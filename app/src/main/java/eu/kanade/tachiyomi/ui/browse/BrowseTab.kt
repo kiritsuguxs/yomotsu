@@ -16,6 +16,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.components.TabbedScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.ui.browse.anime.animeSourcesTab
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
 import eu.kanade.tachiyomi.ui.browse.extension.extensionsTab
 import eu.kanade.tachiyomi.ui.browse.migration.sources.migrateSourceTab
@@ -69,6 +70,7 @@ data object BrowseTab : Tab {
             extensionsTab(extensionsViewModel),
             novelSourcesTab(),
             novelsTab(novelsViewModel),
+            animeSourcesTab(),
             migrateSourceTab(),
         )
 
