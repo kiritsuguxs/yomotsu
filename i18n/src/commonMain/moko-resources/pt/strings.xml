@@ -339,6 +339,9 @@
     <string name="label_novels">Novels</string>
     <string name="label_novel_repos">Repositórios de novels</string>
     <string name="label_novel_sources">Fontes de novels</string>
+    <string name="label_anime_extensions">Extensões de anime</string>
+    <string name="label_anime_sources">Fontes de anime</string>
+    <string name="label_anime_repos">Repositórios de anime</string>
     <string name="trust_novel_source_title">Confiar nesta fonte de novel?</string>
     <string name="trust_novel_source_warning">Esta fonte pode executar JavaScript no seu dispositivo. Instale apenas de repositórios confiáveis.</string>
     <string name="website">Sítio Web</string>
