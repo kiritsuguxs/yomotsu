@@ -2,6 +2,8 @@
 
 package eu.kanade.tachiyomi.animesource.model
 
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
+
 class SAnimeImpl : SAnime {
 
     override lateinit var url: String
@@ -26,7 +28,7 @@ class SAnimeImpl : SAnime {
     override var background_url: String? = null
     // <-- AY
 
-    override var update_strategy: AnimeUpdateStrategy = AnimeUpdateStrategy.ALWAYS_UPDATE
+    override var update_strategy: UpdateStrategy = UpdateStrategy.ALWAYS_UPDATE
 
     override var initialized: Boolean = false
 

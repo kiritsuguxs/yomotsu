@@ -27,7 +27,7 @@ interface SAnime : Serializable {
     var background_url: String?
     // <-- AY
 
-    var update_strategy: AnimeUpdateStrategy
+    var update_strategy: UpdateStrategy
 
     // AY -->
     var fetch_type: FetchType
