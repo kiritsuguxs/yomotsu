@@ -73,8 +73,8 @@ data object BrowseTab : Tab {
             extensionsTab(extensionsViewModel),
             novelSourcesTab(),
             novelsTab(novelsViewModel),
-            animeExtensionsTab(),
             animeSourcesTab(),
+            animeExtensionsTab(),
             migrateSourceTab(),
         )
 
@@ -88,14 +88,14 @@ data object BrowseTab : Tab {
             searchQuery = when (state.currentPage) {
                 1 -> extensionsState.searchQuery
                 3 -> novelSearchQuery
-                4 -> animeExtensionsState.searchQuery
+                5 -> animeExtensionsState.searchQuery
                 else -> null
             },
             onChangeSearchQuery = { query ->
                 when (state.currentPage) {
                     1 -> extensionsViewModel.search(query)
                     3 -> novelsViewModel.search(query)
-                    4 -> animeExtensionsViewModel.search(query)
+                    5 -> animeExtensionsViewModel.search(query)
                 }
             },
         )

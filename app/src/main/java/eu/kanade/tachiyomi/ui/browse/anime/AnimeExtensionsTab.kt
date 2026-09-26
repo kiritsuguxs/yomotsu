@@ -10,6 +10,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.browse.ExtensionScreen
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
+import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -35,7 +36,17 @@ fun Screen.animeExtensionsTab(): TabContent {
                 searchQuery = state.searchQuery,
                 onLongClickItem = { },
                 onClickItemCancel = viewModel::cancelInstallUpdateExtension,
-                onOpenWebView = { },
+                onOpenWebView = { extension ->
+                    extension.sources.getOrNull(0)?.let {
+                        navigator.push(
+                            WebViewScreen(
+                                url = it.baseUrl,
+                                initialTitle = it.name,
+                                sourceId = it.id,
+                            ),
+                        )
+                    }
+                },
                 onInstallExtension = viewModel::installExtension,
                 onUninstallExtension = viewModel::uninstallExtension,
                 onUpdateExtension = viewModel::updateExtension,
