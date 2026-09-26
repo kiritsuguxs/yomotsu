@@ -16,6 +16,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.components.TabbedScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.ui.browse.anime.animeExtensionsTab
 import eu.kanade.tachiyomi.ui.browse.anime.animeSourcesTab
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
 import eu.kanade.tachiyomi.ui.browse.extension.extensionsTab
@@ -64,12 +65,15 @@ data object BrowseTab : Tab {
         val extensionsState by extensionsViewModel.state.collectAsState()
 
         val novelsViewModel = viewModel<eu.kanade.tachiyomi.ui.browse.novel.NovelsViewModel>()
+        val animeExtensionsViewModel = viewModel<eu.kanade.tachiyomi.ui.browse.anime.AnimeExtensionsViewModel>()
+        val animeExtensionsState by animeExtensionsViewModel.state.collectAsState()
 
         val tabs = listOf(
             sourcesTab(),
             extensionsTab(extensionsViewModel),
             novelSourcesTab(),
             novelsTab(novelsViewModel),
+            animeExtensionsTab(),
             animeSourcesTab(),
             migrateSourceTab(),
         )
@@ -84,12 +88,14 @@ data object BrowseTab : Tab {
             searchQuery = when (state.currentPage) {
                 1 -> extensionsState.searchQuery
                 3 -> novelSearchQuery
+                4 -> animeExtensionsState.searchQuery
                 else -> null
             },
             onChangeSearchQuery = { query ->
                 when (state.currentPage) {
                     1 -> extensionsViewModel.search(query)
                     3 -> novelsViewModel.search(query)
+                    4 -> animeExtensionsViewModel.search(query)
                 }
             },
         )

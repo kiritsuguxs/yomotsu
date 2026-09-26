@@ -6,6 +6,8 @@ import eu.kanade.domain.chapter.interactor.SyncChaptersWithSource
 import eu.kanade.domain.download.interactor.DeleteDownload
 import eu.kanade.domain.extension.interactor.GetExtensionLanguages
 import eu.kanade.domain.extension.interactor.GetExtensionSources
+import eu.kanade.domain.extension.interactor.GetAnimeExtensionLanguages
+import eu.kanade.domain.extension.interactor.GetAnimeExtensions
 import eu.kanade.domain.extension.interactor.GetExtensionsByType
 import eu.kanade.domain.extension.interactor.TrustExtension
 import eu.kanade.domain.manga.interactor.GetExcludedScanlators
@@ -20,6 +22,7 @@ import eu.kanade.domain.source.interactor.GetLanguagesWithSources
 import eu.kanade.domain.source.interactor.GetSourcesWithFavoriteCount
 import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.domain.source.interactor.ToggleIncognito
+import eu.kanade.domain.source.interactor.ToggleAnimeLanguage
 import eu.kanade.domain.source.interactor.ToggleLanguage
 import eu.kanade.domain.source.interactor.ToggleSource
 import eu.kanade.domain.source.interactor.ToggleSourcePin
@@ -178,6 +181,8 @@ class DomainModule : InjektModule {
         addFactory { GetExtensionsByType(get(), get()) }
         addFactory { GetExtensionSources(get()) }
         addFactory { GetExtensionLanguages(get(), get()) }
+        addFactory { GetAnimeExtensions(get(), get()) }
+        addFactory { GetAnimeExtensionLanguages(get(), get()) }
 
         addSingletonFactory<UpdatesRepository> { UpdatesRepositoryImpl(get()) }
         addFactory { GetUpdates(get()) }
@@ -193,6 +198,7 @@ class DomainModule : InjektModule {
         addFactory { GetSourcesWithNonLibraryManga(get()) }
         addFactory { SetMigrateSorting(get()) }
         addFactory { ToggleLanguage(get()) }
+        addFactory { ToggleAnimeLanguage(get()) }
         addFactory { ToggleSource(get()) }
         addFactory { ToggleSourcePin(get()) }
         addFactory { TrustExtension(get(), get()) }
