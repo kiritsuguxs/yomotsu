@@ -20,6 +20,15 @@ data class Chapter(
     val version: Long,
     val memo: JsonObject,
 ) {
+    val animeId: Long get() = mangaId
+    val episodeNumber: Double get() = chapterNumber
+    val seen: Boolean get() = read
+    val lastSecondSeen: Long get() = lastPageRead
+    val totalSeconds: Long get() = 0L // TODO: Store in memo if needed
+    val fillermark: Boolean get() = false
+    val summary: String? get() = null
+    val previewUrl: String? get() = null
+
     val isRecognizedNumber: Boolean
         get() = chapterNumber >= 0f
 

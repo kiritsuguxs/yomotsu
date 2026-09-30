@@ -46,6 +46,7 @@ internal object ExtensionLoader {
     }
 
     private const val EXTENSION_FEATURE = "tachiyomi.extension"
+    private const val ANIME_EXTENSION_FEATURE = "tachiyomi.animeextension"
     private const val METADATA_SOURCE_CLASS = "tachiyomi.extension.class"
     private const val METADATA_SOURCE_FACTORY = "tachiyomi.extension.factory"
     private const val METADATA_NSFW = "tachiyomi.extension.nsfw"
@@ -234,6 +235,7 @@ internal object ExtensionLoader {
 
         val extName = appInfo.metaData.getString(METADATA_NAME)
             ?: pkgManager.getApplicationLabel(appInfo).toString().substringAfter("Tachiyomi: ")
+            ?: pkgManager.getApplicationLabel(appInfo).toString().substringAfter("Tachiyomi: ")
         val versionName = pkgInfo.versionName
         val versionCode = PackageInfoCompat.getLongVersionCode(pkgInfo)
 
@@ -267,13 +269,15 @@ internal object ExtensionLoader {
                 versionCode,
                 libVersion,
                 signatures.last(),
+                isAnime = isAnime,
             )
             logcat(LogPriority.WARN) { "Extension $pkgName isn't trusted" }
             return LoadResult.Untrusted(extension)
         }
 
+        val nsfwKey = if (isAnime) "tachiyomi.animeextension.nsfw" else METADATA_NSFW
         val isNsfw = appInfo.metaData.getInt(METADATA_CONTENT_WARNING) > 0 ||
-            appInfo.metaData.getInt(METADATA_NSFW) == 1
+            appInfo.metaData.getInt(nsfwKey) == 1
         if (!loadNsfwSource && isNsfw) {
             logcat(LogPriority.WARN) { "NSFW extension $pkgName not allowed" }
             return LoadResult.Error
@@ -360,7 +364,7 @@ internal object ExtensionLoader {
      * @param pkgInfo The package info of the application.
      */
     private fun isPackageAnExtension(pkgInfo: PackageInfo): Boolean {
-        return pkgInfo.reqFeatures.orEmpty().any { it.name == EXTENSION_FEATURE }
+        return pkgInfo.reqFeatures.orEmpty().any { it.name == EXTENSION_FEATURE || it.name == ANIME_EXTENSION_FEATURE }
     }
 
     /**
@@ -401,5 +405,8 @@ internal object ExtensionLoader {
     private data class ExtensionInfo(
         val packageInfo: PackageInfo,
         val isShared: Boolean,
-    )
+    ) {
+        val isAnime: Boolean
+            get() = packageInfo.reqFeatures.orEmpty().any { it.name == ANIME_EXTENSION_FEATURE }
+    }
 }

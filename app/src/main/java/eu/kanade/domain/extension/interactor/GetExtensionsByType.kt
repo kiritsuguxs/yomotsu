@@ -22,21 +22,21 @@ class GetExtensionsByType(
             extensionManager.availableExtensionsFlow,
         ) { enabledLanguages, _installed, _untrusted, _available ->
             val (updates, installed) = _installed
-                .filter { (showNsfwSources || !it.isNsfw) }
+                .filter { (showNsfwSources || !it.isNsfw) && !it.isAnime }
                 .sortedWith(
                     compareBy<Extension.Installed> { !it.isObsolete }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name },
                 )
                 .partition { it.hasUpdate }
 
-            val untrusted = _untrusted
+            val untrusted = _untrusted.filter { !it.isAnime }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
 
             val available = _available
                 .filter { extension ->
                     _installed.none { it.pkgName == extension.pkgName } &&
                         _untrusted.none { it.pkgName == extension.pkgName } &&
-                        (showNsfwSources || !extension.isNsfw)
+                        (showNsfwSources || !extension.isNsfw) && !extension.isAnime
                 }
                 .flatMap { ext ->
                     ext.sources.filter { it.lang in enabledLanguages }

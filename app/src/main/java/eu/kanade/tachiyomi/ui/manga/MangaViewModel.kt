@@ -42,6 +42,7 @@ import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager
+import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager
 import eu.kanade.translation.TranslationCandidatePolicy
 import eu.kanade.translation.TranslationManager
 import eu.kanade.translation.TranslationRequestOrigin
@@ -104,6 +105,7 @@ class MangaViewModel(
     private val trackerManager: TrackerManager = Injekt.get(),
     private val trackChapter: TrackChapter = Injekt.get(),
     private val downloadManager: DownloadManager = Injekt.get(),
+    private val animeDownloadManager: AnimeDownloadManager = Injekt.get(),
     private val translationManager: TranslationManager = Injekt.get(),
     private val translationPreferences: TranslationPreferences = Injekt.get(),
     private val downloadCache: DownloadCache = Injekt.get(),
@@ -460,7 +462,11 @@ class MangaViewModel(
      */
     private fun deleteDownloads() {
         val state = successState ?: return
-        downloadManager.deleteManga(state.manga, state.source)
+        if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+            animeDownloadManager.deleteManga(state.manga, state.source)
+        } else {
+            downloadManager.deleteManga(state.manga, state.source)
+        }
     }
 
     /**
@@ -545,6 +551,29 @@ class MangaViewModel(
         }
 
         viewModelScope.launchIO {
+            animeDownloadManager.statusFlow()
+                .filter { it.manga.id == successState?.manga?.id }
+                .catch { error -> logcat(LogPriority.ERROR, error) }
+                .collect {
+                    withUIContext {
+                        updateAnimeDownloadState(it)
+                    }
+                }
+        }
+
+        viewModelScope.launchIO {
+            animeDownloadManager.progressFlow()
+                .filter { it.manga.id == successState?.manga?.id }
+                .catch { error -> logcat(LogPriority.ERROR, error) }
+                .collect {
+                    withUIContext {
+                        updateAnimeDownloadState(it)
+                    }
+                }
+        }
+        }
+
+        viewModelScope.launchIO {
             combine(
                 NovelDownloadManager.downloadedChapters,
                 NovelDownloadManager.downloadingChapters,
@@ -585,6 +614,24 @@ class MangaViewModel(
         }
     }
 
+    private fun updateAnimeDownloadState(download: eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload) {
+        updateSuccessState { successState ->
+            val modifiedIndex = successState.chapters.indexOfFirst { it.id == download.chapter.id }
+            if (modifiedIndex < 0) return@updateSuccessState successState
+
+            val newChapters = successState.chapters.toMutableList().apply {
+                val item = removeAt(modifiedIndex)
+                    // We map AnimeDownload.State to Download.State 
+                    .copy(downloadState = eu.kanade.tachiyomi.data.download.model.Download.State.valueOf(download.status.name), downloadProgress = download.progress)
+                add(modifiedIndex, item)
+            }
+            successState.copy(chapters = newChapters)
+        }
+    }
+            successState.copy(chapters = newChapters)
+        }
+    }
+
     private fun observeTranslations() {
         viewModelScope.launchIO {
             translationManager.statusFlow()
@@ -614,20 +661,22 @@ class MangaViewModel(
     private fun List<Chapter>.toChapterListItems(manga: Manga): List<ChapterList.Item> {
         val isLocal = manga.isLocal()
         return map { chapter ->
-            val activeDownload = if (isLocal) {
-                null
+            val activeDownload = if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+                animeDownloadManager.getQueuedDownloadOrNull(chapter.id)
             } else {
                 downloadManager.getQueuedDownloadOrNull(chapter.id)
             }
             val isNovelDownloaded = NovelDownloadManager.isChapterDownloaded(manga.id, chapter.id)
             val isNovelDownloading = NovelDownloadManager.isChapterDownloading(chapter.id)
-            val downloaded = if (isLocal || isNovelDownloaded) {
+            val isAnimeDownloaded = if (source is eu.kanade.tachiyomi.animesource.AnimeSource) animeDownloadManager.isChapterDownloaded(chapter.name, chapter.scanlator, manga.title, source) else false
+            val downloaded = if (isLocal || isNovelDownloaded || isAnimeDownloaded) {
                 true
+            } else if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+                false // already checked isAnimeDownloaded
             } else {
                 downloadManager.isChapterDownloaded(
                     chapter.name,
                     chapter.scanlator,
-                    chapter.url,
                     manga.title,
                     manga.source,
                 )
@@ -740,6 +789,13 @@ class MangaViewModel(
         viewModelScope.launchNonCancellable {
             if (successState.source is eu.kanade.tachiyomi.source.INovelSource) {
                 NovelDownloadManager.downloadChapters(successState.manga, chapters)
+            } else if (successState.source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+                if (startNow) {
+                    val chapterId = chapters.single().id
+                    animeDownloadManager.startDownloadNow(chapterId)
+                } else {
+                    animeDownloadManager.downloadChapters(successState.manga, chapters)
+                }
             } else {
                 if (startNow) {
                     val chapterId = chapters.singleOrNull()?.id ?: return@launchNonCancellable
@@ -874,9 +930,16 @@ class MangaViewModel(
     }
 
     private fun cancelDownload(chapterId: Long) {
-        val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return
-        downloadManager.cancelQueuedDownloads(listOf(activeDownload))
-        updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
+        val state = successState ?: return
+        if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+            val activeDownload = animeDownloadManager.getQueuedDownloadOrNull(chapterId) ?: return
+            animeDownloadManager.cancelQueuedDownloads(listOf(activeDownload))
+            updateAnimeDownloadState(activeDownload.apply { status = eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.NOT_DOWNLOADED })
+        } else {
+            val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return
+            downloadManager.cancelQueuedDownloads(listOf(activeDownload))
+            updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
+        }
     }
 
     fun markPreviousChapterRead(pointer: Chapter) {
@@ -989,6 +1052,12 @@ class MangaViewModel(
                 successState?.let { state ->
                     if (state.source is eu.kanade.tachiyomi.source.INovelSource) {
                         chapters.forEach { NovelDownloadManager.deleteChapter(state.manga.id, it.id) }
+                    } else if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+                        animeDownloadManager.deleteChapters(
+                            chapters,
+                            state.manga,
+                            state.source,
+                        )
                     } else {
                         downloadManager.deleteChapters(
                             chapters,

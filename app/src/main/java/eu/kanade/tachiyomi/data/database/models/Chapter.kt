@@ -50,3 +50,19 @@ fun Chapter.toDomainChapter(): DomainChapter? {
         memo = memo,
     )
 }
+
+var Chapter.last_second_seen: Long
+    get() = last_page_read.toLong()
+    set(value) { last_page_read = value.toInt() }
+
+var Chapter.total_seconds: Long
+    get() = 0L
+    set(value) { }
+
+var Chapter.seen: Boolean
+    get() = read
+    set(value) { read = value }
+
+var Chapter.fillermark: Boolean
+    get() = false
+    set(value) { }

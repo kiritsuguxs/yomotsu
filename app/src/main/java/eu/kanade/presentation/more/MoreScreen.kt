@@ -31,6 +31,8 @@ fun MoreScreen(
     incognitoMode: Boolean,
     onIncognitoModeChange: (Boolean) -> Unit,
     onClickDownloadQueue: () -> Unit,
+    animeDownloadQueueStateProvider: () -> DownloadQueueState,
+    onClickAnimeDownloadQueue: () -> Unit,
     onClickCategories: () -> Unit,
     onClickStats: () -> Unit,
     onClickDataAndStorage: () -> Unit,

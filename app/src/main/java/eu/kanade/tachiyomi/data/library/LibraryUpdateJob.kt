@@ -81,6 +81,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     private val sourceManager: SourceManager = Injekt.get()
     private val libraryPreferences: LibraryPreferences = Injekt.get()
     private val downloadManager: DownloadManager = Injekt.get()
+    private val animeDownloadManager: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager = Injekt.get()
     private val getLibraryManga: GetLibraryManga = Injekt.get()
     private val getManga: GetManga = Injekt.get()
     private val fetchInterval: FetchInterval = Injekt.get()
@@ -320,7 +321,12 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     private fun downloadChapters(manga: Manga, chapters: List<Chapter>) {
         // We don't want to start downloading while the library is updating, because websites
         // may don't like it and they could ban the user.
-        downloadManager.downloadChapters(manga, chapters, false)
+        val source = sourceManager.getOrStub(manga.source)
+        if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+            animeDownloadManager.downloadChapters(manga, chapters, false)
+        } else {
+            downloadManager.downloadChapters(manga, chapters, false)
+        }
     }
 
     /**

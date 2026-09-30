@@ -15,6 +15,9 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.DownloadProvider
+import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadCache
+import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager
+import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadProvider
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.extension.ExtensionManager
@@ -124,6 +127,10 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { DownloadProvider(app) }
         addSingletonFactory { DownloadManager(app) }
         addSingletonFactory { DownloadCache(app) }
+        
+        addSingletonFactory { AnimeDownloadProvider(app) }
+        addSingletonFactory { AnimeDownloadManager(app) }
+        addSingletonFactory { AnimeDownloadCache(app) }
 
         //TachiyomiAT
         addSingletonFactory { TranslationProvider(app) }
@@ -150,6 +157,7 @@ class AppModule(val app: Application) : InjektModule {
             get<Database>()
 
             get<DownloadManager>()
+            get<AnimeDownloadManager>()
         }
     }
 }

@@ -83,6 +83,7 @@ class LibraryViewModel(
     private val coverCache: CoverCache = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val downloadManager: DownloadManager = Injekt.get(),
+    private val animeDownloadManager: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager = Injekt.get(),
     private val downloadCache: DownloadCache = Injekt.get(),
     private val trackerManager: TrackerManager = Injekt.get(),
 ) : StateViewModel<LibraryViewModel.State>(State()) {
@@ -570,7 +571,11 @@ class LibraryViewModel(
                 mangas.forEach { manga ->
                     val source = sourceManager.get(manga.source) as? HttpSource
                     if (source != null) {
-                        downloadManager.deleteManga(manga, source)
+                        if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+                            animeDownloadManager.deleteManga(manga, source)
+                        } else {
+                            downloadManager.deleteManga(manga, source)
+                        }
                     }
                 }
             }

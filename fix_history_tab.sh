@@ -1,0 +1,3 @@
+sed -i '11i import androidx.compose.ui.Modifier\nimport androidx.compose.ui.Alignment\nimport androidx.compose.runtime.rememberCoroutineScope\nimport androidx.compose.runtime.remember\nimport androidx.compose.ui.platform.LocalLayoutDirection\nimport kotlinx.coroutines.launch\nimport androidx.compose.ui.zIndex\nimport tachiyomi.presentation.core.components.material.Scaffold' app/src/main/java/eu/kanade/tachiyomi/ui/history/HistoryTab.kt
+
+sed -i 's/Column(/Scaffold(snackbarHostState = snackbarHostState) { contentPadding ->\n        Column(/g' app/src/main/java/eu/kanade/tachiyomi/ui/history/HistoryTab.kt

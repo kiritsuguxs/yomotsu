@@ -21,6 +21,8 @@ import eu.kanade.presentation.more.MoreScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.DownloadManager
+import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager
+import eu.kanade.tachiyomi.ui.animedownload.AnimeDownloadQueueScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
@@ -59,13 +61,16 @@ data object MoreTab : Tab {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = viewModel<MoreViewModel>()
         val downloadQueueState by viewModel.downloadQueueState.collectAsState()
+        val animeDownloadQueueState by viewModel.animeDownloadQueueState.collectAsState()
         MoreScreen(
             downloadQueueStateProvider = { downloadQueueState },
+            animeDownloadQueueStateProvider = { animeDownloadQueueState },
             downloadedOnly = viewModel.downloadedOnly,
             onDownloadedOnlyChange = { viewModel.downloadedOnly = it },
             incognitoMode = viewModel.incognitoMode,
             onIncognitoModeChange = { viewModel.incognitoMode = it },
             onClickDownloadQueue = { navigator.push(DownloadQueueScreen) },
+            onClickAnimeDownloadQueue = { navigator.push(AnimeDownloadQueueScreen) },
             onClickCategories = { navigator.push(CategoryScreen()) },
             onClickStats = { navigator.push(eu.kanade.tachiyomi.ui.profile.YomotsuProfileScreen()) },
             onClickDataAndStorage = { navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage)) },
@@ -77,6 +82,7 @@ data object MoreTab : Tab {
 
 class MoreViewModel(
     private val downloadManager: DownloadManager = Injekt.get(),
+    private val animeDownloadManager: AnimeDownloadManager = Injekt.get(),
     preferences: BasePreferences = Injekt.get(),
 ) : ViewModel() {
 
@@ -86,7 +92,25 @@ class MoreViewModel(
     private var _downloadQueueState: MutableStateFlow<DownloadQueueState> = MutableStateFlow(DownloadQueueState.Stopped)
     val downloadQueueState: StateFlow<DownloadQueueState> = _downloadQueueState.asStateFlow()
 
+    private var _animeDownloadQueueState: MutableStateFlow<DownloadQueueState> = MutableStateFlow(DownloadQueueState.Stopped)
+    val animeDownloadQueueState: StateFlow<DownloadQueueState> = _animeDownloadQueueState.asStateFlow()
+
     init {
+        // Anime Handle running/paused status change and queue progress updating
+        viewModelScope.launchIO {
+            combine(
+                animeDownloadManager.isDownloaderRunning,
+                animeDownloadManager.queueState,
+            ) { isRunning, downloadQueue -> Pair(isRunning, downloadQueue.size) }
+                .collectLatest { (isDownloading, downloadQueueSize) ->
+                    val pendingDownloadExists = downloadQueueSize != 0
+                    _animeDownloadQueueState.value = when {
+                        !pendingDownloadExists -> DownloadQueueState.Stopped
+                        !isDownloading -> DownloadQueueState.Paused(downloadQueueSize)
+                        else -> DownloadQueueState.Downloading(downloadQueueSize)
+                    }
+                }
+        }
         // Handle running/paused status change and queue progress updating
         viewModelScope.launchIO {
             combine(

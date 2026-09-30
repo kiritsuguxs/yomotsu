@@ -34,6 +34,10 @@
     <string name="label_stats">Statistics</string>
     <string name="label_migration">Migrate</string>
     <string name="label_extensions">Extensions</string>
+    <string name="label_anime_download_queue">Anime Downloads</string>
+    <string name="label_animeextensions">Anime Extensions</string>
+    <string name="label_animesources">Anime Sources</string>
+    <string name="label_anime">Anime</string>
     <string name="label_extension_info">Extension info</string>
     <string name="label_novels">LN Extensions</string>
     <string name="label_novel_repos">Novel repositories</string>

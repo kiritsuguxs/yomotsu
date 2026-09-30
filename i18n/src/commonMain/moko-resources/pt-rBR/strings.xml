@@ -236,6 +236,9 @@
     <string name="information_empty_category">Você ainda não tem nenhuma categoria. Toque no botão Adicionar para criar uma e organizar a sua biblioteca.</string>
     <string name="label_migration">Migrar</string>
     <string name="label_extensions">Extensões</string>
+    <string name="label_animeextensions">Extensões de Anime</string>
+    <string name="label_animesources">Fontes de Anime</string>
+    <string name="label_anime">Anime</string>
     <string name="label_extension_info">Informações da extensão</string>
     <string name="ext_update">Atualizar</string>
     <string name="ext_install">Instalar</string>
