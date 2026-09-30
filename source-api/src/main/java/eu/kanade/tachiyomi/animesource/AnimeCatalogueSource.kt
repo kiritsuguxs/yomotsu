@@ -1,8 +1,8 @@
-package eu.kanade.tachiyomi.animesource
+package eu.kanade.tachiyomi.mangasource
 
-import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
-import eu.kanade.tachiyomi.animesource.model.AnimesPage
-import eu.kanade.tachiyomi.animesource.model.SAnime
+import eu.kanade.tachiyomi.mangasource.model.AnimeFilterList
+import eu.kanade.tachiyomi.mangasource.model.AnimesPage
+import eu.kanade.tachiyomi.mangasource.model.SAnime
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.coroutineScope
@@ -218,7 +218,8 @@ interface AnimeCatalogueSource : AnimeSource {
             words.map { keyword ->
                 launch {
                     runCatching {
-                        getSearchAnime(1, keyword.replace(Regex("[+*]"), ""), filterList).animes
+                        @Suppress("UNCHECKED_CAST")
+                        getSearchAnime(1, keyword.replace(Regex("[+*]"), ""), filterList).mangas as List<SAnime>
                     }
                         .onSuccess { if (it.isNotEmpty()) pushResults(Pair(keyword, it), false) }
                         .onFailure { e ->

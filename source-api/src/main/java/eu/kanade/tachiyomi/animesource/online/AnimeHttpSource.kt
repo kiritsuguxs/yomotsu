@@ -1,12 +1,12 @@
-package eu.kanade.tachiyomi.animesource.online
+package eu.kanade.tachiyomi.mangasource.online
 
-import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
-import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
-import eu.kanade.tachiyomi.animesource.model.AnimesPage
-import eu.kanade.tachiyomi.animesource.model.Hoster
-import eu.kanade.tachiyomi.animesource.model.SAnime
-import eu.kanade.tachiyomi.animesource.model.SEpisode
-import eu.kanade.tachiyomi.animesource.model.Video
+import eu.kanade.tachiyomi.mangasource.AnimeCatalogueSource
+import eu.kanade.tachiyomi.mangasource.model.AnimeFilterList
+import eu.kanade.tachiyomi.mangasource.model.AnimesPage
+import eu.kanade.tachiyomi.mangasource.model.Hoster
+import eu.kanade.tachiyomi.mangasource.model.SAnime
+import eu.kanade.tachiyomi.mangasource.model.SEpisode
+import eu.kanade.tachiyomi.mangasource.model.Video
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.ProgressListener
@@ -301,7 +301,8 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      * @since komikku/extensions-lib 1.6
      * @param response the response from the site.
      */
-    protected open fun relatedAnimeListParse(response: Response): List<SAnime> = popularAnimeParse(response).animes
+    @Suppress("UNCHECKED_CAST")
+    protected open fun relatedAnimeListParse(response: Response): List<SAnime> = popularAnimeParse(response).mangas as List<SAnime>
     protected open fun relatedMangaListParse(response: Response) = relatedAnimeListParse(response)
     // KMK <--
 
