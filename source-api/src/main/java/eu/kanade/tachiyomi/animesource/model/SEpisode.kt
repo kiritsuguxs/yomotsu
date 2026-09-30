@@ -24,6 +24,7 @@ interface SEpisode : eu.kanade.tachiyomi.source.model.SChapter, Serializable {
     var summary: String?
 
     var preview_url: String?
+    override var memo: kotlinx.serialization.json.JsonObject
     // <-- AY
 
     fun copyFrom(other: SEpisode) {

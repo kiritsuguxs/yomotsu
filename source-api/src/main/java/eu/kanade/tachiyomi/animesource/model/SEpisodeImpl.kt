@@ -17,6 +17,7 @@ class SEpisodeImpl : SEpisode {
     // <-- AY
 
     override var scanlator: String? = null
+    override var memo: kotlinx.serialization.json.JsonObject = kotlinx.serialization.json.JsonObject(emptyMap())
 
     // AY -->
     override var summary: String? = null

@@ -160,7 +160,6 @@ interface SAnime : eu.kanade.tachiyomi.source.model.SManga, Serializable {
                 it.update_strategy = update_strategy
                 // ANK <--
                 it.initialized = initialized
-        it.memo = memo
             }
         }
         // SY <--
