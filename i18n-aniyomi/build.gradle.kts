@@ -13,16 +13,10 @@ kotlin {
         namespace = "tachiyomi.i18n.aniyomi"
 
         // TODO(antsy): Remove when https://youtrack.jetbrains.com/issue/KT-83319 is resolved
-        sourceSets {
-            val main by getting
-            main.res.srcDirs("src/commonMain/resources")
-        }
-
-        lint {
-            disable.addAll(listOf("MissingTranslation", "ExtraTranslation"))
-        }
+        withHostTest { }
     }
 
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
     dependencies {
         api(libs.moko.resources)
     }
@@ -33,19 +27,17 @@ kotlin {
     }
 }
 
+androidComponents {
+    onVariants { variant ->
+        val resSource = variant.sources.res ?: return@onVariants
+
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        val task = tasks.register<GenerateLocalesConfigTask>("generate${variantName}LocalesConfig")
+        resSource.addGeneratedSourceDirectory(task) { it.outputDir }
+    }
+}
+
 multiplatformResources {
     resourcesClassName.set("AYMR")
     resourcesPackage.set("tachiyomi.i18n.aniyomi")
-}
-
-val androidResDir = rootProject.layout.buildDirectory.dir("generated/android/res")
-
-androidComponents {
-    onVariants { variant ->
-        val localesConfigTask = project.tasks.register<GenerateLocalesConfigTask>("generateLocalesConfig${variant.name.replaceFirstChar { it.uppercaseChar() }}") {
-            androidResDir.set(this@build_gradle.androidResDir)
-        }
-
-        variant.sources.res?.addGeneratedSourceDirectory(localesConfigTask, GenerateLocalesConfigTask::androidResDir)
-    }
 }
