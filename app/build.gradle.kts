@@ -136,7 +136,7 @@ baselineProfile { baselineProfileOutputDir = "baselineProfiles"; mergeIntoMain =
 
 dependencies {
     baselineProfile(projects.baselineProfile)
-    implementation(projects.i18n); implementation(projects.i18nAt); implementation(projects.core.archive); implementation(projects.core.common); implementation(projects.core.viewmodel); implementation(projects.coreMetadata); implementation(projects.sourceApi); implementation(projects.sourceLocal); implementation(projects.data); implementation(projects.domain); implementation(projects.presentationCore); implementation(projects.presentationWidget); implementation(projects.telemetry)
+    implementation(projects.i18n); implementation(projects.i18nAniyomi); implementation(projects.i18nAt); implementation(projects.core.archive); implementation(projects.core.common); implementation(projects.core.viewmodel); implementation(projects.coreMetadata); implementation(projects.sourceApi); implementation(projects.sourceLocal); implementation(projects.data); implementation(projects.domain); implementation(projects.presentationCore); implementation(projects.presentationWidget); implementation(projects.telemetry)
     implementation(projects.dbnetNative)
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
