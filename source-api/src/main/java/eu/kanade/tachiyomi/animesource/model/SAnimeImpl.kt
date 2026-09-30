@@ -29,6 +29,7 @@ class SAnimeImpl : SAnime {
     override var update_strategy: AnimeUpdateStrategy = AnimeUpdateStrategy.ALWAYS_UPDATE
 
     override var initialized: Boolean = false
+    override var memo: kotlinx.serialization.json.JsonObject = kotlinx.serialization.json.JsonObject(emptyMap())
 
     // AY -->
     override var fetch_type: FetchType = FetchType.Episodes

@@ -14,8 +14,6 @@ import eu.kanade.tachiyomi.network.asObservableSuccess
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.newCachelessCallWithProgress
 import eu.kanade.tachiyomi.source.model.SManga
-import exh.pref.DelegateSourcePreferences
-import exh.source.DelegatedHttpSource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import okhttp3.Headers
@@ -282,7 +280,7 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
                 }
         }.await()
     }
-    override suspend fun fetchRelatedMangaList(manga: SManga) = fetchRelatedAnimeList(manga)
+    override suspend fun fetchRelatedMangaList(manga: SManga) = fetchRelatedAnimeList(manga as SAnime)
 
     /**
      * Returns the request for get related anime list. Override only if it's needed to override
@@ -295,7 +293,7 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
     protected open fun relatedAnimeListRequest(anime: SAnime): Request {
         return animeDetailsRequest(anime)
     }
-    protected open fun relatedMangaListRequest(manga: SManga) = relatedAnimeListRequest(manga)
+    protected open fun relatedMangaListRequest(manga: SManga) = relatedAnimeListRequest(manga as SAnime)
 
     /**
      * Parses the response from the site and returns a list of related animes.
@@ -732,16 +730,4 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      */
     override fun getFilterList() = AnimeFilterList()
 
-    // EXH -->
-    private var delegate: DelegatedHttpSource? = null
-        get() = if (Injekt.get<DelegateSourcePreferences>().delegateSources().get()) {
-            field
-        } else {
-            null
-        }
-
-    fun bindDelegate(delegate: DelegatedHttpSource) {
-        this.delegate = delegate
-    }
-    // EXH <--
 }

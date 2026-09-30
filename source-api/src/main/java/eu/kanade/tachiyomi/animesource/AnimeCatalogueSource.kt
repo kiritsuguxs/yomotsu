@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import logcat.LogPriority
 import rx.Observable
-import tachiyomi.core.common.util.QuerySanitizer.sanitize
+
 import tachiyomi.core.common.util.lang.awaitSingle
 import tachiyomi.core.common.util.system.logcat
 
@@ -24,7 +24,7 @@ interface AnimeCatalogueSource : AnimeSource {
     /**
      * Whether the source has support for latest updates.
      */
-    val supportsLatest: Boolean
+    override val supportsLatest: Boolean
 
     /**
      * Get a page with a list of anime.
@@ -57,14 +57,14 @@ interface AnimeCatalogueSource : AnimeSource {
      * @param page the page number to retrieve.
      */
     @Suppress("DEPRECATION")
-    suspend fun getLatestUpdates(page: Int): AnimesPage {
+    override suspend fun getLatestUpdates(page: Int): AnimesPage {
         return fetchLatestUpdates(page).awaitSingle()
     }
 
     /**
      * Returns the list of filters for the source.
      */
-    fun getFilterList(): AnimeFilterList
+    override fun getFilterList(): AnimeFilterList
 
     // Should be replaced as soon as Anime Extension reach 1.5
     @Deprecated(
@@ -159,7 +159,7 @@ interface AnimeCatalogueSource : AnimeSource {
     suspend fun getRelatedMangaListByExtension(
         manga: SManga,
         pushResults: suspend (relatedManga: Pair<String, List<SManga>>, completed: Boolean) -> Unit,
-    ) = getRelatedAnimeListByExtension(manga, pushResults)
+    ) = getRelatedAnimeListByExtension(manga as SAnime, pushResults as suspend (Pair<String, List<SAnime>>, Boolean) -> Unit)
 
     /**
      * Fetch related animes for a anime from source/site.
@@ -170,7 +170,7 @@ interface AnimeCatalogueSource : AnimeSource {
      * @throws UnsupportedOperationException if a source doesn't support related animes.
      */
     suspend fun fetchRelatedAnimeList(anime: SAnime): List<SAnime> = throw UnsupportedOperationException("Unsupported!")
-    suspend fun fetchRelatedMangaList(manga: SManga): List<SManga> = fetchRelatedAnimeList(manga)
+    suspend fun fetchRelatedMangaList(manga: SManga): List<SManga> = fetchRelatedAnimeList(manga as SAnime) as List<SManga>
 
     /**
      * Slit & strip anime's title into separate searchable keywords.
@@ -223,7 +223,7 @@ interface AnimeCatalogueSource : AnimeSource {
             words.map { keyword ->
                 launch {
                     runCatching {
-                        getSearchAnime(1, keyword.sanitize(), filterList).animes
+                        getSearchAnime(1, keyword.replace(Regex("[+*]"), ""), filterList).animes
                     }
                         .onSuccess { if (it.isNotEmpty()) pushResults(Pair(keyword, it), false) }
                         .onFailure { e ->
@@ -236,6 +236,6 @@ interface AnimeCatalogueSource : AnimeSource {
     suspend fun getRelatedMangaListBySearch(
         manga: SManga,
         pushResults: suspend (relatedManga: Pair<String, List<SManga>>, completed: Boolean) -> Unit,
-    ) = getRelatedAnimeListBySearch(manga, pushResults)
+    ) = getRelatedAnimeListBySearch(manga as SAnime, pushResults as suspend (Pair<String, List<SAnime>>, Boolean) -> Unit)
     // KMK <--
 }

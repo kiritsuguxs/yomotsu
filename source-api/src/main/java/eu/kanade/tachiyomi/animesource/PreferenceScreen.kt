@@ -1,3 +1,2 @@
 package eu.kanade.tachiyomi.animesource
-
-expect class PreferenceScreen
+typealias PreferenceScreen = androidx.preference.PreferenceScreen

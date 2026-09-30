@@ -7,27 +7,27 @@ import java.io.Serializable
 
 interface SAnime : eu.kanade.tachiyomi.source.model.SManga, Serializable {
 
-    var url: String
+    override var url: String
 
-    var title: String
+    override var title: String
 
-    var artist: String?
+    override var artist: String?
 
-    var author: String?
+    override var author: String?
 
-    var description: String?
+    override var description: String?
 
-    var genre: String?
+    override var genre: String?
 
-    var status: Int
+    override var status: Int
 
-    var thumbnail_url: String?
+    override var thumbnail_url: String?
 
     // AY -->
     var background_url: String?
     // <-- AY
 
-    var update_strategy: AnimeUpdateStrategy
+    override var update_strategy: AnimeUpdateStrategy
 
     // AY -->
     var fetch_type: FetchType
@@ -35,9 +35,10 @@ interface SAnime : eu.kanade.tachiyomi.source.model.SManga, Serializable {
     var season_number: Double
     // <-- AY
 
-    var initialized: Boolean
+    override var initialized: Boolean
+    override var memo: kotlinx.serialization.json.JsonObject
 
-    fun getGenres(): List<String>? {
+    override fun getGenres(): List<String>? {
         if (genre.isNullOrBlank()) return null
         return genre?.split(", ")?.map { it.trim() }?.filterNot { it.isBlank() }?.distinct()
     }
@@ -52,7 +53,7 @@ interface SAnime : eu.kanade.tachiyomi.source.model.SManga, Serializable {
     val originalStatus: Int
     // SY <--
 
-    fun copy() = create().also {
+    override fun copy() = create().also {
         it.url = url
         // SY -->
         it.title = originalTitle
@@ -72,6 +73,7 @@ interface SAnime : eu.kanade.tachiyomi.source.model.SManga, Serializable {
         it.season_number = season_number
         // <-- AY
         it.initialized = initialized
+        it.memo = memo
     }
 
     // SY -->
@@ -107,6 +109,7 @@ interface SAnime : eu.kanade.tachiyomi.source.model.SManga, Serializable {
         it.update_strategy = update_strategy
         // ANK <--
         it.initialized = initialized
+        it.memo = memo
     }
     // SY <--
 
@@ -157,6 +160,7 @@ interface SAnime : eu.kanade.tachiyomi.source.model.SManga, Serializable {
                 it.update_strategy = update_strategy
                 // ANK <--
                 it.initialized = initialized
+        it.memo = memo
             }
         }
         // SY <--

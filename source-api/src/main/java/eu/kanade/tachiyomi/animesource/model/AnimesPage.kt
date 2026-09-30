@@ -25,7 +25,7 @@ open class AnimesPage(open val animes: List<SAnime>, open val hasNextPage: Boole
     // SY <--
 
     fun copy(mangas: List<SManga> = this.mangas, hasNextPage: Boolean = this.hasNextPage): AnimesPage {
-        return AnimesPage(mangas, hasNextPage)
+        return AnimesPage(mangas as List<SAnime>, hasNextPage)
     }
 
     override fun toString(): String {

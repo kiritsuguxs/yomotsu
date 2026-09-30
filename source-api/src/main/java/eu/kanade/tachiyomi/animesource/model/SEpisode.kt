@@ -6,11 +6,11 @@ import java.io.Serializable
 
 interface SEpisode : eu.kanade.tachiyomi.source.model.SChapter, Serializable {
 
-    var url: String
+    override var url: String
 
-    var name: String
+    override var name: String
 
-    var date_upload: Long
+    override var date_upload: Long
 
     var episode_number: Float
 
@@ -18,7 +18,7 @@ interface SEpisode : eu.kanade.tachiyomi.source.model.SChapter, Serializable {
     var fillermark: Boolean
     // <-- AY
 
-    var scanlator: String?
+    override var scanlator: String?
 
     // AY -->
     var summary: String?
@@ -47,7 +47,7 @@ interface SEpisode : eu.kanade.tachiyomi.source.model.SChapter, Serializable {
         }
     }
 
-    var chapter_number: Float
+    override var chapter_number: Float
         get() = episode_number
         set(value) {
             episode_number = value

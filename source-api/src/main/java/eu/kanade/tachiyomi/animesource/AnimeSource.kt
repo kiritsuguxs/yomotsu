@@ -23,14 +23,14 @@ interface AnimeSource : eu.kanade.tachiyomi.source.Source {
     /**
      * ID for the source. Must be unique.
      */
-    val id: Long
+    override val id: Long
 
     /**
      * Name of the source.
      */
-    val name: String
+    override val name: String
 
-    val lang: String
+    override val lang: String
         get() = ""
 
     /**
