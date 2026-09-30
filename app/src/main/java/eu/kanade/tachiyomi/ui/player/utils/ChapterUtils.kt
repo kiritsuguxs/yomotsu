@@ -27,7 +27,7 @@ class ChapterUtils {
         ): List<IndexedSegment> {
             val sortedStamps = stamps.sortedBy { it.start }
             val chapters = sortedStamps.mapIndexed { i, it ->
-                val startTime = if (i == 0 && it.start < 1.0) {
+                val startTime = if (i == 0 && it.start < 1.0f) {
                     0.0
                 } else {
                     it.start
@@ -55,12 +55,12 @@ class ChapterUtils {
             }.flatten()
             val playerChapters = currentChapters.filter { playerChapter ->
                 chapters.none { chapter ->
-                    abs(chapter.start - playerChapter.start) < 1.0 && chapter.index == -2
+                    abs(chapter.start - playerChapter.start) < 1.0f && chapter.index == -2
                 }
             }.map {
                 IndexedSegment(it.name, it.start, it.color, chapterType = it.chapterType)
             }.sortedBy { it.start }.mapIndexed { i, it ->
-                if (i == 0 && it.start < 1.0) {
+                if (i == 0 && it.start < 1.0f) {
                     IndexedSegment(
                         it.name,
                         0.0f,
@@ -73,7 +73,7 @@ class ChapterUtils {
             }
             val filteredChapters = chapters.filter { chapter ->
                 playerChapters.none { playerChapter ->
-                    abs(chapter.start - playerChapter.start) < 1.0 && chapter.index != -2
+                    abs(chapter.start - playerChapter.start) < 1.0f && chapter.index != -2
                 }
             }
             val startChapter = if ((playerChapters + filteredChapters).isNotEmpty() &&

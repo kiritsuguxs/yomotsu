@@ -13,12 +13,12 @@ import java.io.InputStream
 
 private const val DEFAULT_THUMBNAIL_NAME = "thumbnail.jpg"
 
-actual class LocalEpisodeThumbnailManager(
+class LocalEpisodeThumbnailManager(
     private val context: Context,
     private val fileSystem: LocalSourceFileSystem,
 ) {
 
-    actual fun find(animeUrl: String, fileName: String): UniFile? {
+    fun find(animeUrl: String, fileName: String): UniFile? {
         return fileSystem.getFilesInMangaDirectory(animeUrl)
             // Get all file whose names contain the episode name and the word 'thumbnail'
             .filter { it.isFile && it.nameWithoutExtension.equals(fileName, ignoreCase = true) }
@@ -26,7 +26,7 @@ actual class LocalEpisodeThumbnailManager(
             .firstOrNull { ImageUtil.isImage(it.name) { it.openInputStream() } }
     }
 
-    actual fun update(anime: SAnime, episode: SEpisode, inputStream: InputStream): UniFile? {
+    fun update(anime: SAnime, episode: SEpisode, inputStream: InputStream): UniFile? {
         val directory = fileSystem.getMangaDirectory(anime.url)
         if (directory == null) {
             inputStream.close()
