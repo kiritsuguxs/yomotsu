@@ -85,6 +85,11 @@
     7. Migrar (`migrateSourceTab()`)
   - A busca (`searchQuery` e `onChangeSearchQuery`) é mapeada para os índices corretos das abas de extensões (1 para Mangá, 3 para Anime, 5 para Novels).
 
+### H. Resolução de Dependências Gradle e JitPack
+- O repositório JitPack sofre com erros intermitentes de `401 Unauthorized` / rate limiting do Cloudflare quando acessado pelos runners do GitHub Actions.
+- Em [`settings.gradle.kts`](file:///workspace/yomotsu/settings.gradle.kts), o repositório JitPack foi configurado com `content { includeGroupByRegex("com\\.github\\..*") }` tanto em `pluginManagement` quanto em `dependencyResolutionManagement`. Isso impede que o Gradle tente buscar pacotes como `io.github.secozzi` ou `cafe.adriel.voyager` no JitPack.
+- Removida a dependência inválida `voyager-screenmodel` do bundle em [`gradle/libs.versions.toml`](file:///workspace/yomotsu/gradle/libs.versions.toml) (que falhava na resolução de variantes Android), já que `voyager-navigator` já traz `voyager-core` com suporte a `ScreenModel`.
+
 ---
 
 ## 4. Estrutura de Arquivos Importantes
