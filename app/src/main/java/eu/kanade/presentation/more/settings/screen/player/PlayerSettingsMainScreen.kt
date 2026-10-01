@@ -39,7 +39,6 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.more.settings.screen.SettingsSearchScreen
-import eu.kanade.presentation.more.settings.screen.player.editor.PlayerSettingsEditorScreen
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
@@ -93,7 +92,7 @@ object PlayerSettingsMainScreen : Screen() {
                                 AppBar.Action(
                                     title = stringResource(MR.strings.action_search),
                                     icon = Icons.Outlined.Search,
-                                    onClick = { navigator.navigate(SettingsSearchScreen(true), twoPane) },
+                                    onClick = { navigator.navigate(SettingsSearchScreen(), twoPane) },
                                 ),
                             ),
                         )
@@ -205,12 +204,7 @@ object PlayerSettingsMainScreen : Screen() {
             icon = Icons.Outlined.Audiotrack,
             screen = PlayerSettingsAudioScreen,
         ),
-        Item(
-            titleRes = AYMR.strings.pref_player_editor,
-            subtitleRes = AYMR.strings.pref_player_editor_summary,
-            icon = Icons.Outlined.EditNote,
-            screen = PlayerSettingsEditorScreen,
-        ),
+
         Item(
             titleRes = AYMR.strings.pref_player_advanced,
             subtitleRes = AYMR.strings.pref_player_advanced_summary,

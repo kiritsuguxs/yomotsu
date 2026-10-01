@@ -595,5 +595,7 @@
     <string name="player_sheets_deband_iterations">Iterations</string>
     <string name="player_sheets_deband_threshold">Threshold</string>
     <string name="player_sheets_deband_range">Range</string>
-    <string name="player_sheets_deband_grain">Grain</string>
+    <string name="player_pref_subtitle_black_bars">Render subtitles in black bars</string>
+    <string name="player_pref_subtitle_black_bars_summary">Display subtitles in black bars when available</string>
+    <string name="player_pref_subtitle_system_fonts">Use system fonts</string>
 </resources>

@@ -28,13 +28,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import animiru.feature.mpvfiles.MpvConfig.Companion.MPV_DIR
-import com.yubyf.truetypeparser.TTFFile
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.anime.interactor.SetAnimeViewerFlags
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.episode.model.toDbEpisode
 import eu.kanade.domain.source.interactor.GetIncognitoState
-import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.animesource.AnimeSource
@@ -43,19 +41,17 @@ import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SerializableHoster.Companion.toHosterList
 import eu.kanade.tachiyomi.animesource.model.TimeStamp
 import eu.kanade.tachiyomi.animesource.model.Video
+import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager
+import eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload
 import eu.kanade.tachiyomi.data.database.models.Episode
 import eu.kanade.tachiyomi.data.database.models.toDomainEpisode
-import eu.kanade.tachiyomi.data.download.DownloadManager
-import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
-import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
 import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.source.online.all.MergedSource
 import eu.kanade.tachiyomi.ui.player.controls.components.IndexedSegment
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.HosterState
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.getChangedAt
@@ -73,10 +69,7 @@ import eu.kanade.tachiyomi.ui.player.utils.ChapterUtils
 import eu.kanade.tachiyomi.ui.player.utils.ChapterUtils.Companion.getStringRes
 import eu.kanade.tachiyomi.ui.reader.SaveImageNotifier
 import eu.kanade.tachiyomi.util.chapter.filterDownloaded
-import eu.kanade.tachiyomi.util.chapter.removeDuplicates
-import eu.kanade.tachiyomi.util.editBackground
 import eu.kanade.tachiyomi.util.editCover
-import eu.kanade.tachiyomi.util.editThumbnail
 import eu.kanade.tachiyomi.util.lang.byteSize
 import eu.kanade.tachiyomi.util.lang.takeBytes
 import eu.kanade.tachiyomi.util.storage.DiskUtil
@@ -119,7 +112,6 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.anime.interactor.GetAnime
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.category.interactor.GetCategories
-import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.episode.interactor.GetEpisodesByAnimeId
 import tachiyomi.domain.episode.interactor.UpdateEpisode
@@ -129,8 +121,6 @@ import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.history.interactor.UpsertHistory
 import tachiyomi.domain.history.model.HistoryUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetMergedMangaById
-import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.domain.track.interactor.GetTracks
@@ -151,7 +141,7 @@ class PlayerViewModel @JvmOverloads constructor(
     private val savedState: SavedStateHandle,
     private val json: Json = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
-    private val downloadManager: DownloadManager = Injekt.get(),
+    private val downloadManager: AnimeDownloadManager = Injekt.get(),
     private val storageManager: StorageManager = Injekt.get(),
     private val imageSaver: ImageSaver = Injekt.get(),
     private val downloadPreferences: DownloadPreferences = Injekt.get(),
@@ -173,17 +163,9 @@ class PlayerViewModel @JvmOverloads constructor(
         private val trackSelect: TrackSelect = Injekt.get(),
     private val audioManager: AudioManager = Injekt.get(),
     brightnessManager: BrightnessManager = Injekt.get(),
-    // SY -->
     uiPreferences: UiPreferences = Injekt.get(),
-    private val getMergedMangaById: GetMergedMangaById = Injekt.get(),
-    private val getMergedReferencesById: GetMergedReferencesById = Injekt.get(),
-    private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId = Injekt.get(),
-    // SY <--
-    // ANK -->
     private val getIncognitoState: GetIncognitoState = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    private val syncPreferences: SyncPreferences = Injekt.get(),
-    // ANK <--
 ) : AndroidViewModel(context) {
 
     val cachePath: String = context.applicationContext.cacheDir.path
@@ -340,7 +322,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val anime = anime!!
         runBlocking {
             // KMK -->
-                            getEpisodesByAnimeId.await(anime.id, applyFilter = false)
+                            getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = false)
             // KMK <--
         }
     }
@@ -419,9 +401,7 @@ class PlayerViewModel @JvmOverloads constructor(
             file.name?.lowercase()?.matches(FONT_EXTENSION_REGEX) == true
         }?.mapNotNull {
             try {
-                // ANK -->
-                it.openInputStream().use { s -> TTFFile.open(s) }.families.values.first()
-                // ANK <--
+                it.name?.substringBeforeLast('.')
             } catch (_: Exception) {
                 null
             }
@@ -446,11 +426,7 @@ class PlayerViewModel @JvmOverloads constructor(
                     file.isFile && file.name.lowercase().matches(FONT_EXTENSION_REGEX)
                 }?.forEach { file ->
                     try {
-                        fontFiles.add(
-                            // ANK -->
-                            file.inputStream().use { s -> TTFFile.open(s) }.families.values.first(),
-                            // ANK <--
-                        )
+                        fontFiles.add(file.nameWithoutExtension)
                     } catch (_: Exception) { }
                 }
             }
@@ -1105,19 +1081,7 @@ class PlayerViewModel @JvmOverloads constructor(
             "seek_by" -> seekByWithText(data.toInt(), null)
             "seek_to" -> seekToWithText(data.toInt(), null)
             "toggle_button" -> {
-                fun showButton() {
-                    if (_primaryButton.value == null) {
-                        _primaryButton.update {
-                            customButtons.value.firstOrNull { it.isFavorite }
-                        }
-                    }
-                }
-
-                when (data) {
-                    "show" -> showButton()
-                    "hide" -> _primaryButton.update { null }
-                    "toggle" -> if (_primaryButton.value == null) showButton() else _primaryButton.update { null }
-                }
+                // custom buttons not supported
             }
             "software_keyboard" -> {
                 viewModelScope.launch {
@@ -1289,10 +1253,10 @@ class PlayerViewModel @JvmOverloads constructor(
     val eventFlow = eventChannel.receiveAsFlow()
 
     val incognitoMode: Boolean by lazy { getIncognitoState.await(currentSource.value?.id) }
-    private val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading().get()
+    private val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading.get()
 
-    internal val relativeTime = uiPreferences.relativeTime().get()
-    internal val dateFormat = uiPreferences.dateFormat().get()
+    internal val relativeTime = uiPreferences.relativeTime.get()
+    internal val dateFormat = uiPreferences.dateFormat.get()
 
     /**
      * The position in the current video. Used to restore from process kill.
@@ -1321,7 +1285,7 @@ class PlayerViewModel @JvmOverloads constructor(
             field = value
         }
 
-    private var episodeToDownload: Download? = null
+    private var episodeToDownload: AnimeDownload? = null
 
     private fun filterEpisodeList(
         // ANK -->
@@ -1351,12 +1315,12 @@ class PlayerViewModel @JvmOverloads constructor(
                     when {
                         skipSeen && it.read -> true
                         skipFiltered -> {
-                            (anime.unreadFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_READ && !it.read) ||
-                                (anime.unreadFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_UNREAD && it.read) ||
-                                (anime.downloadedFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_DOWNLOADED && !isEpisodeDownloaded(it)) ||
-                                (anime.downloadedFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_NOT_DOWNLOADED && isEpisodeDownloaded(it)) ||
-                                (anime.bookmarkedFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_BOOKMARKED && !it.bookmark) ||
-                                (anime.bookmarkedFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_NOT_BOOKMARKED && it.bookmark)
+                            (anime.unreadFilterRaw == tachiyomi.domain.manga.model.Manga.CHAPTER_SHOW_READ && !it.read) ||
+                                (anime.unreadFilterRaw == tachiyomi.domain.manga.model.Manga.CHAPTER_SHOW_UNREAD && it.read) ||
+                                (anime.downloadedFilterRaw == tachiyomi.domain.manga.model.Manga.CHAPTER_SHOW_DOWNLOADED && !isEpisodeDownloaded(it)) ||
+                                (anime.downloadedFilterRaw == tachiyomi.domain.manga.model.Manga.CHAPTER_SHOW_NOT_DOWNLOADED && isEpisodeDownloaded(it)) ||
+                                (anime.bookmarkedFilterRaw == tachiyomi.domain.manga.model.Manga.CHAPTER_SHOW_BOOKMARKED && !it.bookmark) ||
+                                (anime.bookmarkedFilterRaw == tachiyomi.domain.manga.model.Manga.CHAPTER_SHOW_NOT_BOOKMARKED && it.bookmark)
                         }
                         else -> false
                     }
@@ -2349,6 +2313,8 @@ class PlayerViewModel @JvmOverloads constructor(
             downloadManager.deletePendingChapters()
         }
     }
+
+    fun deletePendingEpisodes() = deletePendingChapters()
 
     /**
      * Returns the skipIntroLength used by this anime or the default one.

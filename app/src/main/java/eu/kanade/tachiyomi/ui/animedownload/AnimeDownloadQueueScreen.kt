@@ -49,7 +49,6 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.components.NestedMenuItem
-import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.databinding.DownloadListBinding
 import kotlinx.collections.immutable.persistentListOf
@@ -248,10 +247,6 @@ object AnimeDownloadQueueScreen : Screen() {
             val right = with(density) { contentPadding.calculateRightPadding(layoutDirection).toPx().roundToInt() }
             val bottom = with(density) { contentPadding.calculateBottomPadding().toPx().roundToInt() }
 
-            // KMK -->
-            val colorScheme = AndroidViewColorScheme(MaterialTheme.colorScheme)
-            // KMK <--
-
             Box(modifier = Modifier.nestedScroll(nestedScrollConnection)) {
                 AndroidView(
                     modifier = Modifier.fillMaxWidth(),
@@ -259,9 +254,6 @@ object AnimeDownloadQueueScreen : Screen() {
                         screenModel.controllerBinding = DownloadListBinding.inflate(LayoutInflater.from(context))
                         screenModel.adapter = AnimeDownloadAdapter(
                             screenModel.listener,
-                            // KMK -->
-                            colorScheme,
-                            // KMK <--
                         )
                         screenModel.controllerBinding.root.adapter = screenModel.adapter
                         screenModel.adapter?.isHandleDragEnabled = true

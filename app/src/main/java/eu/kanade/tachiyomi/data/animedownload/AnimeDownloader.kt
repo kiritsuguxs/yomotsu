@@ -18,16 +18,12 @@ import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload
 import eu.kanade.tachiyomi.data.library.LibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.NotificationHandler
-import eu.kanade.tachiyomi.data.torrentServer.service.TorrentServerService
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.torrentServer.TorrentServerApi
-import eu.kanade.tachiyomi.torrentServer.TorrentServerUtils
 import eu.kanade.tachiyomi.ui.player.loader.EpisodeLoader
 import eu.kanade.tachiyomi.ui.player.loader.HosterLoader
 import eu.kanade.tachiyomi.util.storage.DiskUtil
-import eu.kanade.tachiyomi.util.storage.toFFmpegString
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
 import kotlinx.collections.immutable.toImmutableList
@@ -78,6 +74,9 @@ import uy.kohesive.injekt.injectLazy
 import java.io.BufferedReader
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+
+private fun android.net.Uri.toFFmpegString(context: Context): String =
+    FFmpegKitConfig.getSafParameter(context, this, "rw")
 
 /**
  * This class is the one in charge of downloading episodes.
@@ -220,7 +219,7 @@ class AnimeDownloader(
         downloaderJob = scope.launch {
             val activeDownloadsFlow = combine(
                 queueState,
-                downloadPreferences.parallelSourceLimit().changes(),
+                downloadPreferences.parallelSourceLimit.changes(),
             ) { a, b -> a to b }.transformLatest { (queue, parallelCount) ->
                 while (true) {
                     val activeDownloads = queue.asSequence()
@@ -472,7 +471,7 @@ class AnimeDownloader(
                     download.progress = 0
 
                     // If videoFile is not existing then download it
-                    if (preferences.useExternalDownloader().get() == download.changeDownloader) {
+                    if (preferences.useExternalDownloader.get() == download.changeDownloader) {
                         progressJob = scope.launch {
                             while (download.status == AnimeDownload.State.DOWNLOADING) {
                                 delay(50)
@@ -518,11 +517,7 @@ class AnimeDownloader(
             tmpDir.findFile("$filename.tmp")?.delete()
             val videoFile = tmpDir.createFile("$filename.tmp")!!
             try {
-                if (isTor(download.video!!)) {
-                    torrentDownload(download, tmpDir, videoFile, filename)
-                } else {
-                    ffmpegDownload(download, tmpDir, videoFile, filename)
-                }
+                ffmpegDownload(download, tmpDir, videoFile, filename)
             } catch (e: Exception) {
                 videoFile.delete()
                 throw e
@@ -541,34 +536,6 @@ class AnimeDownloader(
             }
             .flowOn(Dispatchers.IO)
             .first()
-    }
-
-    private fun isTor(video: Video): Boolean {
-        return (video.videoUrl.startsWith("magnet") || video.videoUrl.endsWith(".torrent"))
-    }
-
-    private suspend fun torrentDownload(
-        download: AnimeDownload,
-        tmpDir: UniFile,
-        videoFile: UniFile,
-        filename: String,
-    ) {
-        val video = download.video!!
-        TorrentServerService.start()
-        TorrentServerService.wait(10)
-        val currentTorrent = TorrentServerApi.addTorrent(video.videoUrl, video.videoTitle, "", "", false)
-        var index = 0
-        if (video.videoUrl.contains("index=")) {
-            index = try {
-                video.videoUrl.substringAfter("index=")
-                    .substringBefore("&").toInt()
-            } catch (_: Exception) {
-                0
-            }
-        }
-        val torrentUrl = TorrentServerUtils.getTorrentPlayLink(currentTorrent, index)
-        video.videoUrl = torrentUrl
-        return ffmpegDownload(download, tmpDir, videoFile, filename)
     }
 
     // ffmpeg is always on safe mode
@@ -711,49 +678,7 @@ class AnimeDownloader(
 
     // AM -->
     private suspend fun filterTracks(tracks: List<Track>, headers: Headers): List<Track> {
-        if (!downloadPreferences.ignoreBrokenTracks.get()) return tracks
-
-        // ANK -->
-        return coroutineScope {
-            tracks.map { track ->
-                async {
-                    // Keep non-http URL tracks
-                    if (!track.url.startsWith("http")) return@async track
-                    // ANK <--
-                    try {
-                        val request = Request.Builder()
-                            .url(track.url)
-                            .headers(headers)
-                            .head()
-                            .build()
-
-                        // ANK -->
-                        // Same subtitle CDNs reject HEAD with 405/501; fall back to a ranged GET
-                        val headCode = client.newCall(request).await().use { it.code }
-                        if (headCode != 405 && headCode != 501) {
-                            return@async if (headCode in 200..299) track else null
-                        }
-
-                        val rangedRequest = Request.Builder()
-                            .url(track.url)
-                            .headers(headers)
-                            .header("Range", "bytes=0-0")
-                            .build()
-                        return@async client.newCall(rangedRequest).await().use {
-                            if (it.isSuccessful) track else null
-                        }
-                        // ANK <--
-                    } catch (_: Exception) {
-                        // ANK -->
-                        currentCoroutineContext().ensureActive()
-                        // ANK <--
-                        null
-                    }
-                }
-                // ANK -->
-            }.awaitAll().filterNotNull()
-            // ANK <--
-        }
+        return tracks
     }
     // <-- AM
 
@@ -818,7 +743,7 @@ class AnimeDownloader(
             // TODO: support other file formats!!
             // start download with intent
             val pm = context.packageManager
-            val pkgName = preferences.externalDownloaderSelection().get()
+            val pkgName = preferences.externalDownloaderSelection.get()
             val intent: Intent
             if (pkgName.isNotEmpty()) {
                 intent = pm.getLaunchIntentForPackage(pkgName) ?: throw Exception(

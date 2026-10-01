@@ -22,7 +22,6 @@ import eu.kanade.tachiyomi.ui.player.settings.DecoderPreferences
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
-import tachiyomi.i18n.aniyomi.AYMR
 
 /**
  * Results of the set as cover feature.

@@ -56,10 +56,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Slider
 import eu.kanade.tachiyomi.R
-import tachiyomi.presentation.core.components.BaseSliderItem
 import tachiyomi.presentation.core.components.Pill
-import tachiyomi.presentation.core.components.material.Slider
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.util.secondaryItemAlpha
 import kotlin.math.max
@@ -90,12 +89,12 @@ fun SliderItem(
     ) {
         icon()
         BaseSliderItem(
-            value = value,
-            valueRange = valueRange,
+            value = value.toFloat(),
+            valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
             steps = steps,
             title = label,
             valueString = valueString,
-            onChange = onChange,
+            onChange = { onChange(it.toInt()) },
             titleStyle = labelStyle,
             pillColor = pillColor,
             colors = tint?.let { generateSliderColors(it) } ?: SliderDefaults.colors(),
@@ -318,48 +317,6 @@ fun BaseVerticalSliderItem(
     )
 }
 
-@Composable
-@PreviewLightDark
-private fun PreviewVerticalSliderItem() {
-    MaterialTheme(if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-        var value by remember { mutableIntStateOf(2) }
-        Surface {
-            Row {
-                VerticalSliderItem(
-                    value = value,
-                    valueRange = 1..5,
-                    title = "Filter",
-                    subtitle = "Subtitle",
-                    onChange = { value = it },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_play_seek_triangle),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(width = 16.dp, height = 20.dp),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    },
-                )
-                SliderItem(
-                    value = value,
-                    valueRange = 1..5,
-                    label = "Filter",
-                    onChange = { value = it },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_play_seek_triangle),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(width = 16.dp, height = 20.dp),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    },
-                )
-            }
-        }
-    }
-}
 
 fun generateSliderColors(baseColor: Color): SliderColors {
     // Utility function to darken a color

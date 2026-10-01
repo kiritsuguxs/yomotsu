@@ -432,6 +432,8 @@ class AnimeDownloadManager(
         pendingDeleter.addChapters(getChaptersToDelete(chapters, manga), manga)
     }
 
+    suspend fun enqueueChaptersToDelete(chapters: List<Chapter>, manga: Manga) = enqueueEpisodesToDelete(chapters, manga)
+
     /**
      * Triggers the execution of the deletion of pending chapters.
      */
@@ -442,6 +444,8 @@ class AnimeDownloadManager(
             deleteChapters(chapters, manga, source)
         }
     }
+
+    fun deletePendingChapters() = deletePendingEpisodes()
 
     /**
      * Renames source download folder
@@ -545,7 +549,7 @@ class AnimeDownloadManager(
         } else {
             // KMK <--
             // Retrieve the categories that are set to exclude from being deleted on read
-            val categoriesToExclude = downloadPreferences.removeExcludeCategories().get().map(String::toLong).toSet()
+            val categoriesToExclude = downloadPreferences.removeExcludeCategories.get().map(String::toLong).toSet()
 
             val categoriesForManga = getCategories.await(manga.id)
                 .map { it.id }
@@ -557,7 +561,7 @@ class AnimeDownloadManager(
             }
         }
 
-        return if (!downloadPreferences.removeBookmarkedChapters().get() &&
+        return if (!downloadPreferences.removeBookmarkedChapters.get() &&
             // KMK -->
             // if manually deleting single chapter then will allow deleting bookmark chapter
             (chapters.size > 1 || !ignoreCategoryExclusion)
@@ -571,11 +575,7 @@ class AnimeDownloadManager(
 
     // AY -->
     private fun getEpisodesToDownload(episodes: List<Episode>): List<Episode> {
-        return if (!downloadPreferences.downloadFillermarkedEpisodes().get()) {
-            episodes.filterNot { it.fillermark }
-        } else {
-            episodes
-        }
+        return episodes
     }
     // <-- AY
 

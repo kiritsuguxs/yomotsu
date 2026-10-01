@@ -36,19 +36,13 @@ object PlayerSettingsAdvancedScreen : SearchableSettings {
                 title = stringResource(AYMR.strings.pref_mpv_user_files),
                 subtitle = stringResource(AYMR.strings.pref_mpv_user_files_summary),
             ),
-            Preference.PreferenceItem.MPVConfPreference(
+            Preference.PreferenceItem.EditTextPreference(
                 preference = mpvConf,
                 title = stringResource(AYMR.strings.pref_mpv_conf),
-                fileName = "mpv.conf",
-                scope = scope,
-                context = context,
             ),
-            Preference.PreferenceItem.MPVConfPreference(
+            Preference.PreferenceItem.EditTextPreference(
                 preference = mpvInput,
                 title = stringResource(AYMR.strings.pref_mpv_input),
-                fileName = "input.conf",
-                scope = scope,
-                context = context,
             ),
         )
     }

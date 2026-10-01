@@ -1,19 +1,5 @@
 package eu.kanade.tachiyomi.data.animedownload
 
-import kotlin.time.Duration.Companion.hours
-
-fun UniFile.size(): Long {
-    var totalSize: Long = 0
-    if (isDirectory) {
-        for (file in listFiles().orEmpty()) {
-            totalSize += file.size()
-        }
-    } else {
-        totalSize = length()
-    }
-    return totalSize
-}
-
 import android.app.Application
 import android.content.Context
 import androidx.core.net.toUri
@@ -69,6 +55,18 @@ import uy.kohesive.injekt.api.get
 import java.io.File
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
+
+fun UniFile.size(): Long {
+    var totalSize: Long = 0
+    if (isDirectory) {
+        for (file in listFiles().orEmpty()) {
+            totalSize += file.size()
+        }
+    } else {
+        totalSize = length()
+    }
+    return totalSize
+}
 
 /**
  * Cache where we dump the downloads directory from the filesystem. This class is needed because

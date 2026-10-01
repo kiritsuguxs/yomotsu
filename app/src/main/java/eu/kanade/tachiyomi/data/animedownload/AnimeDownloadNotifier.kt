@@ -32,8 +32,7 @@ internal class AnimeDownloadNotifier(private val context: Context) {
 
     private val progressNotificationBuilder by lazy {
         context.notificationBuilder(Notifications.CHANNEL_DOWNLOADER_PROGRESS) {
-            setColor(ContextCompat.getColor(context, R.color.ic_launcher))
-            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher_foreground))
+            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher))
             setAutoCancel(false)
             setOnlyAlertOnce(true)
         }
@@ -41,8 +40,7 @@ internal class AnimeDownloadNotifier(private val context: Context) {
 
     private val errorNotificationBuilder by lazy {
         context.notificationBuilder(Notifications.CHANNEL_DOWNLOADER_ERROR) {
-            setColor(ContextCompat.getColor(context, R.color.ic_launcher))
-            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher_foreground))
+            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher))
             setAutoCancel(false)
         }
     }
@@ -111,7 +109,7 @@ internal class AnimeDownloadNotifier(private val context: Context) {
                 context.stringResource(AYMR.strings.episode_downloading_progress, download.progress)
             }
 
-            if (preferences.hideNotificationContent().get()) {
+            if (preferences.hideNotificationContent.get()) {
                 setContentTitle(downloadingProgressText)
                 setContentText(null)
             } else {

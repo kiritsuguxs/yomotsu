@@ -3,7 +3,6 @@ package eu.kanade.tachiyomi.data.animedownload
 import android.content.Context
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.util.size
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
@@ -12,7 +11,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.storage.service.StorageManager
-import tachiyomi.i18n.ank.AMR
+import tachiyomi.i18n.MR
 import tachiyomi.source.local.io.LocalSourceFileSystem
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
@@ -47,7 +46,7 @@ class AnimeDownloadProvider(
         if (downloadsDir == null) {
             logcat(LogPriority.ERROR) { "Failed to create download directory" }
             return Result.failure(
-                IOException(context.stringResource(AMR.strings.storage_failed_to_create_download_directory)),
+                IOException(context.stringResource(MR.strings.storage_failed_to_create_download_directory)),
             )
         }
 
@@ -57,7 +56,7 @@ class AnimeDownloadProvider(
             val displayablePath = downloadsDir.displayablePath + "/$sourceDirName"
             logcat(LogPriority.ERROR) { "Failed to create source download directory: $displayablePath" }
             return Result.failure(
-                IOException(context.stringResource(AMR.strings.storage_failed_to_create_directory, displayablePath)),
+                IOException(context.stringResource(MR.strings.storage_failed_to_create_directory, displayablePath)),
             )
         }
 
@@ -67,7 +66,7 @@ class AnimeDownloadProvider(
             val displayablePath = sourceDir.displayablePath + "/$mangaDirName"
             logcat(LogPriority.ERROR) { "Failed to create manga download directory: $displayablePath" }
             return Result.failure(
-                IOException(context.stringResource(AMR.strings.storage_failed_to_create_directory, displayablePath)),
+                IOException(context.stringResource(MR.strings.storage_failed_to_create_directory, displayablePath)),
             )
         }
 

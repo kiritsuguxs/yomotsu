@@ -180,7 +180,7 @@ class EpisodeOptionsDialogScreenModel(
         screenModelScope.launchIO {
             val episode = Injekt.get<GetEpisode>().await(episodeId)!!
             val anime = Injekt.get<GetAnime>().await(animeId)!!
-            val source = sourceManager.getOrStub(sourceId)
+            val source = sourceManager.getOrStub(sourceId) as eu.kanade.tachiyomi.animesource.AnimeSource
 
             _episode.update { _ -> episode }
             _anime.update { _ -> anime }
@@ -492,7 +492,7 @@ private fun VideoList(
     onClickVideo: (Int, Int) -> Unit,
     getHosterList: () -> List<Hoster>?,
 ) {
-    val downloadManager = Injekt.get<DownloadManager>()
+    val downloadManager = Injekt.get<eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager>()
     val clipboard: Clipboard = LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -537,29 +537,28 @@ private fun VideoList(
                     },
                     onExtPlayerClicked = {
                         scope.launch {
-                            MainActivity.startPlayerActivity(
+                            val intent = eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(
                                 context,
                                 anime.id,
                                 episode.id,
-                                true,
-                                currentVideo,
                             )
+                            context.startActivity(intent)
                         }
                     },
                     onIntPlayerClicked = {
                         scope.launch {
-                            MainActivity.startPlayerActivity(
+                            val intent = eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(
                                 context,
                                 anime.id,
                                 episode.id,
-                                false,
-                                currentVideo,
+                                getHosterList(),
                                 selectedHosterVideoIndex.first,
                                 selectedHosterVideoIndex.second,
-                                getHosterList(),
                             )
+                            context.startActivity(intent)
                         }
-                    },                )
+                    },
+                )
             }
         }
     }

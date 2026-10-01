@@ -314,9 +314,6 @@ class MangaScreen(
         } else {
             context.startActivity(ReaderActivity.newIntent(context, chapter.mangaId, chapter.id))
         }
-    } else {
-            context.startActivity(ReaderActivity.newIntent(context, chapter.mangaId, chapter.id))
-        }
     }
 
     private fun getMangaUrl(manga_: Manga?, source_: Source?): String? {

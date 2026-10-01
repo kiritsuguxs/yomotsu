@@ -6,8 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.SearchableSettings
-import eu.kanade.presentation.util.getInvalidLanguageError
-import eu.kanade.presentation.util.isLanguageListValid
 import eu.kanade.tachiyomi.ui.player.settings.AudioChannels
 import eu.kanade.tachiyomi.ui.player.settings.AudioPreferences
 import kotlinx.collections.immutable.toImmutableMap
@@ -35,21 +33,9 @@ object PlayerSettingsAudioScreen : SearchableSettings {
         val boostCap by boostCapPref.collectAsState()
 
         return listOf(
-            Preference.PreferenceItem.EditTextInfoPreference(
+            Preference.PreferenceItem.EditTextPreference(
                 preference = prefLangs,
                 title = stringResource(AYMR.strings.pref_player_audio_lang),
-                dialogSubtitle = stringResource(AYMR.strings.pref_player_audio_lang_info),
-                validate = { pref ->
-                    isLanguageListValid(pref)
-                },
-                errorMessage = { pref ->
-                    getInvalidLanguageError(pref) { invalidLang ->
-                        stringResource(
-                            AYMR.strings.pref_player_subtitle_invalid_lang,
-                            invalidLang,
-                        )
-                    }
-                },
             ),
             Preference.PreferenceItem.SwitchPreference(
                 preference = pitchCorrection,

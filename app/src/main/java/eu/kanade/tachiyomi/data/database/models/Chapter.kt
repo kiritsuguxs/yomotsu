@@ -66,3 +66,8 @@ var Chapter.seen: Boolean
 var Chapter.fillermark: Boolean
     get() = false
     set(value) { }
+
+var Chapter.episode_number: Float
+    get() = chapter_number
+    set(value) { chapter_number = value }
+

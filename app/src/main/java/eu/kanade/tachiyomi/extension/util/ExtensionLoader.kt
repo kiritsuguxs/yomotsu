@@ -232,6 +232,7 @@ internal object ExtensionLoader {
         val pkgInfo = extensionInfo.packageInfo
         val appInfo = pkgInfo.applicationInfo!!
         val pkgName = pkgInfo.packageName
+        val isAnime = extensionInfo.isAnime
 
         val extName = appInfo.metaData.getString(METADATA_NAME)
             ?: pkgManager.getApplicationLabel(appInfo).toString().substringAfter("Tachiyomi: ")

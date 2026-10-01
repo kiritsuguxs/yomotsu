@@ -40,6 +40,9 @@ object Notifications {
     const val ID_DOWNLOAD_CHAPTER_PROGRESS = -201
     const val CHANNEL_DOWNLOADER_ERROR = "downloader_error_channel"
     const val ID_DOWNLOAD_CHAPTER_ERROR = -202
+    const val ID_DOWNLOAD_EPISODE_PROGRESS = -203
+    const val ID_DOWNLOAD_EPISODE_PAUSED = -204
+    const val ID_DOWNLOAD_EPISODE_ERROR = -205
 
     /**
      * Notification channel and ids used by the chapter translator.
@@ -55,6 +58,7 @@ object Notifications {
      */
     const val CHANNEL_NEW_CHAPTERS = "new_chapters_channel"
     const val ID_NEW_CHAPTERS = -301
+    const val ID_NEW_EPISODES = -302
     const val GROUP_NEW_CHAPTERS = "eu.kanade.tachiyomi.NEW_CHAPTERS"
 
     /**

@@ -11,33 +11,14 @@ import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.SearchableSettings
-import eu.kanade.tachiyomi.data.torrentServer.service.TorrentServerService
-import eu.kanade.tachiyomi.torrentServer.TorrentServerPreferences
-import eu.kanade.tachiyomi.ui.player.AMNIS
-import eu.kanade.tachiyomi.ui.player.JUST_PLAYER
-import eu.kanade.tachiyomi.ui.player.MPV_KT
-import eu.kanade.tachiyomi.ui.player.MPV_KT_PREVIEW
-import eu.kanade.tachiyomi.ui.player.MPV_PLAYER
-import eu.kanade.tachiyomi.ui.player.MPV_REMOTE
-import eu.kanade.tachiyomi.ui.player.MX_PLAYER
-import eu.kanade.tachiyomi.ui.player.MX_PLAYER_FREE
-import eu.kanade.tachiyomi.ui.player.MX_PLAYER_PRO
-import eu.kanade.tachiyomi.ui.player.NEXT_PLAYER
 import eu.kanade.tachiyomi.ui.player.PlayerOrientation
-import eu.kanade.tachiyomi.ui.player.VLC_PLAYER
-import eu.kanade.tachiyomi.ui.player.WEB_VIDEO_CASTER
-import eu.kanade.tachiyomi.ui.player.X_PLAYER
 import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
-import eu.kanade.tachiyomi.util.LocalHttpServerHolder
-import eu.kanade.tachiyomi.util.LocalHttpServerService
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toPersistentMap
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.animiru.AMMR
 import tachiyomi.i18n.aniyomi.AYMR
-import tachiyomi.i18n.ank.AMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
@@ -56,9 +37,10 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
     override fun getPreferences(): List<Preference> {
         val playerPreferences = remember { Injekt.get<PlayerPreferences>() }
         val basePreferences = remember { Injekt.get<BasePreferences>() }
-        val deviceSupportsPip = basePreferences.deviceHasPip()
-        val torrentServerPreferences = remember { Injekt.get<TorrentServerPreferences>() }
-        val localHttpServerHolder = remember { Injekt.get<LocalHttpServerHolder>() }
+        val context = LocalContext.current
+        val deviceSupportsPip = remember {
+            context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)
+        }
 
         return listOfNotNull(
             Preference.PreferenceItem.ListPreference(
@@ -80,9 +62,8 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
             ),
             Preference.PreferenceItem.SwitchPreference(
                 preference = playerPreferences.switchOnFailure(),
-                title = stringResource(AMMR.strings.player_pref_switch_on_failure),
+                title = stringResource(AYMR.strings.player_pref_switch_on_failure),
             ),
-            getCastGroup(playerPreferences = playerPreferences),
             Preference.PreferenceItem.ListPreference(
                 preference = playerPreferences.defaultPlayerOrientationType(),
                 entries = PlayerOrientation.entries.associateWith {
@@ -99,8 +80,6 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
                 playerPreferences = playerPreferences,
                 basePreferences = basePreferences,
             ),
-            getTorrentServerGroup(torrentServerPreferences),
-            geCastServerGroup(localHttpServerHolder),
         )
     }
 
@@ -291,7 +270,6 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
                 ),
                 Preference.PreferenceItem.InfoPreference(
                     title = stringResource(AYMR.strings.pref_category_player_aniskip_info),
-                    enabled = isIntroSkipEnabled,
                 ),
             ),
         )
@@ -332,21 +310,6 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
         )
     }
 
-    // enable or destabilizes the use of cast that enable or disable it either with switch
-    @Composable
-    private fun getCastGroup(playerPreferences: PlayerPreferences): Preference.PreferenceGroup {
-        val enableCast = playerPreferences.enableCast()
-        return Preference.PreferenceGroup(
-            title = stringResource(AMR.strings.pref_category_cast),
-            preferenceItems = persistentListOf(
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = enableCast,
-                    title = stringResource(AMR.strings.pref_enable_cast),
-                ),
-            ),
-        )
-    }
-
     @Composable
     private fun getExternalPlayerGroup(
         playerPreferences: PlayerPreferences,
@@ -382,96 +345,11 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
             ),
         )
     }
-
-    @Suppress("SwallowedException", "TooGenericExceptionCaught")
-    @Composable
-    private fun getTorrentServerGroup(
-        torrentServerPreferences: TorrentServerPreferences,
-    ): Preference.PreferenceGroup {
-        val scope = rememberCoroutineScope()
-        val context = LocalContext.current
-        val trackersPref = torrentServerPreferences.trackers()
-        val trackers by trackersPref.collectAsState()
-
-        return Preference.PreferenceGroup(
-            title = stringResource(AMR.strings.pref_category_torrentserver),
-            preferenceItems = persistentListOf(
-                Preference.PreferenceItem.EditTextPreference(
-                    preference = torrentServerPreferences.port(),
-                    title = stringResource(AMR.strings.pref_torrentserver_port),
-                    onValueChanged = {
-                        try {
-                            Integer.parseInt(it)
-                            TorrentServerService.stop()
-                            true
-                        } catch (_: Exception) {
-                            false
-                        }
-                    },
-                ),
-                Preference.PreferenceItem.MultiLineEditTextPreference(
-                    preference = torrentServerPreferences.trackers(),
-                    subtitle = trackersPref.asState(scope).value
-                        .lines().take(2)
-                        .joinToString(
-                            separator = "\n",
-                            postfix = if (trackersPref.asState(scope).value.lines().size > 2) "\n..." else "",
-                        ),
-                    title = context.stringResource(AMR.strings.pref_torrent_trackers),
-                    onValueChanged = {
-                        TorrentServerService.stop()
-                        true
-                    },
-                ),
-                Preference.PreferenceItem.TextPreference(
-                    title = stringResource(AMR.strings.pref_reset_torrent_trackers_string),
-                    enabled = remember(trackers) { trackers != trackersPref.defaultValue() },
-                    onClick = {
-                        trackersPref.delete()
-                        context.stringResource(MR.strings.requires_app_restart)
-                    },
-                ),
-            ),
-        )
-    }
-
-    @Composable
-    private fun geCastServerGroup(
-        localHttpServerHolder: LocalHttpServerHolder,
-    ): Preference.PreferenceGroup {
-        return Preference.PreferenceGroup(
-            title = stringResource(AMR.strings.pref_category_castserver),
-            preferenceItems = persistentListOf(
-                Preference.PreferenceItem.EditTextPreference(
-                    preference = localHttpServerHolder.port(),
-                    title = stringResource(AMR.strings.pref_cast_server_port),
-                    onValueChanged = {
-                        try {
-                            Integer.parseInt(it)
-                            LocalHttpServerService.stop()
-                            true
-                        } catch (_: Exception) {
-                            false
-                        }
-                    },
-                ),
-            ),
-        )
-    }
 }
 
 val externalPlayers = listOf(
-    MPV_PLAYER,
-    MX_PLAYER,
-    MX_PLAYER_FREE,
-    MX_PLAYER_PRO,
-    VLC_PLAYER,
-    MPV_KT,
-    MPV_KT_PREVIEW,
-    MPV_REMOTE,
-    JUST_PLAYER,
-    NEXT_PLAYER,
-    X_PLAYER,
-    WEB_VIDEO_CASTER,
-    AMNIS,
+    "is.xyz.mpv",
+    "org.videolan.vlc",
+    "com.mxtech.videoplayer.ad",
+    "com.mxtech.videoplayer.pro",
 )

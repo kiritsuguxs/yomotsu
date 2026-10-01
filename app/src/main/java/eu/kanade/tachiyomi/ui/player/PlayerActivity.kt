@@ -95,12 +95,16 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import logcat.LogPriority
+import eu.kanade.tachiyomi.data.database.models.episode_number
+import eu.kanade.tachiyomi.data.database.models.fillermark
+import eu.kanade.tachiyomi.data.database.models.last_second_seen
+import eu.kanade.tachiyomi.data.database.models.seen
+import eu.kanade.tachiyomi.data.database.models.total_seconds
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.core.common.util.lang.withUIContext
-import tachiyomi.core.common.util.system.UrlUtils
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
@@ -1045,19 +1049,7 @@ viewModel = viewModel,
             }
         }
 
-            video.videoUrl.startsWith("magnet") ||
-            video.videoUrl.endsWith(".torrent")
-        ) {
-            launchIO {
-                // ANK -->
-                torrentLinkHandler(video.videoUrl, video.videoTitle, video.mpvArgs)
-                // ANK <--
-            }
-        } else {
-            // ANK -->
-            loadFile(parseVideoUrl(video.videoUrl)!!, video.mpvArgs)
-            // ANK <--
-        }
+        loadFile(parseVideoUrl(video.videoUrl)!!, video.mpvArgs)
 
         // AM (DISCORD) -->
         updateDiscordRPC(exitingPlayer = false)

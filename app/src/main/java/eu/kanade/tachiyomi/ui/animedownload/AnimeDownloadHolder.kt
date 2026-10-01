@@ -3,7 +3,6 @@ package eu.kanade.tachiyomi.ui.animedownload
 import android.view.View
 import androidx.recyclerview.widget.ItemTouchHelper
 import eu.davidea.viewholders.FlexibleViewHolder
-import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme.Companion.setColors
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload
 import eu.kanade.tachiyomi.databinding.DownloadItemBinding
@@ -55,9 +54,6 @@ class AnimeDownloadHolder(private val view: View, val adapter: AnimeDownloadAdap
             notifyProgress()
             notifyDownloadedPages()
         }
-        // KMK -->
-        binding.downloadProgress.setColors(adapter.colorScheme)
-        // KMK <--
     }
 
     /**

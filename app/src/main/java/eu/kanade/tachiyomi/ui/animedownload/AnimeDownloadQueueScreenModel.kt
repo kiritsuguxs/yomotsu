@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-class DownloadQueueScreenModel(
+class AnimeDownloadQueueScreenModel(
     private val downloadManager: AnimeDownloadManager = Injekt.get(),
     // KMK -->
     private val navigator: Navigator? = null,
@@ -112,12 +112,6 @@ class DownloadQueueScreenModel(
                             cancel(allDownloadsForSeries)
                         }
                     }
-                    // KMK -->
-                    R.id.show_manga -> {
-                        val mangaId = item.download.manga.id
-                        showManga(mangaId = mangaId)
-                    }
-                    // KMK <--
                 }
             }
         }
@@ -172,12 +166,6 @@ class DownloadQueueScreenModel(
     fun cancel(downloads: List<AnimeDownload>) {
         downloadManager.cancelQueuedDownloads(downloads)
     }
-
-    // KMK -->
-    fun showManga(mangaId: Long) {
-        navigator?.push(MangaScreen(mangaId))
-    }
-    // KMK <--
 
     fun <R : Comparable<R>> reorderQueue(selector: (AnimeDownloadItem) -> R, reverse: Boolean = false) {
         val adapter = adapter ?: return

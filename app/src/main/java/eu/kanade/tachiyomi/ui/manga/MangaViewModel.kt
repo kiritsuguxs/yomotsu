@@ -656,19 +656,17 @@ class MangaViewModel(
 
     private fun List<Chapter>.toChapterListItems(manga: Manga): List<ChapterList.Item> {
         val isLocal = manga.isLocal()
+        val isAnime = source is eu.kanade.tachiyomi.animesource.AnimeSource
         return map { chapter ->
-            val activeDownload = if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
-                animeDownloadManager.getQueuedDownloadOrNull(chapter.id)
-            } else {
-                downloadManager.getQueuedDownloadOrNull(chapter.id)
-            }
+            val activeAnimeDownload = if (isAnime) animeDownloadManager.getQueuedDownloadOrNull(chapter.id) else null
+            val activeDownload = if (!isAnime) downloadManager.getQueuedDownloadOrNull(chapter.id) else null
             val isNovelDownloaded = NovelDownloadManager.isChapterDownloaded(manga.id, chapter.id)
             val isNovelDownloading = NovelDownloadManager.isChapterDownloading(chapter.id)
-            val isAnimeDownloaded = if (source is eu.kanade.tachiyomi.animesource.AnimeSource) animeDownloadManager.isChapterDownloaded(chapter.name, chapter.scanlator, manga.title, source) else false
+            val isAnimeDownloaded = if (isAnime) animeDownloadManager.isChapterDownloaded(chapter.name, chapter.scanlator, manga.title, manga.source) else false
             val downloaded = if (isLocal || isNovelDownloaded || isAnimeDownloaded) {
                 true
-            } else if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
-                false // already checked isAnimeDownloaded
+            } else if (isAnime) {
+                false
             } else {
                 downloadManager.isChapterDownloaded(
                     chapter.name,
@@ -679,6 +677,7 @@ class MangaViewModel(
             }
             val downloadState = when {
                 isNovelDownloading -> Download.State.DOWNLOADING
+                activeAnimeDownload != null -> Download.State.valueOf(activeAnimeDownload.status.name)
                 activeDownload != null -> activeDownload.status
                 downloaded -> Download.State.DOWNLOADED
                 else -> Download.State.NOT_DOWNLOADED
@@ -699,7 +698,7 @@ class MangaViewModel(
                 chapter = chapter,
                 downloadState = downloadState,
                 translationState = translationState,
-                downloadProgress = activeDownload?.progress ?: 0,
+                downloadProgress = activeAnimeDownload?.progress ?: (activeDownload?.progress ?: 0),
                 selected = chapter.id in selectedChapterIds,
             )
         }
