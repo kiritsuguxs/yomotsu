@@ -94,5 +94,6 @@ class SourceRepositoryImpl(
         supportsLatest = false,
         isStub = false,
         isNovel = source is eu.kanade.tachiyomi.source.INovelSource,
+        isAnime = source is eu.kanade.tachiyomi.animesource.AnimeSource,
     )
 }

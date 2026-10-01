@@ -8,24 +8,23 @@ import tachiyomi.domain.source.model.Pin
 import tachiyomi.domain.source.model.Pins
 import tachiyomi.domain.source.model.Source
 import tachiyomi.domain.source.repository.SourceRepository
-import tachiyomi.source.local.isLocal
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
-class GetEnabledSources(
-    private val repository: SourceRepository,
-    private val preferences: SourcePreferences,
+class GetEnabledAnimeSources(
+    private val repository: SourceRepository = Injekt.get(),
+    private val preferences: SourcePreferences = Injekt.get(),
 ) {
 
     fun subscribe(): Flow<List<Source>> {
         return combine(
             preferences.pinnedSources.changes(),
-            preferences.enabledLanguages.changes(),
             preferences.disabledSources.changes(),
             preferences.lastUsedSource.changes(),
             repository.getSources(),
-        ) { pinnedSourceIds, enabledLanguages, disabledSources, lastUsedSource, sources ->
+        ) { pinnedSourceIds, disabledSources, lastUsedSource, sources ->
             sources
-                .filter { !it.isNovel && !it.isAnime }
-                .filter { it.lang in enabledLanguages || it.isLocal() || it.id == 9876543210L }
+                .filter { it.isAnime }
                 .filterNot { it.id.toString() in disabledSources }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
                 .flatMap {

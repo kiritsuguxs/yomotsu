@@ -16,10 +16,11 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.components.TabbedScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
-import eu.kanade.tachiyomi.ui.browse.extension.extensionsTab
 import eu.kanade.tachiyomi.ui.browse.anime.AnimeExtensionsViewModel
 import eu.kanade.tachiyomi.ui.browse.anime.animeExtensionsTab
+import eu.kanade.tachiyomi.ui.browse.anime.animeSourcesTab
+import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
+import eu.kanade.tachiyomi.ui.browse.extension.extensionsTab
 import eu.kanade.tachiyomi.ui.browse.migration.sources.migrateSourceTab
 import eu.kanade.tachiyomi.ui.browse.novel.novelSourcesTab
 import eu.kanade.tachiyomi.ui.browse.novel.novelsTab
@@ -69,9 +70,10 @@ data object BrowseTab : Tab {
         val novelsViewModel = viewModel<eu.kanade.tachiyomi.ui.browse.novel.NovelsViewModel>()
 
         val tabs = listOf(
-            animeExtensionsTab(animeExtensionsViewModel),
             sourcesTab(),
             extensionsTab(extensionsViewModel),
+            animeSourcesTab(),
+            animeExtensionsTab(animeExtensionsViewModel),
             novelSourcesTab(),
             novelsTab(novelsViewModel),
             migrateSourceTab(),
@@ -85,16 +87,16 @@ data object BrowseTab : Tab {
             tabs = tabs,
             state = state,
             searchQuery = when (state.currentPage) {
-                1 -> animeExtensionsState.searchQuery
-                2 -> extensionsState.searchQuery
-                3 -> novelSearchQuery
+                1 -> extensionsState.searchQuery
+                3 -> animeExtensionsState.searchQuery
+                5 -> novelSearchQuery
                 else -> null
             },
             onChangeSearchQuery = { query ->
                 when (state.currentPage) {
-                    1 -> animeExtensionsViewModel.search(query)
-                    2 -> extensionsViewModel.search(query)
-                    3 -> novelsViewModel.search(query)
+                    1 -> extensionsViewModel.search(query)
+                    3 -> animeExtensionsViewModel.search(query)
+                    5 -> novelsViewModel.search(query)
                 }
             },
         )

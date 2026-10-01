@@ -291,7 +291,16 @@ internal object ExtensionLoader {
             return LoadResult.Error
         }
 
-        val sources = appInfo.metaData.getString(METADATA_SOURCE_CLASS)!!
+        val sourceClassKey = if (isAnime) "tachiyomi.animeextension.class" else METADATA_SOURCE_CLASS
+        val sourceFactoryKey = if (isAnime) "tachiyomi.animeextension.factory" else METADATA_SOURCE_FACTORY
+        val sourceClassString = appInfo.metaData.getString(sourceClassKey)
+            ?: appInfo.metaData.getString(METADATA_SOURCE_CLASS)
+        if (sourceClassString == null) {
+            logcat(LogPriority.WARN) { "Missing source class metadata for extension $extName ($pkgName)" }
+            return LoadResult.Error
+        }
+
+        val sources = sourceClassString
             .split(";")
             .map {
                 val sourceClass = it.trim()
@@ -329,8 +338,9 @@ internal object ExtensionLoader {
             libVersion = libVersion,
             lang = lang,
             isNsfw = isNsfw,
+            isAnime = isAnime,
             sources = sources,
-            pkgFactory = appInfo.metaData.getString(METADATA_SOURCE_FACTORY),
+            pkgFactory = appInfo.metaData.getString(sourceFactoryKey) ?: appInfo.metaData.getString(METADATA_SOURCE_FACTORY),
             icon = appInfo.loadIcon(pkgManager),
             isShared = extensionInfo.isShared,
         )
@@ -365,7 +375,8 @@ internal object ExtensionLoader {
      * @param pkgInfo The package info of the application.
      */
     private fun isPackageAnExtension(pkgInfo: PackageInfo): Boolean {
-        return pkgInfo.reqFeatures.orEmpty().any { it.name == EXTENSION_FEATURE || it.name == ANIME_EXTENSION_FEATURE }
+        return pkgInfo.reqFeatures.orEmpty().any { it.name == EXTENSION_FEATURE || it.name == ANIME_EXTENSION_FEATURE } ||
+            pkgInfo.packageName.contains("animeextension")
     }
 
     /**
@@ -408,6 +419,7 @@ internal object ExtensionLoader {
         val isShared: Boolean,
     ) {
         val isAnime: Boolean
-            get() = packageInfo.reqFeatures.orEmpty().any { it.name == ANIME_EXTENSION_FEATURE }
+            get() = packageInfo.reqFeatures.orEmpty().any { it.name == ANIME_EXTENSION_FEATURE } ||
+                packageInfo.packageName.contains("animeextension")
     }
 }

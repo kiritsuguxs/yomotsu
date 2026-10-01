@@ -95,7 +95,9 @@ data class NetworkExtensionStore(
 fun ExtensionList.toAvailableExtensions(store: ExtensionStore): List<TachiyomiExtension.Available> {
     return extensions.map { extension ->
         val lang = extension.sources.map { it.language }.toSet()
-        val isAnime = store.signingKey == "ANIME_REPO" || store.badgeLabel.equals("Anime", ignoreCase = true)
+        val isAnime = store.signingKey == "ANIME_REPO" ||
+            store.badgeLabel.equals("Anime", ignoreCase = true) ||
+            extension.packageName.contains("animeextension")
         TachiyomiExtension.Available(
             name = extension.name,
             isAnime = isAnime,

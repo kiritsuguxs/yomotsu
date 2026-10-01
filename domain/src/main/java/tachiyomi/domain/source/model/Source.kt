@@ -9,6 +9,7 @@ data class Source(
     val pin: Pins = Pins.unpinned,
     val isUsedLast: Boolean = false,
     val isNovel: Boolean = false,
+    val isAnime: Boolean = false,
 ) {
 
     val visualName: String

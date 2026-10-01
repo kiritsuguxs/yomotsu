@@ -61,6 +61,30 @@
 - **AppModule (`app/src/main/java/eu/kanade/tachiyomi/di/AppModule.kt`):** Registrados `MpvConfig`, `AudioManager` e `BrightnessManager`.
 - **PreferenceModule (`app/src/main/java/eu/kanade/tachiyomi/di/PreferenceModule.kt`):** Registrados `PlayerPreferences`, `GesturePreferences`, `DecoderPreferences`, `SubtitlePreferences`, `AudioPreferences` e `AdvancedPlayerPreferences`.
 
+### G. Suporte a Fontes e Extensões de Anime na Aba Browse
+- **Identificação de Extensões de Anime:**
+  - Repositórios e pacotes de extensões de anime usam o namespace `eu.kanade.tachiyomi.animeextension.*`.
+  - Em `NetworkExtensionStore.kt` e `NetworkLegacyExtension.kt`, `isAnime` é avaliado como verdadeiro quando `signingKey == "ANIME_REPO"`, `badgeLabel == "Anime"`, ou `packageName.contains("animeextension")`.
+  - Em `ExtensionLoader.kt`, pacotes instalados com `packageName.contains("animeextension")` ou feature `tachiyomi.animeextension` são carregados com metadados `tachiyomi.animeextension.class` / `tachiyomi.animeextension.factory`, com flag `isAnime = true`.
+- **Filtros de Extensões por Tipo:**
+  - `GetExtensionsByType`: exclui expressamente extensões onde `it.isAnime || it.pkgName.contains("animeextension")`.
+  - `GetAnimeExtensionsByType`: inclui apenas extensões onde `it.isAnime || it.pkgName.contains("animeextension")`.
+- **Separação de Fontes e Interactors:**
+  - `Source.kt` possui propriedade `isAnime: Boolean = false`.
+  - `SourceRepositoryImpl.kt` mapeia `isAnime = source is AnimeSource`.
+  - `GetEnabledSources`: filtra apenas fontes de mangá (`!it.isNovel && !it.isAnime`).
+  - `GetEnabledAnimeSources`: interactor dedicado que filtra fontes com `it.isAnime`. Registrado em `DomainModule.kt`.
+- **Organização das Abas em `BrowseTab.kt`:**
+  - Ordem das abas:
+    1. Fontes (`sourcesTab()`)
+    2. Extensões (`extensionsTab(extensionsViewModel)`)
+    3. Fontes de Anime (`animeSourcesTab()`)
+    4. Extensões de Anime (`animeExtensionsTab(animeExtensionsViewModel)`)
+    5. Fontes LN (`novelSourcesTab()`)
+    6. Extensões LN (`novelsTab(novelsViewModel)`)
+    7. Migrar (`migrateSourceTab()`)
+  - A busca (`searchQuery` e `onChangeSearchQuery`) é mapeada para os índices corretos das abas de extensões (1 para Mangá, 3 para Anime, 5 para Novels).
+
 ---
 
 ## 4. Estrutura de Arquivos Importantes
@@ -69,4 +93,8 @@
   - `PlayerActivity.kt`: Activity do reprodutor MPV.
   - `PlayerViewModel.kt`: ViewModel principal do reprodutor.
 - `app/src/main/java/eu/kanade/tachiyomi/data/animedownload/`: Toda a lógica de fila, cache e download de animes.
+- `app/src/main/java/eu/kanade/tachiyomi/ui/browse/anime/`:
+  - `AnimeSourcesTab.kt` & `AnimeSourcesViewModel.kt`: Aba e ViewModel de fontes de anime.
+  - `AnimeExtensionsTab.kt` & `AnimeExtensionsViewModel.kt`: Aba e ViewModel de extensões de anime.
 - `domain/src/main/java/tachiyomi/domain/download/service/DownloadPreferences.kt`: Preferências de download externo e limites.
+
