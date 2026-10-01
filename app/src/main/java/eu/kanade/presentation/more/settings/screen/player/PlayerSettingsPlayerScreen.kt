@@ -118,19 +118,19 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
                 // KMK -->
                 Preference.PreferenceItem.SwitchPreference(
                     preference = playerPreferences.skipSeen(),
-                    title = stringResource(AMR.strings.pref_skip_seen_episodes),
+                    title = stringResource(AYMR.strings.pref_skip_seen_episodes),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = playerPreferences.skipFiltered(),
-                    title = stringResource(AMR.strings.pref_skip_filtered_episodes),
+                    title = stringResource(AYMR.strings.pref_skip_filtered_episodes),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = playerPreferences.skipDupe(),
-                    title = stringResource(AMR.strings.pref_skip_dupe_episodes),
+                    title = stringResource(AYMR.strings.pref_skip_dupe_episodes),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = playerPreferences.folderPerAnime(),
-                    title = stringResource(AMR.strings.pref_create_folder_per_anime),
+                    title = stringResource(AYMR.strings.pref_create_folder_per_anime),
                     subtitle = stringResource(MR.strings.pref_create_folder_per_manga_summary),
                 ),
                 // KMK <--

@@ -283,7 +283,7 @@ fun BaseVerticalSliderItem(
         SliderDefaults.Track(colors = colors, enabled = enabled, sliderState = sliderState)
     },
 ) {
-    Slider(
+    tachiyomi.presentation.core.components.material.Slider(
         modifier = modifier
             .graphicsLayer {
                 rotationZ = 270f

@@ -44,10 +44,14 @@
 - [`AnimeDownloadNotifier.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/tachiyomi/data/animedownload/AnimeDownloadNotifier.kt): Ícones apontados para recursos existentes (`R.mipmap.ic_launcher`) e remoção de chamadas quebradas a cores do tema antigo.
 - **Fila de Download:** Removido o obsoleto `AndroidViewColorScheme` de `AnimeDownloadAdapter`, `AnimeDownloadHolder` e `AnimeDownloadQueueScreen`.
 
-### D. Telas de Configurações do Player
+### D. Telas de Configurações do Player e Componentes
 - **Editor Removido:** Excluído o pacote quebrado `app/src/main/java/eu/kanade/presentation/more/settings/screen/player/editor/` (9 arquivos tentando compilar um editor de código/mpv.conf dependente de bibliotecas não instaladas).
 - **Substituição de Telas:** Nas telas de Áudio, Legenda e Avançado, widgets customizados (`EditTextInfoPreference`, `MPVConfPreference`) foram substituídos por `EditTextPreference` nativo.
-- **Recursos i18n:** Adicionadas strings ausentes em [`i18n-aniyomi/.../strings.xml`](file:///workspace/yomotsu/i18n-aniyomi/src/commonMain/moko-resources/base/strings.xml): `player_pref_subtitle_black_bars`, `player_pref_subtitle_black_bars_summary`, `player_pref_subtitle_system_fonts`.
+- **Recursos i18n:** Adicionadas strings ausentes em [`i18n-aniyomi/.../strings.xml`](file:///workspace/yomotsu/i18n-aniyomi/src/commonMain/moko-resources/base/strings.xml): `player_pref_subtitle_black_bars`, `player_pref_subtitle_black_bars_summary`, `player_pref_subtitle_system_fonts`, `player_pref_switch_on_failure`, `player_sheets_deband_grain`, `pref_skip_seen_episodes`, `pref_skip_filtered_episodes`, `pref_skip_dupe_episodes`, `pref_create_folder_per_anime`.
+- **Mapeamento AMR -> AYMR:** No Yomotsu, recursos de anime devem referenciar `AYMR.strings.*` (`tachiyomi.i18n.aniyomi.AYMR`), e não referências órfãs a `AMR`.
+- **Vertical Slider:** Em [`SliderItem.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/presentation/player/components/SliderItem.kt), `BaseVerticalSliderItem` utiliza explicitamente `tachiyomi.presentation.core.components.material.Slider` para suportar `Int` e `IntProgression`.
+- **DownloadManager Cache Checks:** `DownloadManager.isChapterDownloaded` no Yomotsu requer 5 parâmetros: `chapterName`, `chapterScanlator`, `chapterUrl`, `mangaTitle`, `sourceId`.
+- **Util de Capítulos:** Em `PlayerViewModel.kt`, importar `eu.kanade.tachiyomi.util.chapter.removeDuplicates`.
 
 ### E. Trackers (Rastreadores)
 - Restaurados arquivos originais de `MyAnimeList`, `AniList`, `Kitsu`, e `Shikimori`, deletando DTOs duplicados de anime para evitar conflitos de tipos e duplicidade de serialização.
