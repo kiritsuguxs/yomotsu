@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import eu.kanade.tachiyomi.ui.player.Segment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,7 +59,7 @@ fun CurrentChapter(
             .clip(RoundedCornerShape(25))
             .background(MaterialTheme.colorScheme.background.copy(alpha = 0.6F))
             .clickable(onClick = onClick)
-            .padding(horizontal = MaterialTheme.padding.mediumSmall, vertical = MaterialTheme.padding.small),
+            .padding(horizontal = MaterialTheme.padding.small, vertical = MaterialTheme.padding.small),
     ) {
         AnimatedContent(
             targetState = chapter,

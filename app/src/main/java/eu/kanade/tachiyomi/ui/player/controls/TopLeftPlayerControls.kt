@@ -47,7 +47,7 @@ fun TopLeftPlayerControls(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.mediumSmall),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
     ) {
         ControlsButton(
             icon = Icons.AutoMirrored.Default.ArrowBack,

@@ -33,7 +33,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.ui.Alignment
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -47,12 +49,11 @@ fun AudioDelayPanel(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ConstraintLayout(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .padding(MaterialTheme.padding.medium),
     ) {
-        val delayControlCard = createRef()
 
         DelayCard(
             delayMs = delayMs,
@@ -61,10 +62,7 @@ fun AudioDelayPanel(
             onReset = onReset,
             title = { AudioDelayCardTitle(onClose = onDismissRequest) },
             delayType = DelayType.Audio,
-            modifier = Modifier.constrainAs(delayControlCard) {
-                linkTo(parent.top, parent.bottom, bias = 0.8f)
-                end.linkTo(parent.end)
-            },
+            modifier = Modifier.align(Alignment.BottomEnd),
         )
     }
 }

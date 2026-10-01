@@ -20,6 +20,7 @@ package eu.kanade.tachiyomi.ui.player.controls
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import eu.kanade.tachiyomi.ui.player.Segment
 import androidx.compose.runtime.Composable
 import eu.kanade.tachiyomi.ui.player.ArtType
 import eu.kanade.tachiyomi.ui.player.Decoder

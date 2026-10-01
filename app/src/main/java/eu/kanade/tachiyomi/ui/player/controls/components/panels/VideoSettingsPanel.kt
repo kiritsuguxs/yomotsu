@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.ui.player.Debanding
 import eu.kanade.tachiyomi.ui.player.VideoFilters
 import eu.kanade.tachiyomi.ui.player.controls.components.panels.components.MultiCardPanel
 import tachiyomi.i18n.aniyomi.AYMR
+import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable

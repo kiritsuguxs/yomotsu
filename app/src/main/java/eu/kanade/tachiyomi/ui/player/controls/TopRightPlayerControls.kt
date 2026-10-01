@@ -75,41 +75,41 @@ fun TopRightPlayerControls(
             isChecked = autoPlayEnabled,
             onToggleAutoPlay = onToggleAutoPlay,
             modifier = Modifier
-                .padding(vertical = MaterialTheme.padding.medium, horizontal = MaterialTheme.padding.mediumSmall)
+                .padding(vertical = MaterialTheme.padding.medium, horizontal = MaterialTheme.padding.small)
                 .size(width = 48.dp, height = 24.dp),
         )
         if (isCastEnabled()) {
             CastButton(
                 castState = castState,
                 onClick = onCastClick,
-                modifier = Modifier.padding(horizontal = MaterialTheme.padding.mediumSmall),
+                modifier = Modifier.padding(horizontal = MaterialTheme.padding.small),
             )
         }
         ControlsButton(
             icon = Icons.Default.Subtitles,
             onClick = onSubtitlesClick,
             onLongClick = onSubtitlesLongClick,
-            horizontalSpacing = MaterialTheme.padding.mediumSmall,
+            horizontalSpacing = MaterialTheme.padding.small,
         )
         ControlsButton(
             icon = Icons.Default.Audiotrack,
             onClick = onAudioClick,
             onLongClick = onAudioLongClick,
-            horizontalSpacing = MaterialTheme.padding.mediumSmall,
+            horizontalSpacing = MaterialTheme.padding.small,
         )
         if (isEpisodeOnline == true) {
             ControlsButton(
                 icon = Icons.Default.HighQuality,
                 onClick = onQualityClick,
                 onLongClick = onQualityClick,
-                horizontalSpacing = MaterialTheme.padding.mediumSmall,
+                horizontalSpacing = MaterialTheme.padding.small,
             )
         }
         ControlsButton(
             icon = Icons.Default.MoreVert,
             onClick = onMoreClick,
             onLongClick = onMoreLongClick,
-            horizontalSpacing = MaterialTheme.padding.mediumSmall,
+            horizontalSpacing = MaterialTheme.padding.small,
         )
     }
 }

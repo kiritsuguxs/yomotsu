@@ -54,7 +54,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.ui.Alignment
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.player.components.OutlinedNumericChooser
 import eu.kanade.tachiyomi.ui.player.controls.CARDS_MAX_WIDTH

@@ -124,7 +124,7 @@ import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.episode.interactor.GetEpisodesByAnimeId
 import tachiyomi.domain.episode.interactor.UpdateEpisode
 import tachiyomi.domain.episode.model.EpisodeUpdate
-import tachiyomi.domain.episode.service.getEpisodeSort
+import tachiyomi.domain.episode.service.getChapterSort
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.history.interactor.UpsertHistory
 import tachiyomi.domain.history.model.HistoryUpdate
@@ -219,7 +219,7 @@ class PlayerViewModel @JvmOverloads constructor(
     val anime: Anime?
         get() = currentAnime.value
 
-    private val _currentSource = MutableStateFlow<AnimeSource?>(null)
+    private val _currentSource = MutableStateFlow<eu.kanade.tachiyomi.source.Source?>(null)
     val currentSource = _currentSource.asStateFlow()
 
     private val _isEpisodeOnline = MutableStateFlow(false)
@@ -1368,18 +1368,12 @@ class PlayerViewModel @JvmOverloads constructor(
                     when {
                         skipSeen && it.read -> true
                         skipFiltered -> {
-                            // ANK <--
-                            (anime.unseenFilterRaw == Anime.EPISODE_SHOW_SEEN && !it.read) ||
-                                (anime.unseenFilterRaw == Anime.EPISODE_SHOW_UNSEEN && it.read) ||
-                                // SY -->
-                                (anime.downloadedFilterRaw == Anime.EPISODE_SHOW_DOWNLOADED && !isEpisodeDownloaded(it)) ||
-                                (anime.downloadedFilterRaw == Anime.EPISODE_SHOW_NOT_DOWNLOADED && isEpisodeDownloaded(it)) ||
-                                // SY <--
-                                (anime.bookmarkedFilterRaw == Anime.EPISODE_SHOW_BOOKMARKED && !it.bookmark) ||
-                                (anime.bookmarkedFilterRaw == Anime.EPISODE_SHOW_NOT_BOOKMARKED && it.bookmark) ||
-                                (anime.fillermarkedFilterRaw == Anime.EPISODE_SHOW_FILLERMARKED && !it.fillermark) ||
-                                (anime.fillermarkedFilterRaw == Anime.EPISODE_SHOW_NOT_FILLERMARKED && it.fillermark)
-                            // ANK -->
+                            (anime.unreadFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_READ && !it.read) ||
+                                (anime.unreadFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_UNREAD && it.read) ||
+                                (anime.downloadedFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_DOWNLOADED && !isEpisodeDownloaded(it)) ||
+                                (anime.downloadedFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_NOT_DOWNLOADED && isEpisodeDownloaded(it)) ||
+                                (anime.bookmarkedFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_BOOKMARKED && !it.bookmark) ||
+                                (anime.bookmarkedFilterRaw == eu.kanade.tachiyomi.source.model.SManga.CHAPTER_SHOW_NOT_BOOKMARKED && it.bookmark)
                         }
                         else -> false
                     }
@@ -1476,17 +1470,6 @@ class PlayerViewModel @JvmOverloads constructor(
                 // SY -->
                 sourceManager.isInitialized.first { it }
                 val source = sourceManager.getOrStub(anime.source)
-                val mergedReferences = if (source is MergedSource) {
-                    getMergedReferencesById.await(anime.id)
-                } else {
-                    emptyList()
-                }
-                val mergedManga = if (source is MergedSource) {
-                    getMergedMangaById.await(anime.id)
-                        .associateBy { it.id }
-                } else {
-                    emptyMap()
-                }
                 _currentAnime.update { _ -> anime }
                 animeTitle.update { _ -> anime.title }
                 sourceManager.isInitialized.first { it }
@@ -1562,7 +1545,7 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun updateEpisode(episode: Episode) {
         mediaTitle.update { _ -> episode.name }
         _isEpisodeOnline.update { _ -> isEpisodeOnline() == true }
-        mpv.setPropertyDouble("user-data/current-anime/episode-number", episode.chapterNumber.toDouble())
+        mpv.setPropertyDouble("user-data/current-anime/episode-number", episode.chapter_number.toDouble())
     }
 
     /**
@@ -1572,13 +1555,7 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun initEpisodeList(anime: Anime): List<Episode> {
         // ANK -->
         val (episodes, animeMap) = runBlocking {
-            if (anime.source == MERGED_SOURCE_ID) {
-                getMergedChaptersByMangaId.await(anime.id, applyFilter = true) to
-                    getMergedMangaById.await(anime.id)
-                        .associateBy { it.id }
-            } else {
                 getEpisodesByAnimeId.await(anime.id, applyFilter = true) to null
-            }
         }
 
         val selectedEpisode = episodes.find { it.id == episodeId }
@@ -1588,7 +1565,7 @@ class PlayerViewModel @JvmOverloads constructor(
         // ANK <--
 
         return episodesForPlayer
-            .sortedWith(getEpisodeSort(anime, sortDescending = false))
+            .sortedWith(getChapterSort(anime, sortDescending = false))
             // ANK -->
             .run {
                 if (playerPreferences.skipDupe().get()) {
@@ -2038,7 +2015,7 @@ class PlayerViewModel @JvmOverloads constructor(
         // ANK -->
         if (!incognitoMode) {
             // Save last second seen and mark as seen if needed
-            currentEp.last_second_seen = seconds
+            currentEp.last_page_read = seconds.toInt()
 
             val progress = playerPreferences.progressPreference().get()
             if (seconds >= (totalSeconds * progress).toLong()) {
@@ -2052,12 +2029,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
             saveWatchingProgress(currentEp)
 
-            // SY -->
-            // Check if syncing is enabled for episode open:
-            if (isSyncEnabled && syncTriggerOpt.syncOnEpisodeOpen && currentEp.lastPageRead == 0L) {
-                SyncDataJob.startNow(Injekt.get<Application>())
-            }
-            // SY <--
+
         }
 
         val inDownloadRange = seconds.toDouble() / totalSeconds.toDouble() > 0.35
@@ -2082,7 +2054,7 @@ class PlayerViewModel @JvmOverloads constructor(
                 if (
                     !episode.read &&
                     episode.isRecognizedNumber &&
-                    episode.episodeNumber.toFloat() == updatedEp.chapterNumber
+                    episode.episodeNumber.toFloat() == updatedEp.chapter_number
                 ) {
                     EpisodeUpdate(id = episode.id!!, read = true)
                         // KMK -->
@@ -2339,8 +2311,8 @@ class PlayerViewModel @JvmOverloads constructor(
             val result = try {
                 when (artType) {
                     ArtType.Cover -> anime.editCover(Injekt.get(), imageStream())
-                    ArtType.Background -> anime.editBackground(Injekt.get(), imageStream())
-                    ArtType.Thumbnail -> episode.editThumbnail(anime, Injekt.get(), imageStream())
+                    ArtType.Background -> false
+                    ArtType.Thumbnail -> false
                 }
 
                 if (anime.isLocal() || anime.favorite) {
@@ -2371,7 +2343,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val context = Injekt.get<Application>()
 
         viewModelScope.launchNonCancellable {
-            trackEpisode.await(context, anime.id, episode.chapterNumber.toDouble())
+            trackEpisode.await(context, anime.id, episode.chapter_number.toDouble())
         }
     }
 
@@ -2401,29 +2373,13 @@ class PlayerViewModel @JvmOverloads constructor(
      * Returns the skipIntroLength used by this anime or the default one.
      */
     private fun getAnimeSkipIntroLength(): Int {
-        val default = gesturePreferences.defaultIntroLength().get()
-        val anime = anime ?: return default
-        val skipIntroLength = anime.skipIntroLength
-        val skipIntroDisable = anime.skipIntroDisable
-        return when {
-            skipIntroDisable -> 0
-            skipIntroLength <= 0 -> default
-            else -> anime.skipIntroLength
-        }
+        return gesturePreferences.defaultIntroLength().get()
     }
 
     /**
      * Updates the skipIntroLength for the open anime.
      */
     fun setAnimeSkipIntroLength(skipIntroLength: Long) {
-        val anime = anime ?: return
-        if (!anime.favorite) return
-        // Skip unnecessary database operation
-        if (skipIntroLength == getAnimeSkipIntroLength().toLong()) return
-        viewModelScope.launchIO {
-            setAnimeViewerFlags.awaitSetSkipIntroLength(anime.id, skipIntroLength)
-            _currentAnime.update { _ -> getAnime.await(anime.id) }
-        }
     }
 
     /**
@@ -2450,7 +2406,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val animeId = anime?.id ?: return null
         val trackerManager = Injekt.get<TrackerManager>()
         var malId: Long?
-        val episodeNumber = currentEpisode.value?.chapterNumber?.toInt() ?: return null
+        val episodeNumber = currentEpisode.value?.chapter_number?.toInt() ?: return null
         if (getTracks.await(animeId).isEmpty()) {
             logcat { "AniSkip: No tracks found for anime $animeId" }
             return null

@@ -135,7 +135,7 @@ private fun EpisodeListItem(
     onEpisodeClicked: (Long?) -> Unit,
 ) {
     var isBookmarked by remember { mutableStateOf(episode.bookmark) }
-    var isFillermarked by remember { mutableStateOf(episode.fillermark) }
+    var isFillermarked by remember { mutableStateOf(false) }
     var textHeight by remember { mutableIntStateOf(0) }
 
     val defaultColor = MaterialTheme.colorScheme.onSurface
@@ -150,7 +150,7 @@ private fun EpisodeListItem(
     } else {
         defaultColor
     }
-    val textAlpha = if (episode.seen) DISABLED_ALPHA else 1f
+    val textAlpha = if (episode.read) DISABLED_ALPHA else 1f
     val textWeight = if (isCurrentEpisode) FontWeight.Bold else FontWeight.Normal
     val textStyle = if (isCurrentEpisode) FontStyle.Italic else FontStyle.Normal
 
@@ -161,7 +161,7 @@ private fun EpisodeListItem(
     }
 
     val clickFillermark: (Boolean) -> Unit = { fillermarked ->
-        episode.fillermark = fillermarked
+        false = fillermarked
         isFillermarked = fillermarked
         onFillermarkClicked(episode.id, fillermarked)
     }

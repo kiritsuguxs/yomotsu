@@ -52,7 +52,7 @@ private fun DoubleTapArrow(
     alpha: Float,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_play_seek_triangle),
+        imageVector = androidx.compose.material.icons.Icons.Filled.PlayArrow,
         contentDescription = null,
         modifier = Modifier
             .size(width = 16.dp, height = 20.dp)
