@@ -65,7 +65,7 @@ interface AnimeSource : eu.kanade.tachiyomi.source.Source {
      * @param anime the anime to fetch seasons for.
      * @return the anime list for the anime.
      */
-    suspend fun getSeasonList(anime: SAnime): List<SAnime>
+    suspend fun getSeasonList(anime: SAnime): List<SAnime> = emptyList()
     // <-- AY
 
     /**

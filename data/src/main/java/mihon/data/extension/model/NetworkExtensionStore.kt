@@ -97,9 +97,10 @@ fun ExtensionList.toAvailableExtensions(store: ExtensionStore): List<TachiyomiEx
         val lang = extension.sources.map { it.language }.toSet()
         val isAnime = store.signingKey == "ANIME_REPO" ||
             store.badgeLabel.equals("Anime", ignoreCase = true) ||
-            extension.packageName.contains("animeextension")
+            extension.packageName.contains("animeextension") ||
+            extension.packageName.startsWith("eu.kanade.tachiyomi.animeextension")
         TachiyomiExtension.Available(
-            name = extension.name,
+            name = extension.name.substringAfter("Aniyomi: ").substringAfter("Tachiyomi: "),
             isAnime = isAnime,
             pkgName = extension.packageName,
             apkUrl = extension.resources.apkUrl,

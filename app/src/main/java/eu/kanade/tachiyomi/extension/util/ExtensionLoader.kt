@@ -234,9 +234,10 @@ internal object ExtensionLoader {
         val pkgName = pkgInfo.packageName
         val isAnime = extensionInfo.isAnime
 
-        val extName = appInfo.metaData.getString(METADATA_NAME)
-            ?: pkgManager.getApplicationLabel(appInfo).toString().substringAfter("Tachiyomi: ")
-            ?: pkgManager.getApplicationLabel(appInfo).toString().substringAfter("Tachiyomi: ")
+        val extName = appInfo.metaData?.getString(METADATA_NAME)
+            ?: pkgManager.getApplicationLabel(appInfo).toString()
+                .substringAfter("Aniyomi: ")
+                .substringAfter("Tachiyomi: ")
         val versionName = pkgInfo.versionName
         val versionCode = PackageInfoCompat.getLongVersionCode(pkgInfo)
 
@@ -246,14 +247,19 @@ internal object ExtensionLoader {
         }
 
         // Validate lib version
-        val libVersion = appInfo.metaData.getFloat(METADATA_EXTENSION_LIB)
-            .takeUnless { it == 0.0f }
+        val libVersion = appInfo.metaData?.getFloat(METADATA_EXTENSION_LIB)
+            ?.takeUnless { it == 0.0f }
             ?.toString()
-            ?.toDouble()
+            ?.toDoubleOrNull()
             ?: versionName.substringBeforeLast('.').toDoubleOrNull()
-        if (libVersion == null || libVersion !in SUPPORTED_LIB_VERSIONS) {
+        val isLibSupported = if (isAnime) {
+            libVersion != null && (libVersion in 12.0..18.0 || libVersion in SUPPORTED_LIB_VERSIONS)
+        } else {
+            libVersion != null && libVersion in SUPPORTED_LIB_VERSIONS
+        }
+        if (!isLibSupported) {
             logcat(LogPriority.WARN) {
-                "Lib version is $libVersion, while only version(s) ${SUPPORTED_LIB_VERSIONS.joinToString()} are supported"
+                "Lib version is $libVersion, while only version(s) ${if (isAnime) "12..18" else SUPPORTED_LIB_VERSIONS.joinToString()} are supported"
             }
             return LoadResult.Error
         }
@@ -268,7 +274,7 @@ internal object ExtensionLoader {
                 pkgName,
                 versionName,
                 versionCode,
-                libVersion,
+                libVersion ?: 0.0,
                 signatures.last(),
                 isAnime = isAnime,
             )
@@ -277,8 +283,8 @@ internal object ExtensionLoader {
         }
 
         val nsfwKey = if (isAnime) "tachiyomi.animeextension.nsfw" else METADATA_NSFW
-        val isNsfw = appInfo.metaData.getInt(METADATA_CONTENT_WARNING) > 0 ||
-            appInfo.metaData.getInt(nsfwKey) == 1
+        val isNsfw = appInfo.metaData?.getInt(METADATA_CONTENT_WARNING) ?: 0 > 0 ||
+            appInfo.metaData?.getInt(nsfwKey) == 1
         if (!loadNsfwSource && isNsfw) {
             logcat(LogPriority.WARN) { "NSFW extension $pkgName not allowed" }
             return LoadResult.Error
@@ -293,8 +299,8 @@ internal object ExtensionLoader {
 
         val sourceClassKey = if (isAnime) "tachiyomi.animeextension.class" else METADATA_SOURCE_CLASS
         val sourceFactoryKey = if (isAnime) "tachiyomi.animeextension.factory" else METADATA_SOURCE_FACTORY
-        val sourceClassString = appInfo.metaData.getString(sourceClassKey)
-            ?: appInfo.metaData.getString(METADATA_SOURCE_CLASS)
+        val sourceClassString = appInfo.metaData?.getString(sourceClassKey)
+            ?: appInfo.metaData?.getString(METADATA_SOURCE_CLASS)
         if (sourceClassString == null) {
             logcat(LogPriority.WARN) { "Missing source class metadata for extension $extName ($pkgName)" }
             return LoadResult.Error
@@ -315,11 +321,22 @@ internal object ExtensionLoader {
                     when (val obj = Class.forName(it, false, classLoader).getDeclaredConstructor().newInstance()) {
                         is Source -> listOf(obj)
                         is SourceFactory -> obj.createSources()
+                        is eu.kanade.tachiyomi.animesource.AnimeSourceFactory -> obj.createSources()
                         else -> throw Exception("Unknown source class type: ${obj.javaClass}")
                     }
                 } catch (e: Throwable) {
-                    logcat(LogPriority.ERROR, e) { "Extension load error: $extName ($it)" }
-                    return LoadResult.Error
+                    try {
+                        val fallBackClassLoader = dalvik.system.PathClassLoader(appInfo.sourceDir, null, context.classLoader)
+                        when (val obj = Class.forName(it, false, fallBackClassLoader).getDeclaredConstructor().newInstance()) {
+                            is Source -> listOf(obj)
+                            is SourceFactory -> obj.createSources()
+                            is eu.kanade.tachiyomi.animesource.AnimeSourceFactory -> obj.createSources()
+                            else -> throw Exception("Unknown source class type: ${obj.javaClass}")
+                        }
+                    } catch (e2: Throwable) {
+                        logcat(LogPriority.ERROR, e2) { "Extension load error: $extName ($it)" }
+                        return LoadResult.Error
+                    }
                 }
             }
 
@@ -376,7 +393,9 @@ internal object ExtensionLoader {
      */
     private fun isPackageAnExtension(pkgInfo: PackageInfo): Boolean {
         return pkgInfo.reqFeatures.orEmpty().any { it.name == EXTENSION_FEATURE || it.name == ANIME_EXTENSION_FEATURE } ||
-            pkgInfo.packageName.contains("animeextension")
+            pkgInfo.packageName.contains("animeextension") ||
+            pkgInfo.packageName.startsWith("eu.kanade.tachiyomi.animeextension") ||
+            pkgInfo.packageName.startsWith("eu.kanade.tachiyomi.extension")
     }
 
     /**
@@ -420,6 +439,7 @@ internal object ExtensionLoader {
     ) {
         val isAnime: Boolean
             get() = packageInfo.reqFeatures.orEmpty().any { it.name == ANIME_EXTENSION_FEATURE } ||
-                packageInfo.packageName.contains("animeextension")
+                packageInfo.packageName.contains("animeextension") ||
+                packageInfo.packageName.startsWith("eu.kanade.tachiyomi.animeextension")
     }
 }

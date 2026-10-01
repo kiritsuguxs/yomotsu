@@ -12,6 +12,7 @@ class TrustExtension(
 ) {
 
     suspend fun isTrusted(pkgInfo: PackageInfo, fingerprints: List<String>): Boolean {
+        if (fingerprints.contains(ANIYOMI_SIGNATURE)) return true
         val trustedFingerprints = repository.getAll().map { it.signingKey }.toHashSet()
         val key = "${pkgInfo.packageName}:${PackageInfoCompat.getLongVersionCode(pkgInfo)}:${fingerprints.last()}"
         return trustedFingerprints.any { fingerprints.contains(it) } || key in preferences.trustedExtensions.get()
@@ -28,5 +29,9 @@ class TrustExtension(
 
     fun revokeAll() {
         preferences.trustedExtensions.delete()
+    }
+
+    companion object {
+        const val ANIYOMI_SIGNATURE = "cbec121aa82ebb02aaa73806992e0368a97d47b5451ed6524816d03084c45905"
     }
 }

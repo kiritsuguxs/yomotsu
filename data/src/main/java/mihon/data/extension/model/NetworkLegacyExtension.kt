@@ -28,9 +28,10 @@ data class NetworkLegacyExtension(
     fun toAvailableExtension(store: ExtensionStore, storeBaseUrl: String): Extension.Available {
         val isAnime = store.signingKey == "ANIME_REPO" ||
             store.badgeLabel.equals("Anime", ignoreCase = true) ||
-            pkg.contains("animeextension")
+            pkg.contains("animeextension") ||
+            pkg.startsWith("eu.kanade.tachiyomi.animeextension")
         return Extension.Available(
-            name = name.substringAfter("Tachiyomi: "),
+            name = name.substringAfter("Aniyomi: ").substringAfter("Tachiyomi: "),
             isAnime = isAnime,
             pkgName = pkg,
             apkUrl = "$storeBaseUrl/apk/$apk",

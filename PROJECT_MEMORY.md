@@ -65,7 +65,14 @@
 - **Identificação de Extensões de Anime:**
   - Repositórios e pacotes de extensões de anime usam o namespace `eu.kanade.tachiyomi.animeextension.*`.
   - Em `NetworkExtensionStore.kt` e `NetworkLegacyExtension.kt`, `isAnime` é avaliado como verdadeiro quando `signingKey == "ANIME_REPO"`, `badgeLabel == "Anime"`, ou `packageName.contains("animeextension")`.
-  - Em `ExtensionLoader.kt`, pacotes instalados com `packageName.contains("animeextension")` ou feature `tachiyomi.animeextension` são carregados com metadados `tachiyomi.animeextension.class` / `tachiyomi.animeextension.factory`, com flag `isAnime = true`.
+  - Em `ExtensionLoader.kt`:
+    - Extensões instaladas com `packageName.contains("animeextension")` ou feature `tachiyomi.animeextension` são carregadas com metadados `tachiyomi.animeextension.class` / `tachiyomi.animeextension.factory`, com flag `isAnime = true`.
+    - Versão de lib (`libVersion`): Extensões de anime do ecossistema Aniyomi utilizam versões `12.0..18.0` (ex: Tomato 14.12 tem lib 14.0), enquanto mangá usa `1.4` e `1.6`. O validador aceita `12.0..18.0` se `isAnime = true`.
+    - Nome da extensão: Remove prefixo `"Aniyomi: "` além de `"Tachiyomi: "`.
+    - Fallback de ClassLoader: Tenta `ChildFirstPathClassLoader` e fallback com `PathClassLoader` para fontes de anime.
+    - `ExtensionInstallReceiver`: Registrado com `RECEIVER_EXPORTED` para receber os intents de instalação do sistema (`ACTION_PACKAGE_ADDED`/`REPLACED`) no Android 14/15.
+  - Em `TrustExtension.kt`: Adicionada a assinatura oficial do repositório Aniyomi (`cbec121aa82ebb02aaa73806992e0368a97d47b5451ed6524816d03084c45905`) como confiável por padrão.
+  - Em `AnimeSource.kt` e `AnimeSourceFactory.kt`: Implementado `SourceFactory` e provido valor default (`emptyList()`) para `getSeasonList` para compatibilidade com extensões compiladas para libs anteriores.
 - **Filtros de Extensões por Tipo:**
   - `GetExtensionsByType`: exclui expressamente extensões onde `it.isAnime || it.pkgName.contains("animeextension")`.
   - `GetAnimeExtensionsByType`: inclui apenas extensões onde `it.isAnime || it.pkgName.contains("animeextension")`.

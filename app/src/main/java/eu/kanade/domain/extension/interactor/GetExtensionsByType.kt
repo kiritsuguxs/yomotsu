@@ -22,14 +22,14 @@ class GetExtensionsByType(
             extensionManager.availableExtensionsFlow,
         ) { enabledLanguages, _installed, _untrusted, _available ->
             val (updates, installed) = _installed
-                .filter { (showNsfwSources || !it.isNsfw) && !it.isAnime && !it.pkgName.contains("animeextension") }
+                .filter { (showNsfwSources || !it.isNsfw) && !it.isAnime && !it.pkgName.contains("animeextension") && !it.pkgName.startsWith("eu.kanade.tachiyomi.animeextension") }
                 .sortedWith(
                     compareBy<Extension.Installed> { !it.isObsolete }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name },
                 )
                 .partition { it.hasUpdate }
 
-            val untrusted = _untrusted.filter { !it.isAnime && !it.pkgName.contains("animeextension") }
+            val untrusted = _untrusted.filter { !it.isAnime && !it.pkgName.contains("animeextension") && !it.pkgName.startsWith("eu.kanade.tachiyomi.animeextension") }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
 
             val available = _available
@@ -38,7 +38,8 @@ class GetExtensionsByType(
                         _untrusted.none { it.pkgName == extension.pkgName } &&
                         (showNsfwSources || !extension.isNsfw) &&
                         !extension.isAnime &&
-                        !extension.pkgName.contains("animeextension")
+                        !extension.pkgName.contains("animeextension") &&
+                        !extension.pkgName.startsWith("eu.kanade.tachiyomi.animeextension")
                 }
                 .flatMap { ext ->
                     ext.sources.filter { it.lang in enabledLanguages }
