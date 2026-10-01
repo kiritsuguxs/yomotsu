@@ -102,6 +102,7 @@ android {
     splits { abi { isEnable = true; isUniversalApk = true; reset(); include("armeabi-v7a", "arm64-v8a", "x86", "x86_64") } }
     packaging {
         jniLibs {
+            pickFirsts += listOf("**/libc++_shared.so")
             keepDebugSymbols += listOf("libandroidx.graphics.path", "libarchive-jni", "libconscrypt_jni", "libimagedecoder", "libquickjs", "libsqlite3x").map { "**/$it.so" }
         }
         resources {
