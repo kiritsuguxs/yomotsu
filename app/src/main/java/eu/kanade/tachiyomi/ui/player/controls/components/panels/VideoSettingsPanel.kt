@@ -6,7 +6,7 @@ import eu.kanade.tachiyomi.ui.player.DebandSettings
 import eu.kanade.tachiyomi.ui.player.Debanding
 import eu.kanade.tachiyomi.ui.player.VideoFilters
 import eu.kanade.tachiyomi.ui.player.controls.components.panels.components.MultiCardPanel
-import tachiyomi.i18n.animiru.AMMR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
@@ -27,7 +27,7 @@ fun VideoSettingsPanel(
 ) {
     MultiCardPanel(
         onDismissRequest = onDismissRequest,
-        title = stringResource(AMMR.strings.player_sheets_video_settings_title),
+        title = stringResource(AYMR.strings.player_sheets_video_settings_title),
         cardCount = 2,
         modifier = modifier,
     ) { index, cardModifier ->

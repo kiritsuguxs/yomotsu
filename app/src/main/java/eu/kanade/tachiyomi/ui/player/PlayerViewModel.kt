@@ -1065,12 +1065,6 @@ class PlayerViewModel @JvmOverloads constructor(
                     "video_filters" -> showPanel(Panels.VideoFilters)
                 }
             }
-            
-            }
-            ?.let {
-                    setPrimaryCustomButtonTitle(it)
-                }
-            }
             "switch_episode" -> {
                 when (data) {
                     "n" -> changeEpisode(false)

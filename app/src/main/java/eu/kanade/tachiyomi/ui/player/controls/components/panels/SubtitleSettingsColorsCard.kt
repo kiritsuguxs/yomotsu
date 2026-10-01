@@ -172,17 +172,17 @@ fun resetColors(
 ) {
     when (type) {
         SubColorType.Text -> {
-            val textColor = preferences.textColorSubtitles().deleteAndGet().toColorHexString()
+            val textColor = preferences.textColorSubtitles().apply { delete() }.get().toColorHexString()
             mpv?.setPropertyString("sub-color", textColor)
         }
 
         SubColorType.Border -> {
-            val borderColor = preferences.borderColorSubtitles().deleteAndGet().toColorHexString()
+            val borderColor = preferences.borderColorSubtitles().apply { delete() }.get().toColorHexString()
             mpv?.setPropertyString("sub-outline-color", borderColor)
         }
 
         SubColorType.Background -> {
-            val backgroundColor = preferences.backgroundColorSubtitles().deleteAndGet().toColorHexString()
+            val backgroundColor = preferences.backgroundColorSubtitles().apply { delete() }.get().toColorHexString()
             mpv?.setPropertyString("sub-back-color", backgroundColor)
         }
     }

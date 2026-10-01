@@ -36,7 +36,7 @@ import eu.kanade.tachiyomi.ui.player.Debanding
 import eu.kanade.tachiyomi.ui.player.controls.CARDS_MAX_WIDTH
 import eu.kanade.tachiyomi.ui.player.controls.panelCardsColors
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.animiru.AMMR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -56,7 +56,7 @@ fun VideoSettingsDebandCard(
         title = {
             Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.medium)) {
                 Icon(Icons.Default.Gradient, null)
-                Text(stringResource(AMMR.strings.player_sheets_deband_title))
+                Text(stringResource(AYMR.strings.player_sheets_deband_title))
             }
         },
         onExpand = { isExpanded = !isExpanded },

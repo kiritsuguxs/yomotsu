@@ -277,14 +277,14 @@ fun resetTypography(
     mpv: MPV,
     preferences: SubtitlePreferences,
 ) {
-    mpv.setPropertyBoolean("sub-bold", preferences.boldSubtitles().deleteAndGet())
-    mpv.setPropertyBoolean("sub-italic", preferences.italicSubtitles().deleteAndGet())
-    mpv.setPropertyString("sub-justify", preferences.subtitleJustification().deleteAndGet().value)
-    mpv.setPropertyString("sub-font", preferences.subtitleFont().deleteAndGet())
-    mpv.setPropertyInt("sub-font-size", preferences.subtitleFontSize().deleteAndGet())
-    mpv.setPropertyInt("sub-outline-size", preferences.subtitleBorderSize().deleteAndGet())
-    mpv.setPropertyInt("sub-shadow-offset", preferences.shadowOffsetSubtitles().deleteAndGet())
-    mpv.setPropertyString("sub-border-style", preferences.borderStyleSubtitles().deleteAndGet().value)
+    mpv.setPropertyBoolean("sub-bold", preferences.boldSubtitles().apply { delete() }.get())
+    mpv.setPropertyBoolean("sub-italic", preferences.italicSubtitles().apply { delete() }.get())
+    mpv.setPropertyString("sub-justify", preferences.subtitleJustification().apply { delete() }.get().value)
+    mpv.setPropertyString("sub-font", preferences.subtitleFont().apply { delete() }.get())
+    mpv.setPropertyInt("sub-font-size", preferences.subtitleFontSize().apply { delete() }.get())
+    mpv.setPropertyInt("sub-outline-size", preferences.subtitleBorderSize().apply { delete() }.get())
+    mpv.setPropertyInt("sub-shadow-offset", preferences.shadowOffsetSubtitles().apply { delete() }.get())
+    mpv.setPropertyString("sub-border-style", preferences.borderStyleSubtitles().apply { delete() }.get().value)
 }
 
 enum class SubtitlesBorderStyle(

@@ -40,8 +40,8 @@ class EpisodeLoader {
         ): List<Hoster> {
             val isDownloaded = isDownload(episode, anime)
             return when {
-                // SY -->
-                source is MergedSource -> {
+                isDownloaded -> getHostersOnDownloaded(episode, anime, source)
+                source is AnimeHttpSource -> getHostersOnHttp(episode, source)
                 source is LocalSource -> getHostersOnLocal(episode)
                 else -> error("source not supported")
             }
@@ -59,7 +59,7 @@ class EpisodeLoader {
                 episodeName = episode.name,
                 episodeScanlator = episode.scanlator,
                 // SY -->
-                animeTitle = anime.ogTitle,
+                animeTitle = anime.title,
                 // SY <--
                 sourceId = anime.source,
                 skipCache = true,

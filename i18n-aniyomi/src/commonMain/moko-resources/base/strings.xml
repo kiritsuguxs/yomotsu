@@ -583,4 +583,9 @@
     <string name="pref_download_fillermarked_items">Allow downloading of fillermarked episodes</string>
     <string name="show_episode_previews">Episode thumbnails</string>
     <string name="show_episode_summaries">Episode summaries</string>
+    <string name="player_sheets_subtitles_ass_no">No</string>
+    <string name="player_sheets_subtitles_ass_yes">Yes</string>
+    <string name="player_sheets_subtitles_ass_scale">Scale</string>
+    <string name="player_sheets_subtitles_ass_force">Force</string>
+    <string name="player_sheets_subtitles_ass_strip">Strip</string>
 </resources>
