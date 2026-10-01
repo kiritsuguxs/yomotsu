@@ -135,7 +135,7 @@ kotlin {
 baselineProfile { baselineProfileOutputDir = "baselineProfiles"; mergeIntoMain = true }
 
 dependencies {
-    implementation(libs.androidx.constraintLayout.compose)
+    implementation(libs.compose.constraintlayout)
     implementation(libs.mpv.lib)
     implementation(libs.bundles.cast)
     baselineProfile(projects.baselineProfile)
