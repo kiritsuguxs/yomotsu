@@ -81,10 +81,9 @@ import eu.kanade.tachiyomi.util.lang.byteSize
 import eu.kanade.tachiyomi.util.lang.takeBytes
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.cacheImageDir
-import exh.source.MERGED_SOURCE_ID
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
-import `is`.xyz.mpv.Utils
+import eu.kanade.tachiyomi.ui.player.utils.PlayerUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -121,8 +120,6 @@ import tachiyomi.domain.anime.interactor.GetAnime
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
-import tachiyomi.domain.custombuttons.interactor.GetCustomButtons
-import tachiyomi.domain.custombuttons.model.CustomButton
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.episode.interactor.GetEpisodesByAnimeId
 import tachiyomi.domain.episode.interactor.UpdateEpisode
@@ -173,8 +170,7 @@ class PlayerViewModel @JvmOverloads constructor(
     private val subtitlePreferences: SubtitlePreferences = Injekt.get(),
     private val gesturePreferences: GesturePreferences = Injekt.get(),
     private val basePreferences: BasePreferences = Injekt.get(),
-    private val getCustomButtons: GetCustomButtons = Injekt.get(),
-    private val trackSelect: TrackSelect = Injekt.get(),
+        private val trackSelect: TrackSelect = Injekt.get(),
     private val audioManager: AudioManager = Injekt.get(),
     brightnessManager: BrightnessManager = Injekt.get(),
     // SY -->
@@ -271,15 +267,9 @@ class PlayerViewModel @JvmOverloads constructor(
 
     // Start mpvKt
 
-    private val _customButtons = MutableStateFlow<ImmutableList<CustomButton>>(persistentListOf())
-    val customButtons = _customButtons.asStateFlow()
-
-    private val _primaryButtonTitle = MutableStateFlow("")
-    val primaryButtonTitle = _primaryButtonTitle.asStateFlow()
-
-    private val _primaryButton = MutableStateFlow<CustomButton?>(null)
-    val primaryButton = _primaryButton.asStateFlow()
-
+        
+        
+        
     val paused by mpv.propFlow<Boolean>("pause").collectAsState(viewModelScope)
     val pos by mpv.propFlow<Int>("time-pos").collectAsState(viewModelScope)
     val duration by mpv.propFlow<Int>("duration").collectAsState(viewModelScope)
@@ -403,8 +393,7 @@ class PlayerViewModel @JvmOverloads constructor(
         // must cost only the buttons instead of failing playback.
         viewModelScope.launchIO {
             try {
-                setCustomButtons(getCustomButtons.getAll())
-            } catch (e: Exception) {
+                            } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Failed to load custom buttons" }
             }
         }
@@ -477,16 +466,7 @@ class PlayerViewModel @JvmOverloads constructor(
         return fontFiles.distinct()
     }
 
-    private fun setCustomButtons(buttons: List<CustomButton>) {
-        _customButtons.update { _ -> buttons.toPersistentList() }
-        buttons.firstOrNull { it.isFavorite }?.let {
-            _primaryButton.update { _ -> it }
-            if (primaryButtonTitle.value.isEmpty()) {
-                setPrimaryCustomButtonTitle(it)
-            }
-        }
-    }
-
+    
     fun isEpisodeOnline(): Boolean? {
         val anime = anime ?: return null
         val episode = currentEpisode.value ?: return null
@@ -1085,11 +1065,9 @@ class PlayerViewModel @JvmOverloads constructor(
                     "video_filters" -> showPanel(Panels.VideoFilters)
                 }
             }
-            "set_button_title" -> {
-                _primaryButtonTitle.update { _ -> data }
+            
             }
-            "reset_button_title" -> {
-                _customButtons.value.firstOrNull { it.isFavorite }?.let {
+            ?.let {
                     setPrimaryCustomButtonTitle(it)
                 }
             }
@@ -1398,11 +1376,11 @@ class PlayerViewModel @JvmOverloads constructor(
                 val filteredEpisodes = episodes.filterNot {
                     // ANK -->
                     when {
-                        skipSeen && it.seen -> true
+                        skipSeen && it.read -> true
                         skipFiltered -> {
                             // ANK <--
-                            (anime.unseenFilterRaw == Anime.EPISODE_SHOW_SEEN && !it.seen) ||
-                                (anime.unseenFilterRaw == Anime.EPISODE_SHOW_UNSEEN && it.seen) ||
+                            (anime.unseenFilterRaw == Anime.EPISODE_SHOW_SEEN && !it.read) ||
+                                (anime.unseenFilterRaw == Anime.EPISODE_SHOW_UNSEEN && it.read) ||
                                 // SY -->
                                 (anime.downloadedFilterRaw == Anime.EPISODE_SHOW_DOWNLOADED && !isEpisodeDownloaded(it)) ||
                                 (anime.downloadedFilterRaw == Anime.EPISODE_SHOW_NOT_DOWNLOADED && isEpisodeDownloaded(it)) ||
@@ -1537,7 +1515,7 @@ class PlayerViewModel @JvmOverloads constructor(
                 _hasNextEpisode.update { _ -> getCurrentEpisodeIndex() != currentPlaylist.value.size - 1 }
 
                 // Write to mpv table
-                val parentTitle = anime.parentId?.let { getAnime.await(it)?.title } ?: ""
+                val parentTitle = ""
                 mpv.setPropertyString("user-data/current-anime/anime-title", anime.title)
                 mpv.setPropertyString("user-data/current-anime/parent-title", parentTitle)
                 mpv.setPropertyInt("user-data/current-anime/intro-length", getAnimeSkipIntroLength())
@@ -1594,7 +1572,7 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun updateEpisode(episode: Episode) {
         mediaTitle.update { _ -> episode.name }
         _isEpisodeOnline.update { _ -> isEpisodeOnline() == true }
-        mpv.setPropertyDouble("user-data/current-anime/episode-number", episode.episode_number.toDouble())
+        mpv.setPropertyDouble("user-data/current-anime/episode-number", episode.chapterNumber.toDouble())
     }
 
     /**
@@ -2066,14 +2044,13 @@ class PlayerViewModel @JvmOverloads constructor(
 
         val seconds = position * 1000L
         val totalSeconds = dur * 1000L
-        currentEp.total_seconds = totalSeconds
-
+        
         episodePosition = seconds
 
         // ANK -->
         if (!incognitoMode) {
             // Save last second seen and mark as seen if needed
-            currentEp.last_second_seen = seconds
+            _currentEpisode.update { it?.copy(lastPageRead = seconds) }
 
             val progress = playerPreferences.progressPreference().get()
             if (seconds >= totalSeconds * progress) {
@@ -2092,7 +2069,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
             // SY -->
             // Check if syncing is enabled for episode open:
-            if (isSyncEnabled && syncTriggerOpt.syncOnEpisodeOpen && currentEp.last_second_seen == 0L) {
+            if (isSyncEnabled && syncTriggerOpt.syncOnEpisodeOpen && currentEp.lastPageRead == 0L) {
                 SyncDataJob.startNow(Injekt.get<Application>())
             }
             // SY <--
@@ -2105,9 +2082,10 @@ class PlayerViewModel @JvmOverloads constructor(
     }
 
     private fun updateEpisodeProgressOnComplete(currentEp: Episode) {
-        currentEp.seen = true
-        updateTrackEpisodeSeen(currentEp)
-        deleteEpisodeIfNeeded(currentEp)
+        val updatedEp = currentEp.copy(read = true)
+        _currentEpisode.update { updatedEp }
+        updateTrackEpisodeSeen(updatedEp)
+        deleteEpisodeIfNeeded(updatedEp)
 
         val markDuplicateAsSeen = libraryPreferences.markDuplicateReadChapterAsRead().get()
             .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
@@ -2116,9 +2094,9 @@ class PlayerViewModel @JvmOverloads constructor(
         val duplicateUnseenEpisodes = unfilteredEpisodeList
             .mapNotNull { episode ->
                 if (
-                    !episode.seen &&
+                    !episode.read &&
                     episode.isRecognizedNumber &&
-                    episode.episodeNumber.toFloat() == currentEp.episode_number
+                    episode.episodeNumber.toFloat() == updatedEp.chapterNumber
                 ) {
                     EpisodeUpdate(id = episode.id, read = true)
                         // KMK -->
@@ -2229,13 +2207,11 @@ class PlayerViewModel @JvmOverloads constructor(
         if (!incognitoMode) {
             updateEpisode.await(
                 EpisodeUpdate(
-                    id = episode.id!!,
-                    read = episode.seen,
+                    id = episode.id,
+                    read = episode.read,
                     bookmark = episode.bookmark,
-                    fillermark = episode.fillermark,
-                    lastPageRead = episode.last_second_seen,
-                    totalPages = episode.total_seconds,
-                ),
+                                        lastPageRead = episode.lastPageRead,
+                                    ),
             )
         }
     }
@@ -2275,8 +2251,7 @@ class PlayerViewModel @JvmOverloads constructor(
             updateEpisode.await(
                 EpisodeUpdate(
                     id = episodeId!!,
-                    fillermark = fillermarked,
-                ),
+                                    ),
             )
         }
     }
@@ -2305,7 +2280,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val notifier = SaveImageNotifier(context)
         notifier.onClear()
 
-        val seconds = timePos?.let { Utils.prettyTime(it) } ?: return
+        val seconds = timePos?.let { PlayerUtils.prettyTime(it) } ?: return
         val filename = generateFilename(anime, seconds) ?: return
 
         // Pictures directory.
@@ -2347,7 +2322,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val context = Injekt.get<Application>()
         val destDir = context.cacheImageDir
 
-        val seconds = timePos?.let { Utils.prettyTime(it) } ?: return
+        val seconds = timePos?.let { PlayerUtils.prettyTime(it) } ?: return
         val filename = generateFilename(anime, seconds) ?: return
 
         try {
@@ -2410,7 +2385,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val context = Injekt.get<Application>()
 
         viewModelScope.launchNonCancellable {
-            trackEpisode.await(context, anime.id, episode.episode_number.toDouble())
+            trackEpisode.await(context, anime.id, episode.chapterNumber.toDouble())
         }
     }
 
@@ -2419,7 +2394,7 @@ class PlayerViewModel @JvmOverloads constructor(
      * manager handles persisting it across process deaths.
      */
     private fun enqueueDeleteSeenEpisodes(episode: Episode) {
-        if (!episode.seen) return
+        if (!episode.read) return
         val anime = anime ?: return
         viewModelScope.launchNonCancellable {
             downloadManager.enqueueEpisodesToDelete(listOf(episode.toDomainEpisode()!!), anime)
@@ -2489,7 +2464,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val animeId = anime?.id ?: return null
         val trackerManager = Injekt.get<TrackerManager>()
         var malId: Long?
-        val episodeNumber = currentEpisode.value?.episode_number?.toInt() ?: return null
+        val episodeNumber = currentEpisode.value?.chapterNumber?.toInt() ?: return null
         if (getTracks.await(animeId).isEmpty()) {
             logcat { "AniSkip: No tracks found for anime $animeId" }
             return null
@@ -2584,10 +2559,7 @@ class PlayerViewModel @JvmOverloads constructor(
         skipIntro(chapter.chapterTitle)
     }
 
-    fun setPrimaryCustomButtonTitle(button: CustomButton) {
-        _primaryButtonTitle.update { _ -> button.name }
-    }
-
+    
     sealed class Event {
         data class SetCoverResult(val result: SetAsCover, val artType: ArtType) : Event()
         data class SavedImage(val result: SaveImageResult) : Event()
@@ -2610,13 +2582,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
 private val FONT_EXTENSION_REGEX = Regex($$""".*\.[ot]tf$""")
 
-fun CustomButton.execute(mpv: MPV) {
-    mpv.command("script-message", "call_button_$id")
-}
 
-fun CustomButton.executeLongPress(mpv: MPV) {
-    mpv.command("script-message", "call_button_${id}_long")
-}
 
 fun Float.normalize(inMin: Float, inMax: Float, outMin: Float, outMax: Float): Float {
     return (this - inMin) * (outMax - outMin) / (inMax - inMin) + outMin

@@ -12,6 +12,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Gradient
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.NotInterested
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconToggleButton
@@ -77,7 +79,7 @@ fun VideoSettingsDebandCard(
                         when (it) {
                             Debanding.None -> Icon(Icons.Default.NotInterested, null)
                             Debanding.CPU -> Icon(Icons.Default.Memory, null)
-                            Debanding.GPU -> Icon(painterResource(R.drawable.expansion_card), null)
+                            Debanding.GPU -> Icon(Icons.Default.Settings, null)
                         }
                     }
                 }
@@ -90,7 +92,7 @@ fun VideoSettingsDebandCard(
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(painterResource(R.drawable.reset_iso_24px), null)
+                        Icon(Icons.Default.Restore, null)
                         Text(stringResource(MR.strings.action_reset))
                     }
                 }

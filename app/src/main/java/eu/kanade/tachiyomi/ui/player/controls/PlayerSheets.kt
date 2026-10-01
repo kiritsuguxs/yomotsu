@@ -21,7 +21,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import dev.vivvvek.seeker.Segment
 import eu.kanade.tachiyomi.ui.player.ArtType
 import eu.kanade.tachiyomi.ui.player.Decoder
 import eu.kanade.tachiyomi.ui.player.Panels
@@ -38,7 +37,6 @@ import eu.kanade.tachiyomi.ui.player.controls.components.sheets.SubtitlesSheet
 import eu.kanade.tachiyomi.ui.player.settings.AudioChannels
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import tachiyomi.domain.custombuttons.model.CustomButton
 import java.io.InputStream
 
 @Composable
@@ -92,9 +90,6 @@ fun PlayerSheets(
     onStartSleepTimer: (Int) -> Unit,
     onStatisticsPageChange: (Int) -> Unit,
     onAudioChannelsChange: (AudioChannels) -> Unit,
-    onCustomButtonClick: (CustomButton) -> Unit,
-    onCustomButtonLongClick: (CustomButton) -> Unit,
-    buttons: ImmutableList<CustomButton>,
 
     // Screenshot sheet
     isLocalSource: Boolean,
@@ -180,12 +175,9 @@ fun PlayerSheets(
                 remainingTime = sleepTimerTimeRemaining,
                 onStartTimer = onStartSleepTimer,
                 onStatisticsPageChange = onStatisticsPageChange,
-                onCustomButtonClick = onCustomButtonClick,
-                onCustomButtonLongClick = onCustomButtonLongClick,
                 onAudioChannelsChange = onAudioChannelsChange,
                 onDismissRequest = onDismissRequest,
                 onEnterFiltersPanel = { onOpenPanel(Panels.VideoFilters) },
-                customButtons = buttons,
             )
         }
 

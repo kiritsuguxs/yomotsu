@@ -9,12 +9,10 @@ import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.source.online.all.MergedSource
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.HosterState
 import kotlinx.coroutines.CancellationException
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.episode.model.Episode
-import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.source.local.LocalSource
 import tachiyomi.source.local.io.LocalSourceFileSystem
@@ -39,34 +37,11 @@ class EpisodeLoader {
             anime: Anime,
             source: AnimeSource,
             sourceManager: SourceManager? = null,
-            mergedReferences: List<MergedMangaReference> = emptyList(),
-            mergedManga: Map<Long, Anime>? = null,
         ): List<Hoster> {
             val isDownloaded = isDownload(episode, anime)
             return when {
                 // SY -->
                 source is MergedSource -> {
-                    val mangaReference = mergedReferences.firstOrNull {
-                        it.animeId == episode.animeId
-                    } ?: error("Merge reference null")
-                    val actualSource = sourceManager?.get(mangaReference.animeSourceId)
-                        ?: error("Source ${mangaReference.animeSourceId} was null")
-                    val manga = mergedManga?.get(episode.animeId) ?: error("Anime for merged episode was null")
-                    val isMergedMangaDownloaded = isDownload(episode, manga)
-                    when {
-                        isMergedMangaDownloaded -> getHostersOnDownloaded(
-                            episode = episode,
-                            anime = manga,
-                            source = actualSource,
-                        )
-                        actualSource is HttpSource -> getHostersOnHttp(episode, actualSource)
-                        actualSource is LocalSource -> getHostersOnLocal(episode)
-                        else -> error("Source not found")
-                    }
-                }
-                // SY <--
-                isDownloaded -> getHostersOnDownloaded(episode, anime, source)
-                source is HttpSource -> getHostersOnHttp(episode, source)
                 source is LocalSource -> getHostersOnLocal(episode)
                 else -> error("source not supported")
             }
@@ -117,7 +92,7 @@ class EpisodeLoader {
          * @param episode the episode being parsed.
          * @param source the online source of the episode.
          */
-        private suspend fun getHostersOnHttp(episode: Episode, source: HttpSource): List<Hoster> {
+        private suspend fun getHostersOnHttp(episode: Episode, source: AnimeHttpSource): List<Hoster> {
             // TODO(16): Remove else block when dropping support for ext lib <1.6
             return if (checkHasHosters(source)) {
                 source.getHosterList(episode.toSEpisode())

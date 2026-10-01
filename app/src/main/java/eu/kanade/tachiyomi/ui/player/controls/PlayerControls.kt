@@ -157,8 +157,6 @@ fun PlayerControls(
     var isSeeking by remember { mutableStateOf(false) }
     var resetControls by remember { mutableStateOf(true) }
 
-    val customButtons by viewModel.customButtons.collectAsState()
-    val customButton by viewModel.primaryButton.collectAsState()
 
     LaunchedEffect(
         controlsShown,
@@ -511,7 +509,6 @@ fun PlayerControls(
                 }
                 // Bottom right controls
                 val skipIntroButton by viewModel.skipIntroText.collectAsState()
-                val customButtonTitle by viewModel.primaryButtonTitle.collectAsState()
                 AnimatedVisibility(
                     controlsShown && !areControlsLocked,
                     enter = if (!reduceMotion) {
@@ -533,8 +530,6 @@ fun PlayerControls(
                 ) {
                     val activity = LocalActivity.current as PlayerActivity
                     BottomRightPlayerControls(
-                        customButton = customButton,
-                        customButtonTitle = customButtonTitle,
                         skipIntroButton = skipIntroButton,
                         onPressSkipIntroButton = viewModel::onSkipIntro,
                         isPipAvailable = activity.isPipSupportedAndEnabled,
@@ -542,12 +537,6 @@ fun PlayerControls(
                             if (!viewModel.isLoadingEpisode.value) {
                                 activity.enterPictureInPictureMode(activity.createPipParams())
                             }
-                        },
-                        onCustomButtonClick = {
-                            customButton?.execute(viewModel.mpv)
-                        },
-                        onCustomButtonLongClick = {
-                            customButton?.executeLongPress(viewModel.mpv)
                         },
                         onAspectClick = {
                             viewModel.changeVideoAspect(
@@ -692,9 +681,6 @@ fun PlayerControls(
                 }
                 viewModel.mpv.setPropertyString(it.property, it.value)
             },
-            onCustomButtonClick = { it.execute(viewModel.mpv) },
-            onCustomButtonLongClick = { it.executeLongPress(viewModel.mpv) },
-            buttons = customButtons,
             onPitchCorrectionChange = {
                 audioPreferences.enablePitchCorrection().set(it)
                 viewModel.mpv.setPropertyBoolean("audio-pitch-correction", it)

@@ -45,8 +45,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.vivvvek.seeker.Segment
-import `is`.xyz.mpv.Utils
 import tachiyomi.presentation.core.components.material.padding
 
 @Composable
@@ -90,7 +88,7 @@ fun CurrentChapter(
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
-                    text = Utils.prettyTime(currentChapter.start.toInt()),
+                    text = eu.kanade.tachiyomi.ui.player.utils.PlayerUtils.prettyTime(currentChapter.start.toInt()),
                     fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,

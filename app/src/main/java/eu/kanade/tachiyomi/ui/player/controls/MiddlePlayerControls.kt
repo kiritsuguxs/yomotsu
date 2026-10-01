@@ -35,7 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.player.controls.components.ControlsButton
-import `is`.xyz.mpv.Utils
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -97,8 +96,8 @@ fun MiddlePlayerControls(
                     stringResource(
                         AYMR.strings.player_gesture_seek_indicator,
                         if (gestureSeekAmount.second >= 0) '+' else '-',
-                        Utils.prettyTime(abs(gestureSeekAmount.second)),
-                        Utils.prettyTime(gestureSeekAmount.first + gestureSeekAmount.second),
+                        eu.kanade.tachiyomi.ui.player.utils.PlayerUtils.prettyTime(abs(gestureSeekAmount.second)),
+                        eu.kanade.tachiyomi.ui.player.utils.PlayerUtils.prettyTime(gestureSeekAmount.first + gestureSeekAmount.second),
                     ),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         shadow = Shadow(Color.Black, blurRadius = 5f),

@@ -25,17 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import eu.kanade.tachiyomi.ui.player.controls.components.ControlsButton
 import eu.kanade.tachiyomi.ui.player.controls.components.FilledControlsButton
-import tachiyomi.domain.custombuttons.model.CustomButton
 
 @Composable
 fun BottomRightPlayerControls(
-    customButton: CustomButton?,
-    customButtonTitle: String,
     skipIntroButton: String?,
     onPressSkipIntroButton: () -> Unit,
     isPipAvailable: Boolean,
-    onCustomButtonClick: () -> Unit,
-    onCustomButtonLongClick: () -> Unit,
     onAspectClick: () -> Unit,
     onPipClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -47,13 +42,6 @@ fun BottomRightPlayerControls(
                 onClick = onPressSkipIntroButton,
                 onLongClick = {},
             )
-        } else if (customButton != null) {
-            FilledControlsButton(
-                text = customButtonTitle,
-                onClick = onCustomButtonClick,
-                onLongClick = onCustomButtonLongClick,
-            )
-        }
 
         if (isPipAvailable) {
             ControlsButton(

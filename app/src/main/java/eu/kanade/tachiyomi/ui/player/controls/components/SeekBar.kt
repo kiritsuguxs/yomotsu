@@ -37,12 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.vivvvek.seeker.Seeker
-import dev.vivvvek.seeker.SeekerDefaults
-import dev.vivvvek.seeker.Segment
 import eu.kanade.tachiyomi.animesource.model.ChapterType
 import eu.kanade.tachiyomi.ui.player.controls.LocalPlayerButtonsClickEvent
-import `is`.xyz.mpv.Utils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import tachiyomi.presentation.core.components.material.padding
@@ -91,29 +87,13 @@ fun SeekbarWithTimers(
             },
             modifier = Modifier.width(92.dp),
         )
-        Seeker(
+        Slider(
             value = position.coerceIn(0f, duration),
-            range = 0f..duration,
+            valueRange = 0f..duration,
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,
-            readAheadValue = readAheadValue,
-            segments = chapters
-                .filter { it.start in 0f..duration }
-                .let {
-                    // add an extra segment at 0 if it doesn't exist.
-                    if (it.isNotEmpty() && it[0].start != 0f) {
-                        persistentListOf(Segment("", 0f)) + it
-                    } else {
-                        it
-                    } + it
-                },
             modifier = Modifier.weight(1f),
-            colors = SeekerDefaults.seekerColors(
-                progressColor = MaterialTheme.colorScheme.primary,
-                thumbColor = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.background,
-                readAheadColor = MaterialTheme.colorScheme.inversePrimary,
-            ),
+            
         )
         VideoTimer(
             value = if (timersInverted.second) -remaining else duration,
@@ -144,7 +124,7 @@ fun VideoTimer(
                 onClick = onClick,
             )
             .wrapContentHeight(Alignment.CenterVertically),
-        text = Utils.prettyTime(value.toInt(), isInverted),
+        text = eu.kanade.tachiyomi.ui.player.utils.PlayerUtils.prettyTime(value.toInt(), isInverted),
         color = Color.White,
         textAlign = TextAlign.Center,
     )

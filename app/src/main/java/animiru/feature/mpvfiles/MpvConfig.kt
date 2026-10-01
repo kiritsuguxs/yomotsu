@@ -15,8 +15,6 @@ import kotlinx.coroutines.isActive
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.custombuttons.interactor.GetCustomButtons
-import tachiyomi.domain.custombuttons.model.CustomButton
 import tachiyomi.domain.storage.service.StorageManager
 import java.io.IOException
 import java.io.InputStream
@@ -28,7 +26,6 @@ class MpvConfig(
     private val context: Context,
     private val storageManager: StorageManager,
     private val advancedPlayerPreferences: AdvancedPlayerPreferences,
-    private val getCustomButtons: GetCustomButtons,
 ) {
     // ANK -->
     // A plain CoroutineScope lets any failure reach the default uncaught handler and kill the app,
@@ -122,11 +119,7 @@ class MpvConfig(
             copyDirectoryContents(storageManager.getShadersDirectory(), shadersDir)
         }
 
-        val buttons = getCustomButtons.getAll()
-        setupCustomButtons(buttons)
 
-        // Copy over the bridge file
-        val luaFile = scriptsDir.createFile("aniyomi.lua") ?: return
         context.assets.open("aniyomi.lua").use { inputStream ->
             luaFile.openOutputStream().use { outputStream ->
                 inputStream.copyTo(outputStream)
@@ -134,43 +127,6 @@ class MpvConfig(
         }
     }
 
-    fun setupCustomButtons(buttons: List<CustomButton>) {
-        val scriptsDir = getMpvDir().createDirectory(MPV_SCRIPTS_DIR)!!
-        val primaryButtonId = buttons.firstOrNull { it.isFavorite }?.id ?: 0L
-
-        val customButtonsContent = buildString {
-            appendLine(
-                """
-                    local lua_modules = mp.find_config_file('scripts')
-                    if lua_modules then
-                        package.path = package.path .. ';' .. lua_modules .. '/?.lua;' .. lua_modules .. '/?/init.lua;' .. '${scriptsDir.filePath}' .. '/?.lua'
-                    end
-                    local aniyomi = require 'aniyomi'
-                """.trimIndent(),
-            )
-
-            buttons.forEach { button ->
-                appendLine(
-                    """
-                        ${button.getButtonOnStartup(primaryButtonId)}
-                        function button${button.id}()
-                            ${button.getButtonContent(primaryButtonId)}
-                        end
-                        mp.register_script_message('call_button_${button.id}', button${button.id})
-                        function button${button.id}long()
-                            ${button.getButtonLongPressContent(primaryButtonId)}
-                        end
-                        mp.register_script_message('call_button_${button.id}_long', button${button.id}long)
-                    """.trimIndent(),
-                )
-            }
-        }
-
-        val file = scriptsDir.createFile("custombuttons.lua")
-        file?.openOutputStream()?.bufferedWriter()?.use {
-            it.write(customButtonsContent)
-        }
-    }
 
     private suspend fun copyFontsDirectory(mpvDir: UniFile) {
         // TODO: I think this is a bad hack.

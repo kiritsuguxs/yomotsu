@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.ui.player.domain
 
 import androidx.core.os.LocaleListCompat
-import eu.kanade.presentation.util.parseCommaSeparatedList
 import eu.kanade.tachiyomi.ui.player.VideoTrack
 import eu.kanade.tachiyomi.ui.player.settings.AudioPreferences
 import eu.kanade.tachiyomi.ui.player.settings.SubtitlePreferences
@@ -19,21 +18,21 @@ class TrackSelect(
             subtitlePreferences.preferredSubLanguages().get()
         } else {
             audioPreferences.preferredAudioLanguages().get()
-        }.parseCommaSeparatedList()
+        }.split(",").map { it.trim() }.filterNot { it.isBlank() }
 
         val whitelist = if (subtitle) {
             subtitlePreferences.subtitleWhitelist().get()
         } else {
             ""
-        }.parseCommaSeparatedList()
+        }.split(",").map { it.trim() }.filterNot { it.isBlank() }
 
         val blacklist = if (subtitle) {
             subtitlePreferences.subtitleBlacklist().get()
         } else {
             ""
-        }.parseCommaSeparatedList()
+        }.split(",").map { it.trim() }.filterNot { it.isBlank() }
 
-        val locales = prefLangs.map(::Locale).ifEmpty {
+        val locales = prefLangs.map { Locale(it) }.ifEmpty {
             listOf(LocaleListCompat.getDefault()[0]!!)
         }
 
@@ -44,7 +43,7 @@ class TrackSelect(
         // ANK -->
         val filtered = tracks.asSequence()
             .filterNot { track ->
-                blacklist.any { track.title.contains(it, true) }
+                blacklist.any { track.title?.contains(it, true) == true }
             }
             .filter { track ->
                 chosenLocale?.let { containsLang(track, it) } ?: true
@@ -52,7 +51,7 @@ class TrackSelect(
 
         whitelist.forEach { w ->
             filtered.firstOrNull { track ->
-                track.title.contains(w, true)
+                track.title?.contains(w, true) == true
             }?.let { return it }
         }
 

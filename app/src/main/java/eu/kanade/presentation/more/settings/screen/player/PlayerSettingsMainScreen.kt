@@ -39,7 +39,6 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.more.settings.screen.SettingsSearchScreen
-import eu.kanade.presentation.more.settings.screen.player.custombutton.PlayerSettingsCustomButtonScreen
 import eu.kanade.presentation.more.settings.screen.player.editor.PlayerSettingsEditorScreen
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.LocalBackPress
@@ -205,12 +204,6 @@ object PlayerSettingsMainScreen : Screen() {
             subtitleRes = AYMR.strings.pref_player_audio_summary,
             icon = Icons.Outlined.Audiotrack,
             screen = PlayerSettingsAudioScreen,
-        ),
-        Item(
-            titleRes = AYMR.strings.pref_player_custom_button,
-            subtitleRes = AYMR.strings.pref_player_custom_button_summary,
-            icon = Icons.Outlined.Terminal,
-            screen = PlayerSettingsCustomButtonScreen,
         ),
         Item(
             titleRes = AYMR.strings.pref_player_editor,

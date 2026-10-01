@@ -29,8 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import dev.vivvvek.seeker.Segment
-import `is`.xyz.mpv.Utils
 import kotlinx.collections.immutable.ImmutableList
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
@@ -91,7 +89,7 @@ fun ChapterTrack(
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            Utils.prettyTime(chapter.start.toInt()),
+            eu.kanade.tachiyomi.ui.player.utils.PlayerUtils.prettyTime(chapter.start.toInt()),
             fontStyle = if (selected) FontStyle.Italic else FontStyle.Normal,
             fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Normal,
         )

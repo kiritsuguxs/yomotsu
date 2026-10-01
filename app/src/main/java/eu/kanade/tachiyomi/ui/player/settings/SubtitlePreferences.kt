@@ -13,7 +13,7 @@ import eu.kanade.tachiyomi.ui.player.controls.components.panels.SubtitlesBorderS
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getEnum
-import tachiyomi.i18n.animiru.AMMR
+import tachiyomi.i18n.aniyomi.AYMR
 
 class SubtitlePreferences(
     private val preferenceStore: PreferenceStore,
@@ -84,11 +84,11 @@ enum class SubtitleAssOverride(
     val value: String,
     val titleRes: StringResource,
 ) {
-    No("no", AMMR.strings.player_sheets_subtitles_ass_no),
-    Yes("yes", AMMR.strings.player_sheets_subtitles_ass_yes),
-    Scale("scale", AMMR.strings.player_sheets_subtitles_ass_scale),
-    Force("force", AMMR.strings.player_sheets_subtitles_ass_force),
-    Strip("strip", AMMR.strings.player_sheets_subtitles_ass_strip),
+    No("no", AYMR.strings.player_sheets_subtitles_ass_no),
+    Yes("yes", AYMR.strings.player_sheets_subtitles_ass_yes),
+    Scale("scale", AYMR.strings.player_sheets_subtitles_ass_scale),
+    Force("force", AYMR.strings.player_sheets_subtitles_ass_force),
+    Strip("strip", AYMR.strings.player_sheets_subtitles_ass_strip),
     ;
 
     companion object {

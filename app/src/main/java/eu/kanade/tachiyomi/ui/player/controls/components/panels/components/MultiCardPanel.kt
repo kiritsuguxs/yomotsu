@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
 import eu.kanade.tachiyomi.ui.player.controls.CARDS_MAX_WIDTH
 import tachiyomi.presentation.core.components.material.padding
 
@@ -53,16 +52,15 @@ fun MultiCardPanel(
     val orientation = LocalConfiguration.current.orientation
     val cards = remember { movableContentOf { p1: Int, p2: Modifier -> cards(p1, p2) } }
 
-    ConstraintLayout(modifier = modifier.fillMaxSize()) {
-        val settingsCards = createRef()
+    Box(modifier = modifier.fillMaxSize()) {
+        
 
         val pagerState = rememberPagerState { cardCount }
         if (orientation == ORIENTATION_PORTRAIT) {
             Column(
-                modifier = Modifier.constrainAs(settingsCards) {
-                    top.linkTo(parent.top, 32.dp)
-                    start.linkTo(parent.start)
-                },
+                modifier = Modifier.padding(top = 32.dp).align(Alignment.TopStart),
+                    
+                    
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
             ) {
                 TopAppBar(
@@ -95,10 +93,9 @@ fun MultiCardPanel(
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
                 modifier = Modifier
-                    .constrainAs(settingsCards) {
-                        top.linkTo(parent.top)
-                        end.linkTo(parent.end, 32.dp)
-                    }
+                    
+                        
+                        .padding(end = 32.dp).align(Alignment.TopEnd)
                     .verticalScroll(rememberScrollState()),
             ) {
                 Spacer(Modifier.height(16.dp))
