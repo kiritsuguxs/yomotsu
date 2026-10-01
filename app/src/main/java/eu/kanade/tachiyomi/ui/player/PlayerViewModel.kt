@@ -343,11 +343,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val anime = anime!!
         runBlocking {
             // KMK -->
-            if (anime.source == MERGED_SOURCE_ID) {
-                getMergedChaptersByMangaId.await(anime.id, dedupe = false, applyFilter = false)
-            } else {
-                getEpisodesByAnimeId.await(anime.id, applyFilter = false)
-            }
+                            getEpisodesByAnimeId.await(anime.id, applyFilter = false)
             // KMK <--
         }
     }
@@ -1479,7 +1475,7 @@ class PlayerViewModel @JvmOverloads constructor(
             if (anime != null) {
                 // SY -->
                 sourceManager.isInitialized.first { it }
-                val source = sourceManager.getOrStub(anime.source)
+                val source = sourceManager.getOrStub(anime.source) as AnimeSource
                 val mergedReferences = if (source is MergedSource) {
                     getMergedReferencesById.await(anime.id)
                 } else {
@@ -1603,8 +1599,8 @@ class PlayerViewModel @JvmOverloads constructor(
             }
             // ANK <--
             .run {
-                if (basePreferences.downloadedOnly().get()) {
-                    filterDownloaded(anime, animeMap)
+                if (basePreferences.downloadedOnly.get()) {
+                    filterDownloaded(anime)
                 } else {
                     this
                 }
@@ -1980,7 +1976,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
     suspend fun loadEpisode(episodeId: Long?): EpisodeLoadResult? {
         val anime = anime ?: return null
-        val source = sourceManager.getOrStub(anime.source)
+        val source = sourceManager.getOrStub(anime.source) as AnimeSource
 
         val chosenEpisode = currentPlaylist.value.firstOrNull { ep -> ep.id == episodeId } ?: return null
 
@@ -2017,8 +2013,6 @@ class PlayerViewModel @JvmOverloads constructor(
      */
     fun onSecondReached(position: Long) {
         // ANK -->
-        val syncTriggerOpt = syncPreferences.getSyncTriggerOptions()
-        val isSyncEnabled = syncPreferences.isSyncEnabled()
         // ANK <--
 
         if (isLoadingEpisode.value) return
@@ -2044,17 +2038,14 @@ class PlayerViewModel @JvmOverloads constructor(
         // ANK -->
         if (!incognitoMode) {
             // Save last second seen and mark as seen if needed
-            _currentEpisode.update { it?.copy(lastPageRead = seconds) }
+            currentEp.last_second_seen = seconds
 
             val progress = playerPreferences.progressPreference().get()
-            if (seconds >= totalSeconds * progress) {
+            if (seconds >= (totalSeconds * progress).toLong()) {
                 updateEpisodeProgressOnComplete(currentEp)
 
                 // SY -->
                 // Check if syncing is enabled for episode seen:
-                if (isSyncEnabled && syncTriggerOpt.syncOnEpisodeSeen) {
-                    SyncDataJob.startNow(Injekt.get<Application>())
-                }
                 // SY <--
             }
             // ANK <--
@@ -2069,19 +2060,20 @@ class PlayerViewModel @JvmOverloads constructor(
             // SY <--
         }
 
-        val inDownloadRange = seconds.toDouble() / totalSeconds > 0.35
+        val inDownloadRange = seconds.toDouble() / totalSeconds.toDouble() > 0.35
         if (inDownloadRange) {
             downloadNextEpisodes()
         }
     }
 
     private fun updateEpisodeProgressOnComplete(currentEp: Episode) {
-        val updatedEp = currentEp.copy(read = true)
+        currentEp.read = true
+        val updatedEp = currentEp
         _currentEpisode.update { updatedEp }
         updateTrackEpisodeSeen(updatedEp)
         deleteEpisodeIfNeeded(updatedEp)
 
-        val markDuplicateAsSeen = libraryPreferences.markDuplicateReadChapterAsRead().get()
+        val markDuplicateAsSeen = libraryPreferences.markDuplicateReadChapterAsRead.get()
             .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
         if (!markDuplicateAsSeen) return
 
@@ -2092,7 +2084,7 @@ class PlayerViewModel @JvmOverloads constructor(
                     episode.isRecognizedNumber &&
                     episode.episodeNumber.toFloat() == updatedEp.chapterNumber
                 ) {
-                    EpisodeUpdate(id = episode.id, read = true)
+                    EpisodeUpdate(id = episode.id!!, read = true)
                         // KMK -->
                         .also { deleteDupChapterIfNeeded(episode.copy(read = true).toDbEpisode()) }
                     // KMK <--
@@ -2134,7 +2126,7 @@ class PlayerViewModel @JvmOverloads constructor(
                     }
                 }
                 .take(downloadAheadAmount)
-            downloadManager.downloadEpisodes(anime, episodesToDownload)
+            downloadManager.downloadChapters(anime, episodesToDownload)
         }
     }
 
@@ -2149,7 +2141,7 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun deleteEpisodeIfNeeded(chosenEpisode: Episode) {
         // Determine which episode should be deleted and enqueue
         val currentEpisodePosition = currentPlaylist.value.indexOf(chosenEpisode)
-        val removeAfterSeenSlots = downloadPreferences.removeAfterReadSlots().get()
+        val removeAfterSeenSlots = downloadPreferences.removeAfterReadSlots.get()
         val episodeToDelete = currentPlaylist.value.getOrNull(
             currentEpisodePosition - removeAfterSeenSlots,
         )
@@ -2173,7 +2165,7 @@ class PlayerViewModel @JvmOverloads constructor(
      * based on the `removeAfterReadSlots` offset while the user is reading sequentially.
      */
     private fun deleteDupChapterIfNeeded(chosenEpisode: Episode) {
-        val removeAfterSeenSlots = downloadPreferences.removeAfterReadSlots().get()
+        val removeAfterSeenSlots = downloadPreferences.removeAfterReadSlots.get()
         if (removeAfterSeenSlots != 0) return
         enqueueDeleteSeenEpisodes(chosenEpisode)
     }
@@ -2201,10 +2193,10 @@ class PlayerViewModel @JvmOverloads constructor(
         if (!incognitoMode) {
             updateEpisode.await(
                 EpisodeUpdate(
-                    id = episode.id,
+                    id = episode.id!!,
                     read = episode.read,
                     bookmark = episode.bookmark,
-                                        lastPageRead = episode.lastPageRead,
+                                        lastPageRead = episode.last_page_read.toLong(),
                                     ),
             )
         }
@@ -2373,7 +2365,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
     private fun updateTrackEpisodeSeen(episode: Episode) {
         if (incognitoMode) return
-        if (!trackPreferences.autoUpdateTrack().get()) return
+        if (!trackPreferences.autoUpdateTrack.get()) return
 
         val anime = anime ?: return
         val context = Injekt.get<Application>()
@@ -2391,7 +2383,7 @@ class PlayerViewModel @JvmOverloads constructor(
         if (!episode.read) return
         val anime = anime ?: return
         viewModelScope.launchNonCancellable {
-            downloadManager.enqueueEpisodesToDelete(listOf(episode.toDomainEpisode()!!), anime)
+            downloadManager.enqueueChaptersToDelete(listOf(episode.toDomainEpisode()!!), anime)
         }
     }
 
@@ -2399,9 +2391,9 @@ class PlayerViewModel @JvmOverloads constructor(
      * Deletes all the pending episodes. This operation will run in a background thread and errors
      * are ignored.
      */
-    fun deletePendingEpisodes() {
+    fun deletePendingChapters() {
         viewModelScope.launchNonCancellable {
-            downloadManager.deletePendingEpisodes()
+            downloadManager.deletePendingChapters()
         }
     }
 

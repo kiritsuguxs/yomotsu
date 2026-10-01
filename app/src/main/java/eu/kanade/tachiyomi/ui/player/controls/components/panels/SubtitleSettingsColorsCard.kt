@@ -54,10 +54,10 @@ import eu.kanade.presentation.player.components.ExpandableCard
 import eu.kanade.presentation.player.components.SliderItem
 import eu.kanade.tachiyomi.ui.player.controls.CARDS_MAX_WIDTH
 import eu.kanade.tachiyomi.ui.player.controls.panelCardsColors
+import eu.kanade.tachiyomi.ui.player.utils.deleteAndGet
 import eu.kanade.tachiyomi.ui.player.settings.SubtitlePreferences
 import `is`.xyz.mpv.MPV
 import tachiyomi.core.common.preference.Preference
-import tachiyomi.core.common.preference.deleteAndGet
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
@@ -172,17 +172,17 @@ fun resetColors(
 ) {
     when (type) {
         SubColorType.Text -> {
-            val textColor = preferences.textColorSubtitles().apply { delete() }.get().toColorHexString()
+            val textColor = preferences.textColorSubtitles().deleteAndGet().toColorHexString()
             mpv?.setPropertyString("sub-color", textColor)
         }
 
         SubColorType.Border -> {
-            val borderColor = preferences.borderColorSubtitles().apply { delete() }.get().toColorHexString()
+            val borderColor = preferences.borderColorSubtitles().deleteAndGet().toColorHexString()
             mpv?.setPropertyString("sub-outline-color", borderColor)
         }
 
         SubColorType.Background -> {
-            val backgroundColor = preferences.backgroundColorSubtitles().apply { delete() }.get().toColorHexString()
+            val backgroundColor = preferences.backgroundColorSubtitles().deleteAndGet().toColorHexString()
             mpv?.setPropertyString("sub-back-color", backgroundColor)
         }
     }

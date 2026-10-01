@@ -22,6 +22,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import `is`.xyz.mpv.MPV
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -63,10 +64,10 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.player.controls.CARDS_MAX_WIDTH
 import eu.kanade.tachiyomi.ui.player.controls.panelCardsColors
 import eu.kanade.tachiyomi.ui.player.settings.SubtitleJustification
+import eu.kanade.tachiyomi.ui.player.utils.deleteAndGet
 import eu.kanade.tachiyomi.ui.player.settings.SubtitlePreferences
 import `is`.xyz.mpv.MPV
 import kotlinx.collections.immutable.ImmutableList
-import tachiyomi.core.common.preference.deleteAndGet
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
@@ -180,7 +181,7 @@ fun SubtitleSettingsTypographyCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    painterResource(R.drawable.outline_brand_family_24),
+                    painterResource(R.drawable.ic_text_format_24dp),
                     null,
                     modifier = Modifier.size(32.dp),
                 )
@@ -267,7 +268,7 @@ fun SubtitleSettingsTypographyCard(
                 onChange = onShadowOffsetChange,
                 valueRange = 0..100,
                 steps = 0,
-                icon = { Icon(painterResource(R.drawable.sharp_shadow_24), null) },
+                icon = { Icon(painterResource(R.drawable.ic_text_format_24dp), null) },
             )
         }
     }
@@ -277,14 +278,14 @@ fun resetTypography(
     mpv: MPV,
     preferences: SubtitlePreferences,
 ) {
-    mpv.setPropertyBoolean("sub-bold", preferences.boldSubtitles().apply { delete() }.get())
-    mpv.setPropertyBoolean("sub-italic", preferences.italicSubtitles().apply { delete() }.get())
-    mpv.setPropertyString("sub-justify", preferences.subtitleJustification().apply { delete() }.get().value)
-    mpv.setPropertyString("sub-font", preferences.subtitleFont().apply { delete() }.get())
-    mpv.setPropertyInt("sub-font-size", preferences.subtitleFontSize().apply { delete() }.get())
-    mpv.setPropertyInt("sub-outline-size", preferences.subtitleBorderSize().apply { delete() }.get())
-    mpv.setPropertyInt("sub-shadow-offset", preferences.shadowOffsetSubtitles().apply { delete() }.get())
-    mpv.setPropertyString("sub-border-style", preferences.borderStyleSubtitles().apply { delete() }.get().value)
+    mpv.setPropertyBoolean("sub-bold", preferences.boldSubtitles().deleteAndGet())
+    mpv.setPropertyBoolean("sub-italic", preferences.italicSubtitles().deleteAndGet())
+    mpv.setPropertyString("sub-justify", preferences.subtitleJustification().deleteAndGet().value)
+    mpv.setPropertyString("sub-font", preferences.subtitleFont().deleteAndGet())
+    mpv.setPropertyInt("sub-font-size", preferences.subtitleFontSize().deleteAndGet())
+    mpv.setPropertyInt("sub-outline-size", preferences.subtitleBorderSize().deleteAndGet())
+    mpv.setPropertyInt("sub-shadow-offset", preferences.shadowOffsetSubtitles().deleteAndGet())
+    mpv.setPropertyString("sub-border-style", preferences.borderStyleSubtitles().deleteAndGet().value)
 }
 
 enum class SubtitlesBorderStyle(

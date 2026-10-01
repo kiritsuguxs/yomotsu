@@ -6,6 +6,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
@@ -50,7 +53,7 @@ fun MultiCardPanel(
 ) {
     BackHandler(onBack = onDismissRequest)
     val orientation = LocalConfiguration.current.orientation
-    val cards = remember { movableContentOf { p1: Int, p2: Modifier -> cards(p1, p2) } }
+    val movableCards = remember { movableContentOf { p1: Int, p2: Modifier -> cards(p1, p2) } }
 
     Box(modifier = modifier.fillMaxSize()) {
         
@@ -85,7 +88,7 @@ fun MultiCardPanel(
                     contentPadding = PaddingValues(horizontal = MaterialTheme.padding.small),
                     beyondViewportPageCount = 1,
                 ) { page ->
-                    cards(page, Modifier.fillMaxWidth())
+                    movableCards(page, Modifier.fillMaxWidth())
                 }
             }
         } else {
@@ -114,7 +117,7 @@ fun MultiCardPanel(
                         Icon(imageVector = Icons.Default.Close, contentDescription = null)
                     }
                 }
-                repeat(cardCount) { cards(it, Modifier) }
+                repeat(cardCount) { movableCards(it, Modifier) }
                 Spacer(Modifier.height(16.dp))
             }
         }
