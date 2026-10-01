@@ -20,6 +20,12 @@ import tachiyomi.domain.storage.service.StoragePreferences
 import tachiyomi.domain.translation.TranslationPreferences
 import tachiyomi.domain.upcoming.service.UpcomingPreferences
 import tachiyomi.domain.updates.service.UpdatesPreferences
+import eu.kanade.tachiyomi.ui.player.settings.AdvancedPlayerPreferences
+import eu.kanade.tachiyomi.ui.player.settings.AudioPreferences
+import eu.kanade.tachiyomi.ui.player.settings.DecoderPreferences
+import eu.kanade.tachiyomi.ui.player.settings.GesturePreferences
+import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
+import eu.kanade.tachiyomi.ui.player.settings.SubtitlePreferences
 import uy.kohesive.injekt.api.InjektModule
 import uy.kohesive.injekt.api.InjektRegistrar
 import uy.kohesive.injekt.api.addSingletonFactory
@@ -85,6 +91,24 @@ class PreferenceModule(val app: Application) : InjektModule {
         }
         addSingletonFactory {
             BasePreferences(app, get())
+        }
+        addSingletonFactory {
+            PlayerPreferences(get())
+        }
+        addSingletonFactory {
+            GesturePreferences(get())
+        }
+        addSingletonFactory {
+            DecoderPreferences(get())
+        }
+        addSingletonFactory {
+            SubtitlePreferences(get())
+        }
+        addSingletonFactory {
+            AudioPreferences(get())
+        }
+        addSingletonFactory {
+            AdvancedPlayerPreferences(get())
         }
     }
 }

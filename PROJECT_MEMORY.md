@@ -56,6 +56,11 @@
 ### E. Trackers (Rastreadores)
 - Restaurados arquivos originais de `MyAnimeList`, `AniList`, `Kitsu`, e `Shikimori`, deletando DTOs duplicados de anime para evitar conflitos de tipos e duplicidade de serialização.
 
+### F. Registro de Injeção de Dependências (Injekt / DI)
+- **DomainModule (`app/src/main/java/eu/kanade/domain/DomainModule.kt`):** Registrados `GetAnimeExtensionsByType`, `SetAnimeViewerFlags` e `TrackSelect`.
+- **AppModule (`app/src/main/java/eu/kanade/tachiyomi/di/AppModule.kt`):** Registrados `MpvConfig`, `AudioManager` e `BrightnessManager`.
+- **PreferenceModule (`app/src/main/java/eu/kanade/tachiyomi/di/PreferenceModule.kt`):** Registrados `PlayerPreferences`, `GesturePreferences`, `DecoderPreferences`, `SubtitlePreferences`, `AudioPreferences` e `AdvancedPlayerPreferences`.
+
 ---
 
 ## 4. Estrutura de Arquivos Importantes

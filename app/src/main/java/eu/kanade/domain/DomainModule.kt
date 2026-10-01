@@ -7,7 +7,10 @@ import eu.kanade.domain.download.interactor.DeleteDownload
 import eu.kanade.domain.extension.interactor.GetExtensionLanguages
 import eu.kanade.domain.extension.interactor.GetExtensionSources
 import eu.kanade.domain.extension.interactor.GetExtensionsByType
+import eu.kanade.domain.extension.interactor.GetAnimeExtensionsByType
 import eu.kanade.domain.extension.interactor.TrustExtension
+import eu.kanade.domain.anime.interactor.SetAnimeViewerFlags
+import eu.kanade.tachiyomi.ui.player.domain.TrackSelect
 import eu.kanade.domain.manga.interactor.GetExcludedScanlators
 import eu.kanade.domain.manga.interactor.SetExcludedScanlators
 import eu.kanade.domain.manga.interactor.SetMangaViewerFlags
@@ -175,8 +178,12 @@ class DomainModule : InjektModule {
         addFactory { DeleteDownload(get(), get()) }
 
         addFactory { GetExtensionsByType(get(), get()) }
+        addFactory { GetAnimeExtensionsByType(get(), get()) }
         addFactory { GetExtensionSources(get()) }
         addFactory { GetExtensionLanguages(get(), get()) }
+
+        addFactory { SetAnimeViewerFlags(get()) }
+        addFactory { TrackSelect(get(), get()) }
 
         addSingletonFactory<UpdatesRepository> { UpdatesRepositoryImpl(get()) }
         addFactory { GetUpdates(get()) }

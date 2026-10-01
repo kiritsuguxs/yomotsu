@@ -18,6 +18,9 @@ import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadCache
 import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadProvider
+import animiru.feature.mpvfiles.MpvConfig
+import eu.kanade.tachiyomi.ui.player.domain.AudioManager
+import eu.kanade.tachiyomi.ui.player.domain.BrightnessManager
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.extension.ExtensionManager
@@ -147,6 +150,10 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { LocalCoverManager(app, get()) }
         addSingletonFactory { StorageManager(app, get()) }
         addSingletonFactory { eu.kanade.tachiyomi.data.telegram.TelegramCloudManager(app) }
+
+        addSingletonFactory { MpvConfig(app, get(), get()) }
+        addSingletonFactory { AudioManager(app) }
+        addSingletonFactory { BrightnessManager(app) }
 
         // Asynchronously init expensive components for a faster cold start
         ContextCompat.getMainExecutor(app).execute {
