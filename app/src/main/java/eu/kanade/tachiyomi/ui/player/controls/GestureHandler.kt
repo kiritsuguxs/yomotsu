@@ -55,7 +55,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.player.components.LeftSideOvalShape
 import eu.kanade.presentation.player.components.RightSideOvalShape
-import eu.kanade.presentation.theme.playerRippleConfiguration
 import eu.kanade.tachiyomi.ui.player.Panels
 import eu.kanade.tachiyomi.ui.player.PlayerUpdates
 import eu.kanade.tachiyomi.ui.player.PlayerViewModel
@@ -313,7 +312,6 @@ fun DoubleTapToSeekOvals(
         contentAlignment = if (amount > 0) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
         CompositionLocalProvider(
-            LocalRippleConfiguration provides playerRippleConfiguration,
         ) {
             if (amount != 0 || text != null) {
                 Box(

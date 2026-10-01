@@ -28,7 +28,7 @@ import eu.kanade.tachiyomi.ui.player.PlayerViewModel
 import eu.kanade.tachiyomi.ui.player.cast.components.CastPlayerDialog
 import eu.kanade.tachiyomi.ui.player.cast.components.CastQualityDialog
 import eu.kanade.tachiyomi.ui.player.cast.components.QueueItemRow
-import tachiyomi.i18n.ank.AMR
+import tachiyomi.i18n.animiru.AMMR
 import tachiyomi.presentation.core.i18n.stringResource
 
 @SuppressLint("StateFlowValueCalledInComposition")
@@ -62,16 +62,16 @@ fun CastControlSheet(
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             FilledTonalButton(onClick = { showQualityDialog = true }) {
-                Text(stringResource(AMR.strings.title_cast_quality))
+                Text(stringResource(AMMR.strings.title_cast_quality))
             }
             FilledTonalButton(onClick = { showQueueDialog = true }) {
-                Text(stringResource(AMR.strings.cast_queue_title))
+                Text(stringResource(AMMR.strings.cast_queue_title))
             }
         }
 
         if (queueItems.isNotEmpty()) {
             Text(
-                text = stringResource(AMR.strings.queue),
+                text = stringResource(AMMR.strings.queue),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(vertical = 8.dp),
             )

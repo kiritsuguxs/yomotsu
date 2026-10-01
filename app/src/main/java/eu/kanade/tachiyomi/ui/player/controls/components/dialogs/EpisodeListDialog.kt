@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.tachiyomi.util.lang.toLocalDate
 import eu.kanade.presentation.manga.components.DotSeparatorText
 import eu.kanade.tachiyomi.data.database.models.Episode
 import eu.kanade.tachiyomi.util.lang.toRelativeString
@@ -45,9 +46,9 @@ import tachiyomi.presentation.core.components.VerticalFastScroller
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+
+import kotlinx.datetime.LocalDate
+
 import eu.kanade.presentation.util.formatChapterNumber as formatEpisodeNumber
 
 @Composable
@@ -90,7 +91,7 @@ fun EpisodeListDialog(
                     val title = if (displayMode == Anime.EPISODE_DISPLAY_NUMBER) {
                         stringResource(
                             AYMR.strings.display_mode_episode,
-                            formatEpisodeNumber(episode.episode_number.toDouble()),
+                            formatEpisodeNumber(episode.chapter_number.toDouble()),
                         )
                     } else {
                         episode.name
@@ -99,10 +100,7 @@ fun EpisodeListDialog(
                     val date = episode.date_upload
                         .takeIf { it > 0L }
                         ?.let {
-                            LocalDate.ofInstant(
-                                Instant.ofEpochMilli(it),
-                                ZoneId.systemDefault(),
-                            ).toRelativeString(
+                            it.toLocalDate().toRelativeString(
                                 context = context,
                                 relative = dateRelativeTime,
                                 dateFormat = dateFormatter,
@@ -135,18 +133,13 @@ private fun EpisodeListItem(
     onEpisodeClicked: (Long?) -> Unit,
 ) {
     var isBookmarked by remember { mutableStateOf(episode.bookmark) }
-    var isFillermarked by remember { mutableStateOf(false) }
     var textHeight by remember { mutableIntStateOf(0) }
 
     val defaultColor = MaterialTheme.colorScheme.onSurface
     val bookmarkAlpha = if (isBookmarked) 1f else DISABLED_ALPHA
     val bookmarkColor = if (isBookmarked) MaterialTheme.colorScheme.primary else defaultColor
-    val fillermarkAlpha = if (isFillermarked) 1f else DISABLED_ALPHA
-    val fillermarkColor = if (isFillermarked) MaterialTheme.colorScheme.tertiary else defaultColor
     val episodeColor = if (isBookmarked) {
         bookmarkColor
-    } else if (isFillermarked) {
-        fillermarkColor
     } else {
         defaultColor
     }
@@ -160,11 +153,6 @@ private fun EpisodeListItem(
         onBookmarkClicked(episode.id, bookmarked)
     }
 
-    val clickFillermark: (Boolean) -> Unit = { fillermarked ->
-        false = fillermarked
-        isFillermarked = fillermarked
-        onFillermarkClicked(episode.id, fillermarked)
-    }
 
     Row(
         modifier = Modifier
@@ -183,16 +171,6 @@ private fun EpisodeListItem(
             )
         }
 
-        IconButton(onClick = { clickFillermark(!isFillermarked) }) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Label,
-                contentDescription = null,
-                tint = fillermarkColor,
-                modifier = Modifier
-                    .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp })
-                    .alpha(fillermarkAlpha),
-            )
-        }
 
         Spacer(modifier = Modifier.width(2.dp))
 

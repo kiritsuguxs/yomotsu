@@ -54,9 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.ui.Alignment
+import androidx.constraintlayout.compose.ConstraintLayout
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.player.components.OutlinedNumericChooser
 import eu.kanade.tachiyomi.ui.player.controls.CARDS_MAX_WIDTH
@@ -80,12 +78,12 @@ fun SubtitleDelayPanel(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    ConstraintLayout(
         modifier = modifier
             .fillMaxSize()
             .padding(MaterialTheme.padding.medium),
     ) {
-        
+        val delayControlCard = createRef()
 
         var affectedSubtitle by remember { mutableStateOf(SubtitleDelayType.Primary) }
         SubtitleDelayCard(
@@ -108,7 +106,10 @@ fun SubtitleDelayPanel(
             onApply = onApply,
             onReset = onReset,
             onClose = onDismissRequest,
-            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomEnd),
+            modifier = Modifier.constrainAs(delayControlCard) {
+                linkTo(parent.top, parent.bottom, bias = 0.8f)
+                end.linkTo(parent.end)
+            },
         )
     }
 }

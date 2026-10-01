@@ -94,7 +94,6 @@ import eu.kanade.tachiyomi.ui.player.settings.GesturePreferences
 import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
 import eu.kanade.tachiyomi.ui.player.settings.SubtitleAssOverride
 import eu.kanade.tachiyomi.ui.player.settings.SubtitleJustification
-import eu.kanade.tachiyomi.ui.player.utils.deleteAndGet
 import eu.kanade.tachiyomi.ui.player.settings.SubtitlePreferences
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -656,7 +655,7 @@ fun PlayerControls(
             onRemoveSpeedPreset = { playerPreferences.speedPresets() -= it.toFixed(2).toString() },
             onResetSpeedPresets = playerPreferences.speedPresets()::delete,
             onResetDefaultSpeed = {
-                viewModel.mpv.setPropertyFloat("speed", playerPreferences.playerSpeed().deleteAndGet().toFixed(2))
+                viewModel.mpv.setPropertyFloat("speed", playerPreferences.playerSpeed().apply { delete() }.get().toFixed(2))
             },
 
             // More sheet state
@@ -834,13 +833,13 @@ fun PlayerControls(
                 resetTypography(viewModel.mpv, subtitlePreferences)
             },
             onSubtitleMiscReset = {
-                subtitlePreferences.subtitlePos().deleteAndGet().let {
+                subtitlePreferences.subtitlePos().apply { delete() }.get().let {
                     viewModel.mpv.setPropertyInt("sub-pos", it)
                 }
-                subtitlePreferences.subtitleFontScale().deleteAndGet().let {
+                subtitlePreferences.subtitleFontScale().apply { delete() }.get().let {
                     viewModel.mpv.setPropertyFloat("sub-scale", it)
                 }
-                subtitlePreferences.overrideSubsASS().deleteAndGet().let {
+                subtitlePreferences.overrideSubsASS().apply { delete() }.get().let {
                     viewModel.mpv.setPropertyString("sub-ass-override", it.value)
                 }
             },
@@ -902,7 +901,7 @@ fun PlayerControls(
                 viewModel.mpv.setPropertyString("deband", "no")
                 viewModel.mpv.command("vf", "remove", "@deband")
                 DebandSettings.entries.forEach {
-                    viewModel.mpv.setPropertyInt(it.mpvProperty, it.preference(decoderPreferences).deleteAndGet())
+                    viewModel.mpv.setPropertyInt(it.mpvProperty, it.preference(decoderPreferences).apply { delete() }.get())
                 }
             },
             onDebandSettingsChange = { setting, value ->
@@ -915,7 +914,7 @@ fun PlayerControls(
             },
             onFilterReset = {
                 VideoFilters.entries.forEach {
-                    viewModel.mpv.setPropertyInt(it.mpvProperty, it.preference(decoderPreferences).deleteAndGet())
+                    viewModel.mpv.setPropertyInt(it.mpvProperty, it.preference(decoderPreferences).apply { delete() }.get())
                 }
             },
             deband = deband,
