@@ -1,8 +1,8 @@
-package eu.kanade.tachiyomi.mangasource
+package eu.kanade.tachiyomi.animesource
 
-import eu.kanade.tachiyomi.mangasource.model.AnimeFilterList
-import eu.kanade.tachiyomi.mangasource.model.AnimesPage
-import eu.kanade.tachiyomi.mangasource.model.SAnime
+import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
+import eu.kanade.tachiyomi.animesource.model.AnimesPage
+import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.coroutineScope
