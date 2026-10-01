@@ -257,7 +257,7 @@ internal object ExtensionLoader {
         } else {
             libVersion != null && libVersion in SUPPORTED_LIB_VERSIONS
         }
-        if (!isLibSupported) {
+        if (libVersion == null || !isLibSupported) {
             logcat(LogPriority.WARN) {
                 "Lib version is $libVersion, while only version(s) ${if (isAnime) "12..18" else SUPPORTED_LIB_VERSIONS.joinToString()} are supported"
             }
@@ -352,12 +352,12 @@ internal object ExtensionLoader {
             pkgName = pkgName,
             versionName = versionName,
             versionCode = versionCode,
-            libVersion = libVersion,
+            libVersion = libVersion ?: 0.0,
             lang = lang,
             isNsfw = isNsfw,
             isAnime = isAnime,
             sources = sources,
-            pkgFactory = appInfo.metaData.getString(sourceFactoryKey) ?: appInfo.metaData.getString(METADATA_SOURCE_FACTORY),
+            pkgFactory = appInfo.metaData?.getString(sourceFactoryKey) ?: appInfo.metaData?.getString(METADATA_SOURCE_FACTORY),
             icon = appInfo.loadIcon(pkgManager),
             isShared = extensionInfo.isShared,
         )
