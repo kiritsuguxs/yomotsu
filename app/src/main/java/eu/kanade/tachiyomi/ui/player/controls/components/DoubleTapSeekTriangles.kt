@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.ui.player.controls.components
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Row
@@ -52,7 +54,7 @@ private fun DoubleTapArrow(
     alpha: Float,
 ) {
     Icon(
-        imageVector = androidx.compose.material.icons.Icons.Filled.PlayArrow,
+        imageVector = Icons.Filled.PlayArrow,
         contentDescription = null,
         modifier = Modifier
             .size(width = 16.dp, height = 20.dp)

@@ -124,7 +124,7 @@ import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.episode.interactor.GetEpisodesByAnimeId
 import tachiyomi.domain.episode.interactor.UpdateEpisode
 import tachiyomi.domain.episode.model.EpisodeUpdate
-import tachiyomi.domain.episode.service.getChapterSort
+import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.history.interactor.UpsertHistory
 import tachiyomi.domain.history.model.HistoryUpdate
@@ -241,10 +241,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
     private val _externalAudioTracks = MutableStateFlow<List<VideoTrack.External>>(emptyList())
     val externalAudioTracks = _externalAudioTracks.asStateFlow()
-
-    val isCasting = MutableStateFlow(false)
     // ANK -->
-    private var castPos: Int = 0
     // ANK <--
 
     private val _hosterList = MutableStateFlow<List<Hoster>>(emptyList())
@@ -1282,18 +1279,7 @@ class PlayerViewModel @JvmOverloads constructor(
         // ANK <--
     }
 
-    fun updateCastProgress(position: Float) {
-        // ANK -->
-        castPos = position.toInt()
-        // ANK <--
-    }
 
-    fun resumeFromCast() {
-        // ANK -->
-        val lastPosition = castPos
-        // ANK <--
-
-        logcat { "Reanudando el video local desde: $lastPosition segundos" }
 
         if (lastPosition > 0) {
             seekTo(lastPosition) // Move the local player to the last position
@@ -1516,8 +1502,6 @@ class PlayerViewModel @JvmOverloads constructor(
                         anime = anime,
                         source = source,
                         sourceManager = sourceManager,
-                        mergedReferences = mergedReferences,
-                        mergedManga = mergedManga,
                     )
                         .takeIf { it.isNotEmpty() }
                         ?.also { currentHosterList = it }
@@ -1555,7 +1539,7 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun initEpisodeList(anime: Anime): List<Episode> {
         // ANK -->
         val (episodes, animeMap) = runBlocking {
-                getEpisodesByAnimeId.await(anime.id, applyFilter = true) to null
+                getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = true) to null
         }
 
         val selectedEpisode = episodes.find { it.id == episodeId }

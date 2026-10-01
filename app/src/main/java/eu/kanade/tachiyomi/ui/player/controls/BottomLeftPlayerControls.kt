@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.runtime.Composable
+import eu.kanade.tachiyomi.ui.player.Segment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import eu.kanade.tachiyomi.ui.player.Sheets

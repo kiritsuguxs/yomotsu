@@ -34,6 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.R
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material3.Icon
 import eu.kanade.tachiyomi.ui.player.controls.components.ControlsButton
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
@@ -85,7 +88,7 @@ fun MiddlePlayerControls(
             }
         }
 
-        val icon = AnimatedImageVector.animatedVectorResource(R.drawable.anim_play_to_pause)
+        
         val interaction = remember { MutableInteractionSource() }
         when {
             isStopped -> {

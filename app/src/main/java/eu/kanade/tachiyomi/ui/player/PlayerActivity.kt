@@ -138,10 +138,6 @@ class PlayerActivity : BaseActivity() {
     private val mpvConfig: MpvConfig = Injekt.get()
     // ANK <--
 
-    // Cast -->
-    val castManager: CastManager by lazy { CastManager(this, Injekt.get()) }
-    // <-- Cast
-
     // AM (CONNECTIONS) -->
     private val connectionsPreferences: ConnectionsPreferences = Injekt.get()
     // <-- AM (CONNECTIONS)
@@ -341,9 +337,6 @@ class PlayerActivity : BaseActivity() {
         }
         // <-- AM (DISCORD)
 
-        // Cast -->
-        castManager
-        // <-- Cast
 
         setContent {
             TachiyomiTheme {
@@ -363,8 +356,7 @@ class PlayerActivity : BaseActivity() {
                         },
                     )
                     PlayerControls(
-                        viewModel = viewModel,
-                        castManager = castManager, // Pass the castManager instance
+viewModel = viewModel,
                         onBackPress = {
                             if (isPipSupportedAndEnabled && viewModel.paused == false &&
                                 playerPreferences.pipOnExit().get()
@@ -417,7 +409,6 @@ class PlayerActivity : BaseActivity() {
         // recreation (e.g. config changes), so it's closed in onCleared() instead of here.
         // mpv.close()
         // ANK <--
-        castManager.cleanup()
 
         // ANK -->
         mpvConfig.onPlayerDestroyed()
@@ -432,9 +423,6 @@ class PlayerActivity : BaseActivity() {
 
     override fun onPause() {
         viewModel.saveCurrentEpisodeWatchingProgress()
-
-        // Maintain active Cast session
-        castManager.maintainCastSessionBackground()
 
         // AM (DISCORD) -->
         updateDiscordRPC(exitingPlayer = true)
@@ -531,18 +519,6 @@ class PlayerActivity : BaseActivity() {
         // AM (DISCORD) -->
         updateDiscordRPC(exitingPlayer = false)
         // <-- AM (DISCORD)
-
-        castManager.apply {
-            // Register session listener cast
-            registerSessionListener()
-
-            // Update current status of cast
-            if (castState.value == CastManager.CastState.CONNECTED) {
-                updateCastState(CastManager.CastState.CONNECTED)
-            }
-            // Synchronize initial status with viewmodel
-            viewModel.isCasting.value = castState.value == CastManager.CastState.CONNECTED
-        }
     }
 
     private fun UniFile.writeText(text: String) {
@@ -634,11 +610,6 @@ class PlayerActivity : BaseActivity() {
     }
 
     override fun onResume() {
-        // Reconnect cast if it was active
-        castManager.apply {
-            reconnect()
-            registerSessionListener()
-        }
 
         // AM (DISCORD) -->
         updateDiscordRPC(exitingPlayer = false)
@@ -905,19 +876,6 @@ class PlayerActivity : BaseActivity() {
                     }
 
                     override fun onPause() {
-                        // Cast -->
-                        castManager.apply {
-                            // Release resources only if not in PIP
-                            if (!isInPictureInPictureMode) {
-                                unregisterSessionListener()
-                            }
-
-                            // If you are transmitting, keep an active session
-                            if (castState.value == CastManager.CastState.CONNECTED) {
-                                maintainCastSessionBackground()
-                            }
-                        }
-                        //
                         when (playAction) {
                             SingleActionGesture.None -> {}
                             SingleActionGesture.Seek -> {}

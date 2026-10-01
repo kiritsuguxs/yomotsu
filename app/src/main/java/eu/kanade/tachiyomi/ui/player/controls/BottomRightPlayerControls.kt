@@ -42,6 +42,7 @@ fun BottomRightPlayerControls(
                 onClick = onPressSkipIntroButton,
                 onLongClick = {},
             )
+        }
 
         if (isPipAvailable) {
             ControlsButton(

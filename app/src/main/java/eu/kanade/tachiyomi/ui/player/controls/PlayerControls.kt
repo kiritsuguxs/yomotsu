@@ -57,8 +57,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.core.graphics.toColorInt
-import eu.kanade.presentation.theme.playerRippleConfiguration
-import eu.kanade.tachiyomi.ui.player.CastManager
 import eu.kanade.tachiyomi.ui.player.DebandSettings
 import eu.kanade.tachiyomi.ui.player.Debanding
 import eu.kanade.tachiyomi.ui.player.Decoder.Companion.getDecoderFromValue
@@ -71,7 +69,6 @@ import eu.kanade.tachiyomi.ui.player.Sheets
 import eu.kanade.tachiyomi.ui.player.VideoAspect
 import eu.kanade.tachiyomi.ui.player.VideoFilters
 import eu.kanade.tachiyomi.ui.player.VideoTrack
-import eu.kanade.tachiyomi.ui.player.cast.components.CastSheet
 import eu.kanade.tachiyomi.ui.player.controls.components.BrightnessOverlay
 import eu.kanade.tachiyomi.ui.player.controls.components.BrightnessSlider
 import eu.kanade.tachiyomi.ui.player.controls.components.ControlsButton
@@ -84,8 +81,6 @@ import eu.kanade.tachiyomi.ui.player.controls.components.panels.resetColors
 import eu.kanade.tachiyomi.ui.player.controls.components.panels.resetTypography
 import eu.kanade.tachiyomi.ui.player.controls.components.panels.toColorHexString
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.toFixed
-import eu.kanade.tachiyomi.ui.player.execute
-import eu.kanade.tachiyomi.ui.player.executeLongPress
 import eu.kanade.tachiyomi.ui.player.settings.AdvancedPlayerPreferences
 import eu.kanade.tachiyomi.ui.player.settings.AudioChannels
 import eu.kanade.tachiyomi.ui.player.settings.AudioPreferences
@@ -100,7 +95,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
-import tachiyomi.core.common.preference.deleteAndGet
 import tachiyomi.core.common.preference.minusAssign
 import tachiyomi.core.common.preference.plusAssign
 import tachiyomi.presentation.core.components.material.padding
@@ -117,12 +111,9 @@ val LocalPlayerButtonsClickEvent = staticCompositionLocalOf { {} }
 @Composable
 fun PlayerControls(
     viewModel: PlayerViewModel,
-    castManager: CastManager,
     onBackPress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showCastSheet by remember { mutableStateOf(false) }
-    val castState by castManager.castState.collectAsState()
 
     val spacing = MaterialTheme.padding
     val playerPreferences = remember { Injekt.get<PlayerPreferences>() }
@@ -181,7 +172,6 @@ fun PlayerControls(
     )
     DoubleTapToSeekOvals(doubleTapSeekAmount, seekText, interactionSource)
     CompositionLocalProvider(
-        LocalRippleConfiguration provides playerRippleConfiguration,
         LocalPlayerButtonsClickEvent provides { resetControls = !resetControls },
         LocalContentColor provides Color.White,
     ) {
@@ -502,9 +492,6 @@ fun PlayerControls(
                         isEpisodeOnline = isEpisodeOnline,
                         onMoreClick = { viewModel.showSheet(Sheets.More) },
                         onMoreLongClick = { viewModel.showPanel(Panels.VideoFilters) },
-                        castState = castState,
-                        onCastClick = { showCastSheet = true },
-                        isCastEnabled = { playerPreferences.enableCast().get() },
                     )
                 }
                 // Bottom right controls
