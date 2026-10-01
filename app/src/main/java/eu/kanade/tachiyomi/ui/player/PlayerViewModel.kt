@@ -1281,10 +1281,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
 
 
-        if (lastPosition > 0) {
-            seekTo(lastPosition) // Move the local player to the last position
-        }
-    }
+
 
     // ====== OLD ======
 
@@ -2506,7 +2503,7 @@ class PlayerViewModel @JvmOverloads constructor(
     }
 }
 
-private val FONT_EXTENSION_REGEX = Regex($$""".*\.[ot]tf$""")
+private val FONT_EXTENSION_REGEX = Regex(""".*\.[ot]tf$""")
 
 
 

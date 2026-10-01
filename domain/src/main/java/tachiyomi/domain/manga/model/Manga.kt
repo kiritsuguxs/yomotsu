@@ -44,6 +44,9 @@ data class Manga(
     val memo: JsonObject,
 ) : JavaSerializable {
 
+    val ogTitle: String get() = title
+    val ogThumbnailUrl: String? get() = thumbnailUrl
+
     val expectedNextUpdate: Instant?
         get() = nextUpdate
             .takeIf { status != SManga.COMPLETED.toLong() }

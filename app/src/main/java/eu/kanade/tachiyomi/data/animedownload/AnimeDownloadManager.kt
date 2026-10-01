@@ -5,8 +5,6 @@ import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload
 import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.util.size
-import exh.log.xLogE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.drop
@@ -251,12 +249,7 @@ class AnimeDownloadManager(
      * @param manga the manga to check.
      */
     fun getDownloadCount(manga: Manga): Int {
-        return if (manga.source == LocalSource.ID) {
-            LocalSourceFileSystem(storageManager).getFilesInMangaDirectory(manga.url)
-                .count { Format.isSupported(it) }
-        } else {
-            cache.getDownloadCount(manga)
-        }
+        return cache.getDownloadCount(manga)
     }
 
     /**
@@ -272,12 +265,7 @@ class AnimeDownloadManager(
      * @param manga the manga to check.
      */
     fun getDownloadSize(manga: Manga): Long {
-        return if (manga.source == LocalSource.ID) {
-            LocalSourceFileSystem(storageManager).getMangaDirectory(manga.url)
-                ?.size() ?: 0L
-        } else {
-            cache.getDownloadSize(manga)
-        }
+        return cache.getDownloadSize(manga)
     }
 
     fun cancelQueuedDownloads(downloads: List<AnimeDownload>) {
@@ -427,7 +415,7 @@ class AnimeDownloadManager(
                 mangaFolder.delete()
                 cache.removeManga(manga)
             } else {
-                xLogE("Cache and download folder doesn't match for " + /* SY --> */ manga.ogTitle /* SY <-- */)
+                logcat(LogPriority.ERROR) { "Cache and download folder doesn't match for ${manga.title}" }
             }
         }
         return cleaned

@@ -571,7 +571,6 @@ class MangaViewModel(
                     }
                 }
         }
-        }
 
         viewModelScope.launchIO {
             combine(
@@ -625,9 +624,6 @@ class MangaViewModel(
                     .copy(downloadState = eu.kanade.tachiyomi.data.download.model.Download.State.valueOf(download.status.name), downloadProgress = download.progress)
                 add(modifiedIndex, item)
             }
-            successState.copy(chapters = newChapters)
-        }
-    }
             successState.copy(chapters = newChapters)
         }
     }

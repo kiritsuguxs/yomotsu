@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import mihon.core.viewmodel.StateViewModel
+import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
+import eu.kanade.tachiyomi.ui.browse.extension.ExtensionUiModel
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
@@ -39,7 +41,7 @@ class AnimeExtensionsViewModel(
     basePreferences: BasePreferences = Injekt.get(),
     private val extensionManager: ExtensionManager = Injekt.get(),
     private val getExtensions: eu.kanade.domain.extension.interactor.GetAnimeExtensionsByType = Injekt.get(),
-) : StateViewModel<ExtensionsViewModel.State>(State()) {
+) : StateViewModel<ExtensionsViewModel.State>(ExtensionsViewModel.State()) {
 
     private val currentDownloads = MutableStateFlow<Map<String, InstallStep>>(hashMapOf())
 

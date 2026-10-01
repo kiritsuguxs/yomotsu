@@ -6,8 +6,6 @@ import eu.kanade.tachiyomi.animesource.model.Track
 import eu.kanade.tachiyomi.ui.player.utils.ChapterUtils
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-
-@Serializable
 data class Segment(val name: String, val start: Float, val color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified)
 data class ChapterNode(
     val time: Float,

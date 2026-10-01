@@ -120,9 +120,14 @@ class MpvConfig(
         }
 
 
-        context.assets.open("aniyomi.lua").use { inputStream ->
-            luaFile.openOutputStream().use { outputStream ->
-                inputStream.copyTo(outputStream)
+        runCatching {
+            val luaFile = scriptsDir?.createFile("aniyomi.lua")
+            if (luaFile != null) {
+                context.assets.open("aniyomi.lua").use { inputStream ->
+                    luaFile.openOutputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
             }
         }
     }

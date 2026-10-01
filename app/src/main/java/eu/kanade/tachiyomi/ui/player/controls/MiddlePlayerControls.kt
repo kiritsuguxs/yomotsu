@@ -22,6 +22,9 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -117,8 +120,8 @@ fun MiddlePlayerControls(
                     enter = enter,
                     exit = exit,
                 ) {
-                    Image(
-                        painter = rememberAnimatedVectorPainter(icon, !paused),
+                    Icon(
+                        imageVector = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
                         modifier = Modifier
                             .size(96.dp)
                             .clip(CircleShape)
@@ -129,6 +132,7 @@ fun MiddlePlayerControls(
                             )
                             .padding(MaterialTheme.padding.medium),
                         contentDescription = null,
+                        tint = Color.White,
                     )
                 }
             }

@@ -66,21 +66,14 @@ import androidx.media.AudioManagerCompat
 import animiru.feature.mpvfiles.MpvConfig
 import animiru.feature.mpvfiles.MpvConfig.Companion.MPV_DIR
 import com.hippo.unifile.UniFile
-import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.tachiyomi.animesource.model.ChapterType
 import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SerializableHoster.Companion.serialize
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
-import eu.kanade.tachiyomi.data.connections.discord.PlayerData
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
-import eu.kanade.tachiyomi.data.torrentServer.service.TorrentServerService
-import eu.kanade.tachiyomi.source.isNsfw
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.torrentServer.TorrentServerApi
-import eu.kanade.tachiyomi.torrentServer.TorrentServerUtils
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.player.controls.PlayerControls
 import eu.kanade.tachiyomi.ui.player.settings.AdvancedPlayerPreferences
@@ -139,7 +132,6 @@ class PlayerActivity : BaseActivity() {
     // ANK <--
 
     // AM (CONNECTIONS) -->
-    private val connectionsPreferences: ConnectionsPreferences = Injekt.get()
     // <-- AM (CONNECTIONS)
 
     private var audioFocusRequest: AudioFocusRequestCompat? = null
@@ -1053,13 +1045,10 @@ viewModel = viewModel,
             }
         }
 
-        if (video.videoUrl.startsWith(TorrentServerUtils.hostUrl) ||
             video.videoUrl.startsWith("magnet") ||
             video.videoUrl.endsWith(".torrent")
         ) {
             launchIO {
-                TorrentServerService.start()
-                TorrentServerService.wait(10)
                 // ANK -->
                 torrentLinkHandler(video.videoUrl, video.videoTitle, video.mpvArgs)
                 // ANK <--
@@ -1129,48 +1118,6 @@ viewModel = viewModel,
     }
     // ANK <--
 
-    private fun torrentLinkHandler(
-        videoUrl: String,
-        quality: String,
-        // ANK -->
-        mpvArgs: List<Pair<String, String>> = emptyList(),
-        // ANK <--
-    ) {
-        var index = 0
-
-        // check if link is from localSource
-        if (videoUrl.startsWith("content://")) {
-            val videoInputStream = applicationContext.contentResolver.openInputStream(videoUrl.toUri())
-            val torrent = TorrentServerApi.uploadTorrent(videoInputStream!!, quality, "", "", false)
-            val torrentUrl = TorrentServerUtils.getTorrentPlayLink(torrent, 0)
-            // ANK -->
-            loadFile(torrentUrl, mpvArgs)
-            // ANK <--
-            return
-        }
-
-        // check if link is from magnet, in that check if index is present
-        if (videoUrl.startsWith("magnet")) {
-            if (videoUrl.contains("index=")) {
-                index = try {
-                    videoUrl.substringAfter("index=").toInt()
-                } catch (_: NumberFormatException) {
-                    0
-                }
-            }
-        }
-
-        val currentTorrent = TorrentServerApi.addTorrent(videoUrl, quality, "", "", false)
-        val videoTorrentUrl = TorrentServerUtils.getTorrentPlayLink(currentTorrent, index)
-        // ANK -->
-        loadFile(videoTorrentUrl, mpvArgs)
-        // ANK <--
-    }
-
-    /**
-     * Called from the presenter if the initial load couldn't load the videos of the episode. In
-     * this case the activity is closed and a toast is shown to the user.
-     */
     private fun setInitialEpisodeError(error: Throwable) {
         if (error is PlayerViewModel.ExceptionWithStringResource) {
             toast(error.stringResource)
@@ -1416,53 +1363,5 @@ viewModel = viewModel,
     }
 
     // AM (DISCORD) -->
-    private fun updateDiscordRPC(exitingPlayer: Boolean) {
-        if (!connectionsPreferences.enableDiscordRPC().get()) return
-
-        DiscordRPCService.discordScope.launchIO {
-            try {
-                if (!exitingPlayer) {
-                    // ANK -->
-                    val timePos = viewModel.pos ?: return@launchIO
-                    val duration = viewModel.duration ?: 1440
-                    // ANK <--
-
-                    val currentPosition = timePos.toLong() * 1000
-                    val startTimestamp = Calendar.getInstance().apply {
-                        timeInMillis = System.currentTimeMillis() - currentPosition
-                    }
-                    val endTimestamp = Calendar.getInstance().apply {
-                        timeInMillis = startTimestamp.timeInMillis
-                        add(Calendar.SECOND, duration)
-                    }
-
-                    val anime = viewModel.currentAnime.value ?: return@launchIO
-                    val episode = viewModel.currentEpisode.value ?: return@launchIO
-
-                    DiscordRPCService.setPlayerActivity(
-                        context = this@PlayerActivity,
-                        PlayerData(
-                            incognitoMode = viewModel.currentSource.value?.isNsfw() == true || viewModel.incognitoMode,
-                            animeId = anime.id,
-                            animeTitle = anime.ogTitle,
-                            thumbnailUrl = anime.thumbnailUrl.takeIf { UrlUtils.isOnlineUrl(it) } ?: anime.ogThumbnailUrl,
-                            episodeNumber = if (connectionsPreferences.useChapterTitles().get()) {
-                                episode.name
-                            } else {
-                                episode.episode_number.toString()
-                            },
-                            startTimestamp = startTimestamp.timeInMillis,
-                            endTimestamp = endTimestamp.timeInMillis,
-                        ),
-                    )
-                } else {
-                    with(DiscordRPCService) {
-                        setScreen(this@PlayerActivity)
-                    }
-                }
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR) { "Error updating Discord RPC: ${e.message}" }
-            }
-        }
-    }
+    private fun updateDiscordRPC(exitingPlayer: Boolean) {}
 }

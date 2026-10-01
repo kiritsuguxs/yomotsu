@@ -1,12 +1,25 @@
 package eu.kanade.tachiyomi.data.animedownload
 
+import kotlin.time.Duration.Companion.hours
+
+fun UniFile.size(): Long {
+    var totalSize: Long = 0
+    if (isDirectory) {
+        for (file in listFiles().orEmpty()) {
+            totalSize += file.size()
+        }
+    } else {
+        totalSize = length()
+    }
+    return totalSize
+}
+
 import android.app.Application
 import android.content.Context
 import androidx.core.net.toUri
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.util.size
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -86,11 +99,7 @@ class AnimeDownloadCache(
      * The interval after which this cache should be invalidated. 1 hour shouldn't cause major
      * issues, as the cache is only used for UI feedback.
      */
-    private val renewInterval // = 1.hours.inWholeMilliseconds
-        // KMK -->
-        get() = downloadPreferences.downloadCacheRenewInterval().get()
-            .hours.inWholeMilliseconds
-    // KMK <--
+    private val renewInterval = 1.hours.inWholeMilliseconds
 
     /**
      * The last time the cache was refreshed.
@@ -508,9 +517,7 @@ class AnimeDownloadCache(
     }
 
     private fun getSources(): List<Source> {
-        // SY -->
-        return sourceManager.getVisibleOnlineSources() + sourceManager.getStubSources()
-        // SY <--
+        return sourceManager.getOnlineSources() + sourceManager.getStubSources()
     }
 
     private fun notifyChanges() {

@@ -39,7 +39,7 @@ fun createPipActions(
     if (replaceWithPrevious) {
         createPipAction(
             context,
-            R.drawable.ic_skip_previous_24dp,
+            android.R.drawable.ic_media_previous,
             AYMR.strings.action_previous_episode,
             PIP_PREVIOUS,
             PIP_PREVIOUS,
@@ -48,7 +48,7 @@ fun createPipActions(
     } else {
         createPipAction(
             context,
-            R.drawable.ic_forward_10_24dp,
+            android.R.drawable.ic_media_ff,
             AYMR.strings.pref_skip_10,
             PIP_SKIP,
             PIP_SKIP,
@@ -73,7 +73,7 @@ fun createPipActions(
     },
     createPipAction(
         context,
-        R.drawable.ic_skip_next_24dp,
+        android.R.drawable.ic_media_next,
         AYMR.strings.action_next_episode,
         PIP_NEXT,
         PIP_NEXT,

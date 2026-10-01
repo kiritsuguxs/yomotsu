@@ -937,13 +937,7 @@ fun PlayerControls(
         )
     }
 
-    if (showCastSheet) {
-        CastSheet(
-            castManager = castManager,
-            viewModel = viewModel,
-            onDismissRequest = { showCastSheet = false },
-        )
-    }
+
 }
 
 fun <T> playerControlsExitAnimationSpec(): FiniteAnimationSpec<T> = tween(

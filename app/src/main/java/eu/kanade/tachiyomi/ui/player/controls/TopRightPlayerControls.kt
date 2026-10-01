@@ -71,13 +71,7 @@ fun TopRightPlayerControls(
                 .padding(vertical = MaterialTheme.padding.medium, horizontal = MaterialTheme.padding.small)
                 .size(width = 48.dp, height = 24.dp),
         )
-        if (isCastEnabled()) {
-            CastButton(
-                castState = castState,
-                onClick = onCastClick,
-                modifier = Modifier.padding(horizontal = MaterialTheme.padding.small),
-            )
-        }
+
         ControlsButton(
             icon = Icons.Default.Subtitles,
             onClick = onSubtitlesClick,
