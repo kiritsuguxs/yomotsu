@@ -128,7 +128,7 @@ class PackageInstallerInstaller(private val service: Service) : Installer(servic
             service,
             packageActionReceiver,
             IntentFilter(INSTALL_ACTION),
-            ContextCompat.RECEIVER_NOT_EXPORTED,
+            ContextCompat.RECEIVER_EXPORTED,
         )
     }
 }

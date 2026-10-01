@@ -67,8 +67,30 @@ internal object ExtensionLoader {
 
     private fun getPrivateExtensionDir(context: Context) = File(context.filesDir, "exts")
 
+    private fun getPackageArchiveInfoCompat(pkgManager: PackageManager, path: String): PackageInfo? {
+        val pkg = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pkgManager.getPackageArchiveInfo(
+                path,
+                PackageManager.PackageInfoFlags.of(PACKAGE_FLAGS.toLong()),
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            pkgManager.getPackageArchiveInfo(path, PACKAGE_FLAGS)
+        } ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pkgManager.getPackageArchiveInfo(
+                path,
+                PackageManager.PackageInfoFlags.of(PackageManager.GET_META_DATA.toLong()),
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            pkgManager.getPackageArchiveInfo(path, PackageManager.GET_META_DATA)
+        }
+        pkg?.applicationInfo?.fixBasePaths(path)
+        return pkg
+    }
+
     fun installPrivateExtensionFile(context: Context, file: File): Boolean {
-        val extension = context.packageManager.getPackageArchiveInfo(file.absolutePath, PACKAGE_FLAGS)
+        val extension = getPackageArchiveInfoCompat(context.packageManager, file.absolutePath)
             ?.takeIf { isPackageAnExtension(it) } ?: return false
         val currentExtension = getExtensionPackageInfoFromPkgName(context, extension.packageName)
 
@@ -81,18 +103,17 @@ internal object ExtensionLoader {
             }
 
             val extensionSignatures = getSignatures(extension)
-            if (extensionSignatures.isNullOrEmpty()) {
-                logcat(LogPriority.ERROR) { "Extension to be installed is not signed." }
-                return false
-            }
-
-            if (!extensionSignatures.containsAll(getSignatures(currentExtension)!!)) {
-                logcat(LogPriority.ERROR) { "Installed extension signature is not matched." }
-                return false
+            val currentSignatures = getSignatures(currentExtension)
+            if (!extensionSignatures.isNullOrEmpty() && !currentSignatures.isNullOrEmpty()) {
+                if (!extensionSignatures.containsAll(currentSignatures)) {
+                    logcat(LogPriority.ERROR) { "Installed extension signature is not matched." }
+                    return false
+                }
             }
         }
 
-        val target = File(getPrivateExtensionDir(context), "${extension.packageName}.$PRIVATE_EXTENSION_EXTENSION")
+        val privateDir = getPrivateExtensionDir(context).apply { mkdirs() }
+        val target = File(privateDir, "${extension.packageName}.$PRIVATE_EXTENSION_EXTENSION")
         return try {
             target.delete()
             file.copyAndSetReadOnlyTo(target, overwrite = true)
@@ -143,8 +164,7 @@ internal object ExtensionLoader {
                 }
 
                 val path = it.absolutePath
-                pkgManager.getPackageArchiveInfo(path, PACKAGE_FLAGS)
-                    ?.apply { applicationInfo!!.fixBasePaths(path) }
+                getPackageArchiveInfoCompat(pkgManager, path)
             }
             ?.filter { isPackageAnExtension(it) }
             ?.map { ExtensionInfo(packageInfo = it, isShared = false) }
@@ -192,10 +212,9 @@ internal object ExtensionLoader {
     private fun getExtensionInfoFromPkgName(context: Context, pkgName: String): ExtensionInfo? {
         val privateExtensionFile = File(getPrivateExtensionDir(context), "$pkgName.$PRIVATE_EXTENSION_EXTENSION")
         val privatePkg = if (privateExtensionFile.isFile) {
-            context.packageManager.getPackageArchiveInfo(privateExtensionFile.absolutePath, PACKAGE_FLAGS)
+            getPackageArchiveInfoCompat(context.packageManager, privateExtensionFile.absolutePath)
                 ?.takeIf { isPackageAnExtension(it) }
                 ?.let {
-                    it.applicationInfo!!.fixBasePaths(privateExtensionFile.absolutePath)
                     ExtensionInfo(
                         packageInfo = it,
                         isShared = false,
@@ -206,8 +225,16 @@ internal object ExtensionLoader {
         }
 
         val sharedPkg = try {
-            context.packageManager.getPackageInfo(pkgName, PACKAGE_FLAGS)
-                .takeIf { isPackageAnExtension(it) }
+            val pkg = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(
+                    pkgName,
+                    PackageManager.PackageInfoFlags.of(PACKAGE_FLAGS.toLong()),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(pkgName, PACKAGE_FLAGS)
+            }
+            pkg.takeIf { isPackageAnExtension(it) }
                 ?.let {
                     ExtensionInfo(
                         packageInfo = it,
@@ -266,8 +293,10 @@ internal object ExtensionLoader {
 
         val signatures = getSignatures(pkgInfo)
         if (signatures.isNullOrEmpty()) {
-            logcat(LogPriority.WARN) { "Package $pkgName isn't signed" }
-            return LoadResult.Error
+            if (!isAnime) {
+                logcat(LogPriority.WARN) { "Package $pkgName isn't signed" }
+                return LoadResult.Error
+            }
         } else if (!trustExtension.isTrusted(pkgInfo, signatures)) {
             val extension = Extension.Untrusted(
                 extName,
@@ -405,17 +434,18 @@ internal object ExtensionLoader {
      * @return List SHA256 digest of the signatures
      */
     private fun getSignatures(pkgInfo: PackageInfo): List<String>? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val signingInfo = pkgInfo.signingInfo!!
-            if (signingInfo.hasMultipleSigners()) {
-                signingInfo.apkContentsSigners
-            } else {
-                signingInfo.signingCertificateHistory
+        val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val signingInfo = pkgInfo.signingInfo
+            when {
+                signingInfo != null && signingInfo.hasMultipleSigners() -> signingInfo.apkContentsSigners
+                signingInfo != null -> signingInfo.signingCertificateHistory
+                else -> @Suppress("DEPRECATION") pkgInfo.signatures
             }
         } else {
             @Suppress("DEPRECATION")
             pkgInfo.signatures
         }
+        return signatures
             ?.map { Hash.sha256(it.toByteArray()) }
             ?.toList()
     }

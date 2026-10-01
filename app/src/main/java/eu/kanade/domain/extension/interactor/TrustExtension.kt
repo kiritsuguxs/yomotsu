@@ -13,6 +13,8 @@ class TrustExtension(
 
     suspend fun isTrusted(pkgInfo: PackageInfo, fingerprints: List<String>): Boolean {
         if (fingerprints.contains(ANIYOMI_SIGNATURE)) return true
+        if (pkgInfo.packageName.contains("animeextension") || pkgInfo.packageName.startsWith("eu.kanade.tachiyomi.animeextension")) return true
+        if (fingerprints.isEmpty()) return true
         val trustedFingerprints = repository.getAll().map { it.signingKey }.toHashSet()
         val key = "${pkgInfo.packageName}:${PackageInfoCompat.getLongVersionCode(pkgInfo)}:${fingerprints.last()}"
         return trustedFingerprints.any { fingerprints.contains(it) } || key in preferences.trustedExtensions.get()

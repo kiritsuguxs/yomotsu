@@ -79,7 +79,7 @@ internal class ExtensionInstaller(
                 }
 
                 step.value = InstallStep.Installing
-                installApk(downloadId, tmpFile, isUpdateForPrivatelyInstalled)
+                installApk(downloadId, tmpFile, isUpdateForPrivatelyInstalled, isAnime = extension.isAnime)
             } catch (e: Exception) {
                 if (e is InterruptedException) {
                     // Canceled
@@ -106,8 +106,13 @@ internal class ExtensionInstaller(
      * @param tempFile The file of the extension to install. Delete after use.
      * @param isUpdateForPrivatelyInstalled If this install is an update for a privately installed extension
      */
-    private fun installApk(downloadId: Long, tempFile: File, isUpdateForPrivatelyInstalled: Boolean = false) {
-        if (isUpdateForPrivatelyInstalled) {
+    private fun installApk(
+        downloadId: Long,
+        tempFile: File,
+        isUpdateForPrivatelyInstalled: Boolean = false,
+        isAnime: Boolean = false,
+    ) {
+        if (isUpdateForPrivatelyInstalled || isAnime || extensionInstaller.get() == BasePreferences.ExtensionInstaller.PRIVATE) {
             installApkPrivately(downloadId, tempFile)
             return
         }
