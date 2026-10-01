@@ -97,6 +97,14 @@
 - Em [`settings.gradle.kts`](file:///workspace/yomotsu/settings.gradle.kts), o repositório JitPack foi configurado com `content { includeGroupByRegex("com\\.github\\..*") }` tanto em `pluginManagement` quanto em `dependencyResolutionManagement`. Isso impede que o Gradle tente buscar pacotes externos como `io.github.secozzi` ou `cafe.adriel.voyager` no JitPack, eliminando falhas 401.
 - `voyager-screenmodel` deve estar presente no bundle `voyager` em [`gradle/libs.versions.toml`](file:///workspace/yomotsu/gradle/libs.versions.toml) para prover `ScreenModel`, `rememberScreenModel` e `screenModelScope` (usados em `EpisodeOptionsDialogScreen` e `AnimeDownloadQueueScreenModel`).
 
+### I. Instalação In-App (Privada) de Extensões de Anime
+- **Motivação:** No Android 14 e 15, o instalador do sistema (`PackageInstaller`) exige confirmação manual do usuário, permissão de fontes desconhecidas e frequentemente bloqueia extensões ou causa dessincronia de estado.
+- **Funcionamento:**
+  - Extensões de anime agora utilizam instalação privada (`installApkPrivately`) diretamente para a pasta interna (`context.filesDir/exts/<pkgName>.ext`), da mesma forma prática que as extensões de novel funcionam sem depender do instalador do Android.
+  - O instalador padrão do aplicativo em `ExtensionInstallerPreference.kt` foi definido como `PRIVATE`.
+  - Em `ExtensionLoader.kt`, foi implementado `getPackageArchiveInfoCompat` para compatibilidade com Android 13/14/15 (`PackageInfoFlags`), permitindo leitura e execução direta das classes via `PathClassLoader` sem root e sem instalação a nível de SO.
+  - Correção em `getSignatures`: extração segura das assinaturas evitando `NullPointerException` quando `signingInfo` for nulo no Android 15.
+
 ---
 
 ## 4. Estrutura de Arquivos Importantes
