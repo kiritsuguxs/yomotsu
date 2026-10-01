@@ -78,12 +78,12 @@ fun SubtitleDelayPanel(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ConstraintLayout(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .padding(MaterialTheme.padding.medium),
     ) {
-        val delayControlCard = createRef()
+        
 
         var affectedSubtitle by remember { mutableStateOf(SubtitleDelayType.Primary) }
         SubtitleDelayCard(
@@ -106,10 +106,7 @@ fun SubtitleDelayPanel(
             onApply = onApply,
             onReset = onReset,
             onClose = onDismissRequest,
-            modifier = Modifier.constrainAs(delayControlCard) {
-                linkTo(parent.top, parent.bottom, bias = 0.8f)
-                end.linkTo(parent.end)
-            },
+            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomEnd),
         )
     }
 }

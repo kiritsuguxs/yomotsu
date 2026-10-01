@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.BorderColor
 import androidx.compose.material.icons.filled.BorderStyle
 import androidx.compose.material.icons.filled.Check
@@ -181,7 +182,7 @@ fun SubtitleSettingsTypographyCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    painterResource(R.drawable.ic_text_format_24dp),
+                    androidx.compose.ui.graphics.vector.rememberVectorPainter(androidx.compose.material.icons.Icons.Default.Title),
                     null,
                     modifier = Modifier.size(32.dp),
                 )
@@ -268,7 +269,7 @@ fun SubtitleSettingsTypographyCard(
                 onChange = onShadowOffsetChange,
                 valueRange = 0..100,
                 steps = 0,
-                icon = { Icon(painterResource(R.drawable.ic_text_format_24dp), null) },
+                icon = { Icon(androidx.compose.ui.graphics.vector.rememberVectorPainter(androidx.compose.material.icons.Icons.Default.Title), null) },
             )
         }
     }

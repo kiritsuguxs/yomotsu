@@ -35,7 +35,7 @@ class EpisodeLoader {
         suspend fun getHosters(
             episode: Episode,
             anime: Anime,
-            source: AnimeSource,
+            source: eu.kanade.tachiyomi.source.Source,
             sourceManager: SourceManager? = null,
         ): List<Hoster> {
             val isDownloaded = isDownload(episode, anime)
@@ -114,7 +114,7 @@ class EpisodeLoader {
         private fun getHostersOnDownloaded(
             episode: Episode,
             anime: Anime,
-            source: AnimeSource,
+            source: eu.kanade.tachiyomi.source.Source,
         ): List<Hoster> {
             val downloadManager: AnimeDownloadManager = Injekt.get()
             return try {
@@ -159,7 +159,7 @@ class EpisodeLoader {
          * @param source the source of the anime.
          * @param hoster the hoster.
          */
-        private suspend fun getVideos(source: AnimeSource, hoster: Hoster): List<Video> {
+        private suspend fun getVideos(source: eu.kanade.tachiyomi.source.Source, hoster: Hoster): List<Video> {
             val videos = when {
                 hoster.videoList != null && source is AnimeHttpSource -> hoster.videoList!!.parseVideoUrls(source)
                 hoster.videoList != null -> hoster.videoList!!
@@ -195,7 +195,7 @@ class EpisodeLoader {
             }
         }
 
-        suspend fun loadHosterVideos(source: AnimeSource, hoster: Hoster, force: Boolean = false): HosterState {
+        suspend fun loadHosterVideos(source: eu.kanade.tachiyomi.source.Source, hoster: Hoster, force: Boolean = false): HosterState {
             if (!force && hoster.lazy) {
                 return HosterState.Idle(hoster.hosterName)
             }

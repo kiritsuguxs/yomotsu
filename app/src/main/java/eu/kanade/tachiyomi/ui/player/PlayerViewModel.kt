@@ -1475,7 +1475,7 @@ class PlayerViewModel @JvmOverloads constructor(
             if (anime != null) {
                 // SY -->
                 sourceManager.isInitialized.first { it }
-                val source = sourceManager.getOrStub(anime.source) as AnimeSource
+                val source = sourceManager.getOrStub(anime.source)
                 val mergedReferences = if (source is MergedSource) {
                     getMergedReferencesById.await(anime.id)
                 } else {
@@ -1634,7 +1634,7 @@ class PlayerViewModel @JvmOverloads constructor(
      * @return true if the fallback was recorded, false if there is nothing left to wait
      * for and the caller has to handle the failure itself.
      */
-    private fun recordPendingVideoFallback(source: AnimeSource?): Boolean {
+    private fun recordPendingVideoFallback(source: eu.kanade.tachiyomi.source.Source?): Boolean {
         if (_hosterState.value.none { it is HosterState.Loading }) return false
 
         hasPendingVideoFallback.set(true)
@@ -1649,7 +1649,7 @@ class PlayerViewModel @JvmOverloads constructor(
      * hoster finishes resolving; once none are left, the failure is surfaced to the
      * player instead of being postponed again.
      */
-    private suspend fun retryPendingVideoFallback(source: AnimeSource?) {
+    private suspend fun retryPendingVideoFallback(source: eu.kanade.tachiyomi.source.Source?) {
         pendingVideoFallbackMutex.withLock {
             if (!hasPendingVideoFallback.get()) return
 
@@ -1687,7 +1687,7 @@ class PlayerViewModel @JvmOverloads constructor(
     /**
      * Set the video list for hosters.
      */
-    fun loadHosters(source: AnimeSource, hosterList: List<Hoster>, hosterIndex: Int, videoIndex: Int) {
+    fun loadHosters(source: eu.kanade.tachiyomi.source.Source, hosterList: List<Hoster>, hosterIndex: Int, videoIndex: Int) {
         val hasFoundPreferredVideo = AtomicBoolean(false)
         // ANK --> Don't carry a postponed selection over from the previous episode
         hasPendingVideoFallback.set(false)
@@ -1838,7 +1838,7 @@ class PlayerViewModel @JvmOverloads constructor(
         return true
     }
 
-    private suspend fun loadVideo(source: AnimeSource?, video: Video, hosterIndex: Int, videoIndex: Int): Boolean {
+    private suspend fun loadVideo(source: eu.kanade.tachiyomi.source.Source?, video: Video, hosterIndex: Int, videoIndex: Int): Boolean {
         val selectedHosterState = (_hosterState.value[hosterIndex] as? HosterState.Ready) ?: return false
         updateIsLoadingEpisode(true)
 
@@ -1971,12 +1971,12 @@ class PlayerViewModel @JvmOverloads constructor(
     data class EpisodeLoadResult(
         val hosterList: List<Hoster>?,
         val episodeTitle: String,
-        val source: AnimeSource,
+        val source: eu.kanade.tachiyomi.source.Source,
     )
 
     suspend fun loadEpisode(episodeId: Long?): EpisodeLoadResult? {
         val anime = anime ?: return null
-        val source = sourceManager.getOrStub(anime.source) as AnimeSource
+        val source = sourceManager.getOrStub(anime.source)
 
         val chosenEpisode = currentPlaylist.value.firstOrNull { ep -> ep.id == episodeId } ?: return null
 

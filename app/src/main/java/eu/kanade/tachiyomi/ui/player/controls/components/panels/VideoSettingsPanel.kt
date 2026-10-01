@@ -27,7 +27,7 @@ fun VideoSettingsPanel(
 ) {
     MultiCardPanel(
         onDismissRequest = onDismissRequest,
-        title = stringResource(AYMR.strings.player_sheets_video_settings_title),
+        title = stringResource(MR.strings.pref_category_display),
         cardCount = 2,
         modifier = modifier,
     ) { index, cardModifier ->

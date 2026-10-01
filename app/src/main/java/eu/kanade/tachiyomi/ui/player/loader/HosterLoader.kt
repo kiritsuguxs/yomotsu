@@ -79,7 +79,7 @@ class HosterLoader {
          * @param hosterList the list of hosters
          * @return the video, or null if no valid video was found
          */
-        suspend fun getBestVideo(source: AnimeSource, hosterList: List<Hoster>): Video? {
+        suspend fun getBestVideo(source: eu.kanade.tachiyomi.source.Source, hosterList: List<Hoster>): Video? {
             val hosterStates = MutableList<HosterState>(hosterList.size) { HosterState.Idle("") }
 
             return try {
@@ -153,7 +153,7 @@ class HosterLoader {
             }
         }
 
-        suspend fun getResolvedVideo(source: AnimeSource?, video: Video): Video? {
+        suspend fun getResolvedVideo(source: eu.kanade.tachiyomi.source.Source?, video: Video): Video? {
             val resolvedVideo = if (source is AnimeHttpSource && !video.initialized) {
                 try {
                     source.resolveVideo(video)

@@ -56,7 +56,7 @@ fun VideoSettingsDebandCard(
         title = {
             Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.medium)) {
                 Icon(Icons.Default.Gradient, null)
-                Text(stringResource(AYMR.strings.player_sheets_deband_title))
+                Text(stringResource(MR.strings.pref_category_display))
             }
         },
         onExpand = { isExpanded = !isExpanded },
