@@ -34,6 +34,7 @@
   - **Solução Definitiva:**
     - Extraídas as versões modernas de `libc++_shared.so` (NDK r27 / Clang 18.0.3, com suporte completo a C++20 `to_chars`) de `ffmpeg-kit-1.18` para `app/src/main/jniLibs/{arm64-v8a, armeabi-v7a, x86, x86_64}/`.
     - No Android Gradle Plugin, arquivos em `src/main/jniLibs` têm prioridade máxima sobre quaisquer AARs dependentes, garantindo que o runtime C++ moderno seja sempre empacotado no APK final e compatível com `libmpv`, `libffmpegkit` e `libopencv_java4`.
+    - **Atenção (.gitattributes):** Adicionada a regra `*.so binary` em `.gitattributes` para evitar que filtros CRLF/LF do Git corrompam os cabeçalhos ELF (seção `.dynamic`), o que causava `dlopen failed: libc++_shared.so .dynamic section header was not found`.
 
 ### C. Downloader de Anime e Fila
 - [`AnimeDownloader.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/tachiyomi/data/animedownload/AnimeDownloader.kt): Usa `ffmpeg-kit` (`FFmpegKitConfig.getSafParameter`) para download seguro. Removido código de `TorrentServerService` e simplificado `filterTracks`.
