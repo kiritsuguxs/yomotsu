@@ -25,18 +25,15 @@
 4. **Campos do Modelo de Banco (`Chapter` / `Episode`):** O modelo `Episode` é typealiased para `Chapter`. As extensões criadas em [`Chapter.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/tachiyomi/data/database/models/Chapter.kt) (`seen`, `last_second_seen`, `episode_number`, `fillermark`, `total_seconds`) devem ser explicitamente importadas em qualquer arquivo fora do pacote de modelos.
 5. **Constantes de Filtro de Capítulos:** Os filtros estão localizados em `tachiyomi.domain.manga.model.Manga.CHAPTER_SHOW_*` (não em `SManga`).
 
-### B. Empacotamento de Bibliotecas Nativas (AGP Packaging)
-- **Colisão de `libc++_shared.so`:**
-  O projeto utiliza `opencv` (para leitor/filtros de mangá) e `ffmpeg-kit` (para anime). Ambas as bibliotecas fornecem `lib/<abi>/libc++_shared.so`.
-  Para evitar a falha da task `:app:mergeReleaseNativeLibs`, foi adicionado em [`app/build.gradle.kts`](file:///workspace/yomotsu/app/build.gradle.kts):
-  ```kotlin
-  packaging {
-      jniLibs {
-          pickFirsts += listOf("**/libc++_shared.so")
-          ...
-      }
-  }
-  ```
+### B. Empacotamento de Bibliotecas Nativas (AGP Packaging & libmpv)
+- **Colisão de `libc++_shared.so` e Crash do MPV (`cannot locate symbol _ZNSt6__ndk18to_charsEPcS0_f`):**
+  - O projeto utiliza `opencv` (para leitor/filtros de mangá via `ppocr-sdk`), `mpv-android-lib` e `ffmpeg-kit` (para anime).
+  - `opencv` (v4.5.3.0 de 2021) foi compilado com NDK r21 antigo, cuja `libc++_shared.so` NÃO possui símbolos modernos como `std::__ndk1::to_chars(char*, char*, float)` (`_ZNSt6__ndk18to_charsEPcS0_f`).
+  - `libmpv.so` (compilado com NDK moderno r25+) exige `to_chars` em tempo de execução.
+  - Ao usar apenas `pickFirsts += listOf("**/libc++_shared.so")`, o AGP selecionou a biblioteca antiga do `opencv`, fazendo com que `MPV.<init>` quebrasse ao abrir a reprodução de vídeo com `UnsatisfiedLinkError: dlopen failed: cannot locate symbol "_ZNSt6__ndk18to_charsEPcS0_f" referenced by ".../libmpv.so"`.
+  - **Solução Definitiva:**
+    - Extraídas as versões modernas de `libc++_shared.so` (NDK r27 / Clang 18.0.3, com suporte completo a C++20 `to_chars`) de `ffmpeg-kit-1.18` para `app/src/main/jniLibs/{arm64-v8a, armeabi-v7a, x86, x86_64}/`.
+    - No Android Gradle Plugin, arquivos em `src/main/jniLibs` têm prioridade máxima sobre quaisquer AARs dependentes, garantindo que o runtime C++ moderno seja sempre empacotado no APK final e compatível com `libmpv`, `libffmpegkit` e `libopencv_java4`.
 
 ### C. Downloader de Anime e Fila
 - [`AnimeDownloader.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/tachiyomi/data/animedownload/AnimeDownloader.kt): Usa `ffmpeg-kit` (`FFmpegKitConfig.getSafParameter`) para download seguro. Removido código de `TorrentServerService` e simplificado `filterTracks`.
