@@ -236,6 +236,8 @@
   - Em `UpdatesTab.kt`, `HistoryTab.kt` e `MainActivity.kt`, chamadas a `Injekt.get()` falhavam por falta de `import uy.kohesive.injekt.api.get`.
 - **Problema 3 (Argument type mismatch em AniyomiMPVView.kt):**
   - `logcat(LogPriority.ERROR, e) { ... }` causava erro de tipo porque o segundo parâmetro da função top-level `logcat` é `tag: String?`. Corrigido para `logcat(LogPriority.ERROR) { "Failed to init AniyomiMPVView: ${e.message}" }`.
+- **Problema 4 (Import ausente MigrateMangaDialog em HistoryTab.kt):**
+  - Restaurado `import mihon.feature.migration.dialog.MigrateMangaDialog` que havia sido removido durante o ajuste de imports.
 
 
 
