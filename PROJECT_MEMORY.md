@@ -194,16 +194,18 @@
 - **Problema 1 (Botões "Abrir na WebView" Inoperantes em Animes):** Ao clicar nos botões de WebView no catálogo da fonte ou na tela de detalhes do anime, nada acontecia.
   - **Causa:** O código fazia cast exclusivo para `HttpSource` (`source as? HttpSource`). Fontes de anime implementam `AnimeHttpSource` e fontes de novel implementam `NovelHttpSource`. Além disso, `isHttpSource` na tela de detalhes era `false`, e `WebViewViewModel`/`WebViewActivity` não injetavam os headers da fonte de anime.
   - **Solução:** `BrowseSourceScreen.kt`, `MigrateSourceSearchScreen.kt`, `MangaScreen.kt`, `WebViewViewModel.kt` e `WebViewActivity.kt` foram atualizados para obter a URL e headers de `AnimeHttpSource` e `NovelHttpSource`.
-- **Problema 2 (Aba "Recentes" em Carregamento Infinito):**
-  - **Causa:**
-    1. Em `AnimeSource.kt`, `getLatestUpdates(page)` chamava `(this as? AnimeCatalogueSource)?.getLatestUpdates(page)`, que em fontes de anime não-sobrescritas chamava a própria implementação padrão da interface recursivamente no runtime.
-    2. Em `RxExtension.kt`, `Observable<T>.awaitSingle()` chamava a si mesma recursivamente por causa de sombra de import.
-    3. `SourceLatestPagingSource` não possuía verificação de `supportsLatest` e não tinha `withTimeout`, travando indefinidamente a corrotina.
-  - **Solução:**
-    - Criado método `getLatestAnime(page)` em `AnimeCatalogueSource` e chamado em `AnimeSource.kt` e `SourceLatestPagingSource`, eliminando a colisão de nome e a recursão.
-    - Corrigido import em `RxExtension.kt` com alias `coreAwaitSingle`.
-    - Adicionado `withTimeout(30_000L)` e verificação de `supportsLatest` em `SourceLatestPagingSource`.
-    - `supportsLatest` definido como `open` com valor `true` em `AnimeHttpSource` e refletido corretamente em `SourceRepositoryImpl.kt`.
+- **Problema 2 (Aba "Recentes" em Carregamento Infinito e Compatibilidade ABI de Extensões):**
+  - **Causa Real:**
+    1. Em `RxExtension.kt`, `Observable<T>.awaitSingle()` chamava a si mesma recursivamente por sombra de import (`suspend fun <T> Observable<T>.awaitSingle(): T = awaitSingle()`).
+    2. `SourceLatestPagingSource` não possuía `withTimeout`, travando indefinidamente a corrotina caso a fonte demorasse ou falhasse.
+  - **Regra Crítica de Compatibilidade ABI (Congelamento de `source-api`):**
+    - Extensões de anime de terceiros (Aniyomi / Keiyoushi) são APKs pré-compilados contra a `extensions-lib` do Aniyomi.
+    - Alterar métodos abstratos (`popularAnimeRequest`, `popularAnimeParse`, `latestUpdatesRequest`, `latestUpdatesParse`, `latestUpdatesSelector`, `latestUpdatesFromElement`, `latestUpdatesNextPageSelector`) para `open` ou adicionar propriedades/métodos concretos como `supportsLatest` em `AnimeHttpSource` quebra a verificação de classes do Android ART (`VerifyError` / `IncompatibleClassChangeError`). Isso faz com que `ExtensionLoader.kt` falhe em carregar as extensões (sumindo fontes instaladas e impedindo novas instalações).
+    - **Solução Definitiva:**
+      - Mantida a assinatura ABI de `AnimeHttpSource`, `ParsedAnimeHttpSource` e `AnimeCatalogueSource` 100% idêntica ao Aniyomi.
+      - Corrigido `RxExtension.kt` para delegar para `coreAwaitSingle`.
+      - Adicionado `withTimeout(30_000L)` em `SourcePagingSource.kt` para busca, populares e recentes.
+      - `SourceRepositoryImpl.kt` usa `runCatching { source.supportsLatest }.getOrDefault(false)` de forma segura.
 
 
 

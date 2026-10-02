@@ -18,7 +18,7 @@ interface AnimeSource : eu.kanade.tachiyomi.source.Source {
     override suspend fun getPopularManga(page: Int): eu.kanade.tachiyomi.source.model.MangasPage =
         (this as? AnimeCatalogueSource)?.getPopularAnime(page) ?: throw UnsupportedOperationException()
     override suspend fun getLatestUpdates(page: Int): eu.kanade.tachiyomi.source.model.MangasPage =
-        (this as? AnimeCatalogueSource)?.getLatestAnime(page) ?: throw UnsupportedOperationException()
+        (this as? AnimeCatalogueSource)?.getLatestUpdates(page) ?: throw UnsupportedOperationException()
     override suspend fun getSearchManga(page: Int, query: String, filters: eu.kanade.tachiyomi.source.model.FilterList): eu.kanade.tachiyomi.source.model.MangasPage =
         (this as? AnimeCatalogueSource)?.getSearchManga(page, query, filters) ?: throw UnsupportedOperationException()
 

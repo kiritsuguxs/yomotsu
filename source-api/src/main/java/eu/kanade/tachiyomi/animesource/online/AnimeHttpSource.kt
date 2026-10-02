@@ -50,8 +50,6 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      */
     open val versionId = 1
 
-    open override val supportsLatest: Boolean = true
-
     /**
      * ID of the source. By default it uses a generated id using the first 16 characters (64 bits)
      * of the MD5 of the string `"${name.lowercase()}/$lang/$versionId"`.
@@ -206,14 +204,14 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      *
      * @param page the page number to retrieve.
      */
-    protected open fun popularAnimeRequest(page: Int): Request = throw UnsupportedOperationException("popularAnimeRequest not implemented")
+    protected abstract fun popularAnimeRequest(page: Int): Request
 
     /**
      * Parses the response from the site and returns a [AnimesPage] object.
      *
      * @param response the response from the site.
      */
-    protected open fun popularAnimeParse(response: Response): AnimesPage = throw UnsupportedOperationException("popularAnimeParse not implemented")
+    protected abstract fun popularAnimeParse(response: Response): AnimesPage
 
     /**
      * Returns an observable containing a page with a list of anime. Normally it's not needed to
@@ -395,14 +393,14 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      *
      * @param page the page number to retrieve.
      */
-    protected open fun latestUpdatesRequest(page: Int): Request = throw UnsupportedOperationException("latestUpdatesRequest not implemented")
+    protected abstract fun latestUpdatesRequest(page: Int): Request
 
     /**
      * Parses the response from the site and returns a [AnimesPage] object.
      *
      * @param response the response from the site.
      */
-    protected open fun latestUpdatesParse(response: Response): AnimesPage = throw UnsupportedOperationException("latestUpdatesParse not implemented")
+    protected abstract fun latestUpdatesParse(response: Response): AnimesPage
 
     /**
      * Get the updated details for a anime.

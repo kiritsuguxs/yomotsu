@@ -64,13 +64,8 @@ interface AnimeCatalogueSource : AnimeSource {
      * @param page the page number to retrieve.
      */
     @Suppress("DEPRECATION")
-    suspend fun getLatestAnime(page: Int): AnimesPage {
-        return fetchLatestUpdates(page).awaitSingle()
-    }
-
-    @Suppress("DEPRECATION")
     override suspend fun getLatestUpdates(page: Int): AnimesPage {
-        return getLatestAnime(page)
+        return fetchLatestUpdates(page).awaitSingle()
     }
 
     /**

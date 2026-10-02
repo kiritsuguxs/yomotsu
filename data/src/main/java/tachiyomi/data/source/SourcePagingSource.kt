@@ -48,11 +48,7 @@ class SourceLatestPagingSource(source: Source) : BaseSourcePagingSource(source) 
             throw UnsupportedOperationException("Esta fonte não suporta atualizações recentes")
         }
         return kotlinx.coroutines.withTimeout(30_000L) {
-            if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
-                source.getLatestAnime(currentPage)
-            } else {
-                source.getLatestUpdates(currentPage)
-            }
+            source.getLatestUpdates(currentPage)
         }
     }
 }
