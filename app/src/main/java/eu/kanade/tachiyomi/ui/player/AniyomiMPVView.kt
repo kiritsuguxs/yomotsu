@@ -88,7 +88,10 @@ class AniyomiMPVView(context: Context, attributes: AttributeSet?) : BaseMPVView(
         mpv?.setOptionString("idle", "yes")
         mpv?.setOptionString("ytdl", "no")
         setSafeOptionString("tls-verify", "yes")
-        setSafeOptionString("tls-ca-file", "${context.filesDir.path}/${MpvConfig.MPV_DIR}/cacert.pem")
+        val caFile = java.io.File("${context.filesDir.path}/${MpvConfig.MPV_DIR}/cacert.pem")
+        if (caFile.exists() && caFile.length() > 0) {
+            setSafeOptionString("tls-ca-file", caFile.absolutePath)
+        }
 
         // We handle selecting this in the viewmodel
         mpv?.setOptionString("sid", "no")

@@ -51,6 +51,7 @@ import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
 import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
+import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.player.controls.components.IndexedSegment
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.HosterState
@@ -441,7 +442,7 @@ class PlayerViewModel @JvmOverloads constructor(
         val anime = anime ?: return null
         val episode = currentEpisode.value ?: return null
         val source = currentSource.value ?: return null
-        return source is HttpSource &&
+        return (source is AnimeHttpSource || source is HttpSource) &&
             !EpisodeLoader.isDownload(
                 episode.toDomainEpisode()!!,
                 anime,
@@ -1501,7 +1502,9 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun initEpisodeList(anime: Anime): List<Episode> {
         // ANK -->
         val (episodes, animeMap) = runBlocking {
-                getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = true) to null
+            val list = getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = true)
+            val fullList = if (list.any { it.id == episodeId }) list else getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = false)
+            fullList to null
         }
 
         val selectedEpisode = episodes.find { it.id == episodeId }
@@ -1705,6 +1708,12 @@ class PlayerViewModel @JvmOverloads constructor(
                 }
 
                 throw e
+            } catch (e: Throwable) {
+                logcat(LogPriority.ERROR, e) { "Failed to load hosters/videos" }
+                _hosterState.update { _ ->
+                    hosterList.map { HosterState.Idle(it.hosterName) }
+                }
+                eventChannel.send(Event.SetVideoLoadError(e))
             }
         }
     }

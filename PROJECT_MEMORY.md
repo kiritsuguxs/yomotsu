@@ -213,6 +213,21 @@
        - Em `fixBasePaths`, fixados incondicionalmente `sourceDir` e `publicSourceDir` para o caminho real do arquivo da extensão.
        - Em `loadExtension`, adicionado fallback explícito para resolver o arquivo privado `.ext` caso `ApplicationInfo.sourceDir` venha nulo.
 
+### S. Correção de Fechamento Silencioso do Player e Reprodução de Vídeos (Outubro 2026)
+- **Problema (Player fecha sozinho sem mostrar log de erro ao tentar assistir):**
+  - **Causa Raiz 1:** Em `PlayerActivity.kt`, `Thread.setDefaultUncaughtExceptionHandler` sobrescrevia o `GlobalExceptionHandler` do app, capturando qualquer exceção não tratada, emitindo apenas um Toast e chamando `finish()`. Como a activity era finalizada instantaneamente, o `CrashActivity` com o diálogo de cópia do log nunca era aberto.
+  - **Causa Raiz 2:** Em `PlayerViewModel.kt`, `isEpisodeOnline()` checava apenas `source is HttpSource` (interface de manga), retornando `false` para todas as fontes de anime (`AnimeHttpSource`). Em consequência, `setHttpOptions()` não repassava os headers HTTP (`User-Agent`, `Referer`, cookies) para o mpv, causando erro HTTP 403 Forbidden em servidores de vídeo que exigem referer.
+  - **Causa Raiz 3:** O arquivo de certificados raiz `cacert.pem` estava ausente em `app/src/main/assets/`. `AniyomiMPVView.kt` passava incondicionalmente `tls-ca-file` apontando para um caminho inexistente, fazendo a verificação TLS falhar em conexões HTTPS no mpv.
+  - **Causa Raiz 4:** Em `PlayerActivity.kt` (`onNewIntent`), caso `viewModel.init()` falhasse, o código executava `setInitialEpisodeError(exception)` mas não dava `return`, continuando a execução até `viewModel.loadHosters()` com `source = viewModel.currentSource.value!!`, disparando `NullPointerException`.
+  - **Causa Raiz 5:** Ao ocorrer qualquer erro em `setInitialEpisodeError` ou falha de reprodução (`MPV_EVENT_END_FILE`), o código chamava `finish()` imediatamente sem diálogo de erro.
+- **Soluções:**
+  1. **Removido `Thread.setDefaultUncaughtExceptionHandler` de `PlayerActivity`**: Exceções não tratadas agora ativam normalmente o `GlobalExceptionHandler` e a tela padrão de log de crash do Mihon/Yomotsu.
+  2. **Diálogo de Erro Visível no Player**: Adicionado `playerErrorDialogState` com `AlertDialog` Compose em `PlayerActivity`. Erros de inicialização ou reprodução agora exibem uma mensagem clara na tela com botão "Fechar", em vez de fechar a janela abruptamente.
+  3. **Certificados CA**: Adicionado `cacert.pem` completo em `app/src/main/assets/cacert.pem` e atualizado `AniyomiMPVView.kt` para checar `caFile.exists() && caFile.length() > 0` antes de definir `tls-ca-file`.
+  4. **Suporte a `AnimeHttpSource` em Headers**: `isEpisodeOnline()` agora aceita `AnimeHttpSource`, e `setHttpOptions()` extrai e injeta os headers da fonte de anime (`headers`, `user-agent`, `referrer`) no mpv.
+  5. **Proteção de Fluxo em `onNewIntent` e `loadHosters`**: Retorno antecipado após falha em `viewModel.init()`, e captura de `Throwable` em `loadHosters` emitindo `SetVideoLoadError(e)`.
+  6. **UniFile e Scanlators**: Protegida a criação de `mpv.conf`/`input.conf` com `findFile ?: createFile` e adicionado fallback sem filtro de scanlator em `initEpisodeList`.
+
 
 
 

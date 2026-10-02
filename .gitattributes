@@ -25,3 +25,5 @@
 *.pyc binary
 *.swp binary
 *.so binary
+*.pem binary
+*.crt binary

@@ -50,7 +50,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.viewinterop.AndroidView
@@ -120,6 +127,7 @@ class PlayerActivity : BaseActivity() {
     private val mpv by lazy { viewModel.mpv }
     private val player by lazy { AniyomiMPVView(this, null) }
     private val playerObserver by lazy { PlayerObserver(this) }
+    private val playerErrorDialogState = mutableStateOf<String?>(null)
     private val windowInsetsController by lazy { WindowCompat.getInsetsController(window, window.decorView) }
     private val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
     private val inputMethodManager by lazy { getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager }
@@ -201,7 +209,8 @@ class PlayerActivity : BaseActivity() {
         val hostIndex = intent.extras?.getInt("hostIndex") ?: -1
         val vidIndex = intent.extras?.getInt("vidIndex") ?: -1
         if (animeId == -1L || episodeId == -1L) {
-            finish()
+            logcat(LogPriority.ERROR) { "PlayerActivity launched with invalid animeId: $animeId, episodeId: $episodeId" }
+            playerErrorDialogState.value = "Identificador de anime/episódio inválido ($animeId / $episodeId)"
             return
         }
         NotificationReceiver.dismissNotification(
@@ -224,13 +233,16 @@ class PlayerActivity : BaseActivity() {
                 withUIContext {
                     setInitialEpisodeError(exception)
                 }
+                viewModel.updateIsLoadingHosters(false)
+                return@launchNonCancellable
             }
 
             viewModel.updateIsLoadingHosters(false)
 
+            val source = viewModel.currentSource.value ?: return@launchNonCancellable
             lifecycleScope.launch {
                 viewModel.loadHosters(
-                    source = viewModel.currentSource.value!!,
+                    source = source,
                     hosterList = initResult.first.hosterList ?: emptyList(),
                     hosterIndex = initResult.first.videoIndex.first,
                     videoIndex = initResult.first.videoIndex.second,
@@ -257,14 +269,6 @@ class PlayerActivity : BaseActivity() {
         setupPlayerAudio()
         setupMediaSession()
         setupPlayerOrientation()
-
-        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
-            runOnUiThread {
-                toast(throwable.message)
-            }
-            logcat(LogPriority.ERROR, throwable)
-            finish()
-        }
 
         viewModel.eventFlow
             .onEach { event ->
@@ -352,7 +356,7 @@ class PlayerActivity : BaseActivity() {
                         },
                     )
                     PlayerControls(
-viewModel = viewModel,
+                        viewModel = viewModel,
                         onBackPress = {
                             if (isPipSupportedAndEnabled && viewModel.paused == false &&
                                 playerPreferences.pipOnExit().get()
@@ -363,6 +367,32 @@ viewModel = viewModel,
                             }
                         },
                     )
+
+                    val errorDialogMessage by playerErrorDialogState
+                    if (errorDialogMessage != null) {
+                        AlertDialog(
+                            onDismissRequest = {
+                                playerErrorDialogState.value = null
+                                finish()
+                            },
+                            title = {
+                                Text(text = "Erro no Player")
+                            },
+                            text = {
+                                Text(text = errorDialogMessage ?: "")
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        playerErrorDialogState.value = null
+                                        finish()
+                                    },
+                                ) {
+                                    Text(text = "Fechar")
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -530,10 +560,10 @@ viewModel = viewModel,
                 return
             }
 
-        val mpvConfFile = mpvDir.createFile("mpv.conf")!!
-        advancedPlayerPreferences.mpvConf().get().let { mpvConfFile.writeText(it) }
-        val mpvInputFile = mpvDir.createFile("input.conf")!!
-        advancedPlayerPreferences.mpvInput().get().let { mpvInputFile.writeText(it) }
+        val mpvConfFile = mpvDir.findFile("mpv.conf") ?: mpvDir.createFile("mpv.conf")
+        mpvConfFile?.let { advancedPlayerPreferences.mpvConf().get().let(it::writeText) }
+        val mpvInputFile = mpvDir.findFile("input.conf") ?: mpvDir.createFile("input.conf")
+        mpvInputFile?.let { advancedPlayerPreferences.mpvInput().get().let(it::writeText) }
 
         // ANK -->
         // mpv reads scripts/, script-opts/ and shaders/ during init, so it must not start while
@@ -716,7 +746,7 @@ viewModel = viewModel,
 
                 if (playerPreferences.switchOnFailure().get()) {
                     if (!viewModel.loadBestVideo()) {
-                        finish()
+                        playerErrorDialogState.value = errorMessage
                     }
                 } else {
                     viewModel.setIsStopped(true)
@@ -1029,31 +1059,40 @@ viewModel = viewModel,
         if (player.isExiting) return
         if (video == null) return
 
-        viewModel.setIsStopped(false)
-        setHttpOptions(video)
+        try {
+            viewModel.setIsStopped(false)
+            setHttpOptions(video)
 
-        if (viewModel.isLoadingEpisode.value) {
-            viewModel.currentEpisode.value?.let { episode ->
-                val preservePos = playerPreferences.preserveWatchingPosition().get()
-                val resumePosition = position
-                    ?: if (episode.seen && !preservePos) {
-                        0L
-                    } else {
-                        episode.last_second_seen
-                    }
-                mpv.command("set", "start", "${resumePosition / 1000F}")
+            if (viewModel.isLoadingEpisode.value) {
+                viewModel.currentEpisode.value?.let { episode ->
+                    val preservePos = playerPreferences.preserveWatchingPosition().get()
+                    val resumePosition = position
+                        ?: if (episode.seen && !preservePos) {
+                            0L
+                        } else {
+                            episode.last_second_seen
+                        }
+                    mpv.command("set", "start", "${resumePosition / 1000F}")
+                }
+            } else {
+                viewModel.pos?.let {
+                    mpv.command("set", "start", "$it")
+                }
             }
-        } else {
-            viewModel.pos?.let {
-                mpv.command("set", "start", "$it")
+
+            val parsedUrl = parseVideoUrl(video.videoUrl)
+            if (parsedUrl.isNullOrEmpty()) {
+                throw IllegalStateException("URL do vídeo está vazia")
             }
+            loadFile(parsedUrl, video.mpvArgs)
+
+            // AM (DISCORD) -->
+            updateDiscordRPC(exitingPlayer = false)
+            // <-- AM (DISCORD)
+        } catch (e: Throwable) {
+            logcat(LogPriority.ERROR, e) { "Failed to set video" }
+            playerErrorDialogState.value = e.message ?: e.toString()
         }
-
-        loadFile(parseVideoUrl(video.videoUrl)!!, video.mpvArgs)
-
-        // AM (DISCORD) -->
-        updateDiscordRPC(exitingPlayer = false)
-        // <-- AM (DISCORD)
     }
 
     // ANK -->
@@ -1111,13 +1150,13 @@ viewModel = viewModel,
     // ANK <--
 
     private fun setInitialEpisodeError(error: Throwable) {
-        if (error is PlayerViewModel.ExceptionWithStringResource) {
-            toast(error.stringResource)
+        val msg = if (error is PlayerViewModel.ExceptionWithStringResource) {
+            try { tachiyomi.core.common.i18n.stringResource(error.stringResource) } catch (_: Throwable) { error.message ?: "Erro desconhecido" }
         } else {
-            toast(error.message)
+            error.message ?: error.toString()
         }
-        logcat(LogPriority.ERROR, error)
-        finish()
+        logcat(LogPriority.ERROR, error) { "Player initial episode error: $msg" }
+        playerErrorDialogState.value = msg
     }
 
     private fun parseVideoUrl(videoUrl: String?): String? {
@@ -1127,23 +1166,27 @@ viewModel = viewModel,
 
     private fun setHttpOptions(video: Video) {
         if (viewModel.isEpisodeOnline() != true) return
-        val source = viewModel.currentSource.value as? HttpSource ?: return
+        val source = viewModel.currentSource.value
+        val sourceHeaders = when (source) {
+            is AnimeHttpSource -> source.headers
+            is HttpSource -> source.headers
+            else -> null
+        }
 
-        val headers = (video.headers ?: source.headers)
-            .toMultimap()
-            .mapValues { it.value.firstOrNull() ?: "" }
-            .toMutableMap()
+        val headers = (video.headers ?: sourceHeaders)
+            ?.toMultimap()
+            ?.mapValues { it.value.firstOrNull() ?: "" }
+            ?.toMutableMap() ?: mutableMapOf()
 
-        val httpHeaderString = headers.map {
-            it.key + ": " + it.value.replace(",", "\\,")
-        }.joinToString(",")
+        if (headers.isNotEmpty()) {
+            val httpHeaderString = headers.map {
+                it.key + ": " + it.value.replace(",", "\\,")
+            }.joinToString(",")
 
-        mpv.setOptionString("http-header-fields", httpHeaderString)
-
-        // need to fix the cache
-        // MPVLib.setOptionString("cache-on-disk", "yes")
-        // val cacheDir = File(applicationContext.filesDir, "media").path
-        // MPVLib.setOptionString("cache-dir", cacheDir)
+            mpv.setOptionString("http-header-fields", httpHeaderString)
+            (headers["User-Agent"] ?: headers["user-agent"])?.let { mpv.setOptionString("user-agent", it) }
+            (headers["Referer"] ?: headers["referer"])?.let { mpv.setOptionString("referrer", it) }
+        }
     }
 
     fun onTrackLoadedFailure(url: String) {
