@@ -3,20 +3,21 @@ package eu.kanade.tachiyomi.animesource
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import eu.kanade.tachiyomi.source.ConfigurableSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-interface ConfigurableAnimeSource : AnimeSource {
+interface ConfigurableAnimeSource : AnimeSource, ConfigurableSource {
 
     /**
      * Gets instance of [SharedPreferences] scoped to the specific source.
      *
      * @since extensions-lib 1.5
      */
-    fun getSourcePreferences(): SharedPreferences =
+    override fun getSourcePreferences(): SharedPreferences =
         Injekt.get<Application>().getSharedPreferences(preferenceKey(), Context.MODE_PRIVATE)
 
-    fun setupPreferenceScreen(screen: PreferenceScreen)
+    override fun setupPreferenceScreen(screen: PreferenceScreen)
 }
 
 fun ConfigurableAnimeSource.preferenceKey(): String = "source_$id"

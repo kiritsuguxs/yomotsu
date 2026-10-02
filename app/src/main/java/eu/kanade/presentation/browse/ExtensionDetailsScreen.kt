@@ -431,7 +431,7 @@ private fun SourceSwitchPreference(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (source.source is ConfigurableSource) {
+                if (source.source is ConfigurableSource || source.source is eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource) {
                     IconButton(onClick = { onClickSourcePreferences(source.source.id) }) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,

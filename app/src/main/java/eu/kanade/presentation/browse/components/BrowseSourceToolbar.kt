@@ -40,7 +40,7 @@ fun BrowseSourceToolbar(
     // Avoid capturing unstable source in actions lambda
     val title = source?.name
     val isLocalSource = source is LocalSource
-    val isConfigurableSource = source is ConfigurableSource
+    val isConfigurableSource = source is ConfigurableSource || source is eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 
     var selectingDisplayMode by remember { mutableStateOf(false) }
 

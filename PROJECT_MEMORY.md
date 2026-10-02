@@ -181,5 +181,16 @@
     - Em `OkHttpExtensions.kt`: alterado `catch (e: Exception)` para `catch (e: Throwable)` para sempre propagar erros ao `subscriber.onError`.
     - Em `RxCoroutineBridge.kt`: envolvido `subscribe()` em `try-catch (e: Throwable)` para evitar suspensão órfã em caso de falha síncrona.
 
+### P. Registro de PlayerActivity e Configurações de Fontes de Anime (Outubro 2026)
+- **Problema 1 (Crash ao Iniciar Reprodução de Episódio):** Ao clicar para assistir a um episódio, o app crashava com `android.content.ActivityNotFoundException: Unable to find explicit activity class {app.mihon.tachiyomiat/eu.kanade.tachiyomi.ui.player.PlayerActivity}`.
+  - **Causa:** `PlayerActivity` não estava declarada no `AndroidManifest.xml`.
+  - **Solução:** Adicionada a tag `<activity android:name=".ui.player.PlayerActivity" ...>` com `configChanges`, `supportsPictureInPicture="true"`, e filtros S-Pen no `AndroidManifest.xml`.
+- **Problema 2 (Menu dos 3 Pontinhos sem Configurações para Fontes de Anime):** Em fontes como Tomato que requerem login ou configurações, o menu de 3 pontinhos não mostrava "Configurações".
+  - **Causa:** `BrowseSourceToolbar.kt` verificava apenas `source is ConfigurableSource`. Fontes de anime implementam `ConfigurableAnimeSource`. Além disso, `SourcePreferencesScreen.kt` só populava telas para `ConfigurableSource`, e `ExtensionDetailsScreen.kt` só mostrava o ícone de engrenagem para `ConfigurableSource`.
+  - **Solução:**
+    - `ConfigurableAnimeSource` passou a estender `ConfigurableSource`.
+    - `BrowseSourceToolbar.kt`, `SourcePreferencesScreen.kt` e `ExtensionDetailsScreen.kt` receberam suporte explícito a `ConfigurableAnimeSource`.
+
+
 
 

@@ -135,11 +135,19 @@ class SourcePreferencesFragment : PreferenceFragmentCompat() {
         val source = Injekt.get<SourceManager>().getOrStub(sourceId)
         val sourceScreen = preferenceManager.createPreferenceScreen(requireContext())
 
-        if (source is ConfigurableSource) {
-            val dataStore = SharedPreferencesDataStore(source.sourcePreferences())
+        val sourcePref = when (source) {
+            is ConfigurableSource -> source.sourcePreferences()
+            is eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource -> source.getSourcePreferences()
+            else -> null
+        }
+        if (sourcePref != null) {
+            val dataStore = SharedPreferencesDataStore(sourcePref)
             preferenceManager.preferenceDataStore = dataStore
 
-            source.setupPreferenceScreen(sourceScreen)
+            when (source) {
+                is ConfigurableSource -> source.setupPreferenceScreen(sourceScreen)
+                is eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource -> source.setupPreferenceScreen(sourceScreen)
+            }
             sourceScreen.forEach { pref ->
                 pref.isIconSpaceReserved = false
                 pref.isSingleLineTitle = false
