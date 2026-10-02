@@ -78,7 +78,7 @@ data class AnimeDownload(
         ): AnimeDownload? {
             val chapter = getChapter.await(chapterId) ?: return null
             val manga = getManga.await(chapter.mangaId) ?: return null
-            val source = sourceManager.get(manga.source) as? AnimeHttpSource ?: return null
+            val source = (sourceManager.get(manga.source) ?: sourceManager.getOrStub(manga.source)) as? AnimeHttpSource ?: return null
 
             return AnimeDownload(source, manga, chapter)
         }

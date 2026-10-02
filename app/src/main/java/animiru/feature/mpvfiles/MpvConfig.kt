@@ -45,6 +45,10 @@ class MpvConfig(
     private var copyJob: Job? = null
 
     fun copyFiles() {
+        startCopyFiles(force = false)
+    }
+
+    private fun startCopyFiles(force: Boolean) {
         // ANK -->
         // Copying wipes the scripts/script-opts/shaders/fonts directories first, which must never
         // happen underneath a running mpv instance. MainActivity stays resumed behind the player in
@@ -53,8 +57,11 @@ class MpvConfig(
         // A request that arrives mid-copy is deferred too: the copy may already have passed the
         // directory it concerns, so it is recorded and replayed by the loop below instead of being
         // dropped.
-        if (playerSessions.get() > 0 || copyJob?.isActive == true) {
+        if (!force && (playerSessions.get() > 0 || copyJob?.isActive == true)) {
             copyPending.set(true)
+            return
+        }
+        if (copyJob?.isActive == true) {
             return
         }
 
@@ -76,7 +83,7 @@ class MpvConfig(
                 }
                 // Bail out if a player started during the pass; onPlayerDestroyed() flushes the
                 // still-pending request once it is safe again.
-            } while (copyPending.get() && playerSessions.get() == 0)
+            } while (copyPending.get() && (playerSessions.get() == 0 || force))
         }
         // ANK <--
     }
@@ -87,8 +94,10 @@ class MpvConfig(
      * directory tree that is still being deleted and rewritten.
      */
     suspend fun awaitCopy() {
-        if (copyJob == null) {
-            copyFiles()
+        if (copyJob == null || !copyJob!!.isCompleted) {
+            if (copyJob == null) {
+                startCopyFiles(force = true)
+            }
         }
         copyJob?.join()
     }
@@ -151,7 +160,7 @@ class MpvConfig(
             var out: OutputStream? = null
             try {
                 ins = assetManager.open(filename, AssetManager.ACCESS_STREAMING)
-                val outFile = mpvDir.createFile(filename)!!
+                val outFile = mpvDir.findFile(filename) ?: mpvDir.createFile(filename) ?: continue
                 // Note that .available() officially returns an *estimated* number of bytes available
                 // this is only true for generic streams, asset streams return the full file size
                 if (outFile.length() == ins.available().toLong()) {
@@ -200,7 +209,7 @@ class MpvConfig(
             "</fontconfig>",
         ).toMutableList()
         try {
-            val file = mpvDir.createFile("fonts.conf")
+            val file = mpvDir.findFile("fonts.conf") ?: mpvDir.createFile("fonts.conf")
             file?.openOutputStream()?.bufferedWriter()?.use {
                 it.write(parts.joinToString("\n"))
             }

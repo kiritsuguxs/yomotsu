@@ -239,6 +239,26 @@
 - **Problema 4 (Import ausente MigrateMangaDialog em HistoryTab.kt):**
   - Restaurado `import mihon.feature.migration.dialog.MigrateMangaDialog` que havia sido removido durante o ajuste de imports.
 
+### U. Prevenção de Crash Nativo (JNI/R8) e Correções no Download de Animes (Outubro 2026)
+- **Problema 1 (Player fecha sozinho sem log em builds Release):**
+  - **Causa Raiz:** O GitHub Actions compila com `assembleRelease`, que ativa otimização e minificação R8 (`isMinifyEnabled = true`, `proguard-android-optimize.txt`). A biblioteca `is.xyz.mpv` (`mpv-android-lib`) e callbacks do `PlayerObserver` NÃO possuíam regras de ProGuard no `app/proguard-rules.pro`. A biblioteca nativa `libplayer.so` faz chamadas JNI por reflexão para classes, métodos e campos (`nativeHandle`, `MPVNode`, `eventProperty`, `event`, `logMessage`). Ao serem ofuscados ou removidos pelo R8, o runtime do Android (ART) abortava imediatamente o processo com `SIGSEGV` / `SIGABRT` no JNI, sem passar pelo manipulador de exceções da JVM (fechamento instantâneo sem diálogo de erro).
+  - **Solução:**
+    - Adicionadas regras `-keep` completas no `app/proguard-rules.pro` para `is.xyz.mpv.**`, `PlayerObserver`, `AniyomiMPVView`, callbacks da `PlayerActivity`, `native <methods>` e `com.arthenica.ffmpegkit.**`.
+- **Problema 2 (Arquivos CA cert e fontes não eram copiados antes do MPV iniciar):**
+  - **Causa Raiz:** Em `PlayerActivity.onCreate()`, `mpvConfig.onPlayerCreated()` incrementava `playerSessions` para 1 antes de `setupPlayerMPV()`. Como `MpvConfig.copyFiles()` abortava imediatamente quando `playerSessions > 0`, os arquivos `cacert.pem` e `fonts.conf` nunca eram copiados para `context.filesDir/mpv/` na primeira inicialização.
+  - **Solução:**
+    - Invertida a ordem em `PlayerActivity.onCreate()` para rodar `setupPlayerMPV()` antes de `mpvConfig.onPlayerCreated()`.
+    - No `MpvConfig.kt`, tornado o método `awaitCopy()` capaz de forçar a cópia inicial caso ainda não concluída, e protegida a criação de arquivos com `findFile ?: createFile`.
+- **Problema 3 (Botão de download não iniciava o download de episódios de anime):**
+  - **Causa Raiz:**
+    1. No `AnimeDownloader.kt`, `AnimeDownloadJob.start(context)` só era chamado se `wasEmpty == true`. Caso a fila não estivesse vazia ou o worker estivesse pausado/parado, novos episódios não disparavam o download.
+    2. R8 minificava classes e callbacks do `com.arthenica.ffmpegkit.**`, impedindo o funcionamento do `FFmpegKit.executeWithArgumentsAsync`.
+    3. Resolução da fonte no `AnimeDownloader.kt`, `AnimeDownloadStore.kt` e `AnimeDownload.fromChapterId` usava apenas `sourceManager.get(anime.source)` sem fallback para `getOrStub`.
+  - **Solução:**
+    - Ajustado `queueEpisodes` para sempre iniciar o `AnimeDownloadJob` se `!isRunning` e `autoStart == true`.
+    - Adicionadas regras `-keep` completas para `com.arthenica.ffmpegkit.**` e `animedownload.**`.
+    - Adicionado fallback `sourceManager.get(anime.source) ?: sourceManager.getOrStub(anime.source)` e chamada explícita a `animeDownloadManager.startDownloads()` na ação `START` em `MangaViewModel.kt`.
+
 
 
 

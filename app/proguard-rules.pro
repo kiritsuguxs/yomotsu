@@ -119,3 +119,36 @@
 
 # TDLib JNI callbacks
 -keep class org.drinkless.tdlib.** { *; }
+
+# Keep all native methods across the application
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# MPV Android Lib JNI and Callbacks
+-keep class is.xyz.mpv.** { *; }
+-keepclassmembers class is.xyz.mpv.** { *; }
+-keep interface is.xyz.mpv.** { *; }
+-dontwarn is.xyz.mpv.**
+
+# Player JNI observers and components
+-keep class eu.kanade.tachiyomi.ui.player.PlayerObserver { *; }
+-keepclassmembers class eu.kanade.tachiyomi.ui.player.PlayerObserver { *; }
+-keep class eu.kanade.tachiyomi.ui.player.AniyomiMPVView { *; }
+-keepclassmembers class eu.kanade.tachiyomi.ui.player.AniyomiMPVView { *; }
+-keep class eu.kanade.tachiyomi.ui.player.PlayerActivity {
+    void onObserverEvent(...);
+    void event(...);
+    void onTrackLoadedFailure(...);
+}
+
+# FFmpegKit JNI and Callbacks
+-keep class com.arthenica.ffmpegkit.** { *; }
+-keepclassmembers class com.arthenica.ffmpegkit.** { *; }
+-dontwarn com.arthenica.ffmpegkit.**
+
+# Anime Download & Player models
+-keep class eu.kanade.tachiyomi.data.animedownload.** { *; }
+-keepclassmembers class eu.kanade.tachiyomi.data.animedownload.** { *; }
+-keep class animiru.feature.mpvfiles.** { *; }
+-keepclassmembers class animiru.feature.mpvfiles.** { *; }

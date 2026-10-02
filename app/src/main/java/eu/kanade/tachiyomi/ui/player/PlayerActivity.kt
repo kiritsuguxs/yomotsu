@@ -264,8 +264,8 @@ class PlayerActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         try {
-            mpvConfig.onPlayerCreated()
             setupPlayerMPV()
+            mpvConfig.onPlayerCreated()
             setupPlayerAudio()
             setupMediaSession()
             setupPlayerOrientation()

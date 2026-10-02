@@ -309,7 +309,10 @@ class AnimeDownloader(
     ) {
         if (episodes.isEmpty()) return
 
-        val source = sourceManager.get(anime.source) as? AnimeHttpSource ?: return
+        val source = (sourceManager.get(anime.source) ?: sourceManager.getOrStub(anime.source)) as? AnimeHttpSource ?: run {
+            logcat(LogPriority.ERROR) { "Cannot queue episodes: source ${anime.source} is not AnimeHttpSource" }
+            return
+        }
         val wasEmpty = queueState.value.isEmpty()
 
         val episodesToQueue = episodes.asSequence()
@@ -327,32 +330,36 @@ class AnimeDownloader(
             addAllToQueue(episodesToQueue)
 
             // Start downloader if needed
-            if (autoStart && wasEmpty) {
-                val queuedDownloads =
-                    queueState.value.count { it: AnimeDownload -> it.source !is UnmeteredSource }
-                val maxDownloadsFromSource = queueState.value
-                    .groupBy { it.source }
-                    .filterKeys { it !is UnmeteredSource }
-                    .maxOfOrNull { it.value.size }
-                    ?: 0
-                // TODO: show warnings in stable
-                if (
-                    queuedDownloads > DOWNLOADS_QUEUED_WARNING_THRESHOLD ||
-                    maxDownloadsFromSource > EPISODES_PER_SOURCE_QUEUE_WARNING_THRESHOLD
-                ) {
-                    notifier.onWarning(
-                        context.stringResource(
-                            AYMR.strings.download_queue_size_warning,
-                            context.stringResource(MR.strings.app_name),
-                        ),
-                        WARNING_NOTIF_TIMEOUT_MS,
-                        NotificationHandler.openUrl(
-                            context,
-                            LibraryUpdateNotifier.HELP_WARNING_URL,
-                        ),
-                    )
+            if (autoStart) {
+                if (wasEmpty) {
+                    val queuedDownloads =
+                        queueState.value.count { it: AnimeDownload -> it.source !is UnmeteredSource }
+                    val maxDownloadsFromSource = queueState.value
+                        .groupBy { it.source }
+                        .filterKeys { it !is UnmeteredSource }
+                        .maxOfOrNull { it.value.size }
+                        ?: 0
+                    // TODO: show warnings in stable
+                    if (
+                        queuedDownloads > DOWNLOADS_QUEUED_WARNING_THRESHOLD ||
+                        maxDownloadsFromSource > EPISODES_PER_SOURCE_QUEUE_WARNING_THRESHOLD
+                    ) {
+                        notifier.onWarning(
+                            context.stringResource(
+                                AYMR.strings.download_queue_size_warning,
+                                context.stringResource(MR.strings.app_name),
+                            ),
+                            WARNING_NOTIF_TIMEOUT_MS,
+                            NotificationHandler.openUrl(
+                                context,
+                                LibraryUpdateNotifier.HELP_WARNING_URL,
+                            ),
+                        )
+                    }
                 }
-                AnimeDownloadJob.start(context)
+                if (!isRunning) {
+                    AnimeDownloadJob.start(context)
+                }
             }
         }
     }

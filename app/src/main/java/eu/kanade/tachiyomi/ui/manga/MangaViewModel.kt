@@ -832,12 +832,10 @@ class MangaViewModel(
         when (action) {
             ChapterDownloadAction.START -> {
                 startDownload(items.map { it.chapter }, false)
-                if (items.any { it.downloadState == Download.State.ERROR }) {
-                    if (successState?.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
-                        animeDownloadManager.startDownloads()
-                    } else {
-                        downloadManager.startDownloads()
-                    }
+                if (successState?.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
+                    animeDownloadManager.startDownloads()
+                } else if (items.any { it.downloadState == Download.State.ERROR }) {
+                    downloadManager.startDownloads()
                 }
             }
             ChapterDownloadAction.START_NOW -> {
