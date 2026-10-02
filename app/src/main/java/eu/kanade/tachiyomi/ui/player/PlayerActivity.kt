@@ -561,9 +561,9 @@ class PlayerActivity : BaseActivity() {
             }
 
         val mpvConfFile = mpvDir.findFile("mpv.conf") ?: mpvDir.createFile("mpv.conf")
-        mpvConfFile?.let { advancedPlayerPreferences.mpvConf().get().let(it::writeText) }
+        mpvConfFile?.writeText(advancedPlayerPreferences.mpvConf().get())
         val mpvInputFile = mpvDir.findFile("input.conf") ?: mpvDir.createFile("input.conf")
-        mpvInputFile?.let { advancedPlayerPreferences.mpvInput().get().let(it::writeText) }
+        mpvInputFile?.writeText(advancedPlayerPreferences.mpvInput().get())
 
         // ANK -->
         // mpv reads scripts/, script-opts/ and shaders/ during init, so it must not start while
@@ -1151,7 +1151,7 @@ class PlayerActivity : BaseActivity() {
 
     private fun setInitialEpisodeError(error: Throwable) {
         val msg = if (error is PlayerViewModel.ExceptionWithStringResource) {
-            try { tachiyomi.core.common.i18n.stringResource(error.stringResource) } catch (_: Throwable) { error.message ?: "Erro desconhecido" }
+            try { stringResource(error.stringResource) } catch (_: Throwable) { error.message ?: "Erro desconhecido" }
         } else {
             error.message ?: error.toString()
         }
