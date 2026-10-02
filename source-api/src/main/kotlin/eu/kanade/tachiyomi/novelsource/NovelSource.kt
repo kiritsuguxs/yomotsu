@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.novelsource
 
 import eu.kanade.tachiyomi.novelsource.model.SNovel
 import eu.kanade.tachiyomi.novelsource.model.SNovelChapter
-import eu.kanade.tachiyomi.util.awaitSingle
+import tachiyomi.core.common.util.lang.awaitSingle
 import rx.Observable
 
 /**

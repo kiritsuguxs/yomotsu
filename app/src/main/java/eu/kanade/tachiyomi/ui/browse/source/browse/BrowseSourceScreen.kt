@@ -113,19 +113,26 @@ data class BrowseSourceScreen(
         val snackbarHostState = remember { SnackbarHostState() }
 
         val onHelpClick = { uriHandler.openUri(LocalSource.HELP_URL) }
+        fun getSourceHomeUrl(source: Source?): String? = when (source) {
+            is HttpSource -> runCatching { source.getHomeUrl() }.getOrNull()
+            is eu.kanade.tachiyomi.animesource.online.AnimeHttpSource -> runCatching { source.baseUrl }.getOrNull()
+            is eu.kanade.tachiyomi.novelsource.online.NovelHttpSource -> runCatching { source.baseUrl }.getOrNull()
+            else -> null
+        }
+
         val onWebViewClick = f@{
-            val source = viewModel.source as? HttpSource ?: return@f
+            val url = getSourceHomeUrl(viewModel.source) ?: return@f
             navigator.push(
                 WebViewScreen(
-                    url = source.getHomeUrl(),
-                    initialTitle = source.name,
-                    sourceId = source.id,
+                    url = url,
+                    initialTitle = viewModel.source?.name ?: "",
+                    sourceId = viewModel.source?.id,
                 ),
             )
         }
 
         LaunchedEffect(viewModel.source) {
-            assistUrl = (viewModel.source as? HttpSource)?.getHomeUrl()
+            assistUrl = getSourceHomeUrl(viewModel.source)
         }
 
         Scaffold(

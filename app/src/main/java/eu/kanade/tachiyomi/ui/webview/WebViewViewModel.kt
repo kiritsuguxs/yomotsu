@@ -40,9 +40,16 @@ class WebViewViewModel(
     var headers = emptyMap<String, String>()
 
     init {
-        sourceId?.let { sourceManager.get(it) as? HttpSource }?.let { source ->
+        val source = sourceId?.let { sourceManager.get(it) }
+        val okhttpHeaders = when (source) {
+            is HttpSource -> runCatching { source.headers }.getOrNull()
+            is eu.kanade.tachiyomi.animesource.online.AnimeHttpSource -> runCatching { source.headers }.getOrNull()
+            is eu.kanade.tachiyomi.novelsource.online.NovelHttpSource -> runCatching { source.headers }.getOrNull()
+            else -> null
+        }
+        if (okhttpHeaders != null) {
             try {
-                headers = source.headers.toMultimap().mapValues { it.value.getOrNull(0) ?: "" }
+                headers = okhttpHeaders.toMultimap().mapValues { it.value.getOrNull(0) ?: "" }
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Failed to build headers" }
             }

@@ -114,7 +114,7 @@ abstract class ParsedAnimeHttpSource : AnimeHttpSource() {
     /**
      * Returns the Jsoup selector that returns a list of [Element] corresponding to each anime.
      */
-    protected abstract fun latestUpdatesSelector(): String
+    protected open fun latestUpdatesSelector(): String = throw UnsupportedOperationException("latestUpdatesSelector not implemented")
 
     /**
      * Returns an anime from the given [element]. Most sites only show the title and the url, it's
@@ -122,13 +122,13 @@ abstract class ParsedAnimeHttpSource : AnimeHttpSource() {
      *
      * @param element an element obtained from [latestUpdatesSelector].
      */
-    protected abstract fun latestUpdatesFromElement(element: Element): SAnime
+    protected open fun latestUpdatesFromElement(element: Element): SAnime = throw UnsupportedOperationException("latestUpdatesFromElement not implemented")
 
     /**
      * Returns the Jsoup selector that returns the <a> tag linking to the next page, or null if
      * there's no next page.
      */
-    protected abstract fun latestUpdatesNextPageSelector(): String?
+    protected open fun latestUpdatesNextPageSelector(): String? = null
 
     /**
      * Parses the response from the site and returns the details of an anime.

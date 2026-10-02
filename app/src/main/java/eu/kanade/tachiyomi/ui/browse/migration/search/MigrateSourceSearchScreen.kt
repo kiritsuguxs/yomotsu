@@ -114,12 +114,17 @@ data class MigrateSourceSearchScreen(
                 snackbarHostState = snackbarHostState,
                 contentPadding = paddingValues,
                 onWebViewClick = {
-                    val source = viewModel.source as? HttpSource ?: return@BrowseSourceContent
+                    val url = when (val s = viewModel.source) {
+                        is HttpSource -> runCatching { s.getHomeUrl() }.getOrNull()
+                        is eu.kanade.tachiyomi.animesource.online.AnimeHttpSource -> runCatching { s.baseUrl }.getOrNull()
+                        is eu.kanade.tachiyomi.novelsource.online.NovelHttpSource -> runCatching { s.baseUrl }.getOrNull()
+                        else -> null
+                    } ?: return@BrowseSourceContent
                     navigator.push(
                         WebViewScreen(
-                            url = source.getHomeUrl(),
-                            initialTitle = source.name,
-                            sourceId = source.id,
+                            url = url,
+                            initialTitle = viewModel.source?.name ?: "",
+                            sourceId = viewModel.source?.id,
                         ),
                     )
                 },

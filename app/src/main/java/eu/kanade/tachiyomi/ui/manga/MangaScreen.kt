@@ -101,7 +101,10 @@ class MangaScreen(
         }
 
         val successState = state as MangaViewModel.State.Success
-        val isHttpSource = remember { successState.source is HttpSource }
+        val isHttpSource = remember {
+            val s = successState.source
+            s is HttpSource || s is eu.kanade.tachiyomi.animesource.online.AnimeHttpSource || s is eu.kanade.tachiyomi.novelsource.online.NovelHttpSource
+        }
 
         LaunchedEffect(successState.manga, viewModel.source) {
             if (isHttpSource) {
@@ -318,12 +321,27 @@ class MangaScreen(
 
     private fun getMangaUrl(manga_: Manga?, source_: Source?): String? {
         val manga = manga_ ?: return null
-        val source = source_ as? HttpSource ?: return null
-
-        return try {
-            source.getMangaUrl(manga.toSManga())
-        } catch (e: Exception) {
-            null
+        return when (val source = source_) {
+            is HttpSource -> {
+                try {
+                    source.getMangaUrl(manga.toSManga())
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            is eu.kanade.tachiyomi.animesource.online.AnimeHttpSource -> {
+                val sAnime = (manga.toSManga() as? eu.kanade.tachiyomi.animesource.model.SAnime)
+                    ?: eu.kanade.tachiyomi.animesource.model.SAnime.create().apply {
+                        url = manga.url
+                        title = manga.title
+                    }
+                runCatching { source.getAnimeUrl(sAnime) }.getOrNull()
+                    ?: if (manga.url.startsWith("http://") || manga.url.startsWith("https://")) manga.url else "${source.baseUrl}/${manga.url.removePrefix("/")}"
+            }
+            is eu.kanade.tachiyomi.novelsource.online.NovelHttpSource -> {
+                if (manga.url.startsWith("http://") || manga.url.startsWith("https://")) manga.url else "${source.baseUrl}/${manga.url.removePrefix("/")}"
+            }
+            else -> null
         }
     }
 
@@ -401,9 +419,7 @@ class MangaScreen(
      * Copy Manga URL to Clipboard
      */
     private fun copyMangaUrl(context: Context, manga_: Manga?, source_: Source?) {
-        val manga = manga_ ?: return
-        val source = source_ as? HttpSource ?: return
-        val url = source.getMangaUrl(manga.toSManga())
+        val url = getMangaUrl(manga_, source_) ?: return
         context.copyToClipboard(url, url)
     }
 }

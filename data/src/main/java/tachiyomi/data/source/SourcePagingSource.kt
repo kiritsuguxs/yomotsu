@@ -18,32 +18,41 @@ class SourceSearchPagingSource(
     private val filters: FilterList,
 ) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
-            val animeFilters = filters as? eu.kanade.tachiyomi.animesource.model.AnimeFilterList
-                ?: source.getFilterList()
-            source.getSearchAnime(currentPage, query, animeFilters)
-        } else {
-            source.getSearchManga(currentPage, query, filters)
+        return kotlinx.coroutines.withTimeout(30_000L) {
+            if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
+                val animeFilters = filters as? eu.kanade.tachiyomi.animesource.model.AnimeFilterList
+                    ?: source.getFilterList()
+                source.getSearchAnime(currentPage, query, animeFilters)
+            } else {
+                source.getSearchManga(currentPage, query, filters)
+            }
         }
     }
 }
 
 class SourcePopularPagingSource(source: Source) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
-            source.getPopularAnime(currentPage)
-        } else {
-            source.getPopularManga(currentPage)
+        return kotlinx.coroutines.withTimeout(30_000L) {
+            if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
+                source.getPopularAnime(currentPage)
+            } else {
+                source.getPopularManga(currentPage)
+            }
         }
     }
 }
 
 class SourceLatestPagingSource(source: Source) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
-            source.getLatestUpdates(currentPage)
-        } else {
-            source.getLatestUpdates(currentPage)
+        if (!source.supportsLatest) {
+            throw UnsupportedOperationException("Esta fonte não suporta atualizações recentes")
+        }
+        return kotlinx.coroutines.withTimeout(30_000L) {
+            if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
+                source.getLatestAnime(currentPage)
+            } else {
+                source.getLatestUpdates(currentPage)
+            }
         }
     }
 }

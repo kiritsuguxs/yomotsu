@@ -4,7 +4,7 @@ import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.util.awaitSingle
+import tachiyomi.core.common.util.lang.awaitSingle
 import kotlinx.coroutines.async
 import kotlinx.coroutines.supervisorScope
 import rx.Observable
@@ -14,11 +14,11 @@ import eu.kanade.tachiyomi.animesource.model.SAnime as SManga
  * A basic interface for creating a source. It could be an online source, a local source, etc.
  */
 interface AnimeSource : eu.kanade.tachiyomi.source.Source {
-    override val supportsLatest: Boolean get() = false
+    override val supportsLatest: Boolean get() = (this as? AnimeCatalogueSource)?.supportsLatest ?: false
     override suspend fun getPopularManga(page: Int): eu.kanade.tachiyomi.source.model.MangasPage =
         (this as? AnimeCatalogueSource)?.getPopularAnime(page) ?: throw UnsupportedOperationException()
     override suspend fun getLatestUpdates(page: Int): eu.kanade.tachiyomi.source.model.MangasPage =
-        (this as? AnimeCatalogueSource)?.getLatestUpdates(page) ?: throw UnsupportedOperationException()
+        (this as? AnimeCatalogueSource)?.getLatestAnime(page) ?: throw UnsupportedOperationException()
     override suspend fun getSearchManga(page: Int, query: String, filters: eu.kanade.tachiyomi.source.model.FilterList): eu.kanade.tachiyomi.source.model.MangasPage =
         (this as? AnimeCatalogueSource)?.getSearchManga(page, query, filters) ?: throw UnsupportedOperationException()
 

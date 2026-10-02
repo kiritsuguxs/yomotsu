@@ -24,7 +24,7 @@ interface AnimeCatalogueSource : AnimeSource {
     /**
      * Whether the source has support for latest updates.
      */
-    override val supportsLatest: Boolean
+    override val supportsLatest: Boolean get() = false
 
     /**
      * Get a page with a list of anime.
@@ -64,8 +64,13 @@ interface AnimeCatalogueSource : AnimeSource {
      * @param page the page number to retrieve.
      */
     @Suppress("DEPRECATION")
-    override suspend fun getLatestUpdates(page: Int): AnimesPage {
+    suspend fun getLatestAnime(page: Int): AnimesPage {
         return fetchLatestUpdates(page).awaitSingle()
+    }
+
+    @Suppress("DEPRECATION")
+    override suspend fun getLatestUpdates(page: Int): AnimesPage {
+        return getLatestAnime(page)
     }
 
     /**

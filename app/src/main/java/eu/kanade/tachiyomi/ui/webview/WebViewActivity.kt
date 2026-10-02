@@ -58,9 +58,16 @@ class WebViewActivity : BaseActivity() {
         assistUrl = url
 
         var headers = emptyMap<String, String>()
-        (sourceManager.get(intent.extras!!.getLong(SOURCE_KEY)) as? HttpSource)?.let { source ->
+        val source = sourceManager.get(intent.extras!!.getLong(SOURCE_KEY))
+        val okhttpHeaders = when (source) {
+            is HttpSource -> runCatching { source.headers }.getOrNull()
+            is eu.kanade.tachiyomi.animesource.online.AnimeHttpSource -> runCatching { source.headers }.getOrNull()
+            is eu.kanade.tachiyomi.novelsource.online.NovelHttpSource -> runCatching { source.headers }.getOrNull()
+            else -> null
+        }
+        if (okhttpHeaders != null) {
             try {
-                headers = source.headers.toMultimap().mapValues { it.value.getOrNull(0) ?: "" }
+                headers = okhttpHeaders.toMultimap().mapValues { it.value.getOrNull(0) ?: "" }
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Failed to build headers" }
             }

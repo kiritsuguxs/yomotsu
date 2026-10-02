@@ -117,7 +117,7 @@ class SourceRepositoryImpl(
         id = source.id,
         lang = source.lang,
         name = source.name,
-        supportsLatest = false,
+        supportsLatest = source.supportsLatest,
         isStub = false,
         isNovel = isNovelSource(source),
         isAnime = isAnimeSource(source),

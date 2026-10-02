@@ -189,7 +189,21 @@
   - **Causa:** `BrowseSourceToolbar.kt` verificava apenas `source is ConfigurableSource`. Fontes de anime implementam `ConfigurableAnimeSource`. Além disso, `SourcePreferencesScreen.kt` só populava telas para `ConfigurableSource`, e `ExtensionDetailsScreen.kt` só mostrava o ícone de engrenagem para `ConfigurableSource`.
   - **Solução:**
     - `ConfigurableAnimeSource` passou a estender `ConfigurableSource`.
-    - `BrowseSourceToolbar.kt`, `SourcePreferencesScreen.kt` e `ExtensionDetailsScreen.kt` receberam suporte explícito a `ConfigurableAnimeSource`.
+
+### Q. Correções nos Botões de WebView e Carregamento Infinito de Recentes (Outubro 2026)
+- **Problema 1 (Botões "Abrir na WebView" Inoperantes em Animes):** Ao clicar nos botões de WebView no catálogo da fonte ou na tela de detalhes do anime, nada acontecia.
+  - **Causa:** O código fazia cast exclusivo para `HttpSource` (`source as? HttpSource`). Fontes de anime implementam `AnimeHttpSource` e fontes de novel implementam `NovelHttpSource`. Além disso, `isHttpSource` na tela de detalhes era `false`, e `WebViewViewModel`/`WebViewActivity` não injetavam os headers da fonte de anime.
+  - **Solução:** `BrowseSourceScreen.kt`, `MigrateSourceSearchScreen.kt`, `MangaScreen.kt`, `WebViewViewModel.kt` e `WebViewActivity.kt` foram atualizados para obter a URL e headers de `AnimeHttpSource` e `NovelHttpSource`.
+- **Problema 2 (Aba "Recentes" em Carregamento Infinito):**
+  - **Causa:**
+    1. Em `AnimeSource.kt`, `getLatestUpdates(page)` chamava `(this as? AnimeCatalogueSource)?.getLatestUpdates(page)`, que em fontes de anime não-sobrescritas chamava a própria implementação padrão da interface recursivamente no runtime.
+    2. Em `RxExtension.kt`, `Observable<T>.awaitSingle()` chamava a si mesma recursivamente por causa de sombra de import.
+    3. `SourceLatestPagingSource` não possuía verificação de `supportsLatest` e não tinha `withTimeout`, travando indefinidamente a corrotina.
+  - **Solução:**
+    - Criado método `getLatestAnime(page)` em `AnimeCatalogueSource` e chamado em `AnimeSource.kt` e `SourceLatestPagingSource`, eliminando a colisão de nome e a recursão.
+    - Corrigido import em `RxExtension.kt` com alias `coreAwaitSingle`.
+    - Adicionado `withTimeout(30_000L)` e verificação de `supportsLatest` em `SourceLatestPagingSource`.
+    - `supportsLatest` definido como `open` com valor `true` em `AnimeHttpSource` e refletido corretamente em `SourceRepositoryImpl.kt`.
 
 
 
