@@ -7,9 +7,10 @@ import eu.kanade.tachiyomi.ui.player.utils.ChapterUtils
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 data class Segment(val name: String, val start: Float, val color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified)
+@Serializable
 data class ChapterNode(
     val time: Float,
-    private val title: String,
+    val title: String,
 ) {
     val chapterTitle: String
         get() = title.substringBeforeLast(ChapterUtils.ANIYOMI_CHAPTER_IDENTIFIER)

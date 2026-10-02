@@ -257,7 +257,11 @@
   - **Solução:**
     - Ajustado `queueEpisodes` para sempre iniciar o `AnimeDownloadJob` se `!isRunning` e `autoStart == true`.
     - Adicionadas regras `-keep` completas para `com.arthenica.ffmpegkit.**` e `animedownload.**`.
-    - Adicionado fallback `sourceManager.get(anime.source) ?: sourceManager.getOrStub(anime.source)` e chamada explícita a `animeDownloadManager.startDownloads()` na ação `START` em `MangaViewModel.kt`.
+- **Problema 4 (Crash SerializationException: Serializer for class 'ChapterNode' is not found ao abrir o player):**
+  - **Causa Raiz:** Em `PlayerModels.kt`, a classe `ChapterNode` não possuía a anotação `@Serializable`. Ao inicializar o player, o flow `mpv.propFlow<MPVNode>("chapter-list")` decodifica a lista de capítulos via `toObject<List<ChapterNode>>(json)`. Sem a anotação `@Serializable`, o plugin do kotlinx.serialization não gerava o serializer `ChapterNode$$serializer`, causando exceção fatal capturada pelo handler da UI.
+  - **Solução:**
+    - Adicionada a anotação `@Serializable` na classe `ChapterNode` em `PlayerModels.kt`.
+    - Adicionadas regras `-keep` no `app/proguard-rules.pro` para `ChapterNode`, `TrackNode` e seus serializers correspondentes.
 
 
 

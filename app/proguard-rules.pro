@@ -152,3 +152,9 @@
 -keepclassmembers class eu.kanade.tachiyomi.data.animedownload.** { *; }
 -keep class animiru.feature.mpvfiles.** { *; }
 -keepclassmembers class animiru.feature.mpvfiles.** { *; }
+-keep class eu.kanade.tachiyomi.ui.player.ChapterNode { *; }
+-keepclassmembers class eu.kanade.tachiyomi.ui.player.ChapterNode { *; }
+-keep class eu.kanade.tachiyomi.ui.player.ChapterNode$$serializer { *; }
+-keep class eu.kanade.tachiyomi.ui.player.TrackNode { *; }
+-keepclassmembers class eu.kanade.tachiyomi.ui.player.TrackNode { *; }
+-keep class eu.kanade.tachiyomi.ui.player.TrackNode$$serializer { *; }
