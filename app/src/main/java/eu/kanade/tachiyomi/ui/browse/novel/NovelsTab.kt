@@ -36,7 +36,7 @@ fun novelsTab(
         actions = listOf(
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.action_filter),
-                onClick = { navigator.push(eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterScreen()) },
+                onClick = { navigator.push(eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterScreen(eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterType.NOVEL)) },
             ),
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.extensionStores),

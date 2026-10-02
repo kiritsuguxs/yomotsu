@@ -62,7 +62,7 @@ class AnimeExtensionsViewModel(
                 currentDownloads,
                 getExtensions.subscribe(),
             ) { predicate, downloads, (_updates, _installed, _available, _untrusted) ->
-                buildMap {
+                val items = buildMap {
                     val updates = _updates.filter(predicate).map(extensionMapper(downloads))
                     if (updates.isNotEmpty()) {
                         put(ExtensionUiModel.Header.Resource(MR.strings.ext_updates_pending), updates)
@@ -86,22 +86,20 @@ class AnimeExtensionsViewModel(
                         putAll(languagesWithExtensions)
                     }
                 }
+                items to _updates.size
             }
-                .collectLatest { items ->
+                .collectLatest { (items, updatesCount) ->
                     mutableState.update { state ->
                         state.copy(
                             isLoading = false,
                             items = items,
+                            updates = updatesCount,
                         )
                     }
                 }
         }
 
         viewModelScope.launchIO { findAvailableExtensions() }
-
-        preferences.extensionUpdatesCount.changes()
-            .onEach { mutableState.update { state -> state.copy(updates = it) } }
-            .launchIn(viewModelScope)
 
         basePreferences.extensionInstaller.changes()
             .onEach { mutableState.update { state -> state.copy(installer = it) } }
@@ -119,17 +117,19 @@ class AnimeExtensionsViewModel(
             subqueries.any { subquery ->
                 if (extension.name.contains(subquery, ignoreCase = true)) return@any true
 
+                val idQuery = subquery.toLongOrNull()
                 when (extension) {
                     is Extension.Installed -> extension.sources.any { source ->
                         source.name.contains(subquery, ignoreCase = true) ||
                             (source as? HttpSource)?.getHomeUrl()?.contains(subquery, ignoreCase = true) == true ||
-                            source.id == subquery.toLongOrNull()
+                            (source as? eu.kanade.tachiyomi.animesource.online.AnimeHttpSource)?.baseUrl?.contains(subquery, ignoreCase = true) == true ||
+                            (idQuery != null && runCatching { source.id == idQuery }.getOrDefault(false))
                     }
 
                     is Extension.Available -> extension.sources.any {
                         it.name.contains(subquery, ignoreCase = true) ||
                             it.baseUrl.contains(subquery, ignoreCase = true) ||
-                            it.id == subquery.toLongOrNull()
+                            (idQuery != null && it.id == idQuery)
                     }
 
                     else -> false

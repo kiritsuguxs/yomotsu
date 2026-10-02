@@ -20,8 +20,37 @@ class ChildFirstPathClassLoader(
 
     private val systemClassLoader: ClassLoader? = getSystemClassLoader()
 
+    private fun isParentFirst(name: String?): Boolean {
+        if (name == null) return false
+        return name.startsWith("eu.kanade.tachiyomi.source.") ||
+            name.startsWith("eu.kanade.tachiyomi.animesource.") ||
+            name.startsWith("eu.kanade.tachiyomi.network.") ||
+            name.startsWith("eu.kanade.tachiyomi.util.") ||
+            name.startsWith("eu.kanade.tachiyomi.AppInfo") ||
+            name.startsWith("eu.kanade.tachiyomi.core.") ||
+            name.startsWith("tachiyomi.") ||
+            name.startsWith("mihon.") ||
+            name.startsWith("kotlin.") ||
+            name.startsWith("kotlinx.") ||
+            name.startsWith("android.") ||
+            name.startsWith("androidx.") ||
+            name.startsWith("okhttp3.") ||
+            name.startsWith("okio.") ||
+            name.startsWith("org.jsoup.") ||
+            name.startsWith("rx.") ||
+            name.startsWith("uy.kohesive.injekt.")
+    }
+
     override fun loadClass(name: String?, resolve: Boolean): Class<*> {
         var c = findLoadedClass(name)
+
+        if (c == null && isParentFirst(name)) {
+            c = try {
+                super.loadClass(name, resolve)
+            } catch (_: ClassNotFoundException) {
+                null
+            }
+        }
 
         if (c == null && systemClassLoader != null) {
             try {

@@ -37,6 +37,8 @@ interface AnimeCatalogueSource : AnimeSource {
         return fetchPopularAnime(page).awaitSingle()
     }
 
+    override suspend fun getPopularManga(page: Int): eu.kanade.tachiyomi.source.model.MangasPage = getPopularAnime(page)
+
     /**
      * Get a page with a list of anime.
      *
@@ -49,6 +51,8 @@ interface AnimeCatalogueSource : AnimeSource {
     suspend fun getSearchAnime(page: Int, query: String, filters: AnimeFilterList): AnimesPage {
         return fetchSearchAnime(page, query, filters).awaitSingle()
     }
+
+    override suspend fun getSearchManga(page: Int, query: String, filters: eu.kanade.tachiyomi.source.model.FilterList): eu.kanade.tachiyomi.source.model.MangasPage = getSearchAnime(page, query, filters)
 
     /**
      * Get a page with a list of latest anime updates.

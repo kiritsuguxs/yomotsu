@@ -41,7 +41,7 @@ fun extensionsTab(
         actions = listOf(
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.action_filter),
-                onClick = { navigator.push(ExtensionFilterScreen()) },
+                onClick = { navigator.push(ExtensionFilterScreen(ExtensionFilterType.MANGA)) },
             ),
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.extensionStores),

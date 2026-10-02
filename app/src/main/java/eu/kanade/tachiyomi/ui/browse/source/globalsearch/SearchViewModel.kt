@@ -80,7 +80,7 @@ abstract class SearchViewModel(
 
     open fun getEnabledSources(): List<Source> {
         return sourceManager.getAll()
-            .filter { it !is eu.kanade.tachiyomi.source.INovelSource }
+            .filter { it !is eu.kanade.tachiyomi.source.INovelSource && it !is eu.kanade.tachiyomi.animesource.AnimeSource }
             .filter { it.lang in enabledLanguages && "${it.id}" !in disabledSources }
             .sortedWith(
                 compareBy(
@@ -156,7 +156,11 @@ abstract class SearchViewModel(
 
                     try {
                         val page = withContext(coroutineDispatcher) {
-                            source.getSearchManga(1, query, source.getFilterList())
+                            if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
+                                source.getSearchAnime(1, query, source.getFilterList())
+                            } else {
+                                source.getSearchManga(1, query, source.getFilterList())
+                            }
                         }
 
                         val titles = page.mangas

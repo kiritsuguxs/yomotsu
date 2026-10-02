@@ -21,11 +21,12 @@ fun ExtensionFilterScreen(
     navigateUp: () -> Unit,
     state: ExtensionFilterState.Success,
     onClickToggle: (String) -> Unit,
+    titleRes: dev.icerock.moko.resources.StringResource = MR.strings.label_extensions,
 ) {
     Scaffold(
         topBar = { scrollBehavior ->
             AppBar(
-                title = stringResource(MR.strings.label_extensions),
+                title = stringResource(titleRes),
                 navigateUp = navigateUp,
                 scrollBehavior = scrollBehavior,
             )

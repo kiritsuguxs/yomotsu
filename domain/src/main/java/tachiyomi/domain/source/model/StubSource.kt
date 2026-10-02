@@ -40,7 +40,10 @@ class StubSource(
 
     companion object {
         fun from(source: Source): StubSource {
-            return StubSource(id = source.id, lang = source.lang, name = source.name)
+            val id = runCatching { source.id }.getOrDefault(0L)
+            val lang = runCatching { source.lang }.getOrDefault("")
+            val name = runCatching { source.name }.getOrDefault("Unknown")
+            return StubSource(id = id, lang = lang, name = name)
         }
     }
 }

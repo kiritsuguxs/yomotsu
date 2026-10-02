@@ -87,13 +87,39 @@ class SourceRepositoryImpl(
         return SourceLatestPagingSource(sourceManager.getOrStub(sourceId))
     }
 
+    private fun isAnimeSource(source: Source): Boolean {
+        if (source is eu.kanade.tachiyomi.animesource.AnimeSource) return true
+        val clazz = source.javaClass
+        if (clazz.name.contains("anime", ignoreCase = true)) return true
+        var current: Class<*>? = clazz
+        while (current != null && current != Any::class.java) {
+            if (current.name.contains("anime", ignoreCase = true)) return true
+            if (current.interfaces.any { it.name.contains("anime", ignoreCase = true) }) return true
+            current = current.superclass
+        }
+        return false
+    }
+
+    private fun isNovelSource(source: Source): Boolean {
+        if (source is eu.kanade.tachiyomi.source.INovelSource) return true
+        val clazz = source.javaClass
+        if (clazz.name.contains("novel", ignoreCase = true)) return true
+        var current: Class<*>? = clazz
+        while (current != null && current != Any::class.java) {
+            if (current.name.contains("novel", ignoreCase = true)) return true
+            if (current.interfaces.any { it.name.contains("novel", ignoreCase = true) }) return true
+            current = current.superclass
+        }
+        return false
+    }
+
     private fun mapSourceToDomainSource(source: Source): DomainSource = DomainSource(
         id = source.id,
         lang = source.lang,
         name = source.name,
         supportsLatest = false,
         isStub = false,
-        isNovel = source is eu.kanade.tachiyomi.source.INovelSource,
-        isAnime = source is eu.kanade.tachiyomi.animesource.AnimeSource,
+        isNovel = isNovelSource(source),
+        isAnime = isAnimeSource(source),
     )
 }

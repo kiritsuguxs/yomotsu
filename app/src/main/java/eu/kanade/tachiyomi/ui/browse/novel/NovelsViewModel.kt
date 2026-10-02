@@ -31,7 +31,7 @@ class NovelsViewModel(
                 _searchQuery,
                 manager.installedExtensions,
                 manager.availableExtensions,
-                preferences.enabledLanguages.changes(),
+                preferences.enabledNovelLanguages.changes(),
                 manager.isRefreshing,
             ) { query, installed, available, enabledLanguages, isRefreshing ->
                 val filteredInstalled = installed.filter {

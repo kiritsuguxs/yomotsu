@@ -42,7 +42,7 @@ fun animeExtensionsTab(
         actions = listOf(
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.action_filter),
-                onClick = { navigator.push(ExtensionFilterScreen()) },
+                onClick = { navigator.push(ExtensionFilterScreen(eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterType.ANIME)) },
             ),
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.extensionStores),

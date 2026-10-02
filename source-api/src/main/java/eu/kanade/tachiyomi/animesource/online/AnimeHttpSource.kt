@@ -60,16 +60,17 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      *
      * Note: the generated ID sets the sign bit to `0`.
      */
-    private var _id: Long? = null
+    private var _cachedId: Long = 0L
 
     override val id: Long
-        get() = _id ?: try {
+        get() {
+            if (_cachedId != 0L) return _cachedId
             val safeName = runCatching { name }.getOrNull()?.takeIf { it.isNotBlank() } ?: "unknown"
             val safeLang = runCatching { lang }.getOrNull() ?: ""
             val safeVer = runCatching { versionId }.getOrDefault(1)
-            generateId(safeName, safeLang, safeVer).also { _id = it }
-        } catch (_: Throwable) {
-            0L
+            return runCatching {
+                generateId(safeName, safeLang, safeVer).also { _cachedId = it }
+            }.getOrDefault(0L)
         }
 
     /**

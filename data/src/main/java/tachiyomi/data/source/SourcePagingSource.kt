@@ -18,19 +18,31 @@ class SourceSearchPagingSource(
     private val filters: FilterList,
 ) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source.getSearchManga(currentPage, query, filters)
+        return if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
+            source.getSearchAnime(currentPage, query, filters)
+        } else {
+            source.getSearchManga(currentPage, query, filters)
+        }
     }
 }
 
 class SourcePopularPagingSource(source: Source) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source.getPopularManga(currentPage)
+        return if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
+            source.getPopularAnime(currentPage)
+        } else {
+            source.getPopularManga(currentPage)
+        }
     }
 }
 
 class SourceLatestPagingSource(source: Source) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source.getLatestUpdates(currentPage)
+        return if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
+            source.getLatestUpdates(currentPage)
+        } else {
+            source.getLatestUpdates(currentPage)
+        }
     }
 }
 

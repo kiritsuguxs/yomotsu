@@ -125,6 +125,26 @@
   - `ExtensionManager.kt`: consulta `it.id == sourceId` protegida com `try-catch` em `getExtensionPackage` e `getExtensionPackageAsFlow`. Protegido também `getAppIconForSource`.
   - `GetIncognitoState.kt`: consultas protegidas contra exceções.
 
+### L. Correções de Fontes/Extensões de Anime, Pesquisa e Filtros de Idioma Independentes
+- **Erro 1 (Crash ao pesquisar extensões):**
+  - Em `AnimeExtensionsViewModel` e `ExtensionsViewModel`, a verificação de `source.id` só é acionada quando o termo digitado for numérico e encapsulada em `runCatching`.
+  - `AnimeHttpSource.id` agora utiliza primitivo `_cachedId: Long = 0L` com `runCatching`, eliminando qualquer risco de autoboxing `NullPointerException`.
+  - `StubSource.from` blindado contra exceções de leitura de propriedades.
+- **Erro 2 (3 pontinhos e Pesquisa na aba Fontes Anime):**
+  - Criadas as classes `GlobalAnimeSearchViewModel` e `GlobalAnimeSearchScreen` dedicadas para busca global de animes.
+  - `AnimeSourcesTab` atualizada para acionar `GlobalAnimeSearchScreen()` em vez da busca de mangás, e removido o filtro de fontes de mangá.
+- **Erro 3 (Fontes de anime baixadas não apareciam na aba "Fontes"):**
+  - `ChildFirstPathClassLoader.kt`: configurada delegação prioritária ao class loader pai para pacotes de framework/host (`eu.kanade.tachiyomi.source.`, `eu.kanade.tachiyomi.animesource.`, `tachiyomi.`, etc.). Isso impede que o APK externo sobrescreva classes do app com bytecode antigo/incompatível, garantindo que `source is AnimeSource` funcione entre ClassLoaders.
+  - `SourceRepositoryImpl.kt`: implementada checagem hierárquica `isAnimeSource` e `isNovelSource` por introspecção e interfaces, prevenindo falso negativo em instâncias de fontes de anime.
+  - `AnimeCatalogueSource.kt`: sobrescritos `getPopularManga` e `getSearchManga` delegando para `getPopularAnime` e `getSearchAnime`.
+  - `SourcePagingSource.kt`: suporte explícito a `AnimeCatalogueSource`.
+  - `consumer-proguard.pro` e `app/proguard-rules.pro`: adicionadas regras `-keep` completas para `eu.kanade.tachiyomi.animesource.**`.
+- **Erro 4 & Filtros de Idioma Independentes (Manga, Anime e Novel):**
+  - Separados os contadores de atualizações em `ExtensionsViewModel` e `AnimeExtensionsViewModel` para exibirem apenas as atualizações da sua respectiva categoria.
+  - `ExtensionManager.updatePendingUpdatesCount` agora contabiliza apenas mangás na contagem global de atualizações.
+  - Criadas preferências independentes em `SourcePreferences`: `enabledLanguages` (mangá), `enabledAnimeLanguages` (anime) e `enabledNovelLanguages` (novel).
+  - Atualizado `ExtensionFilterScreen` e `ExtensionFilterViewModel` com `ExtensionFilterType` (MANGA, ANIME, NOVEL) e títulos correspondentes, permitindo que a filtragem de idiomas em uma aba não interfira nas demais abas.
+
 ---
 
 ## 4. Estrutura de Arquivos Importantes

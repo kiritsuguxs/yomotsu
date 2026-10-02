@@ -16,20 +16,20 @@ class GetAnimeExtensionsByType(
         val showNsfwSources = preferences.showNsfwSource.get()
 
         return combine(
-            preferences.enabledLanguages.changes(),
+            preferences.enabledAnimeLanguages.changes(),
             extensionManager.installedExtensionsFlow,
             extensionManager.untrustedExtensionsFlow,
             extensionManager.availableExtensionsFlow,
         ) { enabledLanguages, _installed, _untrusted, _available ->
             val (updates, installed) = _installed
-                .filter { (showNsfwSources || !it.isNsfw) && (it.isAnime || it.pkgName.contains("animeextension") || it.pkgName.startsWith("eu.kanade.tachiyomi.animeextension")) }
+                .filter { (showNsfwSources || !it.isNsfw) && isAnimeExtension(it) }
                 .sortedWith(
                     compareBy<Extension.Installed> { !it.isObsolete }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name },
                 )
                 .partition { it.hasUpdate }
 
-            val untrusted = _untrusted.filter { it.isAnime || it.pkgName.contains("animeextension") || it.pkgName.startsWith("eu.kanade.tachiyomi.animeextension") }
+            val untrusted = _untrusted.filter { isAnimeExtension(it) }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
 
             val available = _available
@@ -37,7 +37,7 @@ class GetAnimeExtensionsByType(
                     _installed.none { it.pkgName == extension.pkgName } &&
                         _untrusted.none { it.pkgName == extension.pkgName } &&
                         (showNsfwSources || !extension.isNsfw) &&
-                        (extension.isAnime || extension.pkgName.contains("animeextension") || extension.pkgName.startsWith("eu.kanade.tachiyomi.animeextension"))
+                        isAnimeExtension(extension)
                 }
                 .flatMap { ext ->
                     val filteredSources = ext.sources.filter { it.lang in enabledLanguages }
@@ -58,5 +58,12 @@ class GetAnimeExtensionsByType(
 
             Extensions(updates, installed, available, untrusted)
         }
+    }
+
+    private fun isAnimeExtension(extension: Extension): Boolean {
+        if (extension.isAnime) return true
+        if (extension.pkgName.contains("animeextension") || extension.pkgName.startsWith("eu.kanade.tachiyomi.animeextension")) return true
+        if (extension is Extension.Installed && extension.sources.any { it is eu.kanade.tachiyomi.animesource.AnimeSource || it.javaClass.name.contains("anime", ignoreCase = true) }) return true
+        return false
     }
 }
