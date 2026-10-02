@@ -142,10 +142,10 @@
     void onTrackLoadedFailure(...);
 }
 
-# FFmpegKit JNI and Callbacks
--keep class com.arthenica.ffmpegkit.** { *; }
--keepclassmembers class com.arthenica.ffmpegkit.** { *; }
--dontwarn com.arthenica.ffmpegkit.**
+# FFmpegKit & SmartException JNI and Callbacks
+-keep class com.arthenica.** { *; }
+-keepclassmembers class com.arthenica.** { *; }
+-dontwarn com.arthenica.**
 
 # Anime Download & Player models
 -keep class eu.kanade.tachiyomi.data.animedownload.** { *; }

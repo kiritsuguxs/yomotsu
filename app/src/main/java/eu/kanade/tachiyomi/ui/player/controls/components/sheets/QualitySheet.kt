@@ -244,7 +244,7 @@ internal fun LazyListScope.hosterContent(
     onClickVideo: (Int, Int) -> Unit,
 ) {
     hosters.forEach { (hosterIdx, hoster) ->
-        val isExpanded = expandedState.getOrNull(hosterIdx) ?: false
+        val isExpanded = expandedState.getOrNull(hosterIdx) ?: true
 
         item {
             HosterTrack(

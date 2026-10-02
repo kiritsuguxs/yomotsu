@@ -590,7 +590,10 @@ class AnimeDownloader(
                         }
                         continuation.resume(it)
                     } else {
-                        continuation.resumeWithException(Exception("Error in ffmpeg!"))
+                        val output = it.output?.takeLast(500) ?: "no output"
+                        continuation.resumeWithException(
+                            Exception("FFmpeg error (code ${it.returnCode}): $output"),
+                        )
                     }
                 },
                 logCallback,
@@ -664,6 +667,7 @@ class AnimeDownloader(
         val videoInput = buildList {
             if (video.videoUrl.startsWith("http")) {
                 add(headerOptions)
+                add("-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5")
             }
             add(sourceStreamOptions)
             add("-i")
@@ -690,30 +694,36 @@ class AnimeDownloader(
     // <-- AM
 
     private suspend fun getDuration(videoUrl: String, headerOptions: String): Float? {
-        val durationFile = context.createFileInCacheDir("ffprobe_duration.txt")
-        val durationFilePath = durationFile.toUri().toFFmpegString(context)
+        return try {
+            val durationFile = context.createFileInCacheDir("ffprobe_duration.txt")
+            val durationFilePath = durationFile.absolutePath
 
-        val ffprobeCommand = FFmpegKitConfig.parseArguments(
-            listOf(
-                headerOptions,
-                "-v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
-                "-o \"$durationFilePath\"",
-                "\"$videoUrl\"",
-            ).joinToString(" "),
-        )
+            val ffprobeCommand = FFmpegKitConfig.parseArguments(
+                listOf(
+                    headerOptions,
+                    "-v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
+                    "-o \"$durationFilePath\"",
+                    "\"$videoUrl\"",
+                ).joinToString(" "),
+            )
 
-        suspendCancellableCoroutine { continuation ->
-            val session = FFprobeKit.executeWithArgumentsAsync(ffprobeCommand) {
-                if (it.returnCode.isValueSuccess) {
-                    continuation.resume(it)
-                } else {
-                    continuation.resumeWithException(Exception(it.output))
+            suspendCancellableCoroutine { continuation ->
+                val session = FFprobeKit.executeWithArgumentsAsync(ffprobeCommand) {
+                    if (it.returnCode.isValueSuccess) {
+                        continuation.resume(it)
+                    } else {
+                        continuation.resumeWithException(Exception(it.output))
+                    }
                 }
+                continuation.invokeOnCancellation { session.cancel() }
             }
-            continuation.invokeOnCancellation { session.cancel() }
-        }
 
-        return durationFile.bufferedReader().use(BufferedReader::readText).trim().toFloatOrNull()
+            durationFile.bufferedReader().use(BufferedReader::readText).trim().toFloatOrNull()
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            logcat(LogPriority.WARN) { "Failed to get duration via FFprobe: ${e.message}" }
+            null
+        }
     }
 
     /**

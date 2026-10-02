@@ -703,11 +703,34 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      * @return the videos for the hoster.
      */
     override suspend fun getVideoList(hoster: Hoster): List<Video> {
-        return client.newCall(videoListRequest(hoster))
-            .awaitSuccess()
-            .let { response ->
-                videoListParse(response, hoster)
+        return try {
+            val request = try {
+                videoListRequest(hoster)
+            } catch (e: Throwable) {
+                val url = if (hoster.hosterUrl.startsWith("http://") || hoster.hosterUrl.startsWith("https://")) {
+                    hoster.hosterUrl
+                } else {
+                    baseUrl + hoster.hosterUrl
+                }
+                GET(url, headers)
             }
+            client.newCall(request)
+                .awaitSuccess()
+                .let { response ->
+                    try {
+                        videoListParse(response, hoster)
+                    } catch (e: Throwable) {
+                        try {
+                            videoListParse(response)
+                        } catch (e2: Throwable) {
+                            invokeVideoListParseByReflection(response)
+                                ?: throw (if (e is Exception) e else RuntimeException(e))
+                        }
+                    }
+                }
+        } catch (e: Throwable) {
+            emptyList()
+        }
     }
 
     /**
@@ -719,7 +742,12 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      * @return the request for getting the videos.
      */
     protected open fun videoListRequest(hoster: Hoster): Request {
-        return GET(hoster.hosterUrl, headers)
+        val url = if (hoster.hosterUrl.startsWith("http://") || hoster.hosterUrl.startsWith("https://")) {
+            hoster.hosterUrl
+        } else {
+            baseUrl + hoster.hosterUrl
+        }
+        return GET(url, headers)
     }
 
     /**
@@ -758,11 +786,69 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
 
     @Deprecated("Use the non-RxJava API instead", replaceWith = ReplaceWith("getVideoList"))
     override fun fetchVideoList(episode: SEpisode): Observable<List<Video>> {
-        return client.newCall(videoListRequest(episode))
-            .asObservableSuccess()
-            .map { response ->
-                videoListParse(response)
+        return Observable.defer {
+            try {
+                val request = videoListRequest(episode)
+                client.newCall(request).asObservableSuccess()
+            } catch (e: Throwable) {
+                val req = invokeVideoListRequestByReflection(episode)
+                if (req != null) {
+                    try {
+                        client.newCall(req).asObservableSuccess()
+                    } catch (e2: Throwable) {
+                        Observable.error<Response>(if (e2 is Exception) e2 else RuntimeException(e2))
+                    }
+                } else {
+                    Observable.error<Response>(if (e is Exception) e else RuntimeException(e))
+                }
             }
+        }
+            .map { response ->
+                try {
+                    videoListParse(response)
+                } catch (e: Throwable) {
+                    invokeVideoListParseByReflection(response)
+                        ?: throw (if (e is Exception) e else RuntimeException(e))
+                }
+            }
+    }
+
+    private fun invokeVideoListRequestByReflection(episode: SEpisode): Request? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "videoListRequest" && m.parameterTypes.size == 1) {
+                m.isAccessible = true
+                try {
+                    return m.invoke(this, episode) as? Request
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun invokeVideoListParseByReflection(response: Response): List<Video>? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "videoListParse") {
+                m.isAccessible = true
+                try {
+                    val result = if (m.parameterTypes.size == 1) {
+                        m.invoke(this, response)
+                    } else if (m.parameterTypes.size == 2) {
+                        m.invoke(this, response, Hoster())
+                    } else {
+                        null
+                    }
+                    if (result is List<*>) {
+                        return result.filterIsInstance<Video>()
+                    }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
     }
 
     /**
@@ -797,8 +883,12 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      * @since extensions-lib 16
      */
     open fun List<Video>.sortVideos(): List<Video> {
-        @Suppress("DEPRECATION")
-        return sort()
+        return try {
+            @Suppress("DEPRECATION")
+            sort()
+        } catch (_: Throwable) {
+            this
+        }
     }
 
     /**

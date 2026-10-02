@@ -138,6 +138,7 @@ baselineProfile { baselineProfileOutputDir = "baselineProfiles"; mergeIntoMain =
 dependencies {
     implementation(libs.compose.constraintlayout)
     implementation(libs.mpv.lib)
+    implementation(libs.arthenica.smartexceptions)
     implementation(libs.ffmpeg.kit)
     implementation(libs.bundles.cast)
     baselineProfile(projects.baselineProfile)

@@ -1874,18 +1874,20 @@ class PlayerViewModel @JvmOverloads constructor(
     }
 
     fun onHosterClicked(index: Int) {
-        when (hosterState.value[index]) {
+        when (hosterState.value.getOrNull(index)) {
             is HosterState.Ready -> {
-                _hosterExpandedList.updateAt(index, !_hosterExpandedList.value[index])
+                val currentExpanded = _hosterExpandedList.value.getOrNull(index) ?: true
+                _hosterExpandedList.updateAt(index, !currentExpanded)
             }
             is HosterState.Idle -> {
-                val hosterName = hosterList.value[index].hosterName
+                val hosterName = hosterList.value.getOrNull(index)?.hosterName ?: return
                 _hosterState.updateAt(index, HosterState.Loading(hosterName))
 
                 viewModelScope.launchIO {
+                    val hoster = hosterList.value.getOrNull(index) ?: return@launchIO
                     val hosterState = EpisodeLoader.loadHosterVideos(
                         source = currentSource.value!!,
-                        hoster = hosterList.value[index],
+                        hoster = hoster,
                         force = true,
                     )
                     _hosterState.updateAt(index, hosterState)
@@ -1895,15 +1897,22 @@ class PlayerViewModel @JvmOverloads constructor(
                     // ANK <--
                 }
             }
-            is HosterState.Loading, is HosterState.Error -> {}
+            is HosterState.Loading, is HosterState.Error, null -> {}
         }
     }
 
     private fun <T> MutableStateFlow<List<T>>.updateAt(index: Int, newValue: T) {
         this.update { values ->
-            values.toMutableList().apply {
-                this[index] = newValue
+            val list = values.toMutableList()
+            if (index in list.indices) {
+                list[index] = newValue
+            } else if (index >= 0) {
+                while (list.size < index) {
+                    list.add(newValue)
+                }
+                list.add(newValue)
             }
+            list
         }
     }
 

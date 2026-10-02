@@ -263,6 +263,26 @@
     - Adicionada a anotação `@Serializable` na classe `ChapterNode` em `PlayerModels.kt`.
     - Adicionadas regras `-keep` no `app/proguard-rules.pro` para `ChapterNode`, `TrackNode` e seus serializers correspondentes.
 
+### V. Correções de Exibição de Qualidades de Vídeo e Falha no Download com FFmpegKitConfig (Outubro 2026)
+- **Problema 1 (Notificação de erro com texto 'com.arthenica.ffmpegkit.FFmpegKitConfig' ao baixar anime):**
+  - **Causa Raiz:** O pacote `com.github.jmir1:ffmpeg-kit:1.18` (JitPack) foi publicado com POM vazio, omitindo a dependência transitiva obrigatória de runtime `com.arthenica:smart-exception-java` (`com.arthenica.smartexception`). `libs.arthenica.smartexceptions` não estava incluído em `app/build.gradle.kts`, e o ProGuard protegia apenas `com.arthenica.ffmpegkit.**`. Em tempo de execução, ao tentar inicializar `FFmpegKitConfig`, o ART do Android falhava na verificação da classe com `NoClassDefFoundError: com.arthenica.ffmpegkit.FFmpegKitConfig`.
+  - **Solução:**
+    - Adicionado `implementation(libs.arthenica.smartexceptions)` no `app/build.gradle.kts`.
+    - Atualizada a regra do ProGuard em `app/proguard-rules.pro` para cobrir todo o pacote `-keep class com.arthenica.** { *; }`.
+    - Em `AnimeDownloader.kt`, corrigido o bug em `getDuration` que usava `toFFmpegString` (SAF para URIs `content://`) em arquivos de cache locais (`file://`), substituindo por `durationFile.absolutePath` com fallback resiliente.
+    - Adicionadas flags de reconexão HLS no FFmpeg (`-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5`) para evitar interrupções de stream em downloads.
+    - Substituída a mensagem genérica `"Error in ffmpeg!"` pela mensagem com `it.output` real.
+- **Problema 2 (Qualidades não aparecem na folha 'Qualidades' para todas as extensões):**
+  - **Causa Raiz:**
+    1. Em `EpisodeLoader.kt`, se `checkHasHosters` retornava verdadeiro mas a extensão falhava ao invocar `getHosterList(episode)` (por incompatibilidade ABI ou retorno vazio), o código abortava sem tentar o método universal `getVideoList(episode)`.
+    2. Em `AnimeHttpSource.kt`, `getVideoList(hoster)` e `fetchVideoList(episode)` não possuíam blindagem nem fallbacks reflexivos para variações de assinatura de extensões compiladas para versões anteriores da biblioteca. Além disso, `hoster.hosterUrl` relativas causavam crash por falta de prefixo de URL (`baseUrl`).
+    3. Em `QualitySheet.kt`, `expandedState.getOrNull(hosterIdx)` caía em `false` por padrão quando a lista de estados ainda não estava sincronizada, fazendo com que as listas de qualidades dos hosters ficassem colapsadas e invisíveis.
+  - **Solução:**
+    - Em `EpisodeLoader.kt`: implementado fallback automático para `source.getVideoList(episode)` caso `getHosterList` lance exceção ou retorne lista vazia.
+    - Em `AnimeHttpSource.kt`: adicionadas proteções completas em `getVideoList(hoster)` (com prefixação de URL relativa e fallback para `videoListParse(response)` de 1 parâmetro), `Observable.defer` e métodos de reflexão em `fetchVideoList`, e proteção contra falhas em `sortVideos()`.
+    - Em `QualitySheet.kt`: definido `isExpanded` como `true` por padrão no `hosterContent`, garantindo que as qualidades de vídeo apareçam abertas imediatamente para todas as extensões.
+    - Em `PlayerViewModel.kt`: blindadas as operações `onHosterClicked` e `updateAt` contra `IndexOutOfBoundsException`.
+
 
 
 
