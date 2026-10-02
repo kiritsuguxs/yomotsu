@@ -5,6 +5,8 @@ import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.util.awaitSingle
+import kotlinx.coroutines.async
+import kotlinx.coroutines.supervisorScope
 import rx.Observable
 import eu.kanade.tachiyomi.animesource.model.SAnime as SManga
 
@@ -25,7 +27,7 @@ interface AnimeSource : eu.kanade.tachiyomi.source.Source {
         chapters: List<eu.kanade.tachiyomi.source.model.SChapter>,
         fetchDetails: Boolean,
         fetchChapters: Boolean,
-    ): eu.kanade.tachiyomi.source.model.SMangaUpdate = kotlinx.coroutines.supervisorScope {
+    ): eu.kanade.tachiyomi.source.model.SMangaUpdate = supervisorScope {
         val sAnime = (manga as? SAnime) ?: SAnime.create().apply {
             url = manga.url
             title = manga.title
@@ -37,8 +39,8 @@ interface AnimeSource : eu.kanade.tachiyomi.source.Source {
             thumbnail_url = manga.thumbnail_url
             initialized = manga.initialized
         }
-        val asyncManga = if (fetchDetails) kotlinx.coroutines.async { getAnimeDetails(sAnime) } else null
-        val asyncEpisodes = if (fetchChapters) kotlinx.coroutines.async { getEpisodeList(sAnime) } else null
+        val asyncManga = if (fetchDetails) async { getAnimeDetails(sAnime) } else null
+        val asyncEpisodes = if (fetchChapters) async { getEpisodeList(sAnime) } else null
         eu.kanade.tachiyomi.source.model.SMangaUpdate(
             asyncManga?.await() ?: manga,
             asyncEpisodes?.await() ?: chapters,
