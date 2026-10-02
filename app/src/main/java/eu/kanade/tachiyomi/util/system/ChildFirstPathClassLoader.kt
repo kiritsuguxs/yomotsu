@@ -13,7 +13,7 @@ import java.util.Enumeration
  * - the parent class loader.
  */
 class ChildFirstPathClassLoader(
-    dexPath: String,
+    private val dexPath: String,
     librarySearchPath: String?,
     parent: ClassLoader,
 ) : PathClassLoader(dexPath, librarySearchPath, parent) {
@@ -74,9 +74,32 @@ class ChildFirstPathClassLoader(
     }
 
     override fun getResource(name: String?): URL? {
-        return systemClassLoader?.getResource(name)
-            ?: findResource(name)
-            ?: super.getResource(name)
+        if (name == null) return null
+        val cleanName = name.removePrefix("/")
+        return systemClassLoader?.getResource(cleanName)
+            ?: findResource(cleanName)
+            ?: findInApk(cleanName)
+            ?: super.getResource(cleanName)
+    }
+
+    private fun findInApk(name: String): URL? {
+        return try {
+            val file = java.io.File(dexPath)
+            if (!file.exists()) return null
+            val zip = java.util.zip.ZipFile(file)
+            val entry = zip.getEntry(name)
+                ?: zip.getEntry("assets/$name")
+                ?: zip.getEntry("res/raw/$name")
+            val entryName = entry?.name
+            zip.close()
+            if (entryName != null) {
+                java.net.URI("jar:file:${file.absolutePath}!/$entryName").toURL()
+            } else {
+                null
+            }
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     override fun getResources(name: String?): Enumeration<URL> {

@@ -85,57 +85,64 @@ class CloudflareInterceptor(
         val headers = parseHeaders(originalRequest.headers)
 
         executor.execute {
-            webview = createWebView(originalRequest)
+            try {
+                webview = createWebView(originalRequest)
 
-            webview.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView, url: String) {
-                    fun isCloudFlareBypassed(): Boolean {
-                        return cookieManager.get(origRequestUrl.toHttpUrl())
-                            .firstOrNull { it.name == "cf_clearance" }
-                            .let { it != null && it != oldCookie }
-                    }
+                webview.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String) {
+                        fun isCloudFlareBypassed(): Boolean {
+                            return cookieManager.get(origRequestUrl.toHttpUrl())
+                                .firstOrNull { it.name == "cf_clearance" }
+                                .let { it != null && it != oldCookie }
+                        }
 
-                    if (isCloudFlareBypassed()) {
-                        cloudflareBypassed = true
-                        latch.countDown()
-                    }
+                        if (isCloudFlareBypassed()) {
+                            cloudflareBypassed = true
+                            latch.countDown()
+                        }
 
-                    if (url == origRequestUrl && !challengeFound) {
-                        // The first request didn't return the challenge, abort.
-                        latch.countDown()
-                    }
-                }
-
-                override fun onReceivedHttpError(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                    errorResponse: WebResourceResponse?,
-                ) {
-                    if (request?.isForMainFrame == true) {
-                        if (errorResponse?.statusCode in ERROR_CODES) {
-                            // Found the Cloudflare challenge page.
-                            challengeFound = true
-                        } else {
-                            // Unlock thread, the challenge wasn't found.
+                        if (url == origRequestUrl && !challengeFound) {
+                            // The first request didn't return the challenge, abort.
                             latch.countDown()
                         }
                     }
-                }
-            }
 
-            webview.loadUrl(origRequestUrl, headers)
+                    override fun onReceivedHttpError(
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                        errorResponse: WebResourceResponse?,
+                    ) {
+                        if (request?.isForMainFrame == true) {
+                            if (errorResponse?.statusCode in ERROR_CODES) {
+                                // Found the Cloudflare challenge page.
+                                challengeFound = true
+                            } else {
+                                // Unlock thread, the challenge wasn't found.
+                                latch.countDown()
+                            }
+                        }
+                    }
+                }
+
+                webview.loadUrl(origRequestUrl, headers)
+            } catch (e: Throwable) {
+                latch.countDown()
+            }
         }
 
         latch.awaitFor30Seconds()
 
         executor.execute {
-            if (!cloudflareBypassed) {
-                isWebViewOutdated = webview?.isOutdated() == true
-            }
+            try {
+                if (!cloudflareBypassed) {
+                    isWebViewOutdated = webview?.isOutdated() == true
+                }
 
-            webview?.run {
-                stopLoading()
-                destroy()
+                webview?.run {
+                    stopLoading()
+                    destroy()
+                }
+            } catch (_: Throwable) {
             }
         }
 

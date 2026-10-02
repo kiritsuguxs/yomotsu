@@ -283,6 +283,20 @@
     - Em `QualitySheet.kt`: definido `isExpanded` como `true` por padrão no `hosterContent`, garantindo que as qualidades de vídeo apareçam abertas imediatamente para todas as extensões.
     - Em `PlayerViewModel.kt`: blindadas as operações `onHosterClicked` e `updateAt` contra `IndexOutOfBoundsException`.
 
+### W. Filtro de Idiomas das Extensões de Light Novel (LN) e Resolução de Crash em Extensões (Outubro 2026)
+- **Problema 1 (Filtro de Extensões LN exibe todos os idiomas mesmo selecionando apenas um, ex: Inglês):**
+  - **Causa Raiz:** O conjunto padrão de preferências `enabledNovelLanguages` era inicializado com `LocaleHelper.getDefaultEnabledLanguages()`, que inclui a flag especial `"all"`. Em `NovelsViewModel.kt`, a verificação continha `if (enabledLanguages.isEmpty() || "all" in enabledLanguages) return true`. Como `"all"` não é um idioma real de extensões de novel, ele nunca aparecia na lista de seleção para o usuário desmarcar. O código mantinha `"all"` ativo em segundo plano, fazendo com que todos os idiomas fossem exibidos.
+  - **Solução:**
+    - Em `SourcePreferences.kt`, removido `"all"` do valor padrão de `enabledNovelLanguages`.
+    - Em `ExtensionFilterViewModel.kt`, sanitizado `enabledNovelLanguages` para remover `"all"` caso presente de instalações anteriores.
+    - Em `NovelsViewModel.kt`, reformulado `matchesLanguage` para limpar `"all"` e validar estritamente apenas os idiomas ativados pelo usuário (`en`, `English`, `pt`, `pt-BR`, `es`, `pl`, etc.).
+- **Problema 2 (Crash com error_capture_html_script_not_found ao abrir extensão):**
+  - **Causa Raiz:** Algumas extensões tentam carregar scripts JavaScript para captura de HTML em WebViews via `getResourceAsStream("capture_html.js")` ou via `assets.open()`. Como as extensões são carregadas dinamicamente sem instalação de pacote no sistema, recursos dentro da pasta `assets/` do APK da extensão não eram localizados pelo `ChildFirstPathClassLoader.findResource()`. Além disso, blocos `executor.execute` em `CloudflareInterceptor.kt` executavam sem `try-catch` na thread principal, propagando exceções que derrubavam a aplicação.
+  - **Solução:**
+    - Em `ChildFirstPathClassLoader.kt`, adicionado fallback de resolução de recursos que inspeciona diretamente os arquivos ZIP/APK da extensão (`assets/`, `res/raw/`).
+    - Adicionados os scripts `capture_html.js`, `capture_html` e `scripts/capture_html.js` em `app/src/main/assets/` como salvaguarda no host.
+    - Protegidos os blocos `executor.execute` em `CloudflareInterceptor.kt` com `try-catch` e liberação de `CountDownLatch`.
+
 
 
 

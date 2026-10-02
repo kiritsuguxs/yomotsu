@@ -58,7 +58,9 @@ class NovelsViewModel(
     }
 
     private fun matchesLanguage(pluginLang: String, enabledLanguages: Set<String>): Boolean {
-        if (enabledLanguages.isEmpty() || "all" in enabledLanguages) return true
+        val cleanEnabled = if ("all" in enabledLanguages) enabledLanguages - "all" else enabledLanguages
+        if (cleanEnabled.isEmpty()) return false
+
         val normalized = pluginLang.trim().lowercase()
         val langCode = when {
             normalized.contains("portugu") || normalized == "pt" || normalized == "pt-br" -> "pt"
@@ -76,14 +78,23 @@ class NovelsViewModel(
             normalized.contains("中文") || normalized == "zh" -> "zh"
             normalized.contains("日本") || normalized == "ja" -> "ja"
             normalized.contains("한국") || normalized.contains("조선") || normalized == "ko" -> "ko"
-            normalized.contains("multi") -> "all"
+            normalized.contains("multi") -> "multi"
             else -> normalized
         }
-        return langCode in enabledLanguages ||
-            (langCode == "pt" && ("pt-BR" in enabledLanguages || "pt-PT" in enabledLanguages || "pt" in enabledLanguages)) ||
-            (langCode == "zh" && ("zh-Hans" in enabledLanguages || "zh-Hant" in enabledLanguages)) ||
-            langCode == "all" ||
-            pluginLang in enabledLanguages
+
+        if (langCode == "multi") {
+            return cleanEnabled.any { it.equals("multi", ignoreCase = true) || it.equals("all", ignoreCase = true) }
+        }
+
+        return langCode in cleanEnabled ||
+            cleanEnabled.any { it.equals(langCode, ignoreCase = true) } ||
+            cleanEnabled.any { it.equals(pluginLang, ignoreCase = true) } ||
+            cleanEnabled.any { it.equals(normalized, ignoreCase = true) } ||
+            (langCode == "pt" && cleanEnabled.any { it.startsWith("pt", ignoreCase = true) || it.contains("portugu", ignoreCase = true) }) ||
+            (langCode == "en" && cleanEnabled.any { it.equals("en", ignoreCase = true) || it.contains("english", ignoreCase = true) }) ||
+            (langCode == "es" && cleanEnabled.any { it.equals("es", ignoreCase = true) || it.contains("español", ignoreCase = true) || it.contains("espanol", ignoreCase = true) || it.contains("spanish", ignoreCase = true) }) ||
+            (langCode == "zh" && cleanEnabled.any { it.startsWith("zh", ignoreCase = true) || it.contains("chinese", ignoreCase = true) }) ||
+            (langCode == "pl" && cleanEnabled.any { it.equals("pl", ignoreCase = true) || it.contains("polski", ignoreCase = true) || it.contains("polish", ignoreCase = true) })
     }
 
     fun search(query: String?) {

@@ -32,7 +32,7 @@ class SourcePreferences(
 
     val enabledNovelLanguages: Preference<Set<String>> = preferenceStore.getStringSet(
         "novel_source_languages",
-        LocaleHelper.getDefaultEnabledLanguages(),
+        LocaleHelper.getDefaultEnabledLanguages() - "all",
     )
 
     val disabledSources: Preference<Set<String>> = preferenceStore.getStringSet("hidden_catalogues", emptySet())
