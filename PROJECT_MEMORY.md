@@ -105,6 +105,18 @@
   - Em `ExtensionLoader.kt`, foi implementado `getPackageArchiveInfoCompat` para compatibilidade com Android 13/14/15 (`PackageInfoFlags`), permitindo leitura e execução direta das classes via `PathClassLoader` sem root e sem instalação a nível de SO.
   - Correção em `getSignatures`: extração segura das assinaturas evitando `NullPointerException` quando `signingInfo` for nulo no Android 15.
 
+### J. Prevenção de Falhas de Inicialização e Melhorias no Carregamento de Extensões
+- **Crash no Android 15 (SecurityException):**
+  - No Android 14/15 (SDK 34/35), registrar receivers para broadcasts protegidos do sistema (`ACTION_PACKAGE_ADDED`, etc.) com `RECEIVER_EXPORTED` causa `SecurityException` fatal na inicialização (`App.onCreate()`).
+  - `ExtensionInstallReceiver` e `PackageInstallerInstaller` foram revertidos para `RECEIVER_NOT_EXPORTED` e envolvidos em blocos `try-catch`.
+- **Proteção Completa no Carregamento:**
+  - `ExtensionLoader.loadExtensions()`, `loadExtension()` e `initExtensions()` foram blindados contra falhas de recursos, ícones ausentes ou erros de dex/classes não encontradas.
+  - `getPackageArchiveInfoCompat` foi protegido com fallback e `try-catch` para Android 15.
+- **Detecção de Atualizações e Classes de Extensão de Anime:**
+  - `updateExists` em `ExtensionManager` ajustado para verificar apenas `versionCode` em extensões de anime (evitando falsos positivos de "Atualizar" devido a divergência entre versões da biblioteca de mangá vs anime).
+  - Suporte completo a metadados de extensão tanto com chave de classe quanto de fábrica (`tachiyomi.animeextension.class`, `aniyomi.animeextension.class`, `tachiyomi.animeextension.factory`, `aniyomi.animeextension.factory`).
+  - Registro seguro de stub sources no `AndroidSourceManager` com tratamento de exceções.
+
 ---
 
 ## 4. Estrutura de Arquivos Importantes
@@ -117,4 +129,5 @@
   - `AnimeSourcesTab.kt` & `AnimeSourcesViewModel.kt`: Aba e ViewModel de fontes de anime.
   - `AnimeExtensionsTab.kt` & `AnimeExtensionsViewModel.kt`: Aba e ViewModel de extensões de anime.
 - `domain/src/main/java/tachiyomi/domain/download/service/DownloadPreferences.kt`: Preferências de download externo e limites.
+
 

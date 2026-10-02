@@ -26,7 +26,11 @@ internal class ExtensionInstallReceiver(private val listener: Listener) : Broadc
     val scope = CoroutineScope(SupervisorJob())
 
     fun register(context: Context) {
-        ContextCompat.registerReceiver(context, this, filter, ContextCompat.RECEIVER_EXPORTED)
+        try {
+            ContextCompat.registerReceiver(context, this, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        } catch (e: Throwable) {
+            logcat(LogPriority.ERROR, e) { "Failed to register ExtensionInstallReceiver" }
+        }
     }
 
     private val filter = IntentFilter().apply {

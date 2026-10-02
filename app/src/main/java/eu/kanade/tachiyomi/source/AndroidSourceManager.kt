@@ -22,6 +22,8 @@ import tachiyomi.source.local.LocalSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import logcat.LogPriority
+import tachiyomi.core.common.util.system.logcat
 import java.util.concurrent.ConcurrentHashMap
 
 class AndroidSourceManager(
@@ -63,14 +65,22 @@ class AndroidSourceManager(
                 )
                 mangaExtensions.forEach { extension ->
                     extension.sources.forEach {
-                        mutableMap[it.id] = it
-                        registerStubSource(StubSource.from(it))
+                        try {
+                            mutableMap[it.id] = it
+                            registerStubSource(StubSource.from(it))
+                        } catch (e: Throwable) {
+                            logcat(LogPriority.ERROR, e) { "Failed to register source ${it.name}" }
+                        }
                     }
                 }
                 novelExtensions.forEach { extension ->
                     extension.sources.forEach {
-                        mutableMap[it.id] = it
-                        registerStubSource(StubSource.from(it))
+                        try {
+                            mutableMap[it.id] = it
+                            registerStubSource(StubSource.from(it))
+                        } catch (e: Throwable) {
+                            logcat(LogPriority.ERROR, e) { "Failed to register novel source ${it.name}" }
+                        }
                     }
                 }
                 mutableMap
@@ -112,11 +122,15 @@ class AndroidSourceManager(
 
     private fun registerStubSource(source: StubSource) {
         scope.launch {
-            val dbSource = sourceRepository.getStubSource(source.id)
-            if (dbSource == source) return@launch
-            sourceRepository.upsertStubSource(source.id, source.lang, source.name)
-            if (dbSource != null) {
-                downloadManager.renameSource(dbSource, source)
+            try {
+                val dbSource = sourceRepository.getStubSource(source.id)
+                if (dbSource == source) return@launch
+                sourceRepository.upsertStubSource(source.id, source.lang, source.name)
+                if (dbSource != null) {
+                    downloadManager.renameSource(dbSource, source)
+                }
+            } catch (e: Throwable) {
+                logcat(LogPriority.ERROR, e) { "Failed to register stub source ${source.id}" }
             }
         }
     }

@@ -124,12 +124,16 @@ class PackageInstallerInstaller(private val service: Service) : Installer(servic
     }
 
     init {
-        ContextCompat.registerReceiver(
-            service,
-            packageActionReceiver,
-            IntentFilter(INSTALL_ACTION),
-            ContextCompat.RECEIVER_EXPORTED,
-        )
+        try {
+            ContextCompat.registerReceiver(
+                service,
+                packageActionReceiver,
+                IntentFilter(INSTALL_ACTION),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+        } catch (e: Throwable) {
+            logcat(LogPriority.ERROR, e) { "Failed to register packageActionReceiver" }
+        }
     }
 }
 

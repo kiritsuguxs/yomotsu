@@ -118,7 +118,12 @@ class ExtensionManager(
      * Loads and registers the installed extensions.
      */
     private fun initExtensions() {
-        val extensions = ExtensionLoader.loadExtensions(context)
+        val extensions = try {
+            ExtensionLoader.loadExtensions(context)
+        } catch (e: Throwable) {
+            logcat(LogPriority.ERROR, e) { "Failed to load extensions during initialization" }
+            emptyList()
+        }
 
         installedExtensionMapFlow.value = extensions
             .filterIsInstance<LoadResult.Success>()
@@ -362,7 +367,11 @@ class ExtensionManager(
             ?: availableExtensionMapFlow.value[pkgName]
             ?: return false
 
-        return (availableExt.versionCode > versionCode || availableExt.libVersion > libVersion)
+        return if (isAnime) {
+            availableExt.versionCode > versionCode
+        } else {
+            availableExt.versionCode > versionCode || availableExt.libVersion > libVersion
+        }
     }
 
     private fun updatePendingUpdatesCount() {
