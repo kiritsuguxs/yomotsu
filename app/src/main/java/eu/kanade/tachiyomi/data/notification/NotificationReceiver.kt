@@ -146,7 +146,11 @@ class NotificationReceiver : BroadcastReceiver() {
         val manga = runBlocking { getManga.await(mangaId) }
         val chapter = runBlocking { getChapter.await(chapterId) }
         if (manga != null && chapter != null) {
-            val intent = ReaderActivity.newIntent(context, manga.id, chapter.id).apply {
+            val intent = if (manga.isAnime) {
+                eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, manga.id, chapter.id)
+            } else {
+                ReaderActivity.newIntent(context, manga.id, chapter.id)
+            }.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             context.startActivity(intent)
@@ -385,7 +389,11 @@ class NotificationReceiver : BroadcastReceiver() {
          * @param chapter chapter that needs to be opened
          */
         internal fun openChapterPendingActivity(context: Context, manga: Manga, chapter: Chapter): PendingIntent {
-            val newIntent = ReaderActivity.newIntent(context, manga.id, chapter.id)
+            val newIntent = if (manga.isAnime) {
+                eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, manga.id, chapter.id)
+            } else {
+                ReaderActivity.newIntent(context, manga.id, chapter.id)
+            }
             return PendingIntent.getActivity(
                 context,
                 manga.id.hashCode(),

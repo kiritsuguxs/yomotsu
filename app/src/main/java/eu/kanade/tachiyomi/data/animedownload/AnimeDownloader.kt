@@ -20,7 +20,7 @@ import eu.kanade.tachiyomi.data.library.LibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.NotificationHandler
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.await
-import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.ui.player.loader.EpisodeLoader
 import eu.kanade.tachiyomi.ui.player.loader.HosterLoader
 import eu.kanade.tachiyomi.util.storage.DiskUtil
@@ -309,7 +309,7 @@ class AnimeDownloader(
     ) {
         if (episodes.isEmpty()) return
 
-        val source = sourceManager.get(anime.source) as? HttpSource ?: return
+        val source = sourceManager.get(anime.source) as? AnimeHttpSource ?: return
         val wasEmpty = queueState.value.isEmpty()
 
         val episodesToQueue = episodes.asSequence()
@@ -719,7 +719,7 @@ class AnimeDownloader(
      */
     private fun downloadVideoExternal(
         video: Video,
-        source: HttpSource,
+        source: AnimeHttpSource,
         tmpDir: UniFile,
         filename: String,
     ): UniFile {

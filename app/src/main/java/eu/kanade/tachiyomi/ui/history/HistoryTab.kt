@@ -153,7 +153,12 @@ data object HistoryTab : Tab {
 
     private suspend fun openChapter(context: Context, chapter: Chapter?) {
         if (chapter != null) {
-            val intent = ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+            val manga = uy.kohesive.injekt.Injekt.get<tachiyomi.domain.manga.interactor.GetManga>().await(chapter.mangaId)
+            val intent = if (manga?.isAnime == true) {
+                eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id)
+            } else {
+                ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+            }
             context.startActivity(intent)
         } else {
             snackbarHostState.showSnackbar(context.stringResource(MR.strings.no_next_chapter))

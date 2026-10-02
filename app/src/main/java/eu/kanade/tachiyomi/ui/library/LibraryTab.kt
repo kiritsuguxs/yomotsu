@@ -191,9 +191,12 @@ data object LibraryTab : Tab {
                             scope.launchIO {
                                 val chapter = viewModel.getNextUnreadChapter(it.manga)
                                 if (chapter != null) {
-                                    context.startActivity(
-                                        ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
-                                    )
+                                    val intent = if (it.manga.isAnime) {
+                                        eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id)
+                                    } else {
+                                        ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+                                    }
+                                    context.startActivity(intent)
                                 } else {
                                     snackbarHostState.showSnackbar(context.stringResource(MR.strings.no_next_chapter))
                                 }

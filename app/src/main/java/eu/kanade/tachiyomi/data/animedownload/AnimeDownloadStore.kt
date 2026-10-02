@@ -3,7 +3,7 @@ package eu.kanade.tachiyomi.data.animedownload
 import android.content.Context
 import androidx.core.content.edit
 import eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload
-import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -29,7 +29,7 @@ class AnimeDownloadStore(
     /**
      * Preference file where active downloads are stored.
      */
-    private val preferences = context.getSharedPreferences("active_downloads", Context.MODE_PRIVATE)
+    private val preferences = context.getSharedPreferences("active_anime_downloads", Context.MODE_PRIVATE)
 
     /**
      * Counter used to keep the queue order.
@@ -103,7 +103,7 @@ class AnimeDownloadStore(
                 val manga = cachedManga.getOrPut(mangaId) {
                     runBlocking { getManga.await(mangaId) }
                 } ?: continue
-                val source = sourceManager.get(manga.source) as? HttpSource ?: continue
+                val source = sourceManager.get(manga.source) as? AnimeHttpSource ?: continue
                 val chapter = runBlocking { getChapter.await(chapterId) } ?: continue
                 downloads.add(AnimeDownload(source, manga, chapter))
             }

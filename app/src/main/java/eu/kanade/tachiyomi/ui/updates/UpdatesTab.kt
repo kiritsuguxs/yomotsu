@@ -72,7 +72,12 @@ data object UpdatesTab : Tab {
             onMultiDeleteClicked = viewModel::showConfirmDeleteChapters,
             onUpdateSelected = viewModel::toggleSelection,
             onOpenChapter = {
-                val intent = ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                val manga = kotlinx.coroutines.runBlocking { uy.kohesive.injekt.Injekt.get<tachiyomi.domain.manga.interactor.GetManga>().await(it.update.mangaId) }
+                val intent = if (manga?.isAnime == true) {
+                    eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                } else {
+                    ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                }
                 context.startActivity(intent)
             },
             onCalendarClicked = { navigator.push(UpcomingScreen()) },

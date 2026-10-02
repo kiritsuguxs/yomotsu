@@ -171,12 +171,15 @@ class PlayerViewModel @JvmOverloads constructor(
 ) : AndroidViewModel(context) {
 
     val cachePath: String = context.applicationContext.cacheDir.path
-    val mpv = MPV(context.applicationContext) {
-        it.setOptionString("config", "yes")
-        it.setOptionString("config-dir", context.filesDir.resolve(MPV_DIR).toString())
-        it.setOptionString("gpu-shader-cache-dir", cachePath)
-        it.setOptionString("icc-cache-dir", cachePath)
-        it.setOptionString("keep-open", "yes")
+    val mpv = run {
+        runCatching { context.filesDir.resolve(MPV_DIR).mkdirs() }
+        MPV(context.applicationContext) {
+            it.setOptionString("config", "yes")
+            it.setOptionString("config-dir", context.filesDir.resolve(MPV_DIR).toString())
+            it.setOptionString("gpu-shader-cache-dir", cachePath)
+            it.setOptionString("icc-cache-dir", cachePath)
+            it.setOptionString("keep-open", "yes")
+        }
     }
 
     private val _isStopped = MutableStateFlow(false)
@@ -1438,15 +1441,17 @@ class PlayerViewModel @JvmOverloads constructor(
 
                 // Write to mpv table
                 val parentTitle = ""
-                mpv.setPropertyString("user-data/current-anime/anime-title", anime.title)
-                mpv.setPropertyString("user-data/current-anime/parent-title", parentTitle)
-                mpv.setPropertyInt("user-data/current-anime/intro-length", getAnimeSkipIntroLength())
-                mpv.setPropertyString(
-                    "user-data/current-anime/category",
-                    getCategories.await(anime.id).joinToString {
-                        it.name
-                    },
-                )
+                runCatching {
+                    mpv.setPropertyString("user-data/current-anime/anime-title", anime.title)
+                    mpv.setPropertyString("user-data/current-anime/parent-title", parentTitle)
+                    mpv.setPropertyInt("user-data/current-anime/intro-length", getAnimeSkipIntroLength())
+                    mpv.setPropertyString(
+                        "user-data/current-anime/category",
+                        getCategories.await(anime.id).joinToString {
+                            it.name
+                        },
+                    )
+                }
 
                 val currentEp = currentEpisode.value
                     ?: throw ExceptionWithStringResource("No episode loaded", AYMR.strings.no_episode_loaded)
@@ -1492,7 +1497,9 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun updateEpisode(episode: Episode) {
         mediaTitle.update { _ -> episode.name }
         _isEpisodeOnline.update { _ -> isEpisodeOnline() == true }
-        mpv.setPropertyDouble("user-data/current-anime/episode-number", episode.chapter_number.toDouble())
+        runCatching {
+            mpv.setPropertyDouble("user-data/current-anime/episode-number", episode.chapter_number.toDouble())
+        }
     }
 
     /**

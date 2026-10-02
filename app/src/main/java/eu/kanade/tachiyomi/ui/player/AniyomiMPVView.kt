@@ -58,7 +58,7 @@ class AniyomiMPVView(context: Context, attributes: AttributeSet?) : BaseMPVView(
     // Set mpv option unless it's present in mpv.conf
     private fun setSafeOptionString(name: String, value: String) {
         if (name in mpvOptionNames) return
-        mpv?.setOptionString(name, value)
+        runCatching { mpv?.setOptionString(name, value) }
     }
 
     /**
@@ -73,55 +73,62 @@ class AniyomiMPVView(context: Context, attributes: AttributeSet?) : BaseMPVView(
 
     fun init(mpvInst: MPV) {
         this.mpv = mpvInst
-        setVo(if (decoderPreferences.gpuNext().get()) "gpu-next" else "gpu")
-        mpv?.setPropertyBoolean("pause", true)
-        setSafeOptionString("profile", "fast")
-        mpv?.setOptionString("hwdec", if (decoderPreferences.tryHWDecoding().get()) "auto" else "no")
+        try {
+            setVo(if (decoderPreferences.gpuNext().get()) "gpu-next" else "gpu")
+            mpv?.setPropertyBoolean("pause", true)
+            setSafeOptionString("profile", "fast")
+            mpv?.setOptionString("hwdec", if (decoderPreferences.tryHWDecoding().get()) "auto" else "no")
 
-        if (decoderPreferences.useYUV420P().get()) {
-            mpv?.setOptionString("vf", "format=yuv420p")
+            if (decoderPreferences.useYUV420P().get()) {
+                mpv?.setOptionString("vf", "format=yuv420p")
+            }
+            mpv?.setOptionString("msg-level", "all=" + if (networkPreferences.verboseLogging.get()) "v" else "warn")
+
+            mpv?.setPropertyBoolean("input-default-bindings", true)
+
+            mpv?.setOptionString("idle", "yes")
+            mpv?.setOptionString("ytdl", "no")
+            setSafeOptionString("tls-verify", "yes")
+            val caFile = java.io.File("${context.filesDir.path}/${MpvConfig.MPV_DIR}/cacert.pem")
+            if (caFile.exists() && caFile.length() > 0) {
+                setSafeOptionString("tls-ca-file", caFile.absolutePath)
+            }
+
+            // We handle selecting this in the viewmodel
+            mpv?.setOptionString("sid", "no")
+            mpv?.setOptionString("aid", "no")
+
+            // Limit demuxer cache since the defaults are too high for mobile devices
+            val cacheMegs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) 64 else 32
+            setSafeOptionString("demuxer-max-bytes", "${cacheMegs * 1024 * 1024}")
+            setSafeOptionString("demuxer-max-back-bytes", "${cacheMegs * 1024 * 1024}")
+
+            val screenshotDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+            runCatching { screenshotDir.mkdirs() }
+            mpv?.setOptionString("screenshot-directory", screenshotDir.path)
+
+            VideoFilters.entries.forEach {
+                runCatching { mpv?.setOptionString(it.mpvProperty, it.preference(decoderPreferences).get().toString()) }
+            }
+
+            mpv?.setOptionString("speed", playerPreferences.playerSpeed().get().toString())
+            // workaround for <https://github.com/mpv-player/mpv/issues/14651>
+            setSafeOptionString("vd-lavc-film-grain", "cpu")
+
+            postInitOptions()
+            setupSubtitlesOptions()
+            setupAudioOptions()
+            observeProperties()
+        } catch (e: Throwable) {
+            logcat(LogPriority.ERROR, e) { "Failed to init AniyomiMPVView" }
         }
-        mpv?.setOptionString("msg-level", "all=" + if (networkPreferences.verboseLogging.get()) "v" else "warn")
-
-        mpv?.setPropertyBoolean("input-default-bindings", true)
-
-        mpv?.setOptionString("idle", "yes")
-        mpv?.setOptionString("ytdl", "no")
-        setSafeOptionString("tls-verify", "yes")
-        val caFile = java.io.File("${context.filesDir.path}/${MpvConfig.MPV_DIR}/cacert.pem")
-        if (caFile.exists() && caFile.length() > 0) {
-            setSafeOptionString("tls-ca-file", caFile.absolutePath)
-        }
-
-        // We handle selecting this in the viewmodel
-        mpv?.setOptionString("sid", "no")
-        mpv?.setOptionString("aid", "no")
-
-        // Limit demuxer cache since the defaults are too high for mobile devices
-        val cacheMegs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) 64 else 32
-        setSafeOptionString("demuxer-max-bytes", "${cacheMegs * 1024 * 1024}")
-        setSafeOptionString("demuxer-max-back-bytes", "${cacheMegs * 1024 * 1024}")
-
-        val screenshotDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        screenshotDir.mkdirs()
-        mpv?.setOptionString("screenshot-directory", screenshotDir.path)
-
-        VideoFilters.entries.forEach {
-            mpv?.setOptionString(it.mpvProperty, it.preference(decoderPreferences).get().toString())
-        }
-
-        mpv?.setOptionString("speed", playerPreferences.playerSpeed().get().toString())
-        // workaround for <https://github.com/mpv-player/mpv/issues/14651>
-        setSafeOptionString("vd-lavc-film-grain", "cpu")
-
-        postInitOptions()
-        setupSubtitlesOptions()
-        setupAudioOptions()
-        observeProperties()
     }
 
     fun observeProperties() {
-        for ((name, format) in observedProps) mpv?.observeProperty(name, format)
+        for ((name, format) in observedProps) {
+            runCatching { mpv?.observeProperty(name, format) }
+        }
     }
 
     fun postInitOptions() {

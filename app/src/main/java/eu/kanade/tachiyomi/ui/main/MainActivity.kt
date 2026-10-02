@@ -594,6 +594,13 @@ class MainActivity : BaseActivity() {
             (scheme == "mihon" && data?.host == "extension-store")
     }
 
+    override fun onResume() {
+        super.onResume()
+        try {
+            uy.kohesive.injekt.Injekt.get<animiru.feature.mpvfiles.MpvConfig>().copyFiles()
+        } catch (_: Throwable) {}
+    }
+
     companion object {
         const val INTENT_SEARCH = "eu.kanade.tachiyomi.SEARCH"
         const val INTENT_SEARCH_QUERY = "query"

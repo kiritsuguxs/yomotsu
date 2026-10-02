@@ -128,7 +128,7 @@ class MangaScreen(
             chapterSwipeStartAction = viewModel.chapterSwipeStartAction,
             chapterSwipeEndAction = viewModel.chapterSwipeEndAction,
             navigateUp = navigator::pop,
-            onChapterClicked = { openChapter(context, it, successState.source) },
+            onChapterClicked = { openChapter(context, it, successState.source, successState.manga.isAnime) },
             onDownloadChapter = viewModel::runChapterDownloadActions.takeIf { !successState.source.isLocalOrStub() },
             onTranslationChapter = viewModel::runChapterTranslationActions.takeIf { !isNovel },
             onAddToLibraryClicked = {
@@ -159,7 +159,7 @@ class MangaScreen(
             onTagSearch = { scope.launch { performGenreSearch(navigator, it, viewModel.source!!) } },
             onFilterButtonClicked = viewModel::showSettingsDialog,
             onRefresh = viewModel::fetchAllFromSource,
-            onContinueReading = { continueReading(context, viewModel.getNextUnreadChapter(), successState.source) },
+            onContinueReading = { continueReading(context, viewModel.getNextUnreadChapter(), successState.source, successState.manga.isAnime) },
             onSearch = { query, global -> scope.launch { performSearch(navigator, query, global) } },
             onCoverClicked = viewModel::showCoverDialog,
             onShareClicked = { shareManga(context, viewModel.manga, viewModel.source) }.takeIf { isHttpSource },
@@ -305,14 +305,14 @@ class MangaScreen(
         }
     }
 
-    private fun continueReading(context: Context, unreadChapter: Chapter?, source: Source?) {
-        if (unreadChapter != null) openChapter(context, unreadChapter, source)
+    private fun continueReading(context: Context, unreadChapter: Chapter?, source: Source?, isAnime: Boolean = false) {
+        if (unreadChapter != null) openChapter(context, unreadChapter, source, isAnime)
     }
 
-    private fun openChapter(context: Context, chapter: Chapter, source: Source?) {
+    private fun openChapter(context: Context, chapter: Chapter, source: Source?, isAnime: Boolean = false) {
         if (source is eu.kanade.tachiyomi.source.INovelSource) {
             context.startActivity(eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(context, chapter.mangaId, chapter.id))
-        } else if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+        } else if (source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
             context.startActivity(eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id))
         } else {
             context.startActivity(ReaderActivity.newIntent(context, chapter.mangaId, chapter.id))

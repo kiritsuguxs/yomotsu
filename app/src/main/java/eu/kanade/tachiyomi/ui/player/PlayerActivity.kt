@@ -177,8 +177,8 @@ class PlayerActivity : BaseActivity() {
             vidIndex: Int? = null,
         ): Intent {
             return Intent(context, PlayerActivity::class.java).apply {
-                putExtra("animeId", animeId)
-                putExtra("episodeId", episodeId)
+                if (animeId != null) putExtra("animeId", animeId)
+                if (episodeId != null) putExtra("episodeId", episodeId)
                 hostIndex?.let { putExtra("hostIndex", it) }
                 vidIndex?.let { putExtra("vidIndex", it) }
                 hostList?.let { putExtra("hostList", it.serialize()) }
@@ -203,12 +203,16 @@ class PlayerActivity : BaseActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
 
-        val animeId = intent.extras?.getLong("animeId") ?: -1
-        val episodeId = intent.extras?.getLong("episodeId") ?: -1
+        val animeId = intent.getLongExtra("animeId", -1L).takeIf { it != -1L }
+            ?: intent.getLongExtra("manga", -1L).takeIf { it != -1L }
+            ?: intent.extras?.getLong("animeId") ?: -1L
+        val episodeId = intent.getLongExtra("episodeId", -1L).takeIf { it != -1L }
+            ?: intent.getLongExtra("chapter", -1L).takeIf { it != -1L }
+            ?: intent.extras?.getLong("episodeId") ?: -1L
         val hostList = intent.extras?.getString("hostList") ?: ""
-        val hostIndex = intent.extras?.getInt("hostIndex") ?: -1
-        val vidIndex = intent.extras?.getInt("vidIndex") ?: -1
-        if (animeId == -1L || episodeId == -1L) {
+        val hostIndex = intent.getIntExtra("hostIndex", -1)
+        val vidIndex = intent.getIntExtra("vidIndex", -1)
+        if (animeId <= 0L || episodeId <= 0L) {
             logcat(LogPriority.ERROR) { "PlayerActivity launched with invalid animeId: $animeId, episodeId: $episodeId" }
             playerErrorDialogState.value = "Identificador de anime/episódio inválido ($animeId / $episodeId)"
             return
@@ -259,16 +263,16 @@ class PlayerActivity : BaseActivity() {
         registerSecureActivity(this)
         super.onCreate(savedInstanceState)
 
-        // ANK -->
-        // Registers before setupPlayerMPV() so MpvConfig stops wiping the config directory for as
-        // long as this player lives.
-        mpvConfig.onPlayerCreated()
-        // ANK <--
-
-        setupPlayerMPV()
-        setupPlayerAudio()
-        setupMediaSession()
-        setupPlayerOrientation()
+        try {
+            mpvConfig.onPlayerCreated()
+            setupPlayerMPV()
+            setupPlayerAudio()
+            setupMediaSession()
+            setupPlayerOrientation()
+        } catch (e: Throwable) {
+            logcat(LogPriority.ERROR, e) { "Failed during player onCreate setup" }
+            playerErrorDialogState.value = "Erro ao carregar o player: ${e.message ?: e.toString()}"
+        }
 
         viewModel.eventFlow
             .onEach { event ->

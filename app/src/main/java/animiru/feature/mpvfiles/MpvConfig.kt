@@ -87,6 +87,9 @@ class MpvConfig(
      * directory tree that is still being deleted and rewritten.
      */
     suspend fun awaitCopy() {
+        if (copyJob == null) {
+            copyFiles()
+        }
         copyJob?.join()
     }
 
