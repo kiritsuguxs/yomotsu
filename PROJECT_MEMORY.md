@@ -145,17 +145,23 @@
   - Criadas preferências independentes em `SourcePreferences`: `enabledLanguages` (mangá), `enabledAnimeLanguages` (anime) e `enabledNovelLanguages` (novel).
   - Atualizado `ExtensionFilterScreen` e `ExtensionFilterViewModel` com `ExtensionFilterType` (MANGA, ANIME, NOVEL) e títulos correspondentes, permitindo que a filtragem de idiomas em uma aba não interfira nas demais abas.
 
----
-
-## 4. Estrutura de Arquivos Importantes
-- `app/build.gradle.kts`: Declaração de `ffmpeg-kit`, splits de ABI e `pickFirsts` de jniLibs.
-- `app/src/main/java/eu/kanade/tachiyomi/ui/player/`:
-  - `PlayerActivity.kt`: Activity do reprodutor MPV.
-  - `PlayerViewModel.kt`: ViewModel principal do reprodutor.
-- `app/src/main/java/eu/kanade/tachiyomi/data/animedownload/`: Toda a lógica de fila, cache e download de animes.
-- `app/src/main/java/eu/kanade/tachiyomi/ui/browse/anime/`:
-  - `AnimeSourcesTab.kt` & `AnimeSourcesViewModel.kt`: Aba e ViewModel de fontes de anime.
-  - `AnimeExtensionsTab.kt` & `AnimeExtensionsViewModel.kt`: Aba e ViewModel de extensões de anime.
-- `domain/src/main/java/tachiyomi/domain/download/service/DownloadPreferences.kt`: Preferências de download externo e limites.
+### M. Resolução de AbstractMethodError em Extensões de Anime (AnimeFilterList & AnimesPage)
+- **Sintoma:** Ao pesquisar animes nas fontes instaladas (AnimesOnlineCloud, Anikatsu, AnimeFire, Tomato), o app quebrava com:
+  `java.lang.AbstractMethodError: abstract method "okhttp3.Request AnimeHttpSource.searchAnimeRequest(int, String, FilterList)" on receiver Class<...AnimesOnlineCloud>`
+- **Causa Raiz:** No commit `b3b75a7c382e7667dd0a175e6759fc279e283530`, `AnimeFilterList`, `AnimeFilter` e `AnimesPage` foram transformados em `typealias` apontando para `FilterList`, `Filter` e `MangasPage`. Como `typealias` não tem identidade de classe no bytecode da JVM, os métodos abstratos compilados em `source-api` usavam `eu.kanade.tachiyomi.source.model.FilterList`. As extensões externas pré-compiladas do Aniyomi foram compiladas contra `eu.kanade.tachiyomi.animesource.model.AnimeFilterList` e `AnimesPage`, gerando incompatibilidade binária (ABI) em tempo de execução no ART do Android.
+- **Solução:**
+  - Restauradas as classes reais:
+    - `Filter.kt`: tornado `open class Filter<T>`.
+    - `FilterList.kt`: tornado `open class FilterList`.
+    - `MangasPage.kt`: tornado `open class MangasPage`.
+    - `AnimeFilter.kt`: restaurada como classe selada real estendendo `Filter<T>` com todas as subclasses (`Header`, `Separator`, `Select`, `Text`, `CheckBox`, `TriState`, `Group`, `Sort`, `AutoComplete`).
+    - `AnimeFilterList.kt`: restaurada como classe real estendendo `FilterList(list)`.
+    - `AnimesPage.kt`: restaurada como classe real estendendo `MangasPage(animes, hasNextPage)`.
+  - `AnimeCatalogueSource.kt`: `getSearchManga` converte e passa com segurança `AnimeFilterList` para `getSearchAnime`.
+  - `AnimeHttpSource.kt`: adicionado fallback defensivo por reflexão em `fetchSearchAnime` para invocar métodos de extensões mesmo em caso de pequenas variações de assinatura.
+  - `SourcePagingSource.kt`: conversão e passagem segura de `AnimeFilterList` em `SourceSearchPagingSource`, e captura de `Throwable` em vez de `Exception` para evitar crash fatal do app por `Error` de extensão.
+  - `SearchViewModel.kt`: captura de `Throwable` no bloco de busca em vez de apenas `Exception`.
+  - `SourceFilterDialog.kt` e `BrowseSourceViewModel.kt`: suporte nativo a renderização e manipulação de filtros `AnimeFilter.*`.
+  - Proguard: regras `-keep class eu.kanade.tachiyomi.animesource.** { *; }` fortalecidas em `consumer-proguard.pro` e `app/proguard-rules.pro`.
 
 

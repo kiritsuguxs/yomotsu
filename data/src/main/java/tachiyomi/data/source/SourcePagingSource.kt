@@ -19,7 +19,9 @@ class SourceSearchPagingSource(
 ) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
         return if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
-            source.getSearchAnime(currentPage, query, filters)
+            val animeFilters = filters as? eu.kanade.tachiyomi.animesource.model.AnimeFilterList
+                ?: source.getFilterList()
+            source.getSearchAnime(currentPage, query, animeFilters)
         } else {
             source.getSearchManga(currentPage, query, filters)
         }
@@ -75,7 +77,7 @@ abstract class BaseSourcePagingSource(
                 prevKey = null,
                 nextKey = if (mangasPage.hasNextPage) page + 1 else null,
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             LoadResult.Error(e)
         }
     }

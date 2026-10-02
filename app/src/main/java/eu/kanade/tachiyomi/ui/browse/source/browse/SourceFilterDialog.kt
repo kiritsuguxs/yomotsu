@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AdaptiveSheet
+import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 import tachiyomi.core.common.preference.TriState
@@ -82,10 +83,25 @@ private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit) {
         is Filter.Header -> {
             HeadingItem(filter.name)
         }
+        is AnimeFilter.Header -> {
+            HeadingItem(filter.name)
+        }
         is Filter.Separator -> {
             HorizontalDivider()
         }
+        is AnimeFilter.Separator -> {
+            HorizontalDivider()
+        }
         is Filter.CheckBox -> {
+            CheckboxItem(
+                label = filter.name,
+                checked = filter.state,
+            ) {
+                filter.state = !filter.state
+                onUpdate()
+            }
+        }
+        is AnimeFilter.CheckBox -> {
             CheckboxItem(
                 label = filter.name,
                 checked = filter.state,
@@ -103,6 +119,15 @@ private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit) {
                 onUpdate()
             }
         }
+        is AnimeFilter.TriState -> {
+            TriStateItem(
+                label = filter.name,
+                state = filter.state.toTriStateFilter(),
+            ) {
+                filter.state = filter.state.toTriStateFilter().next().toTriStateInt()
+                onUpdate()
+            }
+        }
         is Filter.Text -> {
             TextItem(
                 label = filter.name,
@@ -112,7 +137,26 @@ private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit) {
                 onUpdate()
             }
         }
+        is AnimeFilter.Text -> {
+            TextItem(
+                label = filter.name,
+                value = filter.state,
+            ) {
+                filter.state = it
+                onUpdate()
+            }
+        }
         is Filter.Select<*> -> {
+            SelectItem(
+                label = filter.name,
+                options = filter.values,
+                selectedIndex = filter.state,
+            ) {
+                filter.state = it
+                onUpdate()
+            }
+        }
+        is AnimeFilter.Select<*> -> {
             SelectItem(
                 label = filter.name,
                 options = filter.values,
@@ -150,6 +194,34 @@ private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit) {
                 }
             }
         }
+        is AnimeFilter.Sort -> {
+            CollapsibleBox(
+                heading = filter.name,
+            ) {
+                Column {
+                    filter.values.mapIndexed { index, item ->
+                        val sortAscending = filter.state?.ascending
+                            ?.takeIf { index == filter.state?.index }
+                        SortItem(
+                            label = item,
+                            sortDescending = if (sortAscending != null) !sortAscending else null,
+                            onClick = {
+                                val ascending = if (index == filter.state?.index) {
+                                    !filter.state!!.ascending
+                                } else {
+                                    filter.state?.ascending ?: true
+                                }
+                                filter.state = AnimeFilter.Sort.Selection(
+                                    index = index,
+                                    ascending = ascending,
+                                )
+                                onUpdate()
+                            },
+                        )
+                    }
+                }
+            }
+        }
         is Filter.Group<*> -> {
             CollapsibleBox(
                 heading = filter.name,
@@ -161,6 +233,18 @@ private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit) {
                 }
             }
         }
+        is AnimeFilter.Group<*> -> {
+            CollapsibleBox(
+                heading = filter.name,
+            ) {
+                Column {
+                    filter.state
+                        .filterIsInstance<Filter<*>>()
+                        .map { FilterItem(filter = it, onUpdate = onUpdate) }
+                }
+            }
+        }
+        else -> {}
     }
 }
 

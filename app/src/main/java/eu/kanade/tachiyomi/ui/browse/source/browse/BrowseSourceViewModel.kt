@@ -50,6 +50,7 @@ import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import kotlin.time.Clock
+import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.source.model.Filter as SourceModelFilter
 
 class BrowseSourceViewModel(
@@ -183,6 +184,8 @@ class BrowseSourceViewModel(
                         when (filter) {
                             is SourceModelFilter.TriState -> filter.state = 1
                             is SourceModelFilter.CheckBox -> filter.state = true
+                            is AnimeFilter.TriState -> filter.state = 1
+                            is AnimeFilter.CheckBox -> filter.state = true
                             else -> {}
                         }
                         genreExists = true
@@ -190,6 +193,15 @@ class BrowseSourceViewModel(
                     }
                 }
             } else if (sourceFilter is SourceModelFilter.Select<*>) {
+                val index = sourceFilter.values.filterIsInstance<String>()
+                    .indexOfFirst { it.equals(genreName, true) }
+
+                if (index != -1) {
+                    sourceFilter.state = index
+                    genreExists = true
+                    break
+                }
+            } else if (sourceFilter is AnimeFilter.Select<*>) {
                 val index = sourceFilter.values.filterIsInstance<String>()
                     .indexOfFirst { it.equals(genreName, true) }
 

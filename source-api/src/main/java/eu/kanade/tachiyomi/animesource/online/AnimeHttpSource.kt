@@ -167,7 +167,12 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
     override fun fetchSearchAnime(page: Int, query: String, filters: AnimeFilterList): Observable<AnimesPage> {
         return Observable.defer {
             try {
-                client.newCall(searchAnimeRequest(page, query, filters)).asObservableSuccess()
+                val request = try {
+                    searchAnimeRequest(page, query, filters)
+                } catch (e: AbstractMethodError) {
+                    invokeSearchAnimeRequestByReflection(page, query, filters) ?: throw e
+                }
+                client.newCall(request).asObservableSuccess()
             } catch (e: NoClassDefFoundError) {
                 // RxJava doesn't handle Errors, which tends to happen during global searches
                 // if an old extension using non-existent classes is still around
@@ -177,6 +182,20 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
             .map { response ->
                 searchAnimeParse(response)
             }
+    }
+
+    private fun invokeSearchAnimeRequestByReflection(page: Int, query: String, filters: AnimeFilterList): Request? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "searchAnimeRequest" && m.parameterTypes.size == 3) {
+                m.isAccessible = true
+                try {
+                    return m.invoke(this, page, query, filters) as? Request
+                } catch (_: Exception) {
+                }
+            }
+        }
+        return null
     }
 
     /**

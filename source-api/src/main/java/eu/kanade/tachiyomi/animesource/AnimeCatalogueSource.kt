@@ -52,7 +52,10 @@ interface AnimeCatalogueSource : AnimeSource {
         return fetchSearchAnime(page, query, filters).awaitSingle()
     }
 
-    override suspend fun getSearchManga(page: Int, query: String, filters: eu.kanade.tachiyomi.source.model.FilterList): eu.kanade.tachiyomi.source.model.MangasPage = getSearchAnime(page, query, filters)
+    override suspend fun getSearchManga(page: Int, query: String, filters: eu.kanade.tachiyomi.source.model.FilterList): eu.kanade.tachiyomi.source.model.MangasPage {
+        val animeFilters = filters as? AnimeFilterList ?: getFilterList()
+        return getSearchAnime(page, query, animeFilters)
+    }
 
     /**
      * Get a page with a list of latest anime updates.

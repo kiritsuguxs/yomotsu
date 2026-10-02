@@ -40,10 +40,9 @@
 -keep,allowoptimization class eu.kanade.tachiyomi.network.OkHttpExtensionsKt { public protected *; }
 -keep,allowoptimization class eu.kanade.tachiyomi.network.RequestsKt { public protected *; }
 -keep,allowoptimization class eu.kanade.tachiyomi.AppInfo { public protected *; }
--keep class eu.kanade.tachiyomi.animesource.model.** { public protected *; }
--keep class eu.kanade.tachiyomi.animesource.online.** { public protected *; }
--keep class eu.kanade.tachiyomi.animesource.** extends eu.kanade.tachiyomi.animesource.AnimeSource { public protected *; }
--keep class * implements eu.kanade.tachiyomi.animesource.AnimeSource { public protected *; }
+-keep class eu.kanade.tachiyomi.animesource.** { *; }
+-keep interface eu.kanade.tachiyomi.animesource.** { *; }
+-keep class * implements eu.kanade.tachiyomi.animesource.AnimeSource { *; }
 
 -keepclassmembers class * implements java.io.Serializable {
     java.lang.Object writeReplace();
