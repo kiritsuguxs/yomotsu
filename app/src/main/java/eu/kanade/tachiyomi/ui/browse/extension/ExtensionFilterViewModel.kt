@@ -73,11 +73,17 @@ class ExtensionFilterViewModel(
                 }
             }
             ExtensionFilterType.NOVEL -> {
-                if ("all" in preferences.enabledNovelLanguages.get()) {
-                    preferences.enabledNovelLanguages.getAndSet { it - "all" }
+                preferences.enabledNovelLanguages.getAndSet { current ->
+                    current.map { LocaleHelper.mapNovelLangToCode(it) }.filter { it.isNotBlank() }.toSet()
                 }
-                preferences.enabledNovelLanguages to novelExtensionManager.availableExtensions.map { list ->
-                    list.map { it.plugin.lang }.filter { it.isNotBlank() }.distinct()
+                preferences.enabledNovelLanguages to combine(
+                    novelExtensionManager.availableExtensions,
+                    novelExtensionManager.installedExtensions,
+                ) { available, installed ->
+                    (available.map { it.plugin.lang } + installed.map { it.plugin.lang })
+                        .map { LocaleHelper.mapNovelLangToCode(it) }
+                        .filter { it.isNotBlank() }
+                        .distinct()
                 }
             }
         }

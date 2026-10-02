@@ -297,6 +297,27 @@
     - Adicionados os scripts `capture_html.js`, `capture_html` e `scripts/capture_html.js` em `app/src/main/assets/` como salvaguarda no host.
     - Protegidos os blocos `executor.execute` em `CloudflareInterceptor.kt` com `try-catch` e liberação de `CountDownLatch`.
 
+### X. Correção dos Nomes de Idioma em Branco na Tela de Filtro de Extensões LN (Outubro 2026)
+- **Problema (Linhas em branco / sem nome na tela 'Extensões LN'):**
+  - Na tela de filtro de extensões de Light Novel ("Extensões LN"), apenas "English", "Multi" e "Polski" mostravam o nome ao lado do interruptor. As demais opções (Português, Espanhol, Francês, Russo, Árabe, Chinês, Japonês, Coreano, etc.) apareciam como linhas totalmente pretas / em branco, sem texto.
+  - **Causa Raiz:**
+    1. Os plugins de novel (vindos do ecossistema LNReader) possuem o campo `plugin.lang` preenchido com nomes completos ou em alfabetos próprios (ex: `"Português"`, `"Español"`, `"Bahasa Indonesia"`, `"Русский"`, `"\u200eالعربية"`, `"中文, 汉语, 漢語"`, `"한국어"`).
+    2. A tela `ExtensionFilterScreen` chama `LocaleHelper.getSourceDisplayName(language, context)` -> `getLocalizedDisplayName(language)`.
+    3. `getLocalizedDisplayName` chamava `Locale.forLanguageTag(lang)`. No padrão BCP-47 do Java/Android, tags de idioma só aceitam letras ASCII básicas (`[a-zA-Z]`). Nomes com acentos (`Português`, `Español`), espaços (`Bahasa Indonesia`, `Tiếng Việt`) ou caracteres não-latinos (Círilico, Árabe, Hangul, CJK) eram rejeitados por erro de sintaxe, fazendo o Android retornar uma instância vazia `Locale("")` cujo `getDisplayName()` resultava em string vazia `""`.
+    4. Apenas strings curtas puramente ASCII (`English`, `Multi`, `Polski`) não geravam erro de sintaxe de tag primária e tinham nomes exibidos.
+  - **Solução:**
+    - Em `LocaleHelper.kt`:
+      - Implementado `mapNovelLangToCode(rawLang: String): String` para mapear todas as strings de plugins e repositórios de novel para seus códigos canônicos BCP-47 / ISO (`pt-BR`, `en`, `es`, `fr`, `id`, `pl`, `vi`, `tr`, `ru`, `uk`, `th`, `ar`, `zh-Hans`, `ja`, `ko`, `all`, etc.).
+      - Atualizado `getSourceDisplayName`: redireciona `all` / `multi` para o recurso de texto `MR.strings.multi_lang` ("Múltiplos").
+      - Atualizado `getLocalizedDisplayName`: normaliza via `mapNovelLangToCode` antes de consultar `Locale.forLanguageTag`, e adicionado fallback que remove marcadores Unicode (`\u200e`) e garante que nenhuma opção fique com nome em branco.
+    - Em `ExtensionFilterViewModel.kt`:
+      - No ramo `ExtensionFilterType.NOVEL`, mapeadas as linguagens das extensões disponíveis e instaladas para códigos canônicos através de `mapNovelLangToCode`.
+      - Migradas automaticamente preferências salvas pré-existentes em `enabledNovelLanguages` (ex: `"English"`, `"Polski"`) para os códigos canônicos (`"en"`, `"pl"`).
+    - Em `NovelsViewModel.kt`:
+      - Atualizada a função `matchesLanguage` para utilizar `mapNovelLangToCode` de forma simétrica e confiável, filtrando rigorosamente apenas as extensões ativadas pelo usuário.
+    - Em `NovelsScreen.kt`:
+      - Atualizada a exibição de idioma nos cartões de extensão e no diálogo de detalhes para utilizar `LocaleHelper.getSourceDisplayName`, padronizando a interface.
+
 
 
 

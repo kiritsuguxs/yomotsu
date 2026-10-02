@@ -6,6 +6,7 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.novel.NovelExtensionManager
 import eu.kanade.tachiyomi.extension.novel.model.NovelExtension
 import eu.kanade.tachiyomi.extension.novel.model.NovelPlugin
+import eu.kanade.tachiyomi.util.system.LocaleHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,43 +59,20 @@ class NovelsViewModel(
     }
 
     private fun matchesLanguage(pluginLang: String, enabledLanguages: Set<String>): Boolean {
-        val cleanEnabled = if ("all" in enabledLanguages) enabledLanguages - "all" else enabledLanguages
-        if (cleanEnabled.isEmpty()) return false
+        if (enabledLanguages.isEmpty()) return false
 
-        val normalized = pluginLang.trim().lowercase()
-        val langCode = when {
-            normalized.contains("portugu") || normalized == "pt" || normalized == "pt-br" -> "pt"
-            normalized.contains("english") || normalized == "en" -> "en"
-            normalized.contains("español") || normalized.contains("espanol") || normalized == "es" -> "es"
-            normalized.contains("franç") || normalized.contains("franc") || normalized == "fr" -> "fr"
-            normalized.contains("indonesia") || normalized == "id" -> "id"
-            normalized.contains("polski") || normalized == "pl" -> "pl"
-            normalized.contains("việt") || normalized.contains("viet") || normalized == "vi" -> "vi"
-            normalized.contains("türk") || normalized.contains("turk") || normalized == "tr" -> "tr"
-            normalized.contains("русский") || normalized == "ru" -> "ru"
-            normalized.contains("укра") || normalized == "uk" -> "uk"
-            normalized.contains("ไทย") || normalized == "th" -> "th"
-            normalized.contains("عرب") || normalized == "ar" -> "ar"
-            normalized.contains("中文") || normalized == "zh" -> "zh"
-            normalized.contains("日本") || normalized == "ja" -> "ja"
-            normalized.contains("한국") || normalized.contains("조선") || normalized == "ko" -> "ko"
-            normalized.contains("multi") -> "multi"
-            else -> normalized
+        val pluginCode = LocaleHelper.mapNovelLangToCode(pluginLang)
+        val normalizedRaw = pluginLang.trim().removePrefix("\u200e").removePrefix("\u200f")
+
+        return enabledLanguages.any { enabled ->
+            val enabledCode = LocaleHelper.mapNovelLangToCode(enabled)
+            enabledCode == pluginCode ||
+                (pluginCode.startsWith("pt") && enabledCode.startsWith("pt")) ||
+                (pluginCode.startsWith("zh") && enabledCode.startsWith("zh")) ||
+                enabled.equals(pluginCode, ignoreCase = true) ||
+                enabled.equals(normalizedRaw, ignoreCase = true) ||
+                (pluginCode == "all" && (enabled == "all" || enabled.equals("multi", ignoreCase = true)))
         }
-
-        if (langCode == "multi") {
-            return cleanEnabled.any { it.equals("multi", ignoreCase = true) || it.equals("all", ignoreCase = true) }
-        }
-
-        return langCode in cleanEnabled ||
-            cleanEnabled.any { it.equals(langCode, ignoreCase = true) } ||
-            cleanEnabled.any { it.equals(pluginLang, ignoreCase = true) } ||
-            cleanEnabled.any { it.equals(normalized, ignoreCase = true) } ||
-            (langCode == "pt" && cleanEnabled.any { it.startsWith("pt", ignoreCase = true) || it.contains("portugu", ignoreCase = true) }) ||
-            (langCode == "en" && cleanEnabled.any { it.equals("en", ignoreCase = true) || it.contains("english", ignoreCase = true) }) ||
-            (langCode == "es" && cleanEnabled.any { it.equals("es", ignoreCase = true) || it.contains("español", ignoreCase = true) || it.contains("espanol", ignoreCase = true) || it.contains("spanish", ignoreCase = true) }) ||
-            (langCode == "zh" && cleanEnabled.any { it.startsWith("zh", ignoreCase = true) || it.contains("chinese", ignoreCase = true) }) ||
-            (langCode == "pl" && cleanEnabled.any { it.equals("pl", ignoreCase = true) || it.contains("polski", ignoreCase = true) || it.contains("polish", ignoreCase = true) })
     }
 
     fun search(query: String?) {

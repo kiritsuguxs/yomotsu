@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,7 @@ import eu.kanade.presentation.util.rememberResourceBitmapPainter
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.extension.novel.model.NovelExtension
 import eu.kanade.tachiyomi.extension.novel.model.NovelPlugin
+import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.material.padding
@@ -264,7 +266,7 @@ private fun NovelExtensionItem(
             ) {
                 ProvideTextStyle(value = MaterialTheme.typography.bodySmall) {
                     if (extension.plugin.lang.isNotEmpty()) {
-                        Text(text = extension.plugin.lang)
+                        Text(text = LocaleHelper.getSourceDisplayName(extension.plugin.lang, LocalContext.current))
                     }
                     if (extension.plugin.version.isNotEmpty()) {
                         Text(text = "•")
@@ -316,7 +318,7 @@ private fun NovelExtensionDetailsDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (plugin.lang.isNotBlank()) {
                     Text(
-                        text = "Idioma: ${plugin.lang}",
+                        text = "Idioma: ${LocaleHelper.getSourceDisplayName(plugin.lang, LocalContext.current)}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
