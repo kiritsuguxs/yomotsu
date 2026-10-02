@@ -164,4 +164,22 @@
   - `SourceFilterDialog.kt` e `BrowseSourceViewModel.kt`: suporte nativo a renderização e manipulação de filtros `AnimeFilter.*`.
   - Proguard: regras `-keep class eu.kanade.tachiyomi.animesource.** { *; }` fortalecidas em `consumer-proguard.pro` e `app/proguard-rules.pro`.
 
+### O. Correções de Idiomas, Atualizações Falsas, Carregamento Infinito de Recentes e Detalhes de Anime (Outubro 2026)
+- **Problema 1 (Vazamento de Idiomas):** Mesmo com apenas português selecionado, extensões de anime em inglês, russo, japonês, etc. apareciam na lista de extensões disponíveis.
+  - **Causa:** Em `GetAnimeExtensionsByType.kt`, havia um fallback `if (filteredSources.isEmpty()) listOf(ext)`, retornando a extensão inteira mesmo quando nenhum idioma batia.
+  - **Solução:** Corrigido para retornar `emptyList()` se o idioma não estiver ativado nas preferências. `ExtensionFilterViewModel` e `SourcePreferences` mantêm preferências separadas (`enabledLanguages`, `enabledAnimeLanguages`, `enabledNovelLanguages`).
+- **Problema 2 (Crash e 0 Capítulos ao abrir Anime):** Abrir anime dava `UnsupportedOperationException: null` e mostrava "0 capítulo".
+  - **Causa:** `UpdateMangaFromRemote.kt` invoca `source.getMangaUpdate(...)`. Em `AnimeSource.kt`, esse método lançava `UnsupportedOperationException()`.
+  - **Solução:** Implementado `getMangaUpdate` em `AnimeSource.kt` usando coroutines (`supervisorScope`), chamando `getAnimeDetails(sAnime)` e `getEpisodeList(sAnime)` e retornando `SMangaUpdate`.
+- **Problema 3 (Notificação Falsa de Atualizações de Anime na aba de Mangá):** Toda vez que o app abria, aparecia notificação "3 atualizações disponíveis: AnimesOnlineCloud, Anime Fire, Anikatsu" que abria a aba de mangá.
+  - **Causa:** `ExtensionApi.checkForUpdates` comparava `libVersion` (incompatível com versionamento de extensões de anime) e não filtrava extensões de anime na notificação de mangá.
+  - **Solução:** Em `ExtensionApi.kt`, extensões de anime são excluídas da notificação de mangá. Em `ExtensionManager.kt`, extensões de anime comparam estritamente `versionCode` (sem `libVersion`), e não são somadas no contador do badge de mangá.
+- **Problema 4 ("Recentes" Carregando Infinitamente):** Ao clicar na aba Recentes de fontes de anime, o app ficava em carregamento infinito.
+  - **Causa:** Se `latestUpdatesRequest` ou `latestUpdatesParse` lançasse `AbstractMethodError` ou `LinkageError`, o RxJava 1 tratava o erro como fatal (`Exceptions.throwIfFatal`), nunca chamando `subscriber.onError(...)`. Consequentemente, `awaitSingle()` / `awaitOne()` ficava suspenso indefinidamente. Além disso, `OkHttpExtensions.asObservable()` capturava apenas `Exception` (deixando `Error` vazar sem notificar o assinante).
+  - **Solução:**
+    - Em `AnimeHttpSource.kt`: `fetchPopularAnime`, `fetchLatestUpdates`, `fetchSearchAnime`, `fetchAnimeDetails` e `fetchEpisodeList` foram encapsulados com `Observable.defer`, fallbacks defensivos por reflexão para invocar os métodos da subclasse mesmo com discrepâncias de assinatura, e conversão de erros em `RuntimeException`.
+    - Em `OkHttpExtensions.kt`: alterado `catch (e: Exception)` para `catch (e: Throwable)` para sempre propagar erros ao `subscriber.onError`.
+    - Em `RxCoroutineBridge.kt`: envolvido `subscribe()` em `try-catch (e: Throwable)` para evitar suspensão órfã em caso de falha síncrona.
+
+
 

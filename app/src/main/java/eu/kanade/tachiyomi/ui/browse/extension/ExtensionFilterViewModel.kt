@@ -64,8 +64,11 @@ class ExtensionFilterViewModel(
             }
             ExtensionFilterType.ANIME -> {
                 preferences.enabledAnimeLanguages to extensionManager.availableExtensionsFlow.map { list ->
-                    list.filter { it.isAnime || it.pkgName.contains("animeextension") }
-                        .flatMap { it.sources.map { s -> s.lang } }
+                    list.filter { it.isAnime || it.pkgName.contains("animeextension") || it.pkgName.startsWith("eu.kanade.tachiyomi.animeextension") }
+                        .flatMap { ext ->
+                            val srcLangs = ext.sources.map { s -> s.lang }
+                            if (srcLangs.isEmpty() && !ext.lang.isNullOrBlank()) listOf(ext.lang!!) else srcLangs
+                        }
                         .distinct()
                 }
             }

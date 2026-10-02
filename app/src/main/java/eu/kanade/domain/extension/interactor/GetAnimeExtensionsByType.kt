@@ -41,9 +41,7 @@ class GetAnimeExtensionsByType(
                 }
                 .flatMap { ext ->
                     val filteredSources = ext.sources.filter { it.lang in enabledLanguages }
-                    if (filteredSources.isEmpty()) {
-                        listOf(ext)
-                    } else {
+                    if (filteredSources.isNotEmpty()) {
                         filteredSources.map {
                             ext.copy(
                                 name = if (ext.sources.size > 1) it.name else ext.name,
@@ -52,6 +50,10 @@ class GetAnimeExtensionsByType(
                                 sources = listOf(it),
                             )
                         }
+                    } else if (ext.sources.isEmpty() && ext.lang in enabledLanguages) {
+                        listOf(ext)
+                    } else {
+                        emptyList()
                     }
                 }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })

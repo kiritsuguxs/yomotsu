@@ -31,6 +31,12 @@ internal class ExtensionApi {
         val extensionsWithUpdate = mutableListOf<Extension.Installed>()
         for (installedExt in installedExtensions) {
             val pkgName = installedExt.pkgName
+            val isAnime = installedExt.isAnime ||
+                pkgName.contains("animeextension") ||
+                pkgName.startsWith("eu.kanade.tachiyomi.animeextension")
+
+            if (isAnime) continue
+
             val availableExt = extensions.find { it.pkgName == pkgName } ?: continue
             val hasUpdatedVer = availableExt.versionCode > installedExt.versionCode
             val hasUpdatedLib = availableExt.libVersion > installedExt.libVersion

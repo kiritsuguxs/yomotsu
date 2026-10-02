@@ -379,7 +379,8 @@ class ExtensionManager(
             ?: availableExtensionMapFlow.value[pkgName]
             ?: return false
 
-        return if (isAnime) {
+        val isAnimeExt = isAnime || pkgName.contains("animeextension") || pkgName.startsWith("eu.kanade.tachiyomi.animeextension")
+        return if (isAnimeExt) {
             availableExt.versionCode > versionCode
         } else {
             availableExt.versionCode > versionCode || availableExt.libVersion > libVersion
@@ -388,7 +389,7 @@ class ExtensionManager(
 
     private fun updatePendingUpdatesCount() {
         val pendingUpdateCount = installedExtensionMapFlow.value.values.count {
-            it.hasUpdate && !it.isAnime && !it.pkgName.contains("animeextension")
+            it.hasUpdate && !it.isAnime && !it.pkgName.contains("animeextension") && !it.pkgName.startsWith("eu.kanade.tachiyomi.animeextension")
         }
         preferences.extensionUpdatesCount.set(pendingUpdateCount)
         if (pendingUpdateCount == 0) {

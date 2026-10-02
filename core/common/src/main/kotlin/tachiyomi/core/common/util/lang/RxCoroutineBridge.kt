@@ -17,8 +17,8 @@ suspend fun <T> Observable<T>.awaitSingle(): T = single().awaitOne()
 
 @OptIn(InternalCoroutinesApi::class)
 private suspend fun <T> Observable<T>.awaitOne(): T = suspendCancellableCoroutine { cont ->
-    cont.unsubscribeOnCancellation(
-        subscribe(
+    try {
+        val sub = subscribe(
             object : Subscriber<T>() {
                 override fun onStart() {
                     request(1)
@@ -50,8 +50,13 @@ private suspend fun <T> Observable<T>.awaitOne(): T = suspendCancellableCoroutin
                     }
                 }
             },
-        ),
-    )
+        )
+        cont.unsubscribeOnCancellation(sub)
+    } catch (e: Throwable) {
+        if (cont.isActive) {
+            cont.resumeWithException(e)
+        }
+    }
 }
 
 private fun <T> CancellableContinuation<T>.unsubscribeOnCancellation(sub: Subscription) =

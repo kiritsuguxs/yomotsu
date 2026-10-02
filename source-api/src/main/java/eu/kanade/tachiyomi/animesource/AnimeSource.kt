@@ -13,11 +13,39 @@ import eu.kanade.tachiyomi.animesource.model.SAnime as SManga
  */
 interface AnimeSource : eu.kanade.tachiyomi.source.Source {
     override val supportsLatest: Boolean get() = false
-    override suspend fun getPopularManga(page: Int): eu.kanade.tachiyomi.source.model.MangasPage = throw UnsupportedOperationException()
-    override suspend fun getLatestUpdates(page: Int): eu.kanade.tachiyomi.source.model.MangasPage = throw UnsupportedOperationException()
-    override suspend fun getSearchManga(page: Int, query: String, filters: eu.kanade.tachiyomi.source.model.FilterList): eu.kanade.tachiyomi.source.model.MangasPage = throw UnsupportedOperationException()
-    override suspend fun getMangaUpdate(manga: eu.kanade.tachiyomi.source.model.SManga, chapters: List<eu.kanade.tachiyomi.source.model.SChapter>, fetchDetails: Boolean, fetchChapters: Boolean): eu.kanade.tachiyomi.source.model.SMangaUpdate = throw UnsupportedOperationException()
-    override suspend fun getPageList(chapter: eu.kanade.tachiyomi.source.model.SChapter): List<eu.kanade.tachiyomi.source.model.Page> = throw UnsupportedOperationException()
+    override suspend fun getPopularManga(page: Int): eu.kanade.tachiyomi.source.model.MangasPage =
+        (this as? AnimeCatalogueSource)?.getPopularAnime(page) ?: throw UnsupportedOperationException()
+    override suspend fun getLatestUpdates(page: Int): eu.kanade.tachiyomi.source.model.MangasPage =
+        (this as? AnimeCatalogueSource)?.getLatestUpdates(page) ?: throw UnsupportedOperationException()
+    override suspend fun getSearchManga(page: Int, query: String, filters: eu.kanade.tachiyomi.source.model.FilterList): eu.kanade.tachiyomi.source.model.MangasPage =
+        (this as? AnimeCatalogueSource)?.getSearchManga(page, query, filters) ?: throw UnsupportedOperationException()
+
+    override suspend fun getMangaUpdate(
+        manga: eu.kanade.tachiyomi.source.model.SManga,
+        chapters: List<eu.kanade.tachiyomi.source.model.SChapter>,
+        fetchDetails: Boolean,
+        fetchChapters: Boolean,
+    ): eu.kanade.tachiyomi.source.model.SMangaUpdate = kotlinx.coroutines.supervisorScope {
+        val sAnime = (manga as? SAnime) ?: SAnime.create().apply {
+            url = manga.url
+            title = manga.title
+            artist = manga.artist
+            author = manga.author
+            description = manga.description
+            genre = manga.genre
+            status = manga.status
+            thumbnail_url = manga.thumbnail_url
+            initialized = manga.initialized
+        }
+        val asyncManga = if (fetchDetails) kotlinx.coroutines.async { getAnimeDetails(sAnime) } else null
+        val asyncEpisodes = if (fetchChapters) kotlinx.coroutines.async { getEpisodeList(sAnime) } else null
+        eu.kanade.tachiyomi.source.model.SMangaUpdate(
+            asyncManga?.await() ?: manga,
+            asyncEpisodes?.await() ?: chapters,
+        )
+    }
+
+    override suspend fun getPageList(chapter: eu.kanade.tachiyomi.source.model.SChapter): List<eu.kanade.tachiyomi.source.model.Page> = emptyList()
 
 
     /**

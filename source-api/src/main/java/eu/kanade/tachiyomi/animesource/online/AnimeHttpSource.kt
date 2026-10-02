@@ -131,11 +131,72 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
         ReplaceWith("getPopularAnime"),
     )
     override fun fetchPopularAnime(page: Int): Observable<AnimesPage> {
-        return client.newCall(popularAnimeRequest(page))
-            .asObservableSuccess()
-            .map { response ->
-                popularAnimeParse(response)
+        return Observable.defer {
+            try {
+                val request = try {
+                    popularAnimeRequest(page)
+                } catch (e: Throwable) {
+                    invokePopularAnimeRequestByReflection(page) ?: throw e
+                }
+                client.newCall(request).asObservableSuccess()
+            } catch (e: Throwable) {
+                Observable.error<Response>(if (e is Exception) e else RuntimeException(e))
             }
+        }
+            .map { response ->
+                try {
+                    popularAnimeParse(response)
+                } catch (e: Throwable) {
+                    invokePopularAnimeParseByReflection(response)
+                        ?: throw (if (e is Exception) e else RuntimeException(e))
+                }
+            }
+    }
+
+    private fun invokePopularAnimeRequestByReflection(page: Int): Request? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "popularAnimeRequest" && m.parameterTypes.size == 1) {
+                m.isAccessible = true
+                try {
+                    return m.invoke(this, page) as? Request
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
+    }
+
+    private fun invokePopularAnimeParseByReflection(response: Response): AnimesPage? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "popularAnimeParse" && m.parameterTypes.size == 1) {
+                m.isAccessible = true
+                try {
+                    val result = m.invoke(this, response)
+                    return when (result) {
+                        is AnimesPage -> result
+                        is eu.kanade.tachiyomi.source.model.MangasPage -> AnimesPage(
+                            result.mangas.map { (it as? SAnime) ?: SAnime.create().apply {
+                                url = it.url
+                                title = it.title
+                                artist = it.artist
+                                author = it.author
+                                description = it.description
+                                genre = it.genre
+                                status = it.status
+                                thumbnail_url = it.thumbnail_url
+                                initialized = it.initialized
+                            }},
+                            result.hasNextPage,
+                        )
+                        else -> null
+                    }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
     }
 
     /**
@@ -169,18 +230,21 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
             try {
                 val request = try {
                     searchAnimeRequest(page, query, filters)
-                } catch (e: AbstractMethodError) {
+                } catch (e: Throwable) {
                     invokeSearchAnimeRequestByReflection(page, query, filters) ?: throw e
                 }
                 client.newCall(request).asObservableSuccess()
-            } catch (e: NoClassDefFoundError) {
-                // RxJava doesn't handle Errors, which tends to happen during global searches
-                // if an old extension using non-existent classes is still around
-                throw RuntimeException(e)
+            } catch (e: Throwable) {
+                Observable.error<Response>(if (e is Exception) e else RuntimeException(e))
             }
         }
             .map { response ->
-                searchAnimeParse(response)
+                try {
+                    searchAnimeParse(response)
+                } catch (e: Throwable) {
+                    invokeSearchAnimeParseByReflection(response)
+                        ?: throw (if (e is Exception) e else RuntimeException(e))
+                }
             }
     }
 
@@ -191,7 +255,39 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
                 m.isAccessible = true
                 try {
                     return m.invoke(this, page, query, filters) as? Request
-                } catch (_: Exception) {
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
+    }
+
+    private fun invokeSearchAnimeParseByReflection(response: Response): AnimesPage? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "searchAnimeParse" && m.parameterTypes.size == 1) {
+                m.isAccessible = true
+                try {
+                    val result = m.invoke(this, response)
+                    return when (result) {
+                        is AnimesPage -> result
+                        is eu.kanade.tachiyomi.source.model.MangasPage -> AnimesPage(
+                            result.mangas.map { (it as? SAnime) ?: SAnime.create().apply {
+                                url = it.url
+                                title = it.title
+                                artist = it.artist
+                                author = it.author
+                                description = it.description
+                                genre = it.genre
+                                status = it.status
+                                thumbnail_url = it.thumbnail_url
+                                initialized = it.initialized
+                            }},
+                            result.hasNextPage,
+                        )
+                        else -> null
+                    }
+                } catch (_: Throwable) {
                 }
             }
         }
@@ -224,11 +320,72 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
         ReplaceWith("getLatestUpdates"),
     )
     override fun fetchLatestUpdates(page: Int): Observable<AnimesPage> {
-        return client.newCall(latestUpdatesRequest(page))
-            .asObservableSuccess()
-            .map { response ->
-                latestUpdatesParse(response)
+        return Observable.defer {
+            try {
+                val request = try {
+                    latestUpdatesRequest(page)
+                } catch (e: Throwable) {
+                    invokeLatestUpdatesRequestByReflection(page) ?: throw e
+                }
+                client.newCall(request).asObservableSuccess()
+            } catch (e: Throwable) {
+                Observable.error<Response>(if (e is Exception) e else RuntimeException(e))
             }
+        }
+            .map { response ->
+                try {
+                    latestUpdatesParse(response)
+                } catch (e: Throwable) {
+                    invokeLatestUpdatesParseByReflection(response)
+                        ?: throw (if (e is Exception) e else RuntimeException(e))
+                }
+            }
+    }
+
+    private fun invokeLatestUpdatesRequestByReflection(page: Int): Request? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "latestUpdatesRequest" && m.parameterTypes.size == 1) {
+                m.isAccessible = true
+                try {
+                    return m.invoke(this, page) as? Request
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
+    }
+
+    private fun invokeLatestUpdatesParseByReflection(response: Response): AnimesPage? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "latestUpdatesParse" && m.parameterTypes.size == 1) {
+                m.isAccessible = true
+                try {
+                    val result = m.invoke(this, response)
+                    return when (result) {
+                        is AnimesPage -> result
+                        is eu.kanade.tachiyomi.source.model.MangasPage -> AnimesPage(
+                            result.mangas.map { (it as? SAnime) ?: SAnime.create().apply {
+                                url = it.url
+                                title = it.title
+                                artist = it.artist
+                                author = it.author
+                                description = it.description
+                                genre = it.genre
+                                status = it.status
+                                thumbnail_url = it.thumbnail_url
+                                initialized = it.initialized
+                            }},
+                            result.hasNextPage,
+                        )
+                        else -> null
+                    }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
     }
 
     /**
@@ -259,11 +416,52 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
 
     @Deprecated("Use the non-RxJava API instead", replaceWith = ReplaceWith("getAnimeDetails"))
     override fun fetchAnimeDetails(anime: SAnime): Observable<SAnime> {
-        return client.newCall(animeDetailsRequest(anime))
-            .asObservableSuccess()
-            .map { response ->
-                animeDetailsParse(response).apply { initialized = true }
+        return Observable.defer {
+            try {
+                val request = animeDetailsRequest(anime)
+                client.newCall(request).asObservableSuccess()
+            } catch (e: Throwable) {
+                Observable.error<Response>(if (e is Exception) e else RuntimeException(e))
             }
+        }
+            .map { response ->
+                try {
+                    animeDetailsParse(response).apply { initialized = true }
+                } catch (e: Throwable) {
+                    (invokeAnimeDetailsParseByReflection(response)
+                        ?: throw (if (e is Exception) e else RuntimeException(e)))
+                        .apply { initialized = true }
+                }
+            }
+    }
+
+    private fun invokeAnimeDetailsParseByReflection(response: Response): SAnime? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "animeDetailsParse" && m.parameterTypes.size == 1) {
+                m.isAccessible = true
+                try {
+                    val result = m.invoke(this, response)
+                    return when (result) {
+                        is SAnime -> result
+                        is SManga -> SAnime.create().apply {
+                            url = result.url
+                            title = result.title
+                            artist = result.artist
+                            author = result.author
+                            description = result.description
+                            genre = result.genre
+                            status = result.status
+                            thumbnail_url = result.thumbnail_url
+                            initialized = result.initialized
+                        }
+                        else -> null
+                    }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
     }
 
     /**
@@ -351,11 +549,50 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
 
     @Deprecated("Use the non-RxJava API instead", replaceWith = ReplaceWith("getEpisodeList"))
     override fun fetchEpisodeList(anime: SAnime): Observable<List<SEpisode>> {
-        return client.newCall(episodeListRequest(anime))
-            .asObservableSuccess()
-            .map { response ->
-                episodeListParse(response)
+        return Observable.defer {
+            try {
+                val request = episodeListRequest(anime)
+                client.newCall(request).asObservableSuccess()
+            } catch (e: Throwable) {
+                Observable.error<Response>(if (e is Exception) e else RuntimeException(e))
             }
+        }
+            .map { response ->
+                try {
+                    episodeListParse(response)
+                } catch (e: Throwable) {
+                    invokeEpisodeListParseByReflection(response)
+                        ?: throw (if (e is Exception) e else RuntimeException(e))
+                }
+            }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun invokeEpisodeListParseByReflection(response: Response): List<SEpisode>? {
+        val methods = this::class.java.methods + this::class.java.declaredMethods
+        for (m in methods) {
+            if (m.name == "episodeListParse" && m.parameterTypes.size == 1) {
+                m.isAccessible = true
+                try {
+                    val result = m.invoke(this, response) as? List<*> ?: continue
+                    return result.mapNotNull { item ->
+                        when (item) {
+                            is SEpisode -> item
+                            is eu.kanade.tachiyomi.source.model.SChapter -> SEpisode.create().apply {
+                                url = item.url
+                                name = item.name
+                                date_upload = item.date_upload
+                                chapter_number = item.chapter_number
+                                scanlator = item.scanlator
+                            }
+                            else -> null
+                        }
+                    }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return null
     }
 
     /**
