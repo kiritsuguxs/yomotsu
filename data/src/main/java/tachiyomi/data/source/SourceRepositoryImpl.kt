@@ -24,7 +24,7 @@ class SourceRepositoryImpl(
         return sourceManager.sources.map { sources ->
             sources.map {
                 mapSourceToDomainSource(it).copy(
-                    supportsLatest = it.supportsLatest,
+                    supportsLatest = runCatching { it.supportsLatest }.getOrDefault(false),
                 )
             }
         }
@@ -117,7 +117,7 @@ class SourceRepositoryImpl(
         id = source.id,
         lang = source.lang,
         name = source.name,
-        supportsLatest = source.supportsLatest,
+        supportsLatest = runCatching { source.supportsLatest }.getOrDefault(false),
         isStub = false,
         isNovel = isNovelSource(source),
         isAnime = isAnimeSource(source),

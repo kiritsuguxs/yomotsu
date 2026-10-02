@@ -14,7 +14,7 @@ import eu.kanade.tachiyomi.animesource.model.SAnime as SManga
  * A basic interface for creating a source. It could be an online source, a local source, etc.
  */
 interface AnimeSource : eu.kanade.tachiyomi.source.Source {
-    override val supportsLatest: Boolean get() = (this as? AnimeCatalogueSource)?.supportsLatest ?: false
+    override val supportsLatest: Boolean get() = false
     override suspend fun getPopularManga(page: Int): eu.kanade.tachiyomi.source.model.MangasPage =
         (this as? AnimeCatalogueSource)?.getPopularAnime(page) ?: throw UnsupportedOperationException()
     override suspend fun getLatestUpdates(page: Int): eu.kanade.tachiyomi.source.model.MangasPage =
