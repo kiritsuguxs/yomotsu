@@ -15,7 +15,11 @@ class GetIncognitoState(
     fun await(sourceId: Long?): Boolean {
         if (basePreferences.incognitoMode.get()) return true
         if (sourceId == null) return false
-        val extensionPackage = extensionManager.getExtensionPackage(sourceId) ?: return false
+        val extensionPackage = try {
+            extensionManager.getExtensionPackage(sourceId)
+        } catch (_: Throwable) {
+            null
+        } ?: return false
 
         return extensionPackage in sourcePreferences.incognitoExtensions.get()
     }
@@ -28,7 +32,7 @@ class GetIncognitoState(
             sourcePreferences.incognitoExtensions.changes(),
             extensionManager.getExtensionPackageAsFlow(sourceId),
         ) { incognito, incognitoExtensions, extensionPackage ->
-            incognito || (extensionPackage in incognitoExtensions)
+            incognito || (extensionPackage != null && extensionPackage in incognitoExtensions)
         }
             .distinctUntilChanged()
     }

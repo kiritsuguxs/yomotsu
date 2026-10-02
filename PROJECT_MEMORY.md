@@ -117,6 +117,14 @@
   - Suporte completo a metadados de extensão tanto com chave de classe quanto de fábrica (`tachiyomi.animeextension.class`, `aniyomi.animeextension.class`, `tachiyomi.animeextension.factory`, `aniyomi.animeextension.factory`).
   - Registro seguro de stub sources no `AndroidSourceManager` com tratamento de exceções.
 
+### K. Correção de NPE no Leitor ao Resolver Pacotes de Extensão
+- **Sintoma:** Ao abrir um capítulo de manhwa/mangá no leitor, ocorria crash com `NullPointerException` em `AnimeHttpSource.getId() -> ExtensionManager.getExtensionPackage() -> GetIncognitoState.await()`.
+- **Causa:** `GetIncognitoState` chama `extensionManager.getExtensionPackage(sourceId)` para checar modo anônimo, iterando por todas as fontes instaladas. Ao passar pelas fontes de extensões de anime instaladas, a propriedade delegada `id by lazy` em `AnimeHttpSource` causava `NullPointerException`.
+- **Solução:**
+  - `AnimeHttpSource.kt`: `id` reescrito com getter seguro e cache (`_id`) usando `runCatching` para evitar qualquer NPE em `generateId()`.
+  - `ExtensionManager.kt`: consulta `it.id == sourceId` protegida com `try-catch` em `getExtensionPackage` e `getExtensionPackageAsFlow`. Protegido também `getAppIconForSource`.
+  - `GetIncognitoState.kt`: consultas protegidas contra exceções.
+
 ---
 
 ## 4. Estrutura de Arquivos Importantes

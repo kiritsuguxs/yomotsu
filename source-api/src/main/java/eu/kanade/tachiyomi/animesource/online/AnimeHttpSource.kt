@@ -60,7 +60,17 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      *
      * Note: the generated ID sets the sign bit to `0`.
      */
-    override val id by lazy { generateId(name, lang, versionId) }
+    private var _id: Long? = null
+
+    override val id: Long
+        get() = _id ?: try {
+            val safeName = runCatching { name }.getOrNull()?.takeIf { it.isNotBlank() } ?: "unknown"
+            val safeLang = runCatching { lang }.getOrNull() ?: ""
+            val safeVer = runCatching { versionId }.getOrDefault(1)
+            generateId(safeName, safeLang, safeVer).also { _id = it }
+        } catch (_: Throwable) {
+            0L
+        }
 
     /**
      * Headers used for requests.
@@ -91,7 +101,8 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
      */
     @Suppress("MemberVisibilityCanBePrivate")
     protected fun generateId(name: String, lang: String, versionId: Int): Long {
-        val key = "${name.lowercase()}/$lang/$versionId"
+        val safeName = runCatching { name.lowercase() }.getOrDefault("unknown")
+        val key = "$safeName/$lang/$versionId"
         val bytes = MessageDigest.getInstance("MD5").digest(key.toByteArray())
         return (0..7).map { bytes[it].toLong() and 0xff shl 8 * (7 - it) }.reduce(Long::or) and Long.MAX_VALUE
     }

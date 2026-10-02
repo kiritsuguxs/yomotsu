@@ -80,7 +80,13 @@ class ExtensionManager(
 
     fun getExtensionPackage(sourceId: Long): String? {
         return installedExtensionsFlow.value.find { extension ->
-            extension.sources.any { it.id == sourceId }
+            extension.sources.any {
+                try {
+                    it.id == sourceId
+                } catch (_: Throwable) {
+                    false
+                }
+            }
         }
             ?.pkgName
     }
@@ -88,7 +94,13 @@ class ExtensionManager(
     fun getExtensionPackageAsFlow(sourceId: Long): Flow<String?> {
         return installedExtensionsFlow.map { extensions ->
             extensions.find { extension ->
-                extension.sources.any { it.id == sourceId }
+                extension.sources.any {
+                    try {
+                        it.id == sourceId
+                    } catch (_: Throwable) {
+                        false
+                    }
+                }
             }
                 ?.pkgName
         }
@@ -98,8 +110,12 @@ class ExtensionManager(
         val pkgName = getExtensionPackage(sourceId) ?: return null
 
         return iconMap[pkgName] ?: iconMap.getOrPut(pkgName) {
-            ExtensionLoader.getExtensionPackageInfoFromPkgName(context, pkgName)!!.applicationInfo!!
-                .loadIcon(context.packageManager)
+            try {
+                ExtensionLoader.getExtensionPackageInfoFromPkgName(context, pkgName)?.applicationInfo
+                    ?.loadIcon(context.packageManager)
+            } catch (_: Throwable) {
+                null
+            }
         }
     }
 
