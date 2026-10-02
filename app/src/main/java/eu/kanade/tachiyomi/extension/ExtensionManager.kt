@@ -109,14 +109,10 @@ class ExtensionManager(
     fun getAppIconForSource(sourceId: Long): Drawable? {
         val pkgName = getExtensionPackage(sourceId) ?: return null
 
-        return iconMap[pkgName] ?: iconMap.getOrPut(pkgName) {
-            try {
-                ExtensionLoader.getExtensionPackageInfoFromPkgName(context, pkgName)?.applicationInfo
-                    ?.loadIcon(context.packageManager)
-            } catch (_: Throwable) {
-                null
-            }
-        }
+        return iconMap[pkgName] ?: runCatching {
+            ExtensionLoader.getExtensionPackageInfoFromPkgName(context, pkgName)?.applicationInfo
+                ?.loadIcon(context.packageManager)
+        }.getOrNull()?.also { iconMap[pkgName] = it }
     }
 
     private var availableExtensionsSourcesData: Map<Long, StubSource> = emptyMap()
