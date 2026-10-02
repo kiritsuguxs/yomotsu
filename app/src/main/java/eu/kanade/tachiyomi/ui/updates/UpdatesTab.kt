@@ -29,8 +29,12 @@ import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel.Event
 import kotlinx.coroutines.flow.collectLatest
 import mihon.feature.upcoming.UpcomingScreen
 import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 data object UpdatesTab : Tab {
 
@@ -72,8 +76,9 @@ data object UpdatesTab : Tab {
             onMultiDeleteClicked = viewModel::showConfirmDeleteChapters,
             onUpdateSelected = viewModel::toggleSelection,
             onOpenChapter = {
-                val manga = kotlinx.coroutines.runBlocking { uy.kohesive.injekt.Injekt.get<tachiyomi.domain.manga.interactor.GetManga>().await(it.update.mangaId) }
-                val intent = if (manga?.isAnime == true) {
+                val manga = kotlinx.coroutines.runBlocking { Injekt.get<GetManga>().await(it.update.mangaId) }
+                val isAnime = manga?.let { m -> Injekt.get<SourceManager>().get(m.source) is eu.kanade.tachiyomi.animesource.AnimeSource } ?: false
+                val intent = if (isAnime) {
                     eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
                 } else {
                     ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)

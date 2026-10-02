@@ -228,6 +228,15 @@
   5. **Proteção de Fluxo em `onNewIntent` e `loadHosters`**: Retorno antecipado após falha em `viewModel.init()`, e captura de `Throwable` em `loadHosters` emitindo `SetVideoLoadError(e)`.
   6. **UniFile e Scanlators**: Protegida a criação de `mpv.conf`/`input.conf` com `findFile ?: createFile` e adicionado fallback sem filtro de scanlator em `initEpisodeList`.
 
+### T. Resolução de Erros de Compilação CI (Outubro 2026)
+- **Problema 1 (Unresolved reference 'isAnime' em Manga):**
+  - O modelo `Manga` não possui propriedade `isAnime` (pertence a `Source.isAnime`).
+  - Corrigido em `MangaScreen.kt`, `MangaViewModel.kt`, `NotificationReceiver.kt`, `LibraryTab.kt` e `UpdatesTab.kt` para checar `source is AnimeSource` ou consultar `sourceManager.get(manga.source) is AnimeSource`.
+- **Problema 2 (Unresolved reference 'get' em Injekt):**
+  - Em `UpdatesTab.kt`, `HistoryTab.kt` e `MainActivity.kt`, chamadas a `Injekt.get()` falhavam por falta de `import uy.kohesive.injekt.api.get`.
+- **Problema 3 (Argument type mismatch em AniyomiMPVView.kt):**
+  - `logcat(LogPriority.ERROR, e) { ... }` causava erro de tipo porque o segundo parâmetro da função top-level `logcat` é `tag: String?`. Corrigido para `logcat(LogPriority.ERROR) { "Failed to init AniyomiMPVView: ${e.message}" }`.
+
 
 
 

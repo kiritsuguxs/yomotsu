@@ -118,6 +118,8 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -597,7 +599,7 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         try {
-            uy.kohesive.injekt.Injekt.get<animiru.feature.mpvfiles.MpvConfig>().copyFiles()
+            Injekt.get<animiru.feature.mpvfiles.MpvConfig>().copyFiles()
         } catch (_: Throwable) {}
     }
 

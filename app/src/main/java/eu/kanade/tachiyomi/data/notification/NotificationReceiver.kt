@@ -44,6 +44,7 @@ class NotificationReceiver : BroadcastReceiver() {
     private val getChapter: GetChapter by injectLazy()
     private val updateChapter: UpdateChapter by injectLazy()
     private val downloadManager: DownloadManager by injectLazy()
+    private val sourceManager: SourceManager by injectLazy()
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
@@ -146,7 +147,8 @@ class NotificationReceiver : BroadcastReceiver() {
         val manga = runBlocking { getManga.await(mangaId) }
         val chapter = runBlocking { getChapter.await(chapterId) }
         if (manga != null && chapter != null) {
-            val intent = if (manga.isAnime) {
+            val isAnime = sourceManager.get(manga.source) is eu.kanade.tachiyomi.animesource.AnimeSource
+            val intent = if (isAnime) {
                 eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, manga.id, chapter.id)
             } else {
                 ReaderActivity.newIntent(context, manga.id, chapter.id)
@@ -389,7 +391,9 @@ class NotificationReceiver : BroadcastReceiver() {
          * @param chapter chapter that needs to be opened
          */
         internal fun openChapterPendingActivity(context: Context, manga: Manga, chapter: Chapter): PendingIntent {
-            val newIntent = if (manga.isAnime) {
+            val source = Injekt.get<SourceManager>().get(manga.source)
+            val isAnime = source is eu.kanade.tachiyomi.animesource.AnimeSource
+            val newIntent = if (isAnime) {
                 eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, manga.id, chapter.id)
             } else {
                 ReaderActivity.newIntent(context, manga.id, chapter.id)

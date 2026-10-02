@@ -30,11 +30,14 @@ import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
-import mihon.feature.migration.dialog.MigrateMangaDialog
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 data object HistoryTab : Tab {
 
@@ -153,8 +156,9 @@ data object HistoryTab : Tab {
 
     private suspend fun openChapter(context: Context, chapter: Chapter?) {
         if (chapter != null) {
-            val manga = uy.kohesive.injekt.Injekt.get<tachiyomi.domain.manga.interactor.GetManga>().await(chapter.mangaId)
-            val intent = if (manga?.isAnime == true) {
+            val manga = Injekt.get<GetManga>().await(chapter.mangaId)
+            val isAnime = manga?.let { m -> Injekt.get<SourceManager>().get(m.source) is eu.kanade.tachiyomi.animesource.AnimeSource } ?: false
+            val intent = if (isAnime) {
                 eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id)
             } else {
                 ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)

@@ -119,6 +119,7 @@ class MangaScreen(
         }
 
         val isNovel = successState.source is eu.kanade.tachiyomi.source.INovelSource
+        val isAnime = successState.source is eu.kanade.tachiyomi.animesource.AnimeSource
 
         MangaScreen(
             state = successState,
@@ -128,7 +129,7 @@ class MangaScreen(
             chapterSwipeStartAction = viewModel.chapterSwipeStartAction,
             chapterSwipeEndAction = viewModel.chapterSwipeEndAction,
             navigateUp = navigator::pop,
-            onChapterClicked = { openChapter(context, it, successState.source, successState.manga.isAnime) },
+            onChapterClicked = { openChapter(context, it, successState.source, isAnime) },
             onDownloadChapter = viewModel::runChapterDownloadActions.takeIf { !successState.source.isLocalOrStub() },
             onTranslationChapter = viewModel::runChapterTranslationActions.takeIf { !isNovel },
             onAddToLibraryClicked = {
@@ -159,7 +160,7 @@ class MangaScreen(
             onTagSearch = { scope.launch { performGenreSearch(navigator, it, viewModel.source!!) } },
             onFilterButtonClicked = viewModel::showSettingsDialog,
             onRefresh = viewModel::fetchAllFromSource,
-            onContinueReading = { continueReading(context, viewModel.getNextUnreadChapter(), successState.source, successState.manga.isAnime) },
+            onContinueReading = { continueReading(context, viewModel.getNextUnreadChapter(), successState.source, isAnime) },
             onSearch = { query, global -> scope.launch { performSearch(navigator, query, global) } },
             onCoverClicked = viewModel::showCoverDialog,
             onShareClicked = { shareManga(context, viewModel.manga, viewModel.source) }.takeIf { isHttpSource },

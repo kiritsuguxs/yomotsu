@@ -121,7 +121,7 @@ class AniyomiMPVView(context: Context, attributes: AttributeSet?) : BaseMPVView(
             setupAudioOptions()
             observeProperties()
         } catch (e: Throwable) {
-            logcat(LogPriority.ERROR, e) { "Failed to init AniyomiMPVView" }
+            logcat(LogPriority.ERROR) { "Failed to init AniyomiMPVView: ${e.message}" }
         }
     }
 

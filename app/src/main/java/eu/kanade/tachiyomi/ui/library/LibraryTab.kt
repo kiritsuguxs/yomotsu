@@ -58,8 +58,11 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.isLocal
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 data object LibraryTab : Tab {
 
@@ -191,7 +194,8 @@ data object LibraryTab : Tab {
                             scope.launchIO {
                                 val chapter = viewModel.getNextUnreadChapter(it.manga)
                                 if (chapter != null) {
-                                    val intent = if (it.manga.isAnime) {
+                                    val isAnime = Injekt.get<SourceManager>().get(it.manga.source) is eu.kanade.tachiyomi.animesource.AnimeSource
+                                    val intent = if (isAnime) {
                                         eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id)
                                     } else {
                                         ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
