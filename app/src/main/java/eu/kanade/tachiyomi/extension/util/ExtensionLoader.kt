@@ -167,8 +167,18 @@ internal object ExtensionLoader {
                 pkgManager.getInstalledPackages(PACKAGE_FLAGS)
             }
         } catch (e: Throwable) {
-            logcat(LogPriority.ERROR, e) { "Failed to get installed packages" }
-            emptyList()
+            logcat(LogPriority.ERROR, e) { "Failed to get installed packages with PACKAGE_FLAGS, falling back to GET_META_DATA" }
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pkgManager.getInstalledPackages(PackageManager.PackageInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pkgManager.getInstalledPackages(PackageManager.GET_META_DATA)
+                }
+            } catch (e2: Throwable) {
+                logcat(LogPriority.ERROR, e2) { "Failed to get installed packages" }
+                emptyList()
+            }
         }
 
         val sharedExtPkgs = installedPkgs
@@ -297,6 +307,12 @@ internal object ExtensionLoader {
             val pkgName = pkgInfo.packageName ?: return LoadResult.Error
             val isAnime = extensionInfo.isAnime
 
+            val apkPath = appInfo.sourceDir ?: (if (!extensionInfo.isShared) {
+                File(getPrivateExtensionDir(context), "$pkgName.$PRIVATE_EXTENSION_EXTENSION").takeIf { it.exists() }?.absolutePath
+            } else null) ?: return LoadResult.Error
+            appInfo.sourceDir = apkPath
+            appInfo.publicSourceDir = apkPath
+
             val extName = try {
                 appInfo.metaData?.getString(METADATA_NAME)
                     ?: pkgManager.getApplicationLabel(appInfo).toString()
@@ -413,7 +429,7 @@ internal object ExtensionLoader {
                                 else -> throw Exception("Unknown source class type: ${obj.javaClass}")
                             }
                         } catch (e2: Throwable) {
-                            logcat(LogPriority.ERROR, e2) { "Extension load error: $extName ($it)" }
+                            logcat(LogPriority.ERROR, e2) { "Extension load error: $extName ($it): ${e2.message}" }
                             return LoadResult.Error
                         }
                     }
@@ -515,12 +531,8 @@ internal object ExtensionLoader {
      * have sourceDir which breaks assets loading (used for getting icon here).
      */
     private fun ApplicationInfo.fixBasePaths(apkPath: String) {
-        if (sourceDir == null) {
-            sourceDir = apkPath
-        }
-        if (publicSourceDir == null) {
-            publicSourceDir = apkPath
-        }
+        sourceDir = apkPath
+        publicSourceDir = apkPath
     }
 
     private data class ExtensionInfo(

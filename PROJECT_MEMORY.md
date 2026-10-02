@@ -188,24 +188,32 @@
 - **Problema 2 (Menu dos 3 Pontinhos sem Configurações para Fontes de Anime):** Em fontes como Tomato que requerem login ou configurações, o menu de 3 pontinhos não mostrava "Configurações".
   - **Causa:** `BrowseSourceToolbar.kt` verificava apenas `source is ConfigurableSource`. Fontes de anime implementam `ConfigurableAnimeSource`. Além disso, `SourcePreferencesScreen.kt` só populava telas para `ConfigurableSource`, e `ExtensionDetailsScreen.kt` só mostrava o ícone de engrenagem para `ConfigurableSource`.
   - **Solução:**
-    - `ConfigurableAnimeSource` passou a estender `ConfigurableSource`.
+    - `BrowseSourceToolbar.kt`, `SourcePreferencesScreen.kt` e `ExtensionDetailsScreen.kt` receberam suporte explícito a `ConfigurableAnimeSource` sem forçar herança direta em `ConfigurableSource`.
 
 ### Q. Correções nos Botões de WebView e Carregamento Infinito de Recentes (Outubro 2026)
 - **Problema 1 (Botões "Abrir na WebView" Inoperantes em Animes):** Ao clicar nos botões de WebView no catálogo da fonte ou na tela de detalhes do anime, nada acontecia.
   - **Causa:** O código fazia cast exclusivo para `HttpSource` (`source as? HttpSource`). Fontes de anime implementam `AnimeHttpSource` e fontes de novel implementam `NovelHttpSource`. Além disso, `isHttpSource` na tela de detalhes era `false`, e `WebViewViewModel`/`WebViewActivity` não injetavam os headers da fonte de anime.
   - **Solução:** `BrowseSourceScreen.kt`, `MigrateSourceSearchScreen.kt`, `MangaScreen.kt`, `WebViewViewModel.kt` e `WebViewActivity.kt` foram atualizados para obter a URL e headers de `AnimeHttpSource` e `NovelHttpSource`.
 - **Problema 2 (Aba "Recentes" em Carregamento Infinito e Compatibilidade ABI de Extensões):**
-  - **Causa Real:**
+  - **Causa:**
     1. Em `RxExtension.kt`, `Observable<T>.awaitSingle()` chamava a si mesma recursivamente por sombra de import (`suspend fun <T> Observable<T>.awaitSingle(): T = awaitSingle()`).
     2. `SourceLatestPagingSource` não possuía `withTimeout`, travando indefinidamente a corrotina caso a fonte demorasse ou falhasse.
-  - **Regra Crítica de Compatibilidade ABI (Congelamento de `source-api`):**
-    - Extensões de anime de terceiros (Aniyomi / Keiyoushi) são APKs pré-compilados contra a `extensions-lib` do Aniyomi.
-    - Alterar métodos abstratos (`popularAnimeRequest`, `popularAnimeParse`, `latestUpdatesRequest`, `latestUpdatesParse`, `latestUpdatesSelector`, `latestUpdatesFromElement`, `latestUpdatesNextPageSelector`) para `open` ou adicionar propriedades/métodos concretos como `supportsLatest` em `AnimeHttpSource` quebra a verificação de classes do Android ART (`VerifyError` / `IncompatibleClassChangeError`). Isso faz com que `ExtensionLoader.kt` falhe em carregar as extensões (sumindo fontes instaladas e impedindo novas instalações).
-    - **Solução Definitiva:**
-      - Mantida a assinatura ABI de `AnimeHttpSource`, `ParsedAnimeHttpSource` e `AnimeCatalogueSource` 100% idêntica ao Aniyomi.
-      - Corrigido `RxExtension.kt` para delegar para `coreAwaitSingle`.
-      - Adicionado `withTimeout(30_000L)` em `SourcePagingSource.kt` para busca, populares e recentes.
-      - `SourceRepositoryImpl.kt` usa `runCatching { source.supportsLatest }.getOrDefault(false)` de forma segura.
+  - **Solução:**
+    - Mantida a assinatura ABI de `AnimeHttpSource`, `ParsedAnimeHttpSource` e `AnimeCatalogueSource` 100% idêntica ao Aniyomi.
+    - Corrigido `RxExtension.kt` para delegar para `coreAwaitSingle`.
+    - Adicionado `withTimeout(30_000L)` em `SourcePagingSource.kt` para busca, populares e recentes.
+    - `SourceRepositoryImpl.kt` usa `runCatching { source.supportsLatest }.getOrDefault(false)` de forma segura.
+
+### R. Restauração de ABI em ConfigurableAnimeSource e Blindagem do ExtensionLoader (Outubro 2026)
+- **Problema (Extensões de anime não instalam e somem da lista de instaladas):**
+  - **Causa Raiz 1:** Em `ConfigurableAnimeSource.kt`, a interface havia sido alterada para estender `ConfigurableSource` (`interface ConfigurableAnimeSource : AnimeSource, ConfigurableSource`). Como ambas as interfaces declaravam métodos padrão `getSourcePreferences()` e assinaturas coincidentes, o ART do Android 15 (Realme SDK 35) falhava na verificação de classes com `IncompatibleClassChangeError` / `VerifyError` ao instanciar qualquer extensão de anime pré-compilada que implementa `ConfigurableAnimeSource` (ex: AnimeFire, BetterAnime, Tomato, AnimesOnlineCloud). Com isso, `ExtensionLoader.loadExtension()` retornava `LoadResult.Error`, descartando as fontes instaladas e abortando a conclusão da instalação.
+  - **Causa Raiz 2:** No Android 15, `pkgManager.getInstalledPackages(PACKAGE_FLAGS)` com `GET_SIGNING_CERTIFICATES` pode falhar por estouro do buffer IPC (TransactionTooLargeException) caso o dispositivo possua centenas de pacotes, resultando em lista vazia.
+  - **Soluções:**
+    1. Revertida a herança de `ConfigurableAnimeSource` para estender única e exclusivamente `AnimeSource`, restaurando 100% da compatibilidade binária (ABI) das extensões Aniyomi.
+    2. No `ExtensionLoader.kt`:
+       - Adicionado fallback automático para `GET_META_DATA` caso `getInstalledPackages` com `PACKAGE_FLAGS` lance exceção.
+       - Em `fixBasePaths`, fixados incondicionalmente `sourceDir` e `publicSourceDir` para o caminho real do arquivo da extensão.
+       - Em `loadExtension`, adicionado fallback explícito para resolver o arquivo privado `.ext` caso `ApplicationInfo.sourceDir` venha nulo.
 
 
 
