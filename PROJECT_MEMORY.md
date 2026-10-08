@@ -451,3 +451,24 @@
     - Diálogo seletor estilo Crunchyroll exibindo o nome do personagem em destaque e a obra de origem logo abaixo.
     - Compatibilidade retroativa garantida em `getPresetAvatar` mapeando IDs legados para os novos personagens sem quebrar preferências salvas.
 
+### AF. Banners Temáticos com Paisagens e Cenários Icônicos de Anime (`ProfilePresets.kt`, `UserProfileScreen.kt`) (Outubro 2026)
+- **12 Banners de Cenários Panorâmicos de Alta Definição:**
+  - Adicionadas paisagens temáticas de anime otimizadas em formato WebP widescreen 2:1 (~30KB cada) em `res/drawable-nodpi/`:
+    1. **Cerejeiras ao Luar** (`banner_sakura_night` - Templo Shinto e flores sob o luar)
+    2. **Portal Torii Místico** (`banner_torii_sea` - Portão Torii tradicional sobre mar escarlate)
+    3. **Céu Estrelado** (`banner_starry_sky` - Galáxia e estrelas cadentes estilo *Your Name / Kimi no Na Wa*)
+    4. **Castelo das Sombras** (`banner_shadow_castle` - Silhueta mística de fantasia / *Solo Leveling*)
+    5. **Neo Tokyo Cyberpunk** (`banner_cyber_city` - Arranha-céus com luzes neon e metrópole noturna)
+    6. **Monte Fuji ao Entardecer** (`banner_fuji_sunset` - Vista crepuscular do Fuji e nuvens douradas)
+    7. **Vila das Cerejeiras** (`banner_sakura_village` - Vilarejo tradicional japonês florescido)
+    8. **Tóquio Iluminada** (`banner_tokyo_night` - Vista panorâmica noturna com Tokyo Tower)
+    9. **Floresta de Bambu** (`banner_bamboo_zen` - Bosque zen de bambus verdes / clima samurai e *Demon Slayer*)
+    10. **Horizonte Synthwave** (`banner_synth_neon` - Sol poente retrowave com linhas e neon)
+    11. **Templo das Lanternas** (`banner_lantern_shrine` - Sala tradicional com lanternas incandescentes)
+    12. **Primavera Imperial** (`banner_vibrant_blossom` - Flores de cerejeira vibrantes sob raios de sol)
+  - Mantidos também os 8 banners gradientes abstratos minimalistas para quem preferir um visual sem ilustrações.
+- **Seletor de Banners Estilizado:**
+  - Grade 2 colunas com cartões retangulares exibindo a imagem do banner em `ContentScale.Crop`, gradiente escuro de leitura e identificação com nome e categoria/obra.
+  - No perfil principal, o banner conta com gradiente vertical suave sobreposto para transição elegante com a área do avatar.
+
+

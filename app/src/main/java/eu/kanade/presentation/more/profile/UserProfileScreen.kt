@@ -444,7 +444,7 @@ fun UserProfileScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(55.dp)
+                                    .height(68.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .clickable {
                                         onBannerPresetSelected(preset.id)
@@ -457,19 +457,57 @@ fun UserProfileScreen(
                                     )
                             ) {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Brush.horizontalGradient(preset.gradient)),
+                                    modifier = Modifier.fillMaxSize(),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = preset.name,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
-                                        textAlign = TextAlign.Center,
+                                    if (preset.drawableRes != null) {
+                                        Image(
+                                            painter = painterResource(preset.drawableRes),
+                                            contentDescription = preset.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colors = listOf(
+                                                            Color.Black.copy(alpha = 0.3f),
+                                                            Color.Black.copy(alpha = 0.7f)
+                                                        )
+                                                    )
+                                                )
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Brush.horizontalGradient(preset.gradient))
+                                        )
+                                    }
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier.padding(horizontal = 4.dp)
-                                    )
+                                    ) {
+                                        Text(
+                                            text = preset.name,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = preset.group,
+                                            color = Color.White.copy(alpha = 0.8f),
+                                            fontSize = 9.sp,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -519,11 +557,29 @@ fun UserProfileScreen(
                             )
                         } else {
                             val presetBanner = ProfilePresets.getPresetBanner(bannerPreset)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Brush.horizontalGradient(presetBanner.gradient))
-                            )
+                            if (presetBanner.drawableRes != null) {
+                                Image(
+                                    painter = painterResource(presetBanner.drawableRes),
+                                    contentDescription = presetBanner.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f))
+                                            )
+                                        )
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Brush.horizontalGradient(presetBanner.gradient))
+                                )
+                            }
                         }
                         IconButton(
                             onClick = { showBannerDialog = true },

@@ -27,7 +27,9 @@ data class ProfilePresetAvatar(
 data class ProfilePresetBanner(
     val id: String,
     val name: String,
-    val gradient: List<Color>
+    val group: String = "Paisagem",
+    val drawableRes: Int? = null,
+    val gradient: List<Color> = listOf(Color(0xFF1A1A1A), Color(0xFF000000))
 )
 
 object ProfilePresets {
@@ -206,43 +208,123 @@ object ProfilePresets {
 
     val PRESET_BANNERS: List<ProfilePresetBanner> = listOf(
         ProfilePresetBanner(
-            id = "banner_abyss",
-            name = "Abismo do Submundo",
-            gradient = listOf(Color(0xFF1A1A1A), Color(0xFF000000))
+            id = "banner_sakura_night",
+            name = "Cerejeiras ao Luar",
+            group = "Japão / Shinto",
+            drawableRes = R.drawable.banner_sakura_night
+        ),
+        ProfilePresetBanner(
+            id = "banner_torii_sea",
+            name = "Portal Torii Místico",
+            group = "Japão / Místico",
+            drawableRes = R.drawable.banner_torii_sea
+        ),
+        ProfilePresetBanner(
+            id = "banner_starry_sky",
+            name = "Céu Estrelado",
+            group = "Your Name",
+            drawableRes = R.drawable.banner_starry_sky
+        ),
+        ProfilePresetBanner(
+            id = "banner_shadow_castle",
+            name = "Castelo das Sombras",
+            group = "Solo Leveling",
+            drawableRes = R.drawable.banner_shadow_castle
+        ),
+        ProfilePresetBanner(
+            id = "banner_cyber_city",
+            name = "Neo Tokyo Cyberpunk",
+            group = "Cyberpunk",
+            drawableRes = R.drawable.banner_cyber_city
+        ),
+        ProfilePresetBanner(
+            id = "banner_fuji_sunset",
+            name = "Monte Fuji ao Entardecer",
+            group = "Paisagem",
+            drawableRes = R.drawable.banner_fuji_sunset
+        ),
+        ProfilePresetBanner(
+            id = "banner_sakura_village",
+            name = "Vila das Cerejeiras",
+            group = "Paisagem",
+            drawableRes = R.drawable.banner_sakura_village
+        ),
+        ProfilePresetBanner(
+            id = "banner_tokyo_night",
+            name = "Tóquio Iluminada",
+            group = "Metrópole",
+            drawableRes = R.drawable.banner_tokyo_night
+        ),
+        ProfilePresetBanner(
+            id = "banner_bamboo_zen",
+            name = "Floresta de Bambu",
+            group = "Zen / Samurai",
+            drawableRes = R.drawable.banner_bamboo_zen
+        ),
+        ProfilePresetBanner(
+            id = "banner_synth_neon",
+            name = "Horizonte Synthwave",
+            group = "Retrowave",
+            drawableRes = R.drawable.banner_synth_neon
+        ),
+        ProfilePresetBanner(
+            id = "banner_lantern_shrine",
+            name = "Templo das Lanternas",
+            group = "Tradicional",
+            drawableRes = R.drawable.banner_lantern_shrine
+        ),
+        ProfilePresetBanner(
+            id = "banner_vibrant_blossom",
+            name = "Primavera Imperial",
+            group = "Paisagem",
+            drawableRes = R.drawable.banner_vibrant_blossom
         ),
         ProfilePresetBanner(
             id = "banner_monarch",
-            name = "Monarca das Sombras",
+            name = "Monarca das Sombras (Gradiente)",
+            group = "Gradiente",
             gradient = listOf(Color(0xFF3A0CA3), Color(0xFF10002B), Color(0xFF000000))
         ),
         ProfilePresetBanner(
+            id = "banner_abyss",
+            name = "Abismo do Submundo (Gradiente)",
+            group = "Gradiente",
+            gradient = listOf(Color(0xFF1A1A1A), Color(0xFF000000))
+        ),
+        ProfilePresetBanner(
             id = "banner_flame",
-            name = "Chama do Dragão",
+            name = "Chama do Dragão (Gradiente)",
+            group = "Gradiente",
             gradient = listOf(Color(0xFF900C3F), Color(0xFFC70039), Color(0xFF110000))
         ),
         ProfilePresetBanner(
             id = "banner_deep_blue",
-            name = "Oceano Profundo",
+            name = "Oceano Profundo (Gradiente)",
+            group = "Gradiente",
             gradient = listOf(Color(0xFF002244), Color(0xFF004080), Color(0xFF000C1A))
         ),
         ProfilePresetBanner(
             id = "banner_emerald",
-            name = "Esmeralda Ancestral",
+            name = "Esmeralda Ancestral (Gradiente)",
+            group = "Gradiente",
             gradient = listOf(Color(0xFF0B3C1D), Color(0xFF1A532C), Color(0xFF05170B))
         ),
         ProfilePresetBanner(
             id = "banner_cyberpunk",
-            name = "Cyberpunk Neón",
+            name = "Cyberpunk Neón (Gradiente)",
+            group = "Gradiente",
             gradient = listOf(Color(0xFFFF007F), Color(0xFF7928CA), Color(0xFF000000))
         ),
         ProfilePresetBanner(
             id = "banner_gold",
-            name = "Ouro Real",
+            name = "Ouro Real (Gradiente)",
+            group = "Gradiente",
             gradient = listOf(Color(0xFFB8860B), Color(0xFF5E4503), Color(0xFF1E1700))
         ),
         ProfilePresetBanner(
             id = "banner_void",
-            name = "Vazio Absoluto",
+            name = "Vazio Absoluto (Gradiente)",
+            group = "Gradiente",
             gradient = listOf(Color(0xFF050505), Color(0xFF000000))
         )
     )
