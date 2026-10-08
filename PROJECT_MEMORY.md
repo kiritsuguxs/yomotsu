@@ -477,9 +477,12 @@
     - **Itens Monitorados (`trackedTitleCount`):** Contabiliza exatamente quantas obras da biblioteca estão associadas e sincronizadas com os rastreadores logados pelo usuário, exibindo o(s) serviço(s) ativo(s) no subtítulo (ex: `AniList` ou `AniList • MyAnimeList`).
     - **Avaliação Média (`meanScore`):** Calcula a média aritmética das notas concedidas pelo usuário às obras rastreadas, normalizada para a escala universal de 10.0 estrelas (ex: `8.50 ★` ou `N/A` caso ainda não haja notas atribuídas).
     - **Tratamento de Estado Desconectado:** Caso o usuário não tenha nenhum rastreador configurado, os cartões informam amigavelmente `0` / `Nenhum rastreador` e `N/A` sem quebras de layout.
-  - **Internacionalização e Strings:**
-    - Utiliza `MR.strings.label_tracked_titles` e `MR.strings.label_mean_score` do Mihon, com suporte multilíngue em `base`, `pt-rBR` e `pt` (`profile_stat_no_trackers`, `profile_stat_mean_score_sub`).
-
-
-
-
+### AH. Lançamento da Versão Oficial 0.20.4-Y41 (Outubro 2026)
+- **Incremento de Versão:**
+  - `versionCode` elevado para `102` e `versionName` definido como `"0.20.4-Y41"` em `app/build.gradle.kts`.
+  - Tag oficial: `v0.20.4-Y41`.
+- **Destaques do Release:**
+  - Suporte completo e integrado a Animes (Player nativo MPV com aceleração de hardware, download de episódios, extensões de anime privadas Anikku/Aniyomi).
+  - Perfil Yomotsu repaginado com 20 avatares em alta definição, 20 banners exclusivos (12 cenários cinematográficos de animes + 8 gradientes minimalistas), molduras dinâmicas com evolução por nível, métricas de leitura/visualização e integração com trackers (AniList/MAL com contagem e média de notas).
+  - 42 conquistas de animes e internacionalização em Português do Brasil, Inglês e Espanhol.
+  - Correção de todas as incompatibilidades de compilação NDK C++, estabilidade no Android 15 e ausência de travamentos em downloads.

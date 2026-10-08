@@ -4,6 +4,32 @@ Este arquivo contém somente as mudanças importantes para quem usa o aplicativo
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
 
+## 0.20.4-Y41
+
+🇧🇷 **Novidades e Aprimoramentos (Português):**
+- **Suporte Nativo a Animes (Player MPV Integrado):** O Yomotsu agora é uma central completa de mangás, novels e animes! Assista a episódios com o reprodutor nativo MPV de alto desempenho com aceleração por hardware, suporte a múltiplas qualidades de vídeo, faixas de áudio e legendas.
+- **Gerenciador de Downloads de Animes:** Baixe episódios completos diretamente pelo aplicativo para assistir offline onde estiver, com controle dedicado de fila e notificações de progresso.
+- **Extensões de Animes Privadas:** Aba exclusiva de Fontes e Extensões para Animes no Explorar (base Anikku/Aniyomi), com instalação interna e privada sem necessidade de permissões perigosas no Android.
+- **Perfil Yomotsu Repaginado e Melhorado:**
+  - **20 Novos Avatares de Personagens de Animes:** Galeria de fotos de perfil com retratos oficiais em alta resolução (512x512) perfeitamente enquadrados para círculos (Sung Jin-woo, Gojo, Sukuna, Luffy, Zoro, Tanjiro, Nezuko, Naruto, Ichigo, Saitama, Eren, Levi, Frieren, Anya, Killua, Goku, Guts, Rimuru, Megumin, Alucard e Yomotsu Original).
+  - **20 Banners Exclusivos (12 Cenários Autênticos + 8 Gradientes):** 12 paisagens cinematográficas de anime fiéis e de tirar o fôlego (Santuário Malevolente de Sukuna, Castelo Infinito de Demon Slayer, Thousand Sunny em mar aberto, Vale do Fim com as estátuas colossais, Vila da Folha com os rostos dos Hokages, Cometa Tiamat de Your Name, Céu de Tóquio, Portão das Sombras de Solo Leveling, Colina das Flores de Frieren, Muralha de Shinganshina, Trilhos no Mar de Chihiro e Jardim Secreto de Howl), além de 8 gradientes abstratos minimalistas.
+  - **Bordas Dinâmicas de Rank:** Molduras de avatar exclusivas, incluindo o Rank Dinâmico que evolui e reflete a cor da sua patente e nível de leitura no Yomotsu.
+  - **Métricas Completas de Leitura e Trackers:** Painel com estatísticas de capítulos lidos, episódios assistidos, tempo total dedicado (lendo e assistindo), mangás e animes salvos offline, obras concluídas e integração com serviços de rastreamento (AniList, MyAnimeList, Kitsu, etc.) exibindo itens monitorados e nota média universal (0-10 estrelas).
+  - **42 Conquistas de Anime:** Desafios e conquistas temáticas exclusivas para desbloquear enquanto você consome seus mangás, novels e animes favoritos.
+- **Internacionalização e Estabilidade:** Localização completa em Português do Brasil, Inglês e Espanhol, total compatibilidade com Android 15 e correções de inicialização e bibliotecas nativas C++.
+
+🇺🇸 **Highlights & Improvements (English):**
+- **Native Anime Support (Integrated MPV Player):** Yomotsu is now an all-in-one hub for manga, light novels, and anime! Watch episodes with high-performance MPV hardware acceleration, video quality selectors, multiple audio tracks, and subtitles.
+- **Anime Download Manager:** Download full episodes directly within the app for offline viewing anywhere, featuring dedicated queue controls and background progress notifications.
+- **Private Anime Extensions:** Dedicated Anime Sources and Extensions tab in Explore (powered by Anikku/Aniyomi ecosystem), featuring private internal installation without requiring invasive Android package installer permissions.
+- **Revamped & Enhanced Yomotsu Profile:**
+  - **20 New Anime Character Avatars:** High-definition character portraits (512x512) framed perfectly for circular profile pictures (Sung Jin-woo, Gojo, Sukuna, Luffy, Zoro, Tanjiro, Nezuko, Naruto, Ichigo, Saitama, Eren, Levi, Frieren, Anya, Killua, Goku, Guts, Rimuru, Megumin, Alucard, and Yomotsu Original).
+  - **20 Exclusive Banners (12 Authentic Anime Landscapes + 8 Gradients):** 12 breathtaking widescreen anime landscapes (Sukuna's Malevolent Shrine, Demon Slayer's Infinity Castle, Thousand Sunny sailing the grand ocean, Valley of the End monumental statues, Hidden Leaf Village Hokage rock, Your Name's Tiamat Comet, Tokyo Sky, Solo Leveling's Shadow Gate, Frieren's Flower Hill, Wall Maria Shinganshina, Spirited Away Sea Train, and Howl's Secret Garden), alongside 8 minimalist high-contrast gradients.
+  - **Dynamic Rank Borders:** Exclusive avatar borders, including a Dynamic Rank border that automatically shifts colors reflecting your current reading rank and progression in Yomotsu.
+  - **Full Reading Metrics & Tracker Integration:** Comprehensive profile dashboard showing chapters read, episodes watched, total time spent reading & watching, offline downloaded titles, completed library entries, and full tracker sync (AniList, MyAnimeList, Kitsu, etc.) with tracked title counts and universal average score (0-10 stars).
+  - **42 Anime Achievements:** Themed challenges and achievements to unlock as you read manga/novels and watch anime.
+- **Localization & Stability:** Full multilingual localization across Brazilian Portuguese, English, and Spanish, Android 15 compatibility enhancements, and native C++ runtime fixes.
+
 ## 0.20.4-Y40
 
 🇧🇷 **Novidades e Aprimoramentos (Português):**
