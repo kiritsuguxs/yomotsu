@@ -40,6 +40,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -535,9 +536,8 @@ class AnimeDownloader(
     ): UniFile {
         var file: UniFile? = null
 
-        val downloadScope = CoroutineScope(coroutineContext)
         for (tries in 1..3) {
-            if (downloadScope.isActive) {
+            if (currentCoroutineContext().isActive) {
                 file = try {
                     tmpDir.findFile("$filename.tmp")?.delete()
                     val videoFile = tmpDir.createFile("$filename.tmp")!!
@@ -562,7 +562,7 @@ class AnimeDownloader(
             if (file != null) break
         }
 
-        return if (downloadScope.isActive) {
+        return if (currentCoroutineContext().isActive) {
             file ?: throw Exception("Downloaded file not found")
         } else {
             throw Exception("Download has been stopped")
@@ -583,7 +583,7 @@ class AnimeDownloader(
         val ffmpegFilename = videoFile.toFFmpegString(context)
 
         val headers = video.headers ?: download.source.headers
-        val headerOptions = if (!headers.isEmpty()) {
+        val headerOptions = if (headers.size > 0) {
             headers.joinToString("", "-headers '", "'") {
                 "${it.first}: ${it.second}\r\n"
             }
