@@ -60,6 +60,8 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.telegram.CloudManga
 import eu.kanade.tachiyomi.data.telegram.TelegramCloudManager
 import kotlinx.coroutines.launch
+import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -99,10 +101,10 @@ class TelegramCloudManagerScreen : Screen() {
         Scaffold(
             topBar = {
                 SearchToolbar(
-                    titleContent = { AppBarTitle("Gerenciador da Nuvem") },
+                    titleContent = { AppBarTitle(stringResource(MR.strings.pref_telegram_cloud_manager)) },
                     searchQuery = searchQuery,
                     onChangeSearchQuery = { searchQuery = it },
-                    placeholderText = "Buscar obra na nuvem...",
+                    placeholderText = stringResource(MR.strings.telegram_cloud_search_hint),
                     navigateUp = { navigator.pop() },
                     actions = {
                         IconButton(
@@ -110,11 +112,8 @@ class TelegramCloudManagerScreen : Screen() {
                                 scope.launch {
                                     isSyncing = true
                                     try {
-                                        snackbarHostState.showSnackbar("Sincronizando com a Nuvem Telegram...")
                                         mangas = cloudManager.syncFromTelegram()
-                                        snackbarHostState.showSnackbar("Sincronização concluída! ${mangas.size} obras sincronizadas.")
-                                    } catch (e: Exception) {
-                                        snackbarHostState.showSnackbar("Erro ao sincronizar: ${e.message}")
+                                    } catch (_: Exception) {
                                     } finally {
                                         isSyncing = false
                                     }
@@ -125,7 +124,7 @@ class TelegramCloudManagerScreen : Screen() {
                             if (isSyncing) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                             } else {
-                                Icon(Icons.Outlined.CloudSync, contentDescription = "Sincronizar com o Telegram")
+                                Icon(Icons.Outlined.CloudSync, contentDescription = stringResource(MR.strings.telegram_cloud_sync_action))
                             }
                         }
                     }
@@ -154,13 +153,13 @@ class TelegramCloudManagerScreen : Screen() {
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Nenhuma obra na lista local",
+                            text = stringResource(MR.strings.telegram_cloud_empty_local),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Clique abaixo para varrer seu grupo do Telegram e buscar os capítulos que já foram enviados.",
+                            text = stringResource(MR.strings.telegram_cloud_empty_local_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -171,7 +170,6 @@ class TelegramCloudManagerScreen : Screen() {
                                     isSyncing = true
                                     try {
                                         mangas = cloudManager.syncFromTelegram()
-                                        snackbarHostState.showSnackbar("Sincronização concluída!")
                                     } finally {
                                         isSyncing = false
                                     }
@@ -180,7 +178,7 @@ class TelegramCloudManagerScreen : Screen() {
                         ) {
                             Icon(Icons.Outlined.CloudSync, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Sincronizar do Telegram")
+                            Text(stringResource(MR.strings.telegram_cloud_sync_action))
                         }
                     }
                 } else if (filteredMangas.isEmpty() && !searchQuery.isNullOrBlank()) {
@@ -250,7 +248,7 @@ class TelegramCloudManagerScreen : Screen() {
                                                 fontWeight = FontWeight.Bold
                                             )
                                             Text(
-                                                text = "${manga.chapters.size} capítulos no Telegram",
+                                                text = stringResource(MR.strings.telegram_cloud_chapters_count, manga.chapters.size),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -261,14 +259,14 @@ class TelegramCloudManagerScreen : Screen() {
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Outlined.Delete,
-                                                contentDescription = "Apagar obra da Nuvem",
+                                                contentDescription = stringResource(MR.strings.telegram_cloud_delete_manga),
                                                 tint = MaterialTheme.colorScheme.error
                                             )
                                         }
                                         IconButton(onClick = { expandedMap[manga.title] = !isExpanded }) {
                                             Icon(
                                                 imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                                                contentDescription = "Expandir"
+                                                contentDescription = null
                                             )
                                         }
                                     }
@@ -283,7 +281,7 @@ class TelegramCloudManagerScreen : Screen() {
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = "Baixando capítulo $curr de $total para a Fonte Local...",
+                                            text = stringResource(MR.strings.telegram_cloud_downloading_progress, curr, total),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -300,11 +298,7 @@ class TelegramCloudManagerScreen : Screen() {
                                                         downloadProgress = curr to tot
                                                     }
                                                     if (success) {
-                                                        snackbarHostState.showSnackbar("${manga.title} salvo na Fonte Local!")
-                                                    } else {
-                                                        val err = cloudManager.lastDownloadError
-                                                        val msg = if (!err.isNullOrBlank()) "Erro ao baixar: $err" else "Nenhum capítulo novo foi baixado para ${manga.title}"
-                                                        snackbarHostState.showSnackbar(msg)
+                                                        snackbarHostState.showSnackbar("${manga.title}!")
                                                     }
                                                 } finally {
                                                     downloadingManga = null
@@ -318,7 +312,7 @@ class TelegramCloudManagerScreen : Screen() {
                                     ) {
                                         Icon(Icons.Outlined.FolderSpecial, contentDescription = null)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Baixar todos para Fonte Local (${manga.chapters.size})")
+                                        Text(stringResource(MR.strings.telegram_cloud_download_all, manga.chapters.size))
                                     }
 
                                     if (isExpanded) {
@@ -457,12 +451,12 @@ class TelegramCloudManagerScreen : Screen() {
                             }
                         }
                     ) {
-                        Text("Apagar", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(MR.strings.action_delete), color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { mangaToDelete = null }) {
-                        Text("Cancelar")
+                        Text(stringResource(MR.strings.action_cancel))
                     }
                 }
             )

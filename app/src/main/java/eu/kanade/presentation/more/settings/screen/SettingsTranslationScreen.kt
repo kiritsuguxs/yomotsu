@@ -65,12 +65,12 @@ object SettingsTranslationScreen : SearchableSettings {
             getTranslationLangGroup(translationPreferences),
             getTranslatioEngineGroup(translationPreferences),
             Preference.PreferenceGroup(
-                title = "Novels",
+                title = stringResource(ATMR.strings.novels),
                 preferenceItems = persistentListOf(
                     Preference.PreferenceItem.SwitchPreference(
                         preference = translationPreferences.autoTranslateNovels(),
-                        title = "Traduzir Novels automaticamente",
-                        subtitle = "Traduz os capítulos de novels para português ao abrir no leitor",
+                        title = stringResource(ATMR.strings.pref_auto_translate_novels),
+                        subtitle = stringResource(ATMR.strings.pref_auto_translate_novels_summary),
                     ),
                     Preference.PreferenceItem.ListPreference(
                         preference = translationPreferences.novelTranslationEngine(),
@@ -102,13 +102,13 @@ object SettingsTranslationScreen : SearchableSettings {
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = translationPreferences.dbnetExperimental(),
-                    title = "Detector DBNet (experimental)",
-                    subtitle = "Somente inglês/ARM64. Primeiro uso baixa 153 MB separados do APK. Reconhecimento ML Kit de página inteira; em falha, usa o OCR selecionado acima.",
+                    title = stringResource(ATMR.strings.pref_ocr_dbnet),
+                    subtitle = stringResource(ATMR.strings.pref_ocr_dbnet_summary),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = translationPreferences.inpainterAot(),
-                    title = "Remoção de texto por IA (AOT-GAN)",
-                    subtitle = "Reconstrói o fundo e arte atrás dos textos usando rede neural (NCNN). Primeiro uso baixa ~11 MB. Se desativado, usa preenchimento rápido de cor.",
+                    title = stringResource(ATMR.strings.pref_inpainter_aot),
+                    subtitle = stringResource(ATMR.strings.pref_inpainter_aot_summary),
                 ),
             ),
         )
@@ -188,8 +188,8 @@ object SettingsTranslationScreen : SearchableSettings {
                 add(
                     Preference.PreferenceItem.EditTextPreference(
                         preference = translationPreferences.deepLApiKey(),
-                        subtitle = "Chave da API DeepL (Free ou Pro)",
-                        title = "DeepL API Key",
+                        subtitle = stringResource(ATMR.strings.pref_sub_deepl_api_key),
+                        title = stringResource(ATMR.strings.pref_deepl_api_key),
                     ),
                 )
             }

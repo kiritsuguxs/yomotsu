@@ -54,4 +54,14 @@
     <string name="translation_notification_text_progress">Translating the text from %1$d pages</string>
     <string name="translation_notification_chapter_progress">Chapter %1$d of %2$d</string>
     <string name="translation_notification_error">Could not finish the translation</string>
+
+    <string name="novels">Novels</string>
+    <string name="pref_auto_translate_novels">Translate novels automatically</string>
+    <string name="pref_auto_translate_novels_summary">Translates novel chapters when opening in the reader</string>
+    <string name="pref_ocr_dbnet">DBNet detector (experimental)</string>
+    <string name="pref_ocr_dbnet_summary">English/ARM64 only. First use downloads 153 MB separately from the APK. Full-page ML Kit recognition; on failure, falls back to the OCR selected above.</string>
+    <string name="pref_inpainter_aot">AI text removal (AOT-GAN)</string>
+    <string name="pref_inpainter_aot_summary">Reconstructs background and artwork behind text using neural network (NCNN). First use downloads ~11 MB. If disabled, uses fast color fill.</string>
+    <string name="pref_deepl_api_key">DeepL API Key</string>
+    <string name="pref_sub_deepl_api_key">DeepL API Key (Free or Pro)</string>
 </resources>

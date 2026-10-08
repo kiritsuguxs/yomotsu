@@ -8,6 +8,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.more.settings.Preference
 import tachiyomi.domain.telegram.TelegramPreferences
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -25,32 +26,32 @@ object SettingsTelegramCloudScreen : SearchableSettings {
         return listOf(
             Preference.PreferenceItem.SwitchPreference(
                 preference = preferences.enableTelegramCloud,
-                title = "Ativar Nuvem Telegram",
-                subtitle = "Enviar capítulos baixados automaticamente para o Telegram",
+                title = stringResource(MR.strings.pref_enable_telegram_cloud),
+                subtitle = stringResource(MR.strings.pref_enable_telegram_cloud_summary),
             ),
             Preference.PreferenceItem.EditTextPreference(
                 preference = preferences.botToken,
-                title = "Bot Token",
-                subtitle = "Token gerado pelo @BotFather",
+                title = stringResource(MR.strings.pref_telegram_bot_token),
+                subtitle = stringResource(MR.strings.pref_telegram_bot_token_summary),
             ),
             Preference.PreferenceItem.EditTextPreference(
                 preference = preferences.chatId,
-                title = "ID do Chat / Canal",
-                subtitle = "ID do canal privado (ex: -1001234567890) ou chat para onde enviar",
+                title = stringResource(MR.strings.pref_telegram_chat_id),
+                subtitle = stringResource(MR.strings.pref_telegram_chat_id_summary),
             ),
             Preference.PreferenceItem.SwitchPreference(
                 preference = preferences.deleteLocalAfterUpload,
-                title = "Apagar arquivo local após upload",
-                subtitle = "Libera espaço no dispositivo assim que o capítulo for salvo na nuvem",
+                title = stringResource(MR.strings.pref_telegram_delete_local),
+                subtitle = stringResource(MR.strings.pref_telegram_delete_local_summary),
             ),
             Preference.PreferenceItem.SwitchPreference(
                 preference = preferences.restoreToLocalSource,
-                title = "Salvar downloads na Fonte Local",
-                subtitle = "Ao restaurar da nuvem, salva direto na pasta da Fonte Local com capa e organização",
+                title = stringResource(MR.strings.pref_telegram_restore_to_local_source),
+                subtitle = stringResource(MR.strings.pref_telegram_restore_to_local_source_summary),
             ),
             Preference.PreferenceItem.TextPreference(
-                title = "Gerenciador de Obras da Nuvem",
-                subtitle = "Ver lista de todas as obras salvas no Telegram e baixar em lote para a Fonte Local",
+                title = stringResource(MR.strings.pref_telegram_cloud_manager),
+                subtitle = stringResource(MR.strings.pref_telegram_cloud_manager_summary),
                 onClick = {
                     navigator.push(TelegramCloudManagerScreen())
                 },

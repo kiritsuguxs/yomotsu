@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Storage
@@ -46,7 +47,9 @@ import eu.kanade.presentation.more.settings.screen.about.AboutScreen
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.setting.PlayerSettingsScreen
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.i18n.at.ATMR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
@@ -191,6 +194,12 @@ object SettingsMainScreen : Screen() {
             subtitleRes = MR.strings.pref_reader_summary,
             icon = Icons.AutoMirrored.Outlined.ChromeReaderMode,
             screen = SettingsReaderScreen,
+        ),
+        Item(
+            titleRes = AYMR.strings.label_player_settings,
+            subtitleRes = AYMR.strings.pref_player_settings_summary,
+            icon = Icons.Outlined.PlayCircleOutline,
+            screen = PlayerSettingsScreen,
         ),
         Item(
             titleRes = MR.strings.pref_category_downloads,
