@@ -30,7 +30,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Lock
@@ -100,9 +102,16 @@ fun UserProfileScreen(
     username: String,
     totalXp: Long,
     totalChaptersRead: Int,
+    totalChapters: Int = 0,
     totalMangas: Int,
     totalEpisodesWatched: Int = 0,
+    totalEpisodes: Int = 0,
     totalAnimes: Int = 0,
+    totalDownloads: Int = 0,
+    mangaDownloads: Int = 0,
+    animeDownloads: Int = 0,
+    completedMangas: Int = 0,
+    completedAnimes: Int = 0,
     totalReadDurationMs: Long = 0L,
     totalWatchDurationMs: Long = 0L,
     unlockedAchievements: List<YomotsuAchievement>,
@@ -609,43 +618,78 @@ fun UserProfileScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ESTATÍSTICAS (MANGÁ & ANIME)
+            // ESTATÍSTICAS COMPLETAS (MANGÁ, ANIME, OFFLINE E TEMPO)
             item {
-                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Linha 1: Mangá vs Anime (Progresso de Leitura e Reprodução)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        val mangaValue = if (totalChapters > 0) "$totalChaptersRead / $totalChapters" else totalChaptersRead.toString()
                         StatBox(
                             icon = Icons.Outlined.MenuBook,
-                            value = totalChaptersRead.toString(),
-                            label = stringResource(MR.strings.profile_stat_read)
+                            value = mangaValue,
+                            label = stringResource(MR.strings.profile_stat_read),
+                            subtitle = "$totalMangas " + stringResource(MR.strings.profile_stat_mangas_in_library),
+                            modifier = Modifier.weight(1f)
                         )
+
+                        val animeValue = if (totalEpisodes > 0) "$totalEpisodesWatched / $totalEpisodes" else totalEpisodesWatched.toString()
                         StatBox(
                             icon = Icons.Outlined.PlayCircleOutline,
-                            value = totalEpisodesWatched.toString(),
-                            label = stringResource(MR.strings.profile_stat_episodes_watched)
+                            value = animeValue,
+                            label = stringResource(MR.strings.profile_stat_episodes_watched),
+                            subtitle = "$totalAnimes " + stringResource(MR.strings.profile_stat_animes_in_library),
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        StatBox(
-                            icon = Icons.Outlined.LibraryBooks,
-                            value = totalMangas.toString(),
-                            label = stringResource(MR.strings.profile_stat_mangas_in_library)
-                        )
-                        StatBox(
-                            icon = Icons.Outlined.CollectionsBookmark,
-                            value = totalAnimes.toString(),
-                            label = stringResource(MR.strings.profile_stat_animes_in_library)
-                        )
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+
+                    // Linha 2: Tempo Lido vs Tempo Assistido (Dias e Horas do Mihon)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         StatBox(
                             icon = Icons.Outlined.Schedule,
                             value = totalReadDurationMs.milliseconds.toDurationString(context, fallback = "0m"),
-                            label = stringResource(MR.strings.profile_stat_time_read)
+                            label = stringResource(MR.strings.profile_stat_time_read),
+                            subtitle = stringResource(MR.strings.label_read_duration),
+                            modifier = Modifier.weight(1f)
                         )
                         StatBox(
                             icon = Icons.Outlined.Timer,
                             value = totalWatchDurationMs.milliseconds.toDurationString(context, fallback = "0m"),
-                            label = stringResource(MR.strings.profile_stat_time_watched)
+                            label = stringResource(MR.strings.profile_stat_time_watched),
+                            subtitle = stringResource(MR.strings.profile_stat_time_watched_sub),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Linha 3: Armazenamento Offline vs Obras Concluídas
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        StatBox(
+                            icon = Icons.Outlined.CloudDownload,
+                            value = totalDownloads.toString(),
+                            label = stringResource(MR.strings.label_downloaded),
+                            subtitle = stringResource(MR.strings.profile_stat_offline_sub, mangaDownloads, animeDownloads),
+                            modifier = Modifier.weight(1f)
+                        )
+                        val totalCompleted = completedMangas + completedAnimes
+                        StatBox(
+                            icon = Icons.Outlined.DoneAll,
+                            value = totalCompleted.toString(),
+                            label = stringResource(MR.strings.label_completed_titles),
+                            subtitle = stringResource(MR.strings.profile_stat_completed_sub, completedMangas, completedAnimes),
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -771,16 +815,53 @@ fun PresetAvatarDisplay(
 }
 
 @Composable
-fun StatBox(icon: ImageVector, value: String, label: String) {
+fun StatBox(
+    icon: ImageVector,
+    value: String,
+    label: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+) {
     Card(
-        modifier = Modifier.width(156.dp).height(92.dp),
+        modifier = modifier.height(102.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
-        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(value, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

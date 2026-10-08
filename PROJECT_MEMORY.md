@@ -408,3 +408,17 @@
 - **Correção de Compatibilidade de Fontes de Anime:**
   - Filtros em `UserProfileViewModel` e `ProfileChecker` usam verificação segura: `source is AnimeSource || source?.javaClass?.name?.contains("anime", ignoreCase = true) == true`.
 
+### AD. Estatísticas Clássicas do Mihon Integradas ao Perfil Yomotsu (Outubro 2026)
+- **Integração Completa das Métricas do Mihon no Perfil do Caçador (`UserProfileViewModel.kt`, `UserProfileScreen.kt`):**
+  - O perfil do usuário agora conta com todas as métricas detalhadas de acervo presentes nas estatísticas originais do Mihon/Tachiyomi, harmonizadas com as novidades de anime:
+    - **Progresso de Mangá:** Exibe `totalChaptersRead / totalChapters` (ex: `150 / 840`) e subtítulo com a quantidade de obras adicionadas (`X mangás na biblioteca`). Atualiza dinamicamente toda vez que novos capítulos são adicionados à biblioteca.
+    - **Progresso de Anime:** Exibe `totalEpisodesWatched / totalEpisodes` (ex: `85 / 240`) e subtítulo com a quantidade de animes (`Y animes na biblioteca`). Atualiza dinamicamente conforme chegam novos episódios.
+    - **Dias Lidos (Mihon):** Injeção de `GetTotalReadDuration.await()` formatado com `Duration.toDurationString(context)` detalhando dias, horas e minutos investidos na leitura.
+    - **Duração de Anime:** Estimativa em dias e horas investidos em episódios assistidos.
+    - **Armazenamento Offline Disponível:** Exibe o total geral de downloads do dispositivo e subtítulo descritivo discriminando downloads de mangá e anime (`X caps • Y eps`).
+    - **Obras Concluídas:** Total de mangás e animes 100% lidos/assistidos (`status == SManga.COMPLETED && unreadCount == 0L`), com subtítulo detalhando (`X mangás • Y animes`).
+  - **Design Responsivo e Simétrico:**
+    - Refatoração do componente `StatBox` para suportar subtítulos informativos e distribuição equitativa (`Modifier.weight(1f)`) em 3 linhas com 2 cartões cada, garantindo encaixe perfeito em qualquer tamanho de tela sem cortes ou quebras de texto.
+  - **Internacionalização Completa:**
+    - Strings adicionadas em `base`, `pt-rBR` e `pt` (`profile_stat_time_watched_sub`, `profile_stat_offline_sub`, `profile_stat_completed_sub`).
+

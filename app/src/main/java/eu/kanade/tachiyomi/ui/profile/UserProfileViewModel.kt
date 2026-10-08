@@ -29,10 +29,16 @@ sealed interface UserProfileState {
         val username: String,
         val totalXp: Long,
         val totalChaptersRead: Int,
+        val totalChapters: Int,
         val totalMangas: Int,
         val totalEpisodesWatched: Int,
+        val totalEpisodes: Int,
         val totalAnimes: Int,
         val totalDownloads: Int,
+        val mangaDownloads: Int,
+        val animeDownloads: Int,
+        val completedMangas: Int,
+        val completedAnimes: Int,
         val unlockedAchievements: List<YomotsuAchievement>,
         val lockedAchievements: List<YomotsuAchievement>,
         val equippedTitle: YomotsuTitle,
@@ -79,10 +85,14 @@ class UserProfileViewModel(
 
             val totalMangas = mangaList.size
             val readChapterCount = mangaList.sumOf { it.readCount }.toInt()
+            val totalChapterCount = mangaList.sumOf { it.totalChapters }.toInt()
+            val completedMangas = mangaList.count { it.manga.status.toInt() == eu.kanade.tachiyomi.source.model.SManga.COMPLETED && it.unreadCount == 0L }
             val downloadCount = downloadManager.getDownloadCount()
 
             val totalAnimes = animeList.size
             val watchedEpisodesCount = animeList.sumOf { it.readCount }.toInt()
+            val totalEpisodeCount = animeList.sumOf { it.totalChapters }.toInt()
+            val completedAnimes = animeList.count { it.manga.status.toInt() == eu.kanade.tachiyomi.source.model.SManga.COMPLETED && it.unreadCount == 0L }
             val animeDownloadCount = animeDownloadManager.getDownloadCount()
 
             val totalDownloads = downloadCount + animeDownloadCount
@@ -124,10 +134,16 @@ class UserProfileViewModel(
                     username = profilePreferences.getUsername(),
                     totalXp = totalXp,
                     totalChaptersRead = readChapterCount,
+                    totalChapters = totalChapterCount,
                     totalMangas = totalMangas,
                     totalEpisodesWatched = watchedEpisodesCount,
+                    totalEpisodes = totalEpisodeCount,
                     totalAnimes = totalAnimes,
                     totalDownloads = totalDownloads,
+                    mangaDownloads = downloadCount,
+                    animeDownloads = animeDownloadCount,
+                    completedMangas = completedMangas,
+                    completedAnimes = completedAnimes,
                     unlockedAchievements = unlocked,
                     lockedAchievements = locked,
                     equippedTitle = equippedTitle,

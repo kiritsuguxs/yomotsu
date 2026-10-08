@@ -993,6 +993,9 @@
     <string name="profile_dialog_choose_border">Escolher Moldura / Borda</string>
     <string name="profile_dialog_choose_border_desc">Selecione o estilo da moldura do seu avatar</string>
     <string name="profile_action_change_border">Moldura / Borda</string>
+    <string name="profile_stat_time_watched_sub">Duração de anime</string>
+    <string name="profile_stat_offline_sub">%1$d caps • %2$d eps</string>
+    <string name="profile_stat_completed_sub">%1$d mangás • %2$d animes</string>
 
     <string name="profile_title_1">Mortal Comum</string>
     <string name="profile_title_10">Desperto</string>
