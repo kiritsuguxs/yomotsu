@@ -451,25 +451,25 @@
     - Diálogo seletor estilo Crunchyroll exibindo o nome do personagem em destaque e a obra de origem logo abaixo.
     - Compatibilidade retroativa garantida em `getPresetAvatar` mapeando IDs legados para os novos personagens sem quebrar preferências salvas.
 
-### AF. Banners Temáticos com Paisagens e Cenários Icônicos de Anime (`ProfilePresets.kt`, `UserProfileScreen.kt`) (Outubro 2026)
-- **12 Banners de Cenários Panorâmicos de Alta Definição:**
-  - Adicionadas paisagens temáticas de anime otimizadas em formato WebP widescreen 2:1 (~30KB cada) em `res/drawable-nodpi/`:
-    1. **Cerejeiras ao Luar** (`banner_sakura_night` - Templo Shinto e flores sob o luar)
-    2. **Portal Torii Místico** (`banner_torii_sea` - Portão Torii tradicional sobre mar escarlate)
-    3. **Céu Estrelado** (`banner_starry_sky` - Galáxia e estrelas cadentes estilo *Your Name / Kimi no Na Wa*)
-    4. **Castelo das Sombras** (`banner_shadow_castle` - Silhueta mística de fantasia / *Solo Leveling*)
-    5. **Neo Tokyo Cyberpunk** (`banner_cyber_city` - Arranha-céus com luzes neon e metrópole noturna)
-    6. **Monte Fuji ao Entardecer** (`banner_fuji_sunset` - Vista crepuscular do Fuji e nuvens douradas)
-    7. **Vila das Cerejeiras** (`banner_sakura_village` - Vilarejo tradicional japonês florescido)
-    8. **Tóquio Iluminada** (`banner_tokyo_night` - Vista panorâmica noturna com Tokyo Tower)
-    9. **Floresta de Bambu** (`banner_bamboo_zen` - Bosque zen de bambus verdes / clima samurai e *Demon Slayer*)
-    10. **Horizonte Synthwave** (`banner_synth_neon` - Sol poente retrowave com linhas e neon)
-    11. **Templo das Lanternas** (`banner_lantern_shrine` - Sala tradicional com lanternas incandescentes)
-    12. **Primavera Imperial** (`banner_vibrant_blossom` - Flores de cerejeira vibrantes sob raios de sol)
-  - Mantidos também os 8 banners gradientes abstratos minimalistas para quem preferir um visual sem ilustrações.
+### AF. Banners Temáticos com Paisagens e Cenários Autênticos de Anime (`ProfilePresets.kt`, `UserProfileScreen.kt`) (Outubro 2026)
+- **12 Banners de Cenários Reais e Icônicos de Franquias de Anime:**
+  - Substituídos os cenários genéricos por ilustrações panorâmicas oficiais e consagradas da animação japonesa, otimizadas em WebP widescreen 2:1 (~20-70KB cada) em `res/drawable-nodpi/`:
+    1. **Lago Itomori** (`banner_your_name` - *Your Name / Kimi no Na wa*: Cometa Tiamat cruzando o céu crepuscular sobre a cratera do Lago Itomori)
+    2. **Céu de Tóquio** (`banner_weathering` - *Weathering With You / Tenki no Ko*: Feixes de luz solar dourada rompendo as nuvens sobre o horizonte de Tóquio)
+    3. **Portão das Sombras** (`banner_solo_leveling` - *Solo Leveling*: Portal azul brilhante da Dungeon e o Exército das Sombras de Sung Jinwoo)
+    4. **Santuário Malevolente** (`banner_jujutsu_kaisen` - *Jujutsu Kaisen*: Expansão de Domínio de Ryomen Sukuna durante o clímax de Shibuya)
+    5. **Monte das Glicínias** (`banner_demon_slayer_wisteria` - *Demon Slayer*: Monte Fujikasane florido com glicínias roxas iluminadas à noite)
+    6. **Vila dos Ferreiros** (`banner_demon_slayer_village` - *Demon Slayer*: O vilarejo secreto dos ferreiros envolto pelas montanhas ao entardecer)
+    7. **Vila da Folha** (`banner_naruto_konoha` - *Naruto*: Panorama de Konohagakure vista do topo do Monumento dos Hokages)
+    8. **Vale do Fim** (`banner_naruto_valley` - *Naruto*: A lendária cachoeira e as estátuas colossais de Madara Uchiha e Hashirama Senju)
+    9. **País de Wano** (`banner_one_piece_wano` - *One Piece*: A florada de cerejeiras em frente à capital das flores e o Monte Fuji de Wano)
+    10. **Muralha de Shinganshina** (`banner_aot_shinganshina` - *Attack on Titan*: O Distrito de Shinganshina sob a imponência da Muralha Maria)
+    11. **Colina das Flores** (`banner_frieren_meadow` - *Sousou no Frieren*: A colina florida mágica de Frieren e Himmel com o vilarejo crepuscular ao fundo)
+    12. **Trilhos no Mar** (`banner_ghibli_spirited` - *Studio Ghibli / A Viagem de Chihiro*: Os trilhos aquáticos do trem misterioso sobre o oceano infinito)
+  - Mantidos também os 8 banners gradientes abstratos minimalistas para personalização limpa.
 - **Seletor de Banners Estilizado:**
-  - Grade 2 colunas com cartões retangulares exibindo a imagem do banner em `ContentScale.Crop`, gradiente escuro de leitura e identificação com nome e categoria/obra.
-  - No perfil principal, o banner conta com gradiente vertical suave sobreposto para transição elegante com a área do avatar.
+  - Grade 2 colunas com cartões com altura aprimorada (`74.dp`) e cantos arredondados (`10.dp`) exibindo a imagem do banner em `ContentScale.Crop`, gradiente escuro de alto contraste para leitura e identificação legível com nome do cenário e franquia de anime.
+  - Compatibilidade garantida em `getPresetBanner` com mapeamento suave de qualquer preferência antiga salva pelo usuário para os novos banners temáticos.
 
 ### AG. Integração de Métricas de Rastreamento e Nota Média (AniList / Trackers) no Perfil Yomotsu (Outubro 2026)
 - **Estatísticas de Monitoramento Clássicas do Mihon no Perfil do Caçador (`UserProfileViewModel.kt`, `UserProfileScreen.kt`, `YomotsuProfileScreen.kt`):**
@@ -479,6 +479,7 @@
     - **Tratamento de Estado Desconectado:** Caso o usuário não tenha nenhum rastreador configurado, os cartões informam amigavelmente `0` / `Nenhum rastreador` e `N/A` sem quebras de layout.
   - **Internacionalização e Strings:**
     - Utiliza `MR.strings.label_tracked_titles` e `MR.strings.label_mean_score` do Mihon, com suporte multilíngue em `base`, `pt-rBR` e `pt` (`profile_stat_no_trackers`, `profile_stat_mean_score_sub`).
+
 
 
 

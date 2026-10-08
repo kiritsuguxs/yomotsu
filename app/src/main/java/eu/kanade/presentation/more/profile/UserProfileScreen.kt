@@ -451,8 +451,8 @@ fun UserProfileScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(68.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .height(74.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                                     .clickable {
                                         onBannerPresetSelected(preset.id)
                                         showBannerDialog = false
@@ -460,7 +460,7 @@ fun UserProfileScreen(
                                     .border(
                                         width = if (isSelected) 2.dp else 0.dp,
                                         color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                        shape = RoundedCornerShape(8.dp)
+                                        shape = RoundedCornerShape(10.dp)
                                     )
                             ) {
                                 Box(

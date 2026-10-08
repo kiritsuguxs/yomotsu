@@ -208,76 +208,76 @@ object ProfilePresets {
 
     val PRESET_BANNERS: List<ProfilePresetBanner> = listOf(
         ProfilePresetBanner(
-            id = "banner_sakura_night",
-            name = "Cerejeiras ao Luar",
-            group = "Japão / Shinto",
-            drawableRes = R.drawable.banner_sakura_night
-        ),
-        ProfilePresetBanner(
-            id = "banner_torii_sea",
-            name = "Portal Torii Místico",
-            group = "Japão / Místico",
-            drawableRes = R.drawable.banner_torii_sea
-        ),
-        ProfilePresetBanner(
-            id = "banner_starry_sky",
-            name = "Céu Estrelado",
+            id = "banner_your_name",
+            name = "Lago Itomori",
             group = "Your Name",
-            drawableRes = R.drawable.banner_starry_sky
+            drawableRes = R.drawable.banner_your_name
         ),
         ProfilePresetBanner(
-            id = "banner_shadow_castle",
-            name = "Castelo das Sombras",
+            id = "banner_weathering",
+            name = "Céu de Tóquio",
+            group = "Weathering With You",
+            drawableRes = R.drawable.banner_weathering
+        ),
+        ProfilePresetBanner(
+            id = "banner_solo_leveling",
+            name = "Portão das Sombras",
             group = "Solo Leveling",
-            drawableRes = R.drawable.banner_shadow_castle
+            drawableRes = R.drawable.banner_solo_leveling
         ),
         ProfilePresetBanner(
-            id = "banner_cyber_city",
-            name = "Neo Tokyo Cyberpunk",
-            group = "Cyberpunk",
-            drawableRes = R.drawable.banner_cyber_city
+            id = "banner_jujutsu_kaisen",
+            name = "Santuário Malevolente",
+            group = "Jujutsu Kaisen",
+            drawableRes = R.drawable.banner_jujutsu_kaisen
         ),
         ProfilePresetBanner(
-            id = "banner_fuji_sunset",
-            name = "Monte Fuji ao Entardecer",
-            group = "Paisagem",
-            drawableRes = R.drawable.banner_fuji_sunset
+            id = "banner_demon_slayer_wisteria",
+            name = "Monte das Glicínias",
+            group = "Demon Slayer",
+            drawableRes = R.drawable.banner_demon_slayer_wisteria
         ),
         ProfilePresetBanner(
-            id = "banner_sakura_village",
-            name = "Vila das Cerejeiras",
-            group = "Paisagem",
-            drawableRes = R.drawable.banner_sakura_village
+            id = "banner_demon_slayer_village",
+            name = "Vila dos Ferreiros",
+            group = "Demon Slayer",
+            drawableRes = R.drawable.banner_demon_slayer_village
         ),
         ProfilePresetBanner(
-            id = "banner_tokyo_night",
-            name = "Tóquio Iluminada",
-            group = "Metrópole",
-            drawableRes = R.drawable.banner_tokyo_night
+            id = "banner_naruto_konoha",
+            name = "Vila da Folha",
+            group = "Naruto",
+            drawableRes = R.drawable.banner_naruto_konoha
         ),
         ProfilePresetBanner(
-            id = "banner_bamboo_zen",
-            name = "Floresta de Bambu",
-            group = "Zen / Samurai",
-            drawableRes = R.drawable.banner_bamboo_zen
+            id = "banner_naruto_valley",
+            name = "Vale do Fim",
+            group = "Naruto",
+            drawableRes = R.drawable.banner_naruto_valley
         ),
         ProfilePresetBanner(
-            id = "banner_synth_neon",
-            name = "Horizonte Synthwave",
-            group = "Retrowave",
-            drawableRes = R.drawable.banner_synth_neon
+            id = "banner_one_piece_wano",
+            name = "País de Wano",
+            group = "One Piece",
+            drawableRes = R.drawable.banner_one_piece_wano
         ),
         ProfilePresetBanner(
-            id = "banner_lantern_shrine",
-            name = "Templo das Lanternas",
-            group = "Tradicional",
-            drawableRes = R.drawable.banner_lantern_shrine
+            id = "banner_aot_shinganshina",
+            name = "Muralha de Shinganshina",
+            group = "Attack on Titan",
+            drawableRes = R.drawable.banner_aot_shinganshina
         ),
         ProfilePresetBanner(
-            id = "banner_vibrant_blossom",
-            name = "Primavera Imperial",
-            group = "Paisagem",
-            drawableRes = R.drawable.banner_vibrant_blossom
+            id = "banner_frieren_meadow",
+            name = "Colina das Flores",
+            group = "Sousou no Frieren",
+            drawableRes = R.drawable.banner_frieren_meadow
+        ),
+        ProfilePresetBanner(
+            id = "banner_ghibli_spirited",
+            name = "Trilhos no Mar",
+            group = "Studio Ghibli",
+            drawableRes = R.drawable.banner_ghibli_spirited
         ),
         ProfilePresetBanner(
             id = "banner_monarch",
@@ -416,7 +416,22 @@ object ProfilePresets {
     }
 
     fun getPresetBanner(id: String?): ProfilePresetBanner {
-        return PRESET_BANNERS.find { it.id == id } ?: PRESET_BANNERS.first()
+        val mappedId = when (id) {
+            "banner_starry_sky" -> "banner_your_name"
+            "banner_shadow_castle" -> "banner_solo_leveling"
+            "banner_fuji_sunset" -> "banner_one_piece_wano"
+            "banner_sakura_village" -> "banner_demon_slayer_village"
+            "banner_sakura_night" -> "banner_demon_slayer_wisteria"
+            "banner_tokyo_night" -> "banner_jujutsu_kaisen"
+            "banner_torii_sea" -> "banner_ghibli_spirited"
+            "banner_bamboo_zen" -> "banner_naruto_valley"
+            "banner_vibrant_blossom" -> "banner_frieren_meadow"
+            "banner_cyber_city" -> "banner_weathering"
+            "banner_lantern_shrine" -> "banner_naruto_konoha"
+            "banner_synth_neon" -> "banner_aot_shinganshina"
+            else -> id
+        }
+        return PRESET_BANNERS.find { it.id == mappedId || it.id == id } ?: PRESET_BANNERS.first()
     }
 
     fun getPresetBorder(id: String?): ProfileAvatarBorder {
