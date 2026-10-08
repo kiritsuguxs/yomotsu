@@ -33,7 +33,9 @@ import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.RadioItem
 import tachiyomi.presentation.core.components.SortItem
@@ -42,6 +44,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import eu.kanade.tachiyomi.animesource.AnimeSource
 
 @Composable
 fun ChapterSettingsDialog(
@@ -58,10 +61,21 @@ fun ChapterSettingsDialog(
     onResetToDefault: () -> Unit,
 ) {
     var showSetAsDefaultDialog by rememberSaveable { mutableStateOf(false) }
+    val isAnime = remember(manga?.source) {
+        manga?.let { m ->
+            try {
+                val source = Injekt.get<SourceManager>().get(m.source)
+                source is AnimeSource || source?.javaClass?.name?.contains("anime", ignoreCase = true) == true
+            } catch (e: Throwable) {
+                false
+            }
+        } ?: false
+    }
     if (showSetAsDefaultDialog) {
         SetAsDefaultDialog(
             onDismissRequest = { showSetAsDefaultDialog = false },
             onConfirmed = onSetAsDefault,
+            isAnime = isAnime,
         )
     }
 
@@ -121,6 +135,7 @@ fun ChapterSettingsDialog(
                     DisplayPage(
                         displayMode = manga?.displayMode ?: 0,
                         onItemSelected = onDisplayModeChanged,
+                        isAnime = isAnime,
                     )
                 }
             }
@@ -213,10 +228,11 @@ private fun ColumnScope.SortPage(
 private fun ColumnScope.DisplayPage(
     displayMode: Long,
     onItemSelected: (Long) -> Unit,
+    isAnime: Boolean = false,
 ) {
     listOf(
         MR.strings.show_title to Manga.CHAPTER_DISPLAY_NAME,
-        MR.strings.show_chapter_number to Manga.CHAPTER_DISPLAY_NUMBER,
+        (if (isAnime) AYMR.strings.show_episode_number else MR.strings.show_chapter_number) to Manga.CHAPTER_DISPLAY_NUMBER,
     ).map { (titleRes, mode) ->
         RadioItem(
             label = stringResource(titleRes),
@@ -230,12 +246,13 @@ private fun ColumnScope.DisplayPage(
 private fun SetAsDefaultDialog(
     onDismissRequest: () -> Unit,
     onConfirmed: (optionalChecked: Boolean) -> Unit,
+    isAnime: Boolean = false,
 ) {
     var optionalChecked by rememberSaveable { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text(text = stringResource(MR.strings.chapter_settings)) },
+        title = { Text(text = stringResource(if (isAnime) AYMR.strings.episode_settings else MR.strings.chapter_settings)) },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -243,7 +260,7 @@ private fun SetAsDefaultDialog(
                 Text(text = stringResource(MR.strings.confirm_set_chapter_settings))
 
                 LabeledCheckbox(
-                    label = stringResource(MR.strings.also_set_chapter_settings_for_library),
+                    label = stringResource(if (isAnime) AYMR.strings.also_set_episode_settings_for_library else MR.strings.also_set_chapter_settings_for_library),
                     checked = optionalChecked,
                     onCheckedChange = { optionalChecked = it },
                 )

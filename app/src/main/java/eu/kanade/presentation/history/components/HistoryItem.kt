@@ -26,11 +26,16 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.formatChapterNumber
+import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.util.lang.toTimestampString
 import tachiyomi.domain.history.model.HistoryWithRelations
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 private val HistoryItemHeight = 96.dp
 
@@ -43,6 +48,14 @@ fun HistoryItem(
     onClickFavorite: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isAnime = remember(history.coverData.sourceId) {
+        try {
+            val source = Injekt.get<SourceManager>().get(history.coverData.sourceId)
+            source is AnimeSource || source?.javaClass?.name?.contains("anime", ignoreCase = true) == true
+        } catch (e: Throwable) {
+            false
+        }
+    }
     Row(
         modifier = modifier
             .clickable(onClick = onClickResume)
@@ -71,8 +84,13 @@ fun HistoryItem(
             val readAt = remember { history.readAt?.toTimestampString() ?: "" }
             Text(
                 text = if (history.chapterNumber > -1) {
+                    val stringRes = if (isAnime) {
+                        AYMR.strings.recent_anime_time
+                    } else {
+                        MR.strings.recent_manga_time
+                    }
                     stringResource(
-                        MR.strings.recent_manga_time,
+                        stringRes,
                         formatChapterNumber(history.chapterNumber),
                         readAt,
                     )

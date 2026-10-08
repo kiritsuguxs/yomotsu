@@ -208,6 +208,7 @@ class MangaScreen(
                         viewModel.toggleAllSelection(false)
                         viewModel.deleteChapters(dialog.chapters)
                     },
+                    isAnime = isAnime,
                 )
             }
 

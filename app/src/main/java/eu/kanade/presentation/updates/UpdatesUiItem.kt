@@ -37,11 +37,17 @@ import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadIndicator
 import eu.kanade.presentation.manga.components.DotSeparatorText
 import eu.kanade.presentation.manga.components.MangaCover
+import eu.kanade.presentation.util.formatTime
 import eu.kanade.presentation.util.relativeTimeSpanString
+import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
@@ -97,6 +103,14 @@ internal fun LazyListScope.updatesUiItems(
             }
             is UpdatesUiModel.Item -> {
                 val updatesItem = item.item
+                val isAnime = remember(updatesItem.update.sourceId) {
+                    try {
+                        val source = Injekt.get<SourceManager>().get(updatesItem.update.sourceId)
+                        source is AnimeSource || source?.javaClass?.name?.contains("anime", ignoreCase = true) == true
+                    } catch (e: Throwable) {
+                        false
+                    }
+                }
                 UpdatesUiItem(
                     modifier = Modifier.animateItem(),
                     update = updatesItem.update,
@@ -104,10 +118,17 @@ internal fun LazyListScope.updatesUiItems(
                     readProgress = updatesItem.update.lastPageRead
                         .takeIf { !updatesItem.update.read && it > 0L }
                         ?.let {
-                            stringResource(
-                                MR.strings.chapter_progress,
-                                it + 1,
-                            )
+                            if (isAnime) {
+                                stringResource(
+                                    AYMR.strings.episode_progress_no_total,
+                                    formatTime(it),
+                                )
+                            } else {
+                                stringResource(
+                                    MR.strings.chapter_progress,
+                                    it + 1,
+                                )
+                            }
                         },
                     onLongClick = {
                         onUpdateSelected(updatesItem, !updatesItem.selected, true)

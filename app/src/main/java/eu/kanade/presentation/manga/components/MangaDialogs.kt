@@ -24,6 +24,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.WheelTextPicker
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -36,6 +37,7 @@ import kotlin.time.Instant
 fun DeleteChaptersDialog(
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
+    isAnime: Boolean = false,
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -58,7 +60,7 @@ fun DeleteChaptersDialog(
             Text(text = stringResource(MR.strings.are_you_sure))
         },
         text = {
-            Text(text = stringResource(MR.strings.confirm_delete_chapters))
+            Text(text = stringResource(if (isAnime) AYMR.strings.confirm_delete_episodes else MR.strings.confirm_delete_chapters))
         },
     )
 }

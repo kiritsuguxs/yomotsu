@@ -355,6 +355,11 @@
     - Em `PlayerViewModel.kt`: Importada e atribuída a extensão `total_seconds`, e `saveEpisodeProgress` repassa `episode.memo` ao `EpisodeUpdate` para salvar a duração no banco de dados.
 - **Problema 3 (Nome do Botão Principal na Tela de Anime):**
   - O botão flutuante (FAB) na tela de anime exibia "Continuar" / "Iniciar" (recursos de mangá). O usuário solicitou que fosse nomeado "Assistir".
-  - **Solução:**
-    - Adicionado recurso de texto `action_watch` em `i18n-aniyomi` (`Watch` em base, `Assistir` em pt-rBR e pt, `Ver` em es).
     - Em `presentation/manga/MangaScreen.kt` (layouts padrão e tablet), o FAB exibe `stringResource(AYMR.strings.action_watch)` quando `state.isAnime` for verdadeiro.
+
+### AA. Diferenciação de Nomenclatura Episódio vs Capítulo (Histórico, Updates e Detalhes) (Outubro 2026)
+- **Histórico (`HistoryItem.kt`):** Identifica se o item é anime via `SourceManager.get(sourceId) is AnimeSource` e exibe `AYMR.strings.recent_anime_time` (`Ep. %1$s - %2$s`) em vez de `MR.strings.recent_manga_time` (`Cap. %1$s - %2$s`).
+- **Detalhes da Obra (`ChapterHeader.kt`, `MangaScreen.kt`):** Cabeçalho exibe `AYMR.plurals.anime_num_episodes` ("X episódios") e título em modo numérico exibe `AYMR.strings.display_mode_episode` ("Episódio X").
+- **Configurações de Exibição (`ChapterSettingsDialog.kt`):** Exibe "Número do episódio", "Configurações do episódio" e "Também se aplica a todos os animes da minha biblioteca" quando a obra for anime.
+- **Diálogos de Exclusão (`MangaDialogs.kt`, `UpdatesDeleteConfirmationDialog.kt`):** Pergunta se deseja excluir episódios selecionados (`AYMR.strings.confirm_delete_episodes`) para animes.
+- **Atualizações Recentes (`UpdatesUiItem.kt`):** Progresso de reprodução formatado com tempo decorrido `formatTime(it)` (`AYMR.strings.episode_progress_no_total`) para animes em vez de páginas de mangá.

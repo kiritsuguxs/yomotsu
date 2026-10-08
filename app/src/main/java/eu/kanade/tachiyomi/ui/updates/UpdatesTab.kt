@@ -93,9 +93,18 @@ data object UpdatesTab : Tab {
         val onDismissDialog = { viewModel.setDialog(null) }
         when (val dialog = state.dialog) {
             is UpdatesViewModel.Dialog.DeleteConfirmation -> {
+                val isAnime = dialog.toDelete.isNotEmpty() && dialog.toDelete.all {
+                    try {
+                        val source = Injekt.get<SourceManager>().get(it.update.sourceId)
+                        source is eu.kanade.tachiyomi.animesource.AnimeSource || source?.javaClass?.name?.contains("anime", ignoreCase = true) == true
+                    } catch (e: Throwable) {
+                        false
+                    }
+                }
                 UpdatesDeleteConfirmationDialog(
                     onDismissRequest = onDismissDialog,
                     onConfirm = { viewModel.deleteChapters(dialog.toDelete) },
+                    isAnime = isAnime,
                 )
             }
             is UpdatesViewModel.Dialog.FilterSheet -> {

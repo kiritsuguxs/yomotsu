@@ -35,6 +35,25 @@ fun relativeTimeSpanString(epochMillis: Long): String {
         now - epochMillis < 1.minutes.inWholeMilliseconds -> stringResource(
             MR.strings.updates_last_update_info_just_now,
         )
-        else -> DateUtils.getRelativeTimeSpanString(epochMillis, now, DateUtils.MINUTE_IN_MILLIS).toString()
+    }
+}
+
+fun formatTime(milliseconds: Long): String {
+    return if (milliseconds > 3600000L) {
+        String.format(
+            "%d:%02d:%02d",
+            java.util.concurrent.TimeUnit.MILLISECONDS.toHours(milliseconds),
+            java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(milliseconds) -
+                java.util.concurrent.TimeUnit.HOURS.toMinutes(java.util.concurrent.TimeUnit.MILLISECONDS.toHours(milliseconds)),
+            java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(milliseconds) -
+                java.util.concurrent.TimeUnit.MINUTES.toSeconds(java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(milliseconds)),
+        )
+    } else {
+        String.format(
+            "%d:%02d",
+            java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(milliseconds),
+            java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(milliseconds) -
+                java.util.concurrent.TimeUnit.MINUTES.toSeconds(java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(milliseconds)),
+        )
     }
 }
