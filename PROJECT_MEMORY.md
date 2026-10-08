@@ -2,7 +2,7 @@
 
 ## 1. Visão Geral do Projeto
 - **Repositório:** `kiritsuguxs/yomotsu`
-- **Branch de Trabalho:** `add-anime-support`
+- **Branch de Trabalho:** `main` (após unificação e lançamento da versão `0.20.4-Y41`)
 - **Objetivo:** Adicionar suporte a Anime (player MPV, download de episódios, animesources e extensões de anime) na base moderna do Yomotsu (fork do Mihon), portando recursos do Aniyomi / Anikku.
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`).
 
