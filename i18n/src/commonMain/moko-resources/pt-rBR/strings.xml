@@ -52,6 +52,7 @@
     <string name="action_display_grid">Grade compacta</string>
     <string name="action_display_list">Lista</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_clear">Limpar</string>
     <string name="action_sort">Ordenar</string>
     <string name="action_install">Instalar</string>
     <string name="action_share">Compartilhar</string>
@@ -966,4 +967,61 @@
     <string name="telegram_cloud_delete_chapter">Apagar capítulo</string>
     <string name="telegram_cloud_downloading_progress">Baixando capítulo %1$d de %2$d para a Fonte Local…</string>
     <string name="telegram_cloud_download_saved">%1$s salvo na Fonte Local!</string>
+    <string name="telegram_cloud_pull_action">Puxar da Nuvem (Fonte Local)</string>
+    <string name="telegram_cloud_checking_toast">Verificando nuvem para %1$s…</string>
+    <string name="telegram_cloud_no_chapters_found">Nenhum capítulo encontrado no Telegram para %1$s</string>
+    <string name="telegram_cloud_delete_manga_dialog_title">Apagar Obra da Nuvem?</string>
+    <string name="telegram_cloud_delete_manga_dialog_text">Deseja apagar \"%1$s\" e todos os seus %2$d capítulos da Nuvem do Telegram?</string>
+    <string name="telegram_cloud_deleting_chapter">Apagando %1$s…</string>
+    <string name="telegram_cloud_chapter_deleted">%1$s apagado!</string>
+    <string name="telegram_cloud_downloading_single_chapter">Baixando %1$s…</string>
+    <string name="telegram_cloud_chapter_saved">%1$s salvo na Fonte Local!</string>
+    <string name="telegram_cloud_chapter_download_error">Erro ao baixar %1$s: %2$s</string>
+    <string name="telegram_cloud_deleting_manga">Apagando %1$s da Nuvem…</string>
+    <string name="telegram_cloud_manga_deleted">%1$s apagado da Nuvem!</string>
+
+    <string name="profile_change_hunter_name">Mudar Nome de Caçador</string>
+    <string name="profile_name_label">Nome</string>
+    <string name="profile_choose_title">Escolha seu Título</string>
+    <string name="profile_edit_banner">Editar Banner</string>
+    <string name="profile_edit_name">Editar Nome</string>
+    <string name="profile_level">Nível %1$d</string>
+    <string name="profile_stat_read">Lidos</string>
+    <string name="profile_stat_in_library">Na Biblioteca</string>
+    <string name="profile_trophy_room">Sala de Troféus (%1$d/%2$d)</string>
+
+    <string name="achievement_reader_name">Leitor Nível %1$d</string>
+    <string name="achievement_reader_desc">Leia %1$d capítulos.</string>
+    <string name="achievement_collector_name">Colecionador Nível %1$d</string>
+    <string name="achievement_collector_desc">Tenha %1$d obras na biblioteca.</string>
+    <string name="achievement_archivist_name">Arquivista Nível %1$d</string>
+    <string name="achievement_archivist_desc">Baixe %1$d capítulos.</string>
+
+    <string name="profile_title_1">Mortal Comum</string>
+    <string name="profile_title_10">Desperto</string>
+    <string name="profile_title_20">Caçador Novato</string>
+    <string name="profile_title_30">Discípulo Externo</string>
+    <string name="profile_title_40">Explorador do Abismo</string>
+    <string name="profile_title_50">Caçador Rank C</string>
+    <string name="profile_title_60">Especialista Marcial</string>
+    <string name="profile_title_70">Caçador Rank B</string>
+    <string name="profile_title_80">Mestre das Sombras</string>
+    <string name="profile_title_90">Caçador Rank A</string>
+    <string name="profile_title_100">Formação do Núcleo</string>
+    <string name="profile_title_110">Senhor de Domínio</string>
+    <string name="profile_title_120">Caçador Rank S</string>
+    <string name="profile_title_130">Caçador Nacional</string>
+    <string name="profile_title_140">Alma Nascente</string>
+    <string name="profile_title_150">Soberano</string>
+    <string name="profile_title_160">Monarca</string>
+    <string name="profile_title_170">Shinigami</string>
+    <string name="profile_title_180">Imortal</string>
+    <string name="profile_title_190">Deus Marcial</string>
+    <string name="profile_title_200">Izanagi do Submundo</string>
+
+    <string name="telegram_cloud_no_results_for">Nenhum resultado para \"%1$s\"</string>
+    <string name="backup_saving_custom_location">Salvar em outro local</string>
+    <string name="backup_creating_yomotsu_folder">Criando backup na pasta Yomotsu…</string>
+
+    <string name="label_update_available">Atualização disponível!</string>
 </resources>

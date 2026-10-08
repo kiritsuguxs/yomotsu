@@ -91,7 +91,7 @@ class CreateBackupScreen : Screen() {
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Folder,
-                                contentDescription = "Salvar em outro local",
+                                contentDescription = stringResource(MR.strings.backup_saving_custom_location),
                             )
                         }
                     },
@@ -107,7 +107,7 @@ class CreateBackupScreen : Screen() {
                         val autoBackupDir = storageManager.getAutomaticBackupsDirectory()
                         if (autoBackupDir != null) {
                             viewModel.createBackup(context, autoBackupDir.uri)
-                            context.toast("Criando backup na pasta Yomotsu...")
+                            context.toast(MR.strings.backup_creating_yomotsu_folder)
                             navigator.pop()
                         } else {
                             try {

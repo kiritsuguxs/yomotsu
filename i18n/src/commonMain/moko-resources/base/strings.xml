@@ -146,6 +146,7 @@
     <string name="action_unpin">Unpin</string>
     <string name="action_apply">Apply</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_clear">Clear</string>
     <string name="action_ok">OK</string>
     <string name="action_cancel_all">Cancel all</string>
     <string name="cancel_all_for_series">Cancel all for this series</string>
@@ -248,6 +249,63 @@
     <string name="telegram_cloud_delete_chapter">Delete chapter</string>
     <string name="telegram_cloud_downloading_progress">Downloading chapter %1$d of %2$d to Local Source…</string>
     <string name="telegram_cloud_download_saved">%1$s saved to Local Source!</string>
+    <string name="telegram_cloud_pull_action">Pull from Cloud (Local Source)</string>
+    <string name="telegram_cloud_checking_toast">Checking cloud for %1$s…</string>
+    <string name="telegram_cloud_no_chapters_found">No chapters found in Telegram for %1$s</string>
+    <string name="telegram_cloud_delete_manga_dialog_title">Delete manga from Cloud?</string>
+    <string name="telegram_cloud_delete_manga_dialog_text">Do you want to delete \"%1$s\" and all its %2$d chapters from Telegram Cloud?</string>
+    <string name="telegram_cloud_deleting_chapter">Deleting %1$s…</string>
+    <string name="telegram_cloud_chapter_deleted">%1$s deleted!</string>
+    <string name="telegram_cloud_downloading_single_chapter">Downloading %1$s…</string>
+    <string name="telegram_cloud_chapter_saved">%1$s saved to Local Source!</string>
+    <string name="telegram_cloud_chapter_download_error">Error downloading %1$s: %2$s</string>
+    <string name="telegram_cloud_deleting_manga">Deleting %1$s from Cloud…</string>
+    <string name="telegram_cloud_manga_deleted">%1$s deleted from Cloud!</string>
+
+    <string name="profile_change_hunter_name">Change Hunter Name</string>
+    <string name="profile_name_label">Name</string>
+    <string name="profile_choose_title">Choose your Title</string>
+    <string name="profile_edit_banner">Edit Banner</string>
+    <string name="profile_edit_name">Edit Name</string>
+    <string name="profile_level">Level %1$d</string>
+    <string name="profile_stat_read">Read</string>
+    <string name="profile_stat_in_library">In Library</string>
+    <string name="profile_trophy_room">Trophy Room (%1$d/%2$d)</string>
+
+    <string name="achievement_reader_name">Reader Level %1$d</string>
+    <string name="achievement_reader_desc">Read %1$d chapters.</string>
+    <string name="achievement_collector_name">Collector Level %1$d</string>
+    <string name="achievement_collector_desc">Have %1$d entries in library.</string>
+    <string name="achievement_archivist_name">Archivist Level %1$d</string>
+    <string name="achievement_archivist_desc">Download %1$d chapters.</string>
+
+    <string name="profile_title_1">Common Mortal</string>
+    <string name="profile_title_10">Awakened</string>
+    <string name="profile_title_20">Novice Hunter</string>
+    <string name="profile_title_30">Outer Disciple</string>
+    <string name="profile_title_40">Abyss Explorer</string>
+    <string name="profile_title_50">Rank C Hunter</string>
+    <string name="profile_title_60">Martial Expert</string>
+    <string name="profile_title_70">Rank B Hunter</string>
+    <string name="profile_title_80">Shadow Master</string>
+    <string name="profile_title_90">Rank A Hunter</string>
+    <string name="profile_title_100">Core Formation</string>
+    <string name="profile_title_110">Domain Lord</string>
+    <string name="profile_title_120">Rank S Hunter</string>
+    <string name="profile_title_130">National Hunter</string>
+    <string name="profile_title_140">Nascent Soul</string>
+    <string name="profile_title_150">Sovereign</string>
+    <string name="profile_title_160">Monarch</string>
+    <string name="profile_title_170">Shinigami</string>
+    <string name="profile_title_180">Immortal</string>
+    <string name="profile_title_190">Martial God</string>
+    <string name="profile_title_200">Underworld Izanagi</string>
+
+    <string name="telegram_cloud_no_results_for">No results for \"%1$s\"</string>
+    <string name="backup_saving_custom_location">Save to custom location</string>
+    <string name="backup_creating_yomotsu_folder">Creating backup in Yomotsu folder…</string>
+
+    <string name="label_update_available">Update available!</string>
     <string name="pref_category_tracking">Tracking</string>
     <string name="pref_category_advanced">Advanced</string>
     <string name="pref_category_about">About</string>

@@ -59,7 +59,8 @@ import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.telegram.CloudManga
 import eu.kanade.tachiyomi.data.telegram.TelegramCloudManager
-import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
@@ -71,6 +72,7 @@ class TelegramCloudManagerScreen : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
         val cloudManager = remember { Injekt.get<TelegramCloudManager>() }
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -197,13 +199,13 @@ class TelegramCloudManagerScreen : Screen() {
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Nenhuma obra encontrada",
+                            text = stringResource(MR.strings.no_results_found),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Nenhum resultado para \"${searchQuery?.trim()}\"",
+                            text = stringResource(MR.strings.telegram_cloud_no_results_for, searchQuery?.trim() ?: ""),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -298,7 +300,7 @@ class TelegramCloudManagerScreen : Screen() {
                                                         downloadProgress = curr to tot
                                                     }
                                                     if (success) {
-                                                        snackbarHostState.showSnackbar("${manga.title}!")
+                                                        snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_download_saved, manga.title))
                                                     }
                                                 } finally {
                                                     downloadingManga = null
@@ -341,14 +343,13 @@ class TelegramCloudManagerScreen : Screen() {
                                                                 scope.launch {
                                                                     downloadingChapterKey = chapterKey
                                                                     try {
-                                                                        snackbarHostState.showSnackbar("Baixando ${chapter.name}...")
+                                                                        snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_downloading_single_chapter, chapter.name))
                                                                         val ok = cloudManager.downloadSingleChapterToLocalSource(manga.title, chapter)
                                                                         if (ok) {
-                                                                            snackbarHostState.showSnackbar("${chapter.name} salvo na Fonte Local!")
+                                                                            snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_chapter_saved, chapter.name))
                                                                         } else {
-                                                                            val err = cloudManager.lastDownloadError
-                                                                            val msg = if (!err.isNullOrBlank()) "Erro ao baixar ${chapter.name}: $err" else "Erro ao baixar ${chapter.name}"
-                                                                            snackbarHostState.showSnackbar(msg)
+                                                                            val err = cloudManager.lastDownloadError ?: ""
+                                                                            snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_chapter_download_error, chapter.name, err))
                                                                         }
                                                                     } finally {
                                                                         downloadingChapterKey = null
@@ -363,10 +364,10 @@ class TelegramCloudManagerScreen : Screen() {
                                                         IconButton(
                                                             onClick = {
                                                                 scope.launch {
-                                                                    snackbarHostState.showSnackbar("Apagando ${chapter.name}...")
+                                                                    snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_deleting_chapter, chapter.name))
                                                                     cloudManager.deleteChapter(manga.title, chapter)
                                                                     mangas = cloudManager.getCloudIndex()
-                                                                    snackbarHostState.showSnackbar("${chapter.name} apagado!")
+                                                                    snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_chapter_deleted, chapter.name))
                                                                 }
                                                             },
                                                             enabled = downloadingManga == null && downloadingChapterKey == null,
@@ -374,7 +375,7 @@ class TelegramCloudManagerScreen : Screen() {
                                                         ) {
                                                             Icon(
                                                                 imageVector = Icons.Outlined.Delete,
-                                                                contentDescription = "Apagar capítulo",
+                                                                contentDescription = stringResource(MR.strings.telegram_cloud_delete_chapter),
                                                                 modifier = Modifier.size(18.dp),
                                                                 tint = MaterialTheme.colorScheme.error
                                                             )
@@ -391,13 +392,17 @@ class TelegramCloudManagerScreen : Screen() {
                                                                     scope.launch {
                                                                         downloadingChapterKey = chapterKey
                                                                         try {
-                                                                            snackbarHostState.showSnackbar("Baixando ${chapter.name}...")
+                                                                            snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_downloading_single_chapter, chapter.name))
                                                                             val ok = cloudManager.downloadSingleChapterToLocalSource(manga.title, chapter)
                                                                             if (ok) {
-                                                                                snackbarHostState.showSnackbar("${chapter.name} salvo na Fonte Local!")
+                                                                                snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_chapter_saved, chapter.name))
                                                                             } else {
                                                                                 val err = cloudManager.lastDownloadError
-                                                                                val msg = if (!err.isNullOrBlank()) "Erro ao baixar ${chapter.name}: $err" else "Erro ao baixar ${chapter.name}"
+                                                                                val msg = if (!err.isNullOrBlank()) {
+                                                                                    context.stringResource(MR.strings.telegram_cloud_chapter_download_error, chapter.name, err)
+                                                                                } else {
+                                                                                    context.stringResource(MR.strings.telegram_cloud_chapter_download_error, chapter.name, "")
+                                                                                }
                                                                                 snackbarHostState.showSnackbar(msg)
                                                                             }
                                                                         } finally {
@@ -411,7 +416,7 @@ class TelegramCloudManagerScreen : Screen() {
                                                             ) {
                                                                 Icon(
                                                                     imageVector = Icons.Outlined.Download,
-                                                                    contentDescription = "Baixar capítulo",
+                                                                    contentDescription = stringResource(MR.strings.manga_download),
                                                                     modifier = Modifier.size(20.dp),
                                                                     tint = MaterialTheme.colorScheme.primary
                                                                 )
@@ -434,19 +439,19 @@ class TelegramCloudManagerScreen : Screen() {
             val target = mangaToDelete!!
             AlertDialog(
                 onDismissRequest = { mangaToDelete = null },
-                title = { Text("Apagar Obra da Nuvem?") },
-                text = { Text("Deseja apagar \"${target.title}\" e todos os seus ${target.chapters.size} capítulos da Nuvem do Telegram?") },
+                title = { Text(stringResource(MR.strings.telegram_cloud_delete_manga_dialog_title)) },
+                text = { Text(stringResource(MR.strings.telegram_cloud_delete_manga_dialog_text, target.title, target.chapters.size)) },
                 confirmButton = {
                     TextButton(
                         onClick = {
                             val title = target.title
                             mangaToDelete = null
                             scope.launch {
-                                snackbarHostState.showSnackbar("Apagando $title da Nuvem...")
+                                snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_deleting_manga, title))
                                 val ok = cloudManager.deleteManga(title)
                                 mangas = cloudManager.getCloudIndex()
                                 if (ok) {
-                                    snackbarHostState.showSnackbar("$title apagado da Nuvem!")
+                                    snackbarHostState.showSnackbar(context.stringResource(MR.strings.telegram_cloud_manga_deleted, title))
                                 }
                             }
                         }

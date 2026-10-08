@@ -61,10 +61,13 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.crossfade
 import coil3.request.ImageRequest
+import eu.kanade.tachiyomi.data.profile.AchievementCategory
 import eu.kanade.tachiyomi.data.profile.YomotsuAchievement
 import eu.kanade.tachiyomi.data.profile.YomotsuLevelManager
 import eu.kanade.tachiyomi.data.profile.YomotsuTitle
+import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.i18n.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,23 +113,23 @@ fun UserProfileScreen(
     if (showNameDialog) {
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            title = { Text("Mudar Nome de Caçador") },
+            title = { Text(stringResource(MR.strings.profile_change_hunter_name)) },
             text = {
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
                     singleLine = true,
-                    label = { Text("Nome") }
+                    label = { Text(stringResource(MR.strings.profile_name_label)) }
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     if(newName.isNotBlank()) onUsernameChanged(newName.trim())
                     showNameDialog = false
-                }) { Text("Salvar") }
+                }) { Text(stringResource(MR.strings.action_save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showNameDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { showNameDialog = false }) { Text(stringResource(MR.strings.action_cancel)) }
             }
         )
     }
@@ -134,12 +137,12 @@ fun UserProfileScreen(
     if (showTitleDialog) {
         AlertDialog(
             onDismissRequest = { showTitleDialog = false },
-            title = { Text("Escolha seu Título") },
+            title = { Text(stringResource(MR.strings.profile_choose_title)) },
             text = {
                 LazyColumn {
                     items(unlockedTitles) { title ->
                         Text(
-                            text = title.name,
+                            text = getLocalizedTitleName(title),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -155,7 +158,7 @@ fun UserProfileScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showTitleDialog = false }) { Text("Fechar") }
+                TextButton(onClick = { showTitleDialog = false }) { Text(stringResource(MR.strings.action_close)) }
             }
         )
     }
@@ -163,9 +166,9 @@ fun UserProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Perfil Yomotsu") },
+                title = { Text(stringResource(MR.strings.label_yomotsu_profile)) },
                 navigationIcon = {
-                    IconButton(onClick = navigateUp) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar") }
+                    IconButton(onClick = navigateUp) { Icon(Icons.Outlined.ArrowBack, contentDescription = stringResource(MR.strings.action_bar_up_description)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
@@ -197,7 +200,7 @@ fun UserProfileScreen(
                             onClick = { bannerLauncher.launch("image/*") },
                             modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
                         ) {
-                            Icon(Icons.Outlined.Edit, contentDescription = "Editar Banner", tint = Color.White.copy(alpha = 0.7f))
+                            Icon(Icons.Outlined.Edit, contentDescription = stringResource(MR.strings.profile_edit_banner), tint = Color.White.copy(alpha = 0.7f))
                         }
                     }
 
@@ -232,10 +235,10 @@ fun UserProfileScreen(
                 Row(modifier = Modifier.fillMaxWidth().clickable { showNameDialog = true }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     Text(username, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Icon(Icons.Outlined.Edit, contentDescription = "Editar Nome", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Outlined.Edit, contentDescription = stringResource(MR.strings.profile_edit_name), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Text(
-                    text = equippedTitle.name,
+                    text = getLocalizedTitleName(equippedTitle),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.fillMaxWidth().clickable { showTitleDialog = true }.padding(vertical = 4.dp),
@@ -249,8 +252,8 @@ fun UserProfileScreen(
             item {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Nível $currentLevel", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text("Nível ${currentLevel + 1}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(MR.strings.profile_level, currentLevel), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(MR.strings.profile_level, currentLevel + 1), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
@@ -268,8 +271,8 @@ fun UserProfileScreen(
             // ESTATÍSTICAS
             item {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    StatBox(Icons.Outlined.MenuBook, totalChaptersRead.toString(), "Lidos")
-                    StatBox(Icons.Outlined.CollectionsBookmark, totalMangas.toString(), "Na Biblioteca")
+                    StatBox(Icons.Outlined.MenuBook, totalChaptersRead.toString(), stringResource(MR.strings.profile_stat_read))
+                    StatBox(Icons.Outlined.CollectionsBookmark, totalMangas.toString(), stringResource(MR.strings.profile_stat_in_library))
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
@@ -277,7 +280,7 @@ fun UserProfileScreen(
             // TÍTULO CONQUISTAS
             item {
                 Text(
-                    text = "Sala de Troféus (${unlockedAchievements.size}/${unlockedAchievements.size + lockedAchievements.size})",
+                    text = stringResource(MR.strings.profile_trophy_room, unlockedAchievements.size, unlockedAchievements.size + lockedAchievements.size),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -323,6 +326,9 @@ fun AchievementItem(achievement: YomotsuAchievement, isUnlocked: Boolean) {
     val contentColor = if (isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
     val icon = if (isUnlocked) achievement.category.icon else Icons.Outlined.Lock
 
+    val localizedName = getLocalizedAchievementName(achievement)
+    val localizedDesc = getLocalizedAchievementDesc(achievement)
+
     val modifier = Modifier.fillMaxWidth()
 
     if (isUnlocked && achievement.tier.isGradient) {
@@ -338,8 +344,8 @@ fun AchievementItem(achievement: YomotsuAchievement, isUnlocked: Boolean) {
                 Icon(icon, contentDescription = null, tint = achievement.tier.color, modifier = Modifier.size(32.dp))
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(achievement.name, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 16.sp)
-                    Text(achievement.description, fontSize = 12.sp, color = contentColor)
+                    Text(localizedName, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 16.sp)
+                    Text(localizedDesc, fontSize = 12.sp, color = contentColor)
                 }
             }
         }
@@ -355,10 +361,68 @@ fun AchievementItem(achievement: YomotsuAchievement, isUnlocked: Boolean) {
                 Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(32.dp))
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(achievement.name, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 16.sp)
-                    Text(achievement.description, fontSize = 12.sp, color = contentColor)
+                    Text(localizedName, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 16.sp)
+                    Text(localizedDesc, fontSize = 12.sp, color = contentColor)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun getLocalizedTitleName(title: YomotsuTitle): String {
+    return when (title.unlockLevel) {
+        1 -> stringResource(MR.strings.profile_title_1)
+        10 -> stringResource(MR.strings.profile_title_10)
+        20 -> stringResource(MR.strings.profile_title_20)
+        30 -> stringResource(MR.strings.profile_title_30)
+        40 -> stringResource(MR.strings.profile_title_40)
+        50 -> stringResource(MR.strings.profile_title_50)
+        60 -> stringResource(MR.strings.profile_title_60)
+        70 -> stringResource(MR.strings.profile_title_70)
+        80 -> stringResource(MR.strings.profile_title_80)
+        90 -> stringResource(MR.strings.profile_title_90)
+        100 -> stringResource(MR.strings.profile_title_100)
+        110 -> stringResource(MR.strings.profile_title_110)
+        120 -> stringResource(MR.strings.profile_title_120)
+        130 -> stringResource(MR.strings.profile_title_130)
+        140 -> stringResource(MR.strings.profile_title_140)
+        150 -> stringResource(MR.strings.profile_title_150)
+        160 -> stringResource(MR.strings.profile_title_160)
+        170 -> stringResource(MR.strings.profile_title_170)
+        180 -> stringResource(MR.strings.profile_title_180)
+        190 -> stringResource(MR.strings.profile_title_190)
+        200 -> stringResource(MR.strings.profile_title_200)
+        else -> title.name
+    }
+}
+
+@Composable
+private fun getLocalizedAchievementName(achievement: YomotsuAchievement): String {
+    val level = Regex("""\d+""").find(achievement.name)?.value?.toIntOrNull()
+    return if (level != null) {
+        when (achievement.category) {
+            AchievementCategory.READING -> stringResource(MR.strings.achievement_reader_name, level)
+            AchievementCategory.COLLECTION -> stringResource(MR.strings.achievement_collector_name, level)
+            AchievementCategory.DOWNLOADS -> stringResource(MR.strings.achievement_archivist_name, level)
+            else -> achievement.name
+        }
+    } else {
+        achievement.name
+    }
+}
+
+@Composable
+private fun getLocalizedAchievementDesc(achievement: YomotsuAchievement): String {
+    val target = Regex("""\d+""").find(achievement.description)?.value?.toIntOrNull()
+    return if (target != null) {
+        when (achievement.category) {
+            AchievementCategory.READING -> stringResource(MR.strings.achievement_reader_desc, target)
+            AchievementCategory.COLLECTION -> stringResource(MR.strings.achievement_collector_desc, target)
+            AchievementCategory.DOWNLOADS -> stringResource(MR.strings.achievement_archivist_desc, target)
+            else -> achievement.description
+        }
+    } else {
+        achievement.description
     }
 }

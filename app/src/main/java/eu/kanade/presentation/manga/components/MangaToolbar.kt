@@ -32,7 +32,9 @@ import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.DownloadDropdownMenu
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.presentation.translation.TranslationGlossaryScreen
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.at.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
 
@@ -172,7 +174,7 @@ fun MangaToolbar(
                     if (!isAnime && onClickToggleAutomaticTranslation != null) {
                         add(
                             AppBar.OverflowAction(
-                                title = "Glossário de tradução",
+                                title = stringResource(AYMR.strings.translation_glossary_title),
                                 onClick = { navigator.push(TranslationGlossaryScreen(title)) },
                             ),
                         )
@@ -198,15 +200,15 @@ fun MangaToolbar(
                     if (!isAnime && telegramPrefs.enableTelegramCloud.get()) {
                         add(
                             AppBar.OverflowAction(
-                                title = "Puxar da Nuvem (Fonte Local)",
+                                title = stringResource(MR.strings.telegram_cloud_pull_action),
                                 onClick = {
                                     scope.launch {
-                                        android.widget.Toast.makeText(context, "Verificando nuvem para $title...", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.stringResource(MR.strings.telegram_cloud_checking_toast, title), android.widget.Toast.LENGTH_SHORT).show()
                                         val success = cloudManager.downloadMangaToLocalSource(title)
                                         if (success) {
-                                            android.widget.Toast.makeText(context, "$title baixado para a Fonte Local!", android.widget.Toast.LENGTH_LONG).show()
+                                            android.widget.Toast.makeText(context, context.stringResource(MR.strings.telegram_cloud_download_saved, title), android.widget.Toast.LENGTH_LONG).show()
                                         } else {
-                                            android.widget.Toast.makeText(context, "Nenhum capítulo encontrado no Telegram para $title", android.widget.Toast.LENGTH_LONG).show()
+                                            android.widget.Toast.makeText(context, context.stringResource(MR.strings.telegram_cloud_no_chapters_found, title), android.widget.Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 },

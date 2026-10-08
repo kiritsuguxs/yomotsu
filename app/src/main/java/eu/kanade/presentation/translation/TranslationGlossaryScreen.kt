@@ -32,6 +32,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.i18n.MR
+import tachiyomi.i18n.at.AYMR
+import tachiyomi.presentation.core.i18n.stringResource
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.util.Screen
@@ -49,6 +54,7 @@ class TranslationGlossaryScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
         val translationContext = remember(mangaTitle) {
             ComicTranslationContext(mangaTitle = mangaTitle, chapterName = "")
         }
@@ -72,16 +78,16 @@ class TranslationGlossaryScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Glossário de tradução") },
+                    title = { Text(stringResource(AYMR.strings.translation_glossary_title)) },
                     navigationIcon = {
                         TextButton(onClick = navigator::pop) {
-                            Text("Voltar")
+                            Text(stringResource(MR.strings.action_webview_back))
                         }
                     },
                     actions = {
                         if (entries.isNotEmpty()) {
                             TextButton(onClick = { showClearDialog = true }) {
-                                Text("Limpar")
+                                Text(stringResource(MR.strings.action_clear))
                             }
                         }
                     },
@@ -106,15 +112,14 @@ class TranslationGlossaryScreen(
                             modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
                         )
                         Text(
-                            text = "Salve nomes, títulos, habilidades e outros termos para manter " +
-                                "a tradução consistente nesta obra.",
+                            text = stringResource(AYMR.strings.translation_glossary_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 12.dp),
                         )
                         if (learnedCorrectionCount > 0) {
                             Text(
-                                text = "$learnedCorrectionCount correções manuais aprendidas nesta obra.",
+                                text = stringResource(AYMR.strings.translation_glossary_learned_corrections, learnedCorrectionCount),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(bottom = 10.dp),
@@ -137,7 +142,7 @@ class TranslationGlossaryScreen(
                                 onCheckedChange = { isProtected = it },
                             )
                             Text(
-                                text = "Proteger: o tradutor deve usar exatamente o texto escolhido",
+                                text = stringResource(AYMR.strings.translation_glossary_protect_summary),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -145,14 +150,14 @@ class TranslationGlossaryScreen(
                         OutlinedTextField(
                             value = source,
                             onValueChange = { source = it },
-                            label = { Text("Texto original") },
+                            label = { Text(stringResource(AYMR.strings.translation_glossary_original_text)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         OutlinedTextField(
                             value = target,
                             onValueChange = { target = it },
-                            label = { Text("Tradução preferida") },
+                            label = { Text(stringResource(AYMR.strings.translation_glossary_preferred_translation)) },
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -165,7 +170,7 @@ class TranslationGlossaryScreen(
                         ) {
                             Button(
                                 onClick = {
-                                    message = when (
+                                    val (msg, isSuccess) = when (
                                         TranslationGlossaryManager.save(
                                             context = translationContext,
                                             source = source,
@@ -174,23 +179,24 @@ class TranslationGlossaryScreen(
                                             isProtected = isProtected,
                                         )
                                     ) {
-                                        GlossarySaveResult.CREATED -> "Termo adicionado."
-                                        GlossarySaveResult.UPDATED -> "Termo atualizado."
-                                        GlossarySaveResult.INVALID_SOURCE -> "Digite o texto original."
-                                        GlossarySaveResult.INVALID_TARGET -> "Digite a tradução preferida."
-                                        GlossarySaveResult.SAME_TEXT -> "A tradução precisa ser diferente do original."
+                                        GlossarySaveResult.CREATED -> context.stringResource(AYMR.strings.translation_glossary_result_created) to true
+                                        GlossarySaveResult.UPDATED -> context.stringResource(AYMR.strings.translation_glossary_result_updated) to true
+                                        GlossarySaveResult.INVALID_SOURCE -> context.stringResource(AYMR.strings.translation_glossary_result_invalid_source) to false
+                                        GlossarySaveResult.INVALID_TARGET -> context.stringResource(AYMR.strings.translation_glossary_result_invalid_target) to false
+                                        GlossarySaveResult.SAME_TEXT -> context.stringResource(AYMR.strings.translation_glossary_result_same_text) to false
                                     }
-                                    if (message == "Termo adicionado." || message == "Termo atualizado.") {
+                                    message = msg
+                                    if (isSuccess) {
                                         source = ""
                                         target = ""
                                         refresh()
                                     }
                                 },
                             ) {
-                                Text("Salvar termo")
+                                Text(stringResource(AYMR.strings.translation_glossary_save_term))
                             }
                             TextButton(onClick = { showBulkDialog = true }) {
-                                Text("Adicionar vários")
+                                Text(stringResource(AYMR.strings.translation_glossary_add_multiple))
                             }
                         }
                         message?.let {
@@ -207,7 +213,7 @@ class TranslationGlossaryScreen(
                 if (entries.isEmpty()) {
                     item {
                         Text(
-                            text = "Nenhum termo salvo para esta obra.",
+                            text = stringResource(AYMR.strings.translation_glossary_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 16.dp),
@@ -238,12 +244,12 @@ class TranslationGlossaryScreen(
                                 onClick = {
                                     TranslationGlossaryManager.remove(translationContext, entry.source)
                                     refresh()
-                                    message = "Termo removido."
+                                    message = context.stringResource(AYMR.strings.translation_glossary_term_removed)
                                 },
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Delete,
-                                    contentDescription = "Remover termo",
+                                    contentDescription = stringResource(AYMR.strings.translation_glossary_remove_term),
                                 )
                             }
                         }
@@ -261,23 +267,23 @@ class TranslationGlossaryScreen(
         if (showClearDialog) {
             AlertDialog(
                 onDismissRequest = { showClearDialog = false },
-                title = { Text("Limpar glossário?") },
-                text = { Text("Todos os termos salvos para esta obra serão removidos.") },
+                title = { Text(stringResource(AYMR.strings.translation_glossary_clear_confirm_title)) },
+                text = { Text(stringResource(AYMR.strings.translation_glossary_clear_confirm_text)) },
                 confirmButton = {
                     TextButton(
                         onClick = {
                             TranslationGlossaryManager.clear(translationContext)
                             refresh()
                             showClearDialog = false
-                            message = "Glossário limpo."
+                            message = context.stringResource(AYMR.strings.translation_glossary_cleared)
                         },
                     ) {
-                        Text("Limpar")
+                        Text(stringResource(MR.strings.action_clear))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showClearDialog = false }) {
-                        Text("Cancelar")
+                        Text(stringResource(MR.strings.action_cancel))
                     }
                 },
             )
@@ -298,9 +304,9 @@ class TranslationGlossaryScreen(
                     refresh()
                     showBulkDialog = false
                     message = when {
-                        result.saved == 0 -> "Nenhum termo válido foi encontrado."
-                        result.skipped > 0 -> "${result.saved} termos salvos; ${result.skipped} linhas ignoradas."
-                        else -> "${result.saved} termos salvos."
+                        result.saved == 0 -> context.stringResource(AYMR.strings.translation_glossary_bulk_none)
+                        result.skipped > 0 -> context.stringResource(AYMR.strings.translation_glossary_bulk_saved_skipped, result.saved, result.skipped)
+                        else -> context.stringResource(AYMR.strings.translation_glossary_bulk_saved, result.saved)
                     }
                 },
             )
@@ -313,15 +319,15 @@ private fun GlossaryTypeSelector(
     selected: TranslationMemoryEntryType,
     onSelected: (TranslationMemoryEntryType) -> Unit,
 ) {
-    Text("Tipo", style = MaterialTheme.typography.labelLarge)
+    Text(stringResource(AYMR.strings.translation_glossary_type_label), style = MaterialTheme.typography.labelLarge)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlossaryTypeChip(TranslationMemoryEntryType.TERM, "Termo", selected, onSelected)
-            GlossaryTypeChip(TranslationMemoryEntryType.NAME, "Nome", selected, onSelected)
+            GlossaryTypeChip(TranslationMemoryEntryType.TERM, stringResource(AYMR.strings.translation_glossary_type_term), selected, onSelected)
+            GlossaryTypeChip(TranslationMemoryEntryType.NAME, stringResource(AYMR.strings.translation_glossary_type_name), selected, onSelected)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlossaryTypeChip(TranslationMemoryEntryType.TITLE, "Título", selected, onSelected)
-            GlossaryTypeChip(TranslationMemoryEntryType.TECHNIQUE, "Técnica", selected, onSelected)
+            GlossaryTypeChip(TranslationMemoryEntryType.TITLE, stringResource(AYMR.strings.translation_glossary_type_title), selected, onSelected)
+            GlossaryTypeChip(TranslationMemoryEntryType.TECHNIQUE, stringResource(AYMR.strings.translation_glossary_type_technique), selected, onSelected)
         }
     }
 }
@@ -349,21 +355,21 @@ private fun BulkGlossaryDialog(
 ) {
     var text by remember { mutableStateOf("") }
     val protectedNameHint = if (type == TranslationMemoryEntryType.NAME && isProtected) {
-        " Para nomes protegidos, também é possível informar apenas o nome."
+        stringResource(AYMR.strings.translation_glossary_add_multiple_hint)
     } else {
         ""
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Adicionar vários termos") },
+        title = { Text(stringResource(AYMR.strings.translation_glossary_add_multiple_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Use uma linha por termo no formato original => tradução.$protectedNameHint")
+                Text(stringResource(AYMR.strings.translation_glossary_add_multiple_description, protectedNameHint))
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text("Lista de termos") },
+                    label = { Text(stringResource(AYMR.strings.translation_glossary_terms_list)) },
                     placeholder = { Text("Shadow Monarch => Monarca das Sombras") },
                     minLines = 6,
                     maxLines = 12,
@@ -376,24 +382,25 @@ private fun BulkGlossaryDialog(
                 enabled = text.isNotBlank(),
                 onClick = { onSave(text) },
             ) {
-                Text("Salvar lista")
+                Text(stringResource(AYMR.strings.translation_glossary_save_list))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(MR.strings.action_cancel))
             }
         },
     )
 }
 
+@Composable
 private fun TranslationMemoryEntryType.displayLabel(isProtected: Boolean): String {
     val label = when (this) {
-        TranslationMemoryEntryType.TERM -> "Termo"
-        TranslationMemoryEntryType.NAME -> "Nome"
-        TranslationMemoryEntryType.TITLE -> "Título"
-        TranslationMemoryEntryType.TECHNIQUE -> "Técnica"
-        TranslationMemoryEntryType.MANUAL_CORRECTION -> "Correção aprendida"
+        TranslationMemoryEntryType.TERM -> stringResource(AYMR.strings.translation_glossary_type_term)
+        TranslationMemoryEntryType.NAME -> stringResource(AYMR.strings.translation_glossary_type_name)
+        TranslationMemoryEntryType.TITLE -> stringResource(AYMR.strings.translation_glossary_type_title)
+        TranslationMemoryEntryType.TECHNIQUE -> stringResource(AYMR.strings.translation_glossary_type_technique)
+        TranslationMemoryEntryType.MANUAL_CORRECTION -> stringResource(AYMR.strings.translation_glossary_type_manual_correction)
     }
-    return if (isProtected) "$label protegido" else label
+    return if (isProtected) stringResource(AYMR.strings.translation_glossary_protected_suffix, label) else label
 }

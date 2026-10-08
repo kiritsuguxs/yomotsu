@@ -64,4 +64,57 @@
     <string name="pref_inpainter_aot_summary">Reconstructs background and artwork behind text using neural network (NCNN). First use downloads ~11 MB. If disabled, uses fast color fill.</string>
     <string name="pref_deepl_api_key">DeepL API Key</string>
     <string name="pref_sub_deepl_api_key">DeepL API Key (Free or Pro)</string>
+
+    <string name="novel_customize_reading">Customize reading</string>
+    <string name="novel_tts_listen">Listen to chapter</string>
+    <string name="novel_tts_pause">Pause narration</string>
+    <string name="novel_tts_listen_short">Listen</string>
+    <string name="novel_tts_pause_short">Pause</string>
+    <string name="novel_reader_settings">Reader Settings</string>
+    <string name="novel_font_size">Font Size: %1$d sp</string>
+    <string name="novel_background_color">Background Color</string>
+    <string name="novel_voice_and_narration">Voice and Narration</string>
+    <string name="novel_configure_voice">Configure Voice (%1$s • %2$.1fx)</string>
+    <string name="novel_tts_title">Voice Narration (TTS)</string>
+    <string name="novel_tts_narrator_voice">Narrator Voice</string>
+    <string name="novel_tts_reading_speed">Reading Speed: %1$.1fx</string>
+    <string name="novel_tts_background_notice">✨ Narration will continue playing even with screen locked or in background.</string>
+    <string name="novel_loading_chapter">Loading chapter…</string>
+    <string name="novel_translating_chapter">Translating chapter…</string>
+    <string name="novel_tts_wait_chapter">Please wait for chapter to load before playing.</string>
+
+    <string name="translation_glossary_title">Translation glossary</string>
+    <string name="translation_glossary_description">Save names, titles, abilities and other terms to keep translations consistent for this entry.</string>
+    <string name="translation_glossary_learned_corrections">%1$d manual corrections learned for this entry.</string>
+    <string name="translation_glossary_protect_summary">Protect: translator must use exact chosen text</string>
+    <string name="translation_glossary_original_text">Original text</string>
+    <string name="translation_glossary_preferred_translation">Preferred translation</string>
+    <string name="translation_glossary_result_created">Term added.</string>
+    <string name="translation_glossary_result_updated">Term updated.</string>
+    <string name="translation_glossary_result_invalid_source">Enter the original text.</string>
+    <string name="translation_glossary_result_invalid_target">Enter the preferred translation.</string>
+    <string name="translation_glossary_result_same_text">Translation must differ from original.</string>
+    <string name="translation_glossary_save_term">Save term</string>
+    <string name="translation_glossary_add_multiple">Add multiple</string>
+    <string name="translation_glossary_empty">No terms saved for this entry.</string>
+    <string name="translation_glossary_term_removed">Term removed.</string>
+    <string name="translation_glossary_remove_term">Remove term</string>
+    <string name="translation_glossary_clear_confirm_title">Clear glossary?</string>
+    <string name="translation_glossary_clear_confirm_text">All saved terms for this entry will be removed.</string>
+    <string name="translation_glossary_cleared">Glossary cleared.</string>
+    <string name="translation_glossary_bulk_none">No valid terms found.</string>
+    <string name="translation_glossary_bulk_saved_skipped">%1$d terms saved; %2$d lines skipped.</string>
+    <string name="translation_glossary_bulk_saved">%1$d terms saved.</string>
+    <string name="translation_glossary_type_label">Type</string>
+    <string name="translation_glossary_type_term">Term</string>
+    <string name="translation_glossary_type_name">Name</string>
+    <string name="translation_glossary_type_title">Title</string>
+    <string name="translation_glossary_type_technique">Technique</string>
+    <string name="translation_glossary_type_manual_correction">Learned correction</string>
+    <string name="translation_glossary_protected_suffix">%1$s (protected)</string>
+    <string name="translation_glossary_add_multiple_title">Add multiple terms</string>
+    <string name="translation_glossary_add_multiple_description">Use one line per term in the format original => translation.%1$s</string>
+    <string name="translation_glossary_add_multiple_hint"> For protected names, you can also provide just the name.</string>
+    <string name="translation_glossary_terms_list">Terms list</string>
+    <string name="translation_glossary_save_list">Save list</string>
 </resources>

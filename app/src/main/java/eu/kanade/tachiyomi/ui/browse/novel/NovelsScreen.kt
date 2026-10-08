@@ -318,19 +318,19 @@ private fun NovelExtensionDetailsDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (plugin.lang.isNotBlank()) {
                     Text(
-                        text = "Idioma: ${LocaleHelper.getSourceDisplayName(plugin.lang, LocalContext.current)}",
+                        text = "${stringResource(MR.strings.ext_info_language)}: ${LocaleHelper.getSourceDisplayName(plugin.lang, LocalContext.current)}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 if (plugin.version.isNotBlank()) {
                     Text(
-                        text = "Versão: ${plugin.version}",
+                        text = "${stringResource(MR.strings.version)}: ${plugin.version}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 if (extension.hasUpdate) {
                     Text(
-                        text = "Atualização disponível!",
+                        text = stringResource(MR.strings.label_update_available),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,

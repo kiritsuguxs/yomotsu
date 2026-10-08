@@ -34,6 +34,7 @@
     <string name="action_open_in_browser">Abrir en el navegador</string>
     <string name="action_display_mode">Modo de visualización</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_clear">Limpiar</string>
     <string name="action_sort">Ordenar</string>
     <string name="action_install">Instalar</string>
     <string name="loading">Cargando…</string>
@@ -909,4 +910,96 @@
     <string name="extensionStoresScreen.deleteStore.title">Quitar listado de extensiones</string>
     <string name="extensionStoresScreen.deleteStore.body">¿Seguro que quieres quitar el listado de extensiones «%1$s» (%2$s)?</string>
     <string name="pref_webtoon_vertical_navigator_on_left">Ubicar la interfaz de navegación en el margen izquierdo</string>
+
+    <string name="pref_telegram_cloud">Nube de Telegram</string>
+    <string name="pref_enable_telegram_cloud">Activar Nube de Telegram</string>
+    <string name="pref_enable_telegram_cloud_summary">Subir automáticamente los capítulos descargados a Telegram</string>
+    <string name="pref_telegram_bot_token">Token del Bot</string>
+    <string name="pref_telegram_bot_token_summary">Token generado por @BotFather</string>
+    <string name="pref_telegram_chat_id">ID de Chat / Canal</string>
+    <string name="pref_telegram_chat_id_summary">ID del canal privado (ej. -1001234567890) o chat de destino</string>
+    <string name="pref_telegram_delete_local">Eliminar archivo local tras la subida</string>
+    <string name="pref_telegram_delete_local_summary">Libera espacio en el dispositivo una vez guardado en la nube</string>
+    <string name="pref_telegram_restore_to_local_source">Guardar descargas en Fuente Local</string>
+    <string name="pref_telegram_restore_to_local_source_summary">Al restaurar desde la nube, guarda directamente en la carpeta Fuente Local con portada y metadatos</string>
+    <string name="pref_telegram_cloud_manager">Gestor de Manga en la Nube</string>
+    <string name="pref_telegram_cloud_manager_summary">Ver todos los mangas guardados en Telegram y descargar por lotes a Fuente Local</string>
+    <string name="label_yomotsu_profile">Perfil Yomotsu</string>
+    <string name="telegram_cloud_syncing">Sincronizando con la Nube de Telegram…</string>
+    <string name="telegram_cloud_sync_completed">¡Sincronización completada! %1$d mangas sincronizados.</string>
+    <string name="telegram_cloud_sync_error">Error al sincronizar: %1$s</string>
+    <string name="telegram_cloud_empty_local">No hay mangas en la lista local</string>
+    <string name="telegram_cloud_empty_local_description">Toca abajo para escanear tu grupo de Telegram y encontrar capítulos ya subidos.</string>
+    <string name="telegram_cloud_sync_action">Sincronizar desde Telegram</string>
+    <string name="telegram_cloud_search_hint">Buscar manga en la nube…</string>
+    <string name="telegram_cloud_chapters_count">%1$d capítulos en Telegram</string>
+    <string name="telegram_cloud_download_all">Descargar todo a Fuente Local (%1$d)</string>
+    <string name="telegram_cloud_delete_manga">Eliminar manga de la Nube</string>
+    <string name="telegram_cloud_delete_chapter">Eliminar capítulo</string>
+    <string name="telegram_cloud_downloading_progress">Descargando capítulo %1$d de %2$d a Fuente Local…</string>
+    <string name="telegram_cloud_download_saved">¡%1$s guardado en Fuente Local!</string>
+    <string name="telegram_cloud_pull_action">Obtener de la Nube (Fuente Local)</string>
+    <string name="telegram_cloud_checking_toast">Comprobando la nube para %1$s…</string>
+    <string name="telegram_cloud_no_chapters_found">No se encontraron capítulos en Telegram para %1$s</string>
+    <string name="telegram_cloud_delete_manga_dialog_title">¿Eliminar manga de la Nube?</string>
+    <string name="telegram_cloud_delete_manga_dialog_text">¿Deseas eliminar «%1$s» y todos sus %2$d capítulos de la Nube de Telegram?</string>
+    <string name="telegram_cloud_deleting_chapter">Eliminando %1$s…</string>
+    <string name="telegram_cloud_chapter_deleted">¡%1$s eliminado!</string>
+    <string name="telegram_cloud_downloading_single_chapter">Descargando %1$s…</string>
+    <string name="telegram_cloud_chapter_saved">¡%1$s guardado en Fuente Local!</string>
+    <string name="telegram_cloud_chapter_download_error">Error al descargar %1$s: %2$s</string>
+    <string name="telegram_cloud_deleting_manga">Eliminando %1$s de la Nube…</string>
+    <string name="telegram_cloud_manga_deleted">¡%1$s eliminado de la Nube!</string>
+
+    <string name="profile_change_hunter_name">Cambiar Nombre de Cazador</string>
+    <string name="profile_name_label">Nombre</string>
+    <string name="profile_choose_title">Elige tu Título</string>
+    <string name="profile_edit_banner">Editar Portada</string>
+    <string name="profile_edit_name">Editar Nombre</string>
+    <string name="profile_level">Nivel %1$d</string>
+    <string name="profile_stat_read">Leídos</string>
+    <string name="profile_stat_in_library">En Biblioteca</string>
+    <string name="profile_trophy_room">Sala de Trofeos (%1$d/%2$d)</string>
+
+    <string name="achievement_reader_name">Lector Nivel %1$d</string>
+    <string name="achievement_reader_desc">Lee %1$d capítulos.</string>
+    <string name="achievement_collector_name">Coleccionista Nivel %1$d</string>
+    <string name="achievement_collector_desc">Ten %1$d obras en la biblioteca.</string>
+    <string name="achievement_archivist_name">Archivero Nivel %1$d</string>
+    <string name="achievement_archivist_desc">Descarga %1$d capítulos.</string>
+
+    <string name="profile_title_1">Mortal Común</string>
+    <string name="profile_title_10">Despierto</string>
+    <string name="profile_title_20">Cazador Novato</string>
+    <string name="profile_title_30">Discípulo Externo</string>
+    <string name="profile_title_40">Explorador del Abismo</string>
+    <string name="profile_title_50">Cazador Rango C</string>
+    <string name="profile_title_60">Especialista Marcial</string>
+    <string name="profile_title_70">Cazador Rango B</string>
+    <string name="profile_title_80">Maestro de las Sombras</string>
+    <string name="profile_title_90">Cazador Rango A</string>
+    <string name="profile_title_100">Formación del Núcleo</string>
+    <string name="profile_title_110">Señor de Dominio</string>
+    <string name="profile_title_120">Cazador Rango S</string>
+    <string name="profile_title_130">Cazador Nacional</string>
+    <string name="profile_title_140">Alma Naciente</string>
+    <string name="profile_title_150">Soberano</string>
+    <string name="profile_title_160">Monarca</string>
+    <string name="profile_title_170">Shinigami</string>
+    <string name="profile_title_180">Inmortal</string>
+    <string name="profile_title_190">Dios Marcial</string>
+    <string name="profile_title_200">Izanagi del Inframundo</string>
+
+    <string name="telegram_cloud_no_results_for">Ningún resultado para «%1$s»</string>
+    <string name="backup_saving_custom_location">Guardar en otra ubicación</string>
+    <string name="backup_creating_yomotsu_folder">Creando copia de seguridad en la carpeta Yomotsu…</string>
+
+    <string name="pref_player_summary">Ajustes del reproductor, controles, audio y subtítulos</string>
+    <string name="theme_onyx">Ónix</string>
+    <string name="theme_twilight">Crepúsculo</string>
+    <string name="theme_orchid">Orquídea</string>
+    <string name="theme_autumn">Otoño</string>
+
+    <string name="label_update_available">¡Actualización disponible!</string>
+    <string name="label_novels">Extensiones LN</string>
 </resources>
