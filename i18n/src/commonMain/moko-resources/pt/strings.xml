@@ -30,7 +30,7 @@
     <string name="action_next_chapter">Capítulo seguinte</string>
     <string name="action_retry">Tentar novamente</string>
     <string name="action_remove">Remover</string>
-    <string name="action_resume">Resumir</string>
+    <string name="action_resume">Continuar</string>
     <string name="action_open_in_browser">Abrir no navegador</string>
     <string name="action_display_mode">Modo de exibição</string>
     <string name="action_cancel">Cancelar</string>

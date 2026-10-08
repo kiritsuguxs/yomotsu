@@ -45,7 +45,7 @@
     <string name="action_next_chapter">Próximo capítulo</string>
     <string name="action_retry">Tentar novamente</string>
     <string name="action_remove">Remover</string>
-    <string name="action_resume">Retomar</string>
+    <string name="action_resume">Continuar</string>
     <string name="action_open_in_browser">Abrir no navegador</string>
     <string name="action_display_mode">Modo de visualização</string>
     <string name="action_display">Visualizar</string>
