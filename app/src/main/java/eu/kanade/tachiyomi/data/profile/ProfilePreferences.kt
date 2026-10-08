@@ -23,6 +23,7 @@ class ProfilePreferences(
     private val avatarPresetPref = preferenceStore.getString("yomotsu_profile_avatar_preset", "preset_yomotsu")
     private val avatarCustomPathPref = preferenceStore.getString("yomotsu_profile_avatar_custom_path", "")
     private val avatarCustomBase64Pref = preferenceStore.getString("yomotsu_profile_avatar_custom_base64", "")
+    private val avatarBorderPref = preferenceStore.getString("yomotsu_profile_avatar_border", "border_auto")
 
     private val bannerTypePref = preferenceStore.getString("yomotsu_profile_banner_type", "preset") // "preset" or "custom"
     private val bannerPresetPref = preferenceStore.getString("yomotsu_profile_banner_preset", "banner_abyss")
@@ -119,6 +120,9 @@ class ProfilePreferences(
             setAvatarCustom(uriString)
         }
     }
+
+    fun getAvatarBorder(): String = avatarBorderPref.get().ifBlank { "border_auto" }
+    fun setAvatarBorder(borderId: String) = avatarBorderPref.set(borderId)
 
     fun getBannerType(): String = bannerTypePref.get()
     fun getBannerPreset(): String = bannerPresetPref.get().ifBlank { "banner_abyss" }

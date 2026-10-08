@@ -31,6 +31,8 @@ class YomotsuProfileScreen : Screen() {
                     totalMangas = currentState.totalMangas,
                     totalEpisodesWatched = currentState.totalEpisodesWatched,
                     totalAnimes = currentState.totalAnimes,
+                    totalReadDurationMs = currentState.totalReadDurationMs,
+                    totalWatchDurationMs = currentState.totalWatchDurationMs,
                     unlockedAchievements = currentState.unlockedAchievements,
                     lockedAchievements = currentState.lockedAchievements,
                     equippedTitle = currentState.equippedTitle,
@@ -38,6 +40,7 @@ class YomotsuProfileScreen : Screen() {
                     avatarUri = currentState.avatarUri,
                     avatarPreset = currentState.avatarPreset,
                     avatarType = currentState.avatarType,
+                    avatarBorder = currentState.avatarBorder,
                     bannerUri = currentState.bannerUri,
                     bannerPreset = currentState.bannerPreset,
                     bannerType = currentState.bannerType,
@@ -45,6 +48,7 @@ class YomotsuProfileScreen : Screen() {
                     onTitleSelected = { viewModel.setEquippedTitle(it) },
                     onAvatarSelected = { viewModel.setAvatarCustom(it) },
                     onAvatarPresetSelected = { viewModel.setAvatarPreset(it) },
+                    onAvatarBorderSelected = { viewModel.setAvatarBorder(it) },
                     onBannerSelected = { viewModel.setBannerCustom(it) },
                     onBannerPresetSelected = { viewModel.setBannerPreset(it) }
                 )

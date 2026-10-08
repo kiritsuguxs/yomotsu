@@ -17,9 +17,18 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.TravelExplore
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import eu.kanade.tachiyomi.R
+
+data class ProfileAvatarBorder(
+    val id: String,
+    val name: String,
+    val description: String,
+    val colors: List<Color>,
+    val isDynamicRank: Boolean = false,
+)
 
 data class ProfilePresetAvatar(
     val id: String,
@@ -213,11 +222,104 @@ object ProfilePresets {
         )
     )
 
+    val PRESET_BORDERS: List<ProfileAvatarBorder> = listOf(
+        ProfileAvatarBorder(
+            id = "border_white",
+            name = "Branco Minimalista",
+            description = "Borda limpa, elegante e moderna em tom branco puro",
+            colors = listOf(Color(0xFFFFFFFF), Color(0xFFEBEBEB), Color(0xFFF5F5F5), Color(0xFFFFFFFF))
+        ),
+        ProfileAvatarBorder(
+            id = "border_black",
+            name = "Preto Obsidiana",
+            description = "Minimalista escuro sofisticado em ônix e obsidiana",
+            colors = listOf(Color(0xFF2C2D30), Color(0xFF141414), Color(0xFF383A3F), Color(0xFF2C2D30))
+        ),
+        ProfileAvatarBorder(
+            id = "border_auto",
+            name = "Rank Dinâmico (Automático)",
+            description = "Evolui e reflete a cor da sua patente atual de caçador",
+            colors = emptyList(),
+            isDynamicRank = true
+        ),
+        ProfileAvatarBorder(
+            id = "border_monarch",
+            name = "Monarca das Sombras",
+            description = "Aura mística púrpura e violeta neón dos soberanos",
+            colors = listOf(Color(0xFFC77DFF), Color(0xFF7209B7), Color(0xFF3A0CA3), Color(0xFFC77DFF))
+        ),
+        ProfileAvatarBorder(
+            id = "border_gold",
+            name = "Aura Dourada",
+            description = "Resplendor dourado celestial dos caçadores lendários",
+            colors = listOf(Color(0xFFFFE082), Color(0xFFFFD700), Color(0xFFFF8F00), Color(0xFFFFE082))
+        ),
+        ProfileAvatarBorder(
+            id = "border_crimson",
+            name = "Chama Carmesim",
+            description = "Fogo escarlate vibrante e rubi apaixonado",
+            colors = listOf(Color(0xFFFF5252), Color(0xFFFF1744), Color(0xFF880E4F), Color(0xFFFF5252))
+        ),
+        ProfileAvatarBorder(
+            id = "border_cyber",
+            name = "Cyberpunk Neón",
+            description = "Gradiente futurista entre rosa choque e violeta neon",
+            colors = listOf(Color(0xFFFF007F), Color(0xFF9B51E0), Color(0xFF00F5D4), Color(0xFFFF007F))
+        ),
+        ProfileAvatarBorder(
+            id = "border_cyan",
+            name = "Pulso Elétrico",
+            description = "Energia ciano e azul elétrico cintilante",
+            colors = listOf(Color(0xFF80D8FF), Color(0xFF00E5FF), Color(0xFF0091EA), Color(0xFF80D8FF))
+        ),
+        ProfileAvatarBorder(
+            id = "border_emerald",
+            name = "Esmeralda Ancestral",
+            description = "Verde místico puro da floresta primordial",
+            colors = listOf(Color(0xFF69F0AE), Color(0xFF00E676), Color(0xFF1B5E20), Color(0xFF69F0AE))
+        ),
+        ProfileAvatarBorder(
+            id = "border_none",
+            name = "Sem Borda",
+            description = "Avatar limpo sem moldura ao redor",
+            colors = listOf(Color.Transparent, Color.Transparent)
+        )
+    )
+
     fun getPresetAvatar(id: String?): ProfilePresetAvatar {
         return PRESET_AVATARS.find { it.id == id } ?: PRESET_AVATARS.first()
     }
 
     fun getPresetBanner(id: String?): ProfilePresetBanner {
         return PRESET_BANNERS.find { it.id == id } ?: PRESET_BANNERS.first()
+    }
+
+    fun getPresetBorder(id: String?): ProfileAvatarBorder {
+        return PRESET_BORDERS.find { it.id == id } ?: PRESET_BORDERS.first { it.id == "border_auto" }
+    }
+
+    fun getRankBorderColors(level: Int): List<Color> {
+        return when {
+            level >= 200 -> listOf(Color(0xFFC77DFF), Color(0xFF7209B7), Color(0xFF3A0CA3), Color(0xFFC77DFF))
+            level >= 160 -> listOf(Color(0xFFFFE082), Color(0xFFFFD700), Color(0xFFFF8F00), Color(0xFFFFE082))
+            level >= 120 -> listOf(Color(0xFFFF5252), Color(0xFFFF1744), Color(0xFF880E4F), Color(0xFFFF5252))
+            level >= 80 -> listOf(Color(0xFF80D8FF), Color(0xFF00E5FF), Color(0xFF0097A7), Color(0xFF80D8FF))
+            level >= 50 -> listOf(Color(0xFFECEFF1), Color(0xFFB0BEC5), Color(0xFF78909C), Color(0xFFECEFF1))
+            level >= 20 -> listOf(Color(0xFFD7CCC8), Color(0xFFCD7F32), Color(0xFF8D6E63), Color(0xFFD7CCC8))
+            else -> listOf(Color(0xFF9E9E9E), Color(0xFF616161), Color(0xFF757575), Color(0xFF9E9E9E))
+        }
+    }
+
+    fun getBorderBrush(borderId: String?, currentLevel: Int): Brush {
+        if (borderId == "border_none") {
+            return Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+        }
+        val border = getPresetBorder(borderId)
+        val colors = if (border.isDynamicRank) {
+            getRankBorderColors(currentLevel)
+        } else {
+            border.colors
+        }
+        return Brush.sweepGradient(colors)
     }
 }

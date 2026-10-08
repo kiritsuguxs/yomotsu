@@ -386,3 +386,25 @@
 - **Disparo de Conquistas em Tempo Real:**
   - `ProfileChecker.checkAchievements(...)` é acionado pelo `PlayerViewModel.kt` ao assistir episódios e pelo `AnimeDownloader.kt` ao concluir downloads de episódios.
 
+### AC. Mini Card na Aba "Mais", Molduras de Avatar Customizáveis e Tempo Assistido/Lido (Outubro 2026)
+- **Mini Hunter Profile Card na Aba "Mais" (`MoreScreen.kt`, `MoreTab.kt`):**
+  - Adicionado card estilizado logo abaixo do cabeçalho da Logo na aba "Mais".
+  - Exibe o avatar do usuário com a moldura selecionada, nome, patente/nível atual com badge ("Nv. X"), título equipado com gradiente, barra de progresso suave de XP e chevron indicativo.
+  - Ao clicar no card, abre diretamente o Perfil Yomotsu (`YomotsuProfileScreen`).
+  - Carregamento reativo em `MoreViewModel` via `HunterProfileSummary`, atualizando os dados ao entrar na aba.
+- **Molduras e Bordas de Avatar Customizáveis (`ProfilePresets.kt`, `ProfilePreferences.kt`, `UserProfileScreen.kt`):**
+  - Suporte completo a molduras personalizáveis pelo usuário:
+    - **Branco Minimalista (`border_white`):** Borda limpa e elegante em branco puro com acabamento refinado.
+    - **Preto Obsidiana (`border_black`):** Estilo minimalista moderno em ônix escuro e obsidiana.
+    - **Rank Dinâmico (`border_auto`):** Adapta-se automaticamente à patente do caçador (Ferro, Bronze, Prata, Ciano, Rubi, Ouro e Monarca Supremo).
+    - **Gradientes de Elite:** Monarca das Sombras (púrpura/neon), Aura Dourada (ouro celestial), Chama Carmesim (rubi fogo), Cyberpunk Neón, Pulso Elétrico (ciano), Esmeralda Ancestral e Sem Borda.
+  - O seletor de molduras pode ser acessado pelo botão dedicado na foto de perfil (ícone de escudo no canto inferior) ou pelo diálogo de avatar (`[ 🛡️ Moldura / Borda ]`).
+  - Cada item na lista exibe uma prévia circular em tempo real da aura da moldura com `sweepGradient`.
+  - Persistência automática no `PreferenceStore` (`yomotsu_profile_avatar_border`), incluída nos backups.
+- **Estatísticas de Tempo Lido e Tempo Assistido (`UserProfileViewModel.kt`, `UserProfileScreen.kt`):**
+  - Terceira linha adicionada na grade de estatísticas do perfil:
+    - **Tempo Lido:** Injeção de `GetTotalReadDuration.await()` formatado com `Duration.toDurationString` ("X dias Y horas Z min").
+    - **Tempo Assistido:** Estimativa precisa baseada nos episódios concluídos (`watchedEpisodesCount * 23L * 60 * 1000L`) formatada com `Duration.toDurationString`.
+- **Correção de Compatibilidade de Fontes de Anime:**
+  - Filtros em `UserProfileViewModel` e `ProfileChecker` usam verificação segura: `source is AnimeSource || source?.javaClass?.name?.contains("anime", ignoreCase = true) == true`.
+

@@ -988,6 +988,11 @@
     <string name="profile_category_manga">Mangá</string>
     <string name="profile_category_collection">Coleção</string>
     <string name="profile_category_downloads">Downloads</string>
+    <string name="profile_stat_time_read">Tempo Lido</string>
+    <string name="profile_stat_time_watched">Tempo Assistido</string>
+    <string name="profile_dialog_choose_border">Escolher Moldura / Borda</string>
+    <string name="profile_dialog_choose_border_desc">Selecione o estilo da moldura do seu avatar</string>
+    <string name="profile_action_change_border">Moldura / Borda</string>
 
     <string name="profile_title_1">Mortal Comum</string>
     <string name="profile_title_10">Desperto</string>

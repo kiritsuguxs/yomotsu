@@ -26,11 +26,11 @@ object ProfileChecker {
 
         val animeList = distinctLibraryManga.filter { item ->
             val s = sourceManager.get(item.manga.source)
-            s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.isAnime == true
+            s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true
         }
         val mangaList = distinctLibraryManga.filter { item ->
             val s = sourceManager.get(item.manga.source)
-            !(s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.isAnime == true)
+            !(s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true)
         }
 
         val stats = AchievementStats(

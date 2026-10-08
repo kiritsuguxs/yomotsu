@@ -15,6 +15,7 @@ import eu.kanade.tachiyomi.data.profile.YomotsuTitle
 import kotlinx.coroutines.flow.update
 import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.domain.history.interactor.GetTotalReadDuration
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
@@ -39,9 +40,12 @@ sealed interface UserProfileState {
         val avatarUri: String?,
         val avatarPreset: String,
         val avatarType: String,
+        val avatarBorder: String,
         val bannerUri: String?,
         val bannerPreset: String,
         val bannerType: String,
+        val totalReadDurationMs: Long,
+        val totalWatchDurationMs: Long,
     ) : UserProfileState
 }
 
@@ -50,6 +54,7 @@ class UserProfileViewModel(
     private val animeDownloadManager: AnimeDownloadManager = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val getLibraryManga: GetLibraryManga = Injekt.get(),
+    private val getTotalReadDuration: GetTotalReadDuration = Injekt.get(),
     private val profilePreferences: ProfilePreferences = Injekt.get(),
     private val context: Application = Injekt.get()
 ) : StateViewModel<UserProfileState>(UserProfileState.Loading) {
@@ -65,11 +70,11 @@ class UserProfileViewModel(
 
             val animeList = distinctLibraryManga.filter { item ->
                 val s = sourceManager.get(item.manga.source)
-                s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.isAnime == true
+                s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true
             }
             val mangaList = distinctLibraryManga.filter { item ->
                 val s = sourceManager.get(item.manga.source)
-                !(s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.isAnime == true)
+                !(s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true)
             }
 
             val totalMangas = mangaList.size
@@ -81,6 +86,9 @@ class UserProfileViewModel(
             val animeDownloadCount = animeDownloadManager.getDownloadCount()
 
             val totalDownloads = downloadCount + animeDownloadCount
+
+            val totalReadDurationMs = getTotalReadDuration.await()
+            val totalWatchDurationMs = watchedEpisodesCount * 23L * 60 * 1000L
 
             val totalXp = (readChapterCount * YomotsuLevelManager.XP_PER_CHAPTER_READ.toLong()) +
                           (downloadCount * YomotsuLevelManager.XP_PER_CHAPTER_DOWNLOAD.toLong()) +
@@ -127,9 +135,12 @@ class UserProfileViewModel(
                     avatarUri = profilePreferences.getAvatarUri(),
                     avatarPreset = profilePreferences.getAvatarPreset(),
                     avatarType = profilePreferences.getAvatarType(),
+                    avatarBorder = profilePreferences.getAvatarBorder(),
                     bannerUri = profilePreferences.getBannerUri(),
                     bannerPreset = profilePreferences.getBannerPreset(),
                     bannerType = profilePreferences.getBannerType(),
+                    totalReadDurationMs = totalReadDurationMs,
+                    totalWatchDurationMs = totalWatchDurationMs,
                 )
             }
         }
@@ -137,6 +148,11 @@ class UserProfileViewModel(
 
     fun setEquippedTitle(title: YomotsuTitle) {
         profilePreferences.setEquippedTitleId(title.name)
+        loadProfile()
+    }
+
+    fun setAvatarBorder(borderId: String) {
+        profilePreferences.setAvatarBorder(borderId)
         loadProfile()
     }
 

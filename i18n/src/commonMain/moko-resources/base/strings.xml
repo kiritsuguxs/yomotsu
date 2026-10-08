@@ -297,6 +297,11 @@
     <string name="profile_category_manga">Manga</string>
     <string name="profile_category_collection">Collection</string>
     <string name="profile_category_downloads">Downloads</string>
+    <string name="profile_stat_time_read">Time Read</string>
+    <string name="profile_stat_time_watched">Time Watched</string>
+    <string name="profile_dialog_choose_border">Choose Avatar Border</string>
+    <string name="profile_dialog_choose_border_desc">Select a frame style for your profile avatar</string>
+    <string name="profile_action_change_border">Avatar Border</string>
 
     <string name="profile_title_1">Common Mortal</string>
     <string name="profile_title_10">Awakened</string>

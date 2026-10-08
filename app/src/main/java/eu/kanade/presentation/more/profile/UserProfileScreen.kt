@@ -37,8 +37,12 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PlayCircleOutline
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -75,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import eu.kanade.presentation.util.toDurationString
 import eu.kanade.tachiyomi.data.profile.AchievementCategory
 import eu.kanade.tachiyomi.data.profile.ProfilePresetAvatar
 import eu.kanade.tachiyomi.data.profile.ProfilePresetBanner
@@ -86,6 +91,7 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,6 +103,8 @@ fun UserProfileScreen(
     totalMangas: Int,
     totalEpisodesWatched: Int = 0,
     totalAnimes: Int = 0,
+    totalReadDurationMs: Long = 0L,
+    totalWatchDurationMs: Long = 0L,
     unlockedAchievements: List<YomotsuAchievement>,
     lockedAchievements: List<YomotsuAchievement>,
     equippedTitle: YomotsuTitle,
@@ -104,6 +112,7 @@ fun UserProfileScreen(
     avatarUri: String?,
     avatarPreset: String = "preset_yomotsu",
     avatarType: String = "preset",
+    avatarBorder: String = "border_auto",
     bannerUri: String?,
     bannerPreset: String = "banner_abyss",
     bannerType: String = "preset",
@@ -111,6 +120,7 @@ fun UserProfileScreen(
     onTitleSelected: (YomotsuTitle) -> Unit,
     onAvatarSelected: (String?) -> Unit,
     onAvatarPresetSelected: (String) -> Unit = {},
+    onAvatarBorderSelected: (String) -> Unit = {},
     onBannerSelected: (String?) -> Unit,
     onBannerPresetSelected: (String) -> Unit = {}
 ) {
@@ -118,6 +128,7 @@ fun UserProfileScreen(
     var showTitleDialog by remember { mutableStateOf(false) }
     var showNameDialog by remember { mutableStateOf(false) }
     var showAvatarDialog by remember { mutableStateOf(false) }
+    var showBorderDialog by remember { mutableStateOf(false) }
     var showBannerDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf(username) }
     var selectedCategory by remember { mutableStateOf<AchievementCategory?>(null) }
@@ -204,12 +215,25 @@ fun UserProfileScreen(
                             avatarLauncher.launch("image/*")
                             showAvatarDialog = false
                         },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(MR.strings.profile_action_pick_from_gallery))
+                    }
+
+                    Button(
+                        onClick = {
+                            showAvatarDialog = false
+                            showBorderDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Icon(Icons.Outlined.Shield, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(MR.strings.profile_action_change_border))
                     }
 
                     Text(
@@ -260,6 +284,102 @@ fun UserProfileScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showAvatarDialog = false }) {
+                    Text(stringResource(MR.strings.action_close))
+                }
+            }
+        )
+    }
+
+    // DIÁLOGO SELETOR DE BORDA / MOLDURA
+    if (showBorderDialog) {
+        AlertDialog(
+            onDismissRequest = { showBorderDialog = false },
+            title = { Text(stringResource(MR.strings.profile_dialog_choose_border)) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(MR.strings.profile_dialog_choose_border_desc),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(ProfilePresets.PRESET_BORDERS) { border ->
+                            val isSelected = avatarBorder == border.id
+                            val brush = if (border.id == "border_none") {
+                                Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                            } else if (border.isDynamicRank) {
+                                Brush.sweepGradient(ProfilePresets.getRankBorderColors(currentLevel))
+                            } else {
+                                Brush.sweepGradient(border.colors)
+                            }
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        onAvatarBorderSelected(border.id)
+                                        showBorderDialog = false
+                                    }
+                                    .border(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF1E1E1E))
+                                            .border(
+                                                width = if (border.id == "border_none") 1.dp else 3.5.dp,
+                                                brush = if (border.id == "border_none") Brush.linearGradient(listOf(Color.Gray.copy(alpha = 0.4f), Color.Gray.copy(alpha = 0.4f))) else brush,
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = if (border.id == "border_none") "—" else "★",
+                                            color = Color.White.copy(alpha = 0.8f),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = border.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = border.description,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showBorderDialog = false }) {
                     Text(stringResource(MR.strings.action_close))
                 }
             }
@@ -395,30 +515,56 @@ fun UserProfileScreen(
                         }
                     }
 
-                    // AVATAR
+                    // AVATAR COM BORDA PERSONALIZADA
+                    val borderBrush = ProfilePresets.getBorderBrush(avatarBorder, currentLevel)
+                    val borderWidth = if (avatarBorder == "border_none") 0.dp else 4.dp
                     Box(
                         modifier = Modifier
                             .size(120.dp)
                             .align(Alignment.BottomCenter)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(4.dp, MaterialTheme.colorScheme.background, CircleShape)
-                            .clickable { showAvatarDialog = true },
-                        contentAlignment = Alignment.Center
                     ) {
-                        if (avatarType == "custom" && avatarUri != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(if (avatarUri.startsWith("content://") || avatarUri.startsWith("file://")) Uri.parse(avatarUri) else File(avatarUri))
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Avatar",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(borderWidth, borderBrush, CircleShape)
+                                .clickable { showAvatarDialog = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (avatarType == "custom" && avatarUri != null) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(if (avatarUri.startsWith("content://") || avatarUri.startsWith("file://")) Uri.parse(avatarUri) else File(avatarUri))
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Avatar",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                val presetAvatar = ProfilePresets.getPresetAvatar(avatarPreset)
+                                PresetAvatarDisplay(preset = presetAvatar, modifier = Modifier.fillMaxSize())
+                            }
+                        }
+
+                        // Botão de atalho para editar a borda / moldura
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surface)
+                                .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
+                                .clickable { showBorderDialog = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Outlined.Shield,
+                                contentDescription = stringResource(MR.strings.profile_action_change_border),
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
                             )
-                        } else {
-                            val presetAvatar = ProfilePresets.getPresetAvatar(avatarPreset)
-                            PresetAvatarDisplay(preset = presetAvatar, modifier = Modifier.fillMaxSize())
                         }
                     }
                 }
@@ -488,6 +634,18 @@ fun UserProfileScreen(
                             icon = Icons.Outlined.CollectionsBookmark,
                             value = totalAnimes.toString(),
                             label = stringResource(MR.strings.profile_stat_animes_in_library)
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        StatBox(
+                            icon = Icons.Outlined.Schedule,
+                            value = totalReadDurationMs.milliseconds.toDurationString(context, fallback = "0m"),
+                            label = stringResource(MR.strings.profile_stat_time_read)
+                        )
+                        StatBox(
+                            icon = Icons.Outlined.Timer,
+                            value = totalWatchDurationMs.milliseconds.toDurationString(context, fallback = "0m"),
+                            label = stringResource(MR.strings.profile_stat_time_watched)
                         )
                     }
                 }
@@ -676,7 +834,7 @@ fun AchievementItem(achievement: YomotsuAchievement, isUnlocked: Boolean) {
 }
 
 @Composable
-private fun getLocalizedTitleName(title: YomotsuTitle): String {
+fun getLocalizedTitleName(title: YomotsuTitle): String {
     return when (title.unlockLevel) {
         1 -> stringResource(MR.strings.profile_title_1)
         10 -> stringResource(MR.strings.profile_title_10)
