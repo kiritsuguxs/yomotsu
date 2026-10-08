@@ -424,30 +424,30 @@
 
 ### AE. Galeria de Avatares com Personagens Reais de Anime estilo Crunchyroll (Outubro 2026)
 - **Substituição dos Ícones Genéricos por 20 Personagens Icônicos de Animes (`ProfilePresets.kt`, `UserProfileScreen.kt`):**
-  - Removidos os ícones genéricos anteriores e introduzida uma galeria completa de avatares com fotos de rosto em alta definição empacotadas em WebP otimizado (apenas ~10KB cada) em `res/drawable-nodpi/`:
-    1. **Sung Jin-woo** (*Solo Leveling*)
-    2. **Satoru Gojo** (*Jujutsu Kaisen*)
-    3. **Ryomen Sukuna** (*Jujutsu Kaisen*)
-    4. **Monkey D. Luffy** (*One Piece*)
-    5. **Roronoa Zoro** (*One Piece*)
-    6. **Naruto Uzumaki** (*Naruto*)
-    7. **Tanjiro Kamado** (*Demon Slayer*)
-    8. **Nezuko Kamado** (*Demon Slayer*)
-    9. **Ichigo Kurosaki** (*Bleach*)
-    10. **Saitama** (*One Punch Man*)
-    11. **Eren Yeager** (*Attack on Titan*)
-    12. **Levi Ackerman** (*Attack on Titan*)
-    13. **Frieren** (*Sousou no Frieren*)
-    14. **Anya Forger** (*Spy x Family*)
-    15. **Killua Zoldyck** (*Hunter x Hunter*)
-    16. **Son Goku** (*Dragon Ball*)
-    17. **Guts** (*Berserk*)
-    18. **Rimuru Tempest** (*Slime Isekai*)
-    19. **Megumin** (*KonoSuba*)
-    20. **Alucard** (*Hellsing*)
+  - Removidos os ícones genéricos e substituídos por avatares modernos em alta definição (512x512 WebP, ~20-50KB cada) em `res/drawable-nodpi/`, com enquadramento perfeito (PFP bust / close-up centralizado) para que a moldura circular (`CircleShape`) exiba o rosto, cabelos e ombros sem cortes bruscos:
+    1. **Sung Jin-woo** (*Solo Leveling* - Arte oficial do manhwa com adaga e olhos azuis brilhantes)
+    2. **Satoru Gojo** (*Jujutsu Kaisen* - Gojo sem venda com os Seis Olhos azuis elétricos em destaque)
+    3. **Ryomen Sukuna** (*Jujutsu Kaisen* - Sukuna com marcas amaldiçoadas, flecha de fogo e sorriso sinistro)
+    4. **Monkey D. Luffy** (*One Piece* - Gear 5 Joy Boy rindo com cabelos brancos em nuvens)
+    5. **Roronoa Zoro** (*One Piece* - Zoro com sorriso confiante, cicatriz no olho, brincos e espadas)
+    6. **Naruto Uzumaki** (*Naruto* - Naruto Shippuden com kunai, colar de Tsunade e olhos azuis)
+    7. **Tanjiro Kamado** (*Demon Slayer* - Tanjiro com haori verde/preto, brincos Hanafuda e espada Nichirin)
+    8. **Nezuko Kamado** (*Demon Slayer* - Nezuko com bocal de bambu, olhos rosados e quimono)
+    9. **Ichigo Kurosaki** (*Bleach: TYBW* - Ichigo Thousand-Year Blood War com Zangetsu dupla e lua crescente)
+    10. **Saitama** (*One Punch Man* - Saitama em Modo Sério com sombreamento dramático e capa branca)
+    11. **Eren Yeager** (*Attack on Titan* - Eren Yeager Final Season com coque manbun e marcas de titã)
+    12. **Levi Ackerman** (*Attack on Titan* - Capitão Levi empunhando lâmina com capa de Exploração)
+    13. **Frieren** (*Sousou no Frieren* - Frieren com chiquinhas brancas, orelhas de elfo e cajado mágico)
+    14. **Anya Forger** (*Spy x Family* - Anya com olhos brilhantes de estrela "Waku Waku")
+    15. **Killua Zoldyck** (*Hunter x Hunter* - Killua Godspeed com relâmpagos púrpuras)
+    16. **Son Goku** (*Dragon Ball Super* - Goku Instinto Superior com aura prateada divina)
+    17. **Guts** (*Berserk* - Guts com Armadura Berserker e olho vermelho incandescente)
+    18. **Rimuru Tempest** (*Slime Isekai* - Lorde Demônio Rimuru com máscara anti-magia e slime azul)
+    19. **Megumin** (*KonoSuba* - Megumin segurando chapéu de bruxa com olhos carmesim)
+    20. **Alucard** (*Hellsing Ultimate* - Alucard mirando arma com sobretudo vermelho e sorriso vampírico)
     21. **Yomotsu Original** (*Logo clássico Yomotsu*)
   - **Renderização e Layout:**
-    - `PresetAvatarDisplay` utiliza `ContentScale.Crop` com preenchimento total circular (`Modifier.fillMaxSize()`) para personagens, integrando perfeitamente com todas as 10 molduras de avatar selecionáveis.
+    - `PresetAvatarDisplay` utiliza `ContentScale.Crop` com preenchimento total circular (`Modifier.fillMaxSize()`) para personagens, integrando perfeitamente com todas as molduras de avatar selecionáveis.
     - Diálogo seletor estilo Crunchyroll exibindo o nome do personagem em destaque e a obra de origem logo abaixo.
     - Compatibilidade retroativa garantida em `getPresetAvatar` mapeando IDs legados para os novos personagens sem quebrar preferências salvas.
 
