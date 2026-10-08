@@ -458,7 +458,7 @@ private fun MangaScreenSmallImpl(
                             chapterCount = chapters.size,
                             missingChapterCount = missingChapterCount,
                             onClick = onFilterClicked,
-                            isAnime = isAnime,
+                            isAnime = state.isAnime,
                         )
                     }
 
@@ -711,7 +711,7 @@ fun MangaScreenLargeImpl(
                                     chapterCount = chapters.size,
                                     missingChapterCount = missingChapterCount,
                                     onClick = onFilterButtonClicked,
-                                    isAnime = isAnime,
+                                    isAnime = state.isAnime,
                                 )
                             }
 
