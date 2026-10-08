@@ -2,6 +2,8 @@ package eu.kanade.translation
 
 import android.content.Context
 import com.hippo.unifile.UniFile
+import eu.kanade.tachiyomi.animesource.AnimeSource
+import eu.kanade.tachiyomi.source.INovelSource
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.translation.data.TranslationProvider
 import eu.kanade.translation.memory.TranslationCache
@@ -100,6 +102,8 @@ class TranslationManager(
         chapters: Iterable<Chapter>,
         origin: TranslationRequestOrigin,
     ) {
+        val source = sourceManager.get(manga.source)
+        if (source is AnimeSource || source is INovelSource) return
         val autoTranslateEnabled = translationPreferences.autoTranslateManga(manga.id).get()
         if (!TranslationLaunchPolicy.canStart(origin, autoTranslateEnabled)) return
         chapters.forEach { chapter -> translator.queueChapter(manga, chapter) }
@@ -113,6 +117,10 @@ class TranslationManager(
         title: String,
         sourceId: Long,
     ): Translation.State {
+        val source = sourceManager.get(sourceId)
+        if (source == null || source is AnimeSource || source is INovelSource) {
+            return Translation.State.NOT_TRANSLATED
+        }
         val translation = getQueuedTranslationOrNull(chapterId)
         if (translation != null) return translation.status
         if (isChapterTranslated(chapterName, scanlator, title, sourceId)) return Translation.State.TRANSLATED
@@ -126,7 +134,7 @@ class TranslationManager(
         sourceId: Long,
     ): Boolean {
         val source = sourceManager.get(sourceId)
-        if (source == null) return false
+        if (source == null || source is AnimeSource || source is INovelSource) return false
         val file = provider.findTranslationFile(chapterName, chapterScanlator, mangaTitle, source)
         return file?.exists() == true
     }

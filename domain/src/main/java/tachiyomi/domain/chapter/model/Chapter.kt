@@ -24,7 +24,8 @@ data class Chapter(
     val episodeNumber: Double get() = chapterNumber
     val seen: Boolean get() = read
     val lastSecondSeen: Long get() = lastPageRead
-    val totalSeconds: Long get() = 0L // TODO: Store in memo if needed
+    val totalSeconds: Long
+        get() = memo["total_seconds"]?.toString()?.trim('"')?.toLongOrNull() ?: 0L
     val fillermark: Boolean get() = false
     val summary: String? get() = null
     val previewUrl: String? get() = null

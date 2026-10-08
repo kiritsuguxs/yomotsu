@@ -4,6 +4,8 @@ package eu.kanade.tachiyomi.data.database.models
 
 import eu.kanade.tachiyomi.source.model.SChapter
 import java.io.Serializable
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import tachiyomi.domain.chapter.model.Chapter as DomainChapter
 
 interface Chapter : SChapter, Serializable {
@@ -56,8 +58,12 @@ var Chapter.last_second_seen: Long
     set(value) { last_page_read = value.toInt() }
 
 var Chapter.total_seconds: Long
-    get() = 0L
-    set(value) { }
+    get() = memo["total_seconds"]?.toString()?.trim('"')?.toLongOrNull() ?: 0L
+    set(value) {
+        val current = memo.toMutableMap()
+        current["total_seconds"] = JsonPrimitive(value)
+        memo = JsonObject(current)
+    }
 
 var Chapter.seen: Boolean
     get() = read

@@ -70,6 +70,8 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
+import java.util.concurrent.TimeUnit
 import tachiyomi.presentation.core.components.TwoPanelBox
 import tachiyomi.presentation.core.components.VerticalFastScroller
 import tachiyomi.presentation.core.components.material.PullRefresh
@@ -320,6 +322,7 @@ private fun MangaScreenSmallImpl(
                 onClickEditNotes = onEditNotesClicked,
                 automaticTranslationEnabled = state.autoTranslateEnabled,
                 onClickToggleAutomaticTranslation = onToggleAutomaticTranslation,
+                isAnime = state.isAnime,
                 actionModeCounter = selectedChapterCount,
                 onCancelActionMode = { onAllChapterSelected(false) },
                 onSelectAll = { onAllChapterSelected(true) },
@@ -354,7 +357,11 @@ private fun MangaScreenSmallImpl(
                         state.chapters.fastAny { it.chapter.read }
                     }
                     Text(
-                        text = stringResource(if (isReading) MR.strings.action_resume else MR.strings.action_start),
+                        text = if (state.isAnime) {
+                            stringResource(AYMR.strings.action_watch)
+                        } else {
+                            stringResource(if (isReading) MR.strings.action_resume else MR.strings.action_start)
+                        },
                     )
                 },
                 icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null) },
@@ -463,7 +470,8 @@ private fun MangaScreenSmallImpl(
                         onDownloadChapter = onDownloadChapter,
                         onChapterSelected = onChapterSelected,
                         onChapterSwipe = onChapterSwipe,
-                        onTranslationChapter=onTranslationChapter,
+                        onTranslationChapter = onTranslationChapter,
+                        isAnime = state.isAnime,
                     )
                 }
             }
@@ -564,6 +572,7 @@ fun MangaScreenLargeImpl(
                 onClickEditNotes = onEditNotesClicked,
                 automaticTranslationEnabled = state.autoTranslateEnabled,
                 onClickToggleAutomaticTranslation = onToggleAutomaticTranslation,
+                isAnime = state.isAnime,
                 onCancelActionMode = { onAllChapterSelected(false) },
                 actionModeCounter = selectedChapterCount,
                 onSelectAll = { onAllChapterSelected(true) },
@@ -603,9 +612,13 @@ fun MangaScreenLargeImpl(
                         state.chapters.fastAny { it.chapter.read }
                     }
                     Text(
-                        text = stringResource(
-                            if (isReading) MR.strings.action_resume else MR.strings.action_start,
-                        ),
+                        text = if (state.isAnime) {
+                            stringResource(AYMR.strings.action_watch)
+                        } else {
+                            stringResource(
+                                if (isReading) MR.strings.action_resume else MR.strings.action_start,
+                            )
+                        },
                     )
                 },
                 icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null) },
@@ -709,7 +722,8 @@ fun MangaScreenLargeImpl(
                                 onDownloadChapter = onDownloadChapter,
                                 onChapterSelected = onChapterSelected,
                                 onChapterSwipe = onChapterSwipe,
-                                onTranslationChapter = onTranslationChapter
+                                onTranslationChapter = onTranslationChapter,
+                                isAnime = state.isAnime,
                             )
                         }
                     }
@@ -787,6 +801,7 @@ private fun LazyListScope.sharedChapterItems(
     onTranslationChapter: ((ChapterList.Item, ChapterTranslationAction) -> Unit)?,
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
+    isAnime: Boolean = false,
 ) {
     items(
         items = chapters,
@@ -815,14 +830,33 @@ private fun LazyListScope.sharedChapterItems(
                         item.chapter.name
                     },
                     date = relativeDateText(item.chapter.dateUpload),
-                    readProgress = item.chapter.lastPageRead
-                        .takeIf { !item.chapter.read && it > 0L }
-                        ?.let {
-                            stringResource(
-                                MR.strings.chapter_progress,
-                                it + 1,
-                            )
-                        },
+                    readProgress = if (isAnime) {
+                        item.chapter.lastPageRead
+                            .takeIf { !item.chapter.read && it > 0L }
+                            ?.let {
+                                if (item.chapter.totalSeconds > 0L) {
+                                    stringResource(
+                                        AYMR.strings.episode_progress,
+                                        formatTime(it),
+                                        formatTime(item.chapter.totalSeconds),
+                                    )
+                                } else {
+                                    stringResource(
+                                        AYMR.strings.episode_progress_no_total,
+                                        formatTime(it),
+                                    )
+                                }
+                            }
+                    } else {
+                        item.chapter.lastPageRead
+                            .takeIf { !item.chapter.read && it > 0L }
+                            ?.let {
+                                stringResource(
+                                    MR.strings.chapter_progress,
+                                    it + 1,
+                                )
+                            }
+                    },
                     scanlator = item.chapter.scanlator.takeIf { !it.isNullOrBlank() },
                     read = item.chapter.read,
                     bookmark = item.chapter.bookmark,
@@ -877,5 +911,25 @@ private fun onChapterItemClick(
         chapterItem.selected -> onToggleSelection(false)
         isAnyChapterSelected -> onToggleSelection(true)
         else -> onChapterClicked(chapterItem.chapter)
+    }
+}
+
+private fun formatTime(milliseconds: Long): String {
+    return if (milliseconds > 3600000L) {
+        String.format(
+            "%d:%02d:%02d",
+            TimeUnit.MILLISECONDS.toHours(milliseconds),
+            TimeUnit.MILLISECONDS.toMinutes(milliseconds) -
+                TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(milliseconds)),
+            TimeUnit.MILLISECONDS.toSeconds(milliseconds) -
+                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(milliseconds)),
+        )
+    } else {
+        String.format(
+            "%d:%02d",
+            TimeUnit.MILLISECONDS.toMinutes(milliseconds),
+            TimeUnit.MILLISECONDS.toSeconds(milliseconds) -
+                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(milliseconds)),
+        )
     }
 }

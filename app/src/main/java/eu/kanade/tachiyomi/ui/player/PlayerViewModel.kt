@@ -45,6 +45,7 @@ import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload
 import eu.kanade.tachiyomi.data.database.models.Episode
 import eu.kanade.tachiyomi.data.database.models.toDomainEpisode
+import eu.kanade.tachiyomi.data.database.models.total_seconds
 import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
@@ -1987,6 +1988,7 @@ class PlayerViewModel @JvmOverloads constructor(
         if (!incognitoMode) {
             // Save last second seen and mark as seen if needed
             currentEp.last_page_read = seconds.toInt()
+            currentEp.total_seconds = totalSeconds
 
             val progress = playerPreferences.progressPreference().get()
             if (seconds >= (totalSeconds * progress).toLong()) {
@@ -2139,8 +2141,9 @@ class PlayerViewModel @JvmOverloads constructor(
                     id = episode.id!!,
                     read = episode.read,
                     bookmark = episode.bookmark,
-                                        lastPageRead = episode.last_page_read.toLong(),
-                                    ),
+                    lastPageRead = episode.last_page_read.toLong(),
+                    memo = episode.memo,
+                ),
             )
         }
     }

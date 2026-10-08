@@ -418,6 +418,7 @@
     <string name="action_view_episodes">View episodes</string>
     <string name="action_previous_episode">Previous episode</string>
     <string name="action_play">Play</string>
+    <string name="action_watch">Watch</string>
     <string name="action_next_episode">Next episode</string>
     <string name="action_screen_fit">Screen fit mode</string>
     <string name="action_show_anime">Show anime</string>

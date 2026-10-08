@@ -337,3 +337,24 @@
     - Execução nativa direta via `FFmpegKitConfig.ffmpegExecute(session)` no despachante `Dispatchers.IO` sincronizada com `isFFmpegRunning`.
     - Parse de `Duration:` e progresso contínuo integrados em `LogCallback` e `StatisticsCallback`.
     - Cancelamento de sessões ativas do FFmpeg em `cancelDownloaderJob()`.
+
+### Z. Desacoplamento de Tradução, Progresso de Episódios em Minutos e Botão Assistir (Outubro 2026)
+- **Problema 1 (Recursos de Tradução de Mangá vazando na tela de Anime):**
+  - O menu overflow da tela de detalhes de anime exibia "Glossário de tradução" e "Ativar tradução automática para esta obra".
+  - Episódios de anime baixados podiam acionar fluxo de tradução do TachiyomiAT.
+  - **Solução:**
+    - Em `MangaToolbar.kt`: Adicionado parâmetro `isAnime` e condicionadas as opções de tradução ("Glossário de tradução", toggle de tradução automática, traduzir baixados) e sincronização Telegram ("Puxar da Nuvem") a `!isAnime`.
+    - Em `ui/manga/MangaScreen.kt`: `onTranslationChapter`, `onTranslateDownloadedClicked` e `onToggleAutomaticTranslation` foram estritos com `.takeIf { !isNovel && !isAnime }`.
+    - Em `MangaViewModel.kt`: `hasDownloadedChaptersToTranslate` verifica `!isAnime`, `observeTranslations()` ignora animes, e `toChapterListItems()` define `translationState = NOT_TRANSLATED` sem consultar o gerenciador de tradução.
+    - Em `TranslationManager.kt`: Métodos `translateChapters`, `getChapterTranslationStatus` e `isChapterTranslated` verificam explicitamente se a fonte é `AnimeSource` (ou `INovelSource`), retornando imediatamente.
+- **Problema 2 (Progresso de Episódios marcando em Páginas ao invés de Minutos):**
+  - `lastPageRead` é reaproveitado pelo player de vídeo para armazenar os milissegundos assistidos. Na lista de capítulos/episódios, o app formatava com `MR.strings.chapter_progress` ("Pág. %1$d"), exibindo valores absurdos como "Pág. 300001" após pausar o vídeo.
+  - **Solução:**
+    - Em `presentation/manga/MangaScreen.kt`: Implementada a função `formatTime(milliseconds: Long)` (formatação `mm:ss` ou `hh:mm:ss`) e atualizada a renderização de `readProgress`: para `isAnime`, formata como `AYMR.strings.episode_progress` (`%1$s/%2$s`) quando há duração total conhecida, ou `AYMR.strings.episode_progress_no_total` (`%1$s`) apenas com o tempo decorrido.
+    - Em `domain/.../Chapter.kt` e `data/.../Chapter.kt`: `totalSeconds` agora é extraído e persistido de forma segura dentro de `memo["total_seconds"]`.
+    - Em `PlayerViewModel.kt`: Importada e atribuída a extensão `total_seconds`, e `saveEpisodeProgress` repassa `episode.memo` ao `EpisodeUpdate` para salvar a duração no banco de dados.
+- **Problema 3 (Nome do Botão Principal na Tela de Anime):**
+  - O botão flutuante (FAB) na tela de anime exibia "Continuar" / "Iniciar" (recursos de mangá). O usuário solicitou que fosse nomeado "Assistir".
+  - **Solução:**
+    - Adicionado recurso de texto `action_watch` em `i18n-aniyomi` (`Watch` em base, `Assistir` em pt-rBR e pt, `Ver` em es).
+    - Em `presentation/manga/MangaScreen.kt` (layouts padrão e tablet), o FAB exibe `stringResource(AYMR.strings.action_watch)` quando `state.isAnime` for verdadeiro.

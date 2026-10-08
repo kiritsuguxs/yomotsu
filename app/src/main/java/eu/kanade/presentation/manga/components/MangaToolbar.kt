@@ -51,6 +51,7 @@ fun MangaToolbar(
     onClickEditNotes: () -> Unit,
     automaticTranslationEnabled: Boolean,
     onClickToggleAutomaticTranslation: (() -> Unit)? = null,
+    isAnime: Boolean = false,
 
     // For action mode
     actionModeCounter: Int,
@@ -121,7 +122,7 @@ fun MangaToolbar(
                             ),
                         )
                     }
-                    if (onClickTranslateDownloaded != null) {
+                    if (!isAnime && onClickTranslateDownloaded != null) {
                         add(
                             AppBar.Action(
                                 title = stringResource(MR.strings.action_translate_downloaded_chapters),
@@ -168,7 +169,7 @@ fun MangaToolbar(
                             ),
                         )
                     }
-                    if (onClickToggleAutomaticTranslation != null) {
+                    if (!isAnime && onClickToggleAutomaticTranslation != null) {
                         add(
                             AppBar.OverflowAction(
                                 title = "Glossário de tradução",
@@ -194,7 +195,7 @@ fun MangaToolbar(
                             onClick = onClickEditNotes,
                         ),
                     )
-                    if (telegramPrefs.enableTelegramCloud.get()) {
+                    if (!isAnime && telegramPrefs.enableTelegramCloud.get()) {
                         add(
                             AppBar.OverflowAction(
                                 title = "Puxar da Nuvem (Fonte Local)",

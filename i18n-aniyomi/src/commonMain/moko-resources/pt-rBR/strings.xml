@@ -281,6 +281,7 @@
     <string name="action_view_episodes">Ver episódios</string>
     <string name="action_previous_episode">Episódio anterior</string>
     <string name="action_play">Play</string>
+    <string name="action_watch">Assistir</string>
     <string name="action_next_episode">Próximo episódio</string>
     <string name="action_screen_fit">Modo de ajuste de tela</string>
     <string name="action_show_anime">Mostrar anime</string>

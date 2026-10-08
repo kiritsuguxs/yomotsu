@@ -637,11 +637,13 @@ class MangaViewModel(
     }
 
     private fun observeTranslations() {
+        if (isAnime) return
         viewModelScope.launchIO {
             translationManager.statusFlow()
                 .filter { it.manga.id == successState?.manga?.id }
                 .catch { error -> logcat(LogPriority.ERROR, error) }
                 .collect { translation ->
+                    if (isAnime) return@collect
                     withUIContext {
                         updateTranslationState(translation)
                     }
@@ -665,6 +667,7 @@ class MangaViewModel(
     private fun List<Chapter>.toChapterListItems(manga: Manga): List<ChapterList.Item> {
         val isLocal = manga.isLocal()
         val isAnime = (source is eu.kanade.tachiyomi.animesource.AnimeSource) || (sourceManager.get(manga.source) is eu.kanade.tachiyomi.animesource.AnimeSource)
+        val isNovel = (source is eu.kanade.tachiyomi.source.INovelSource) || (sourceManager.get(manga.source) is eu.kanade.tachiyomi.source.INovelSource)
         return map { chapter ->
             val activeAnimeDownload = if (isAnime) animeDownloadManager.getQueuedDownloadOrNull(chapter.id) else null
             val activeDownload = if (!isAnime) downloadManager.getQueuedDownloadOrNull(chapter.id) else null
@@ -691,7 +694,7 @@ class MangaViewModel(
                 downloaded -> Download.State.DOWNLOADED
                 else -> Download.State.NOT_DOWNLOADED
             }
-            val translationState = if (downloadState == Download.State.DOWNLOADED) {
+            val translationState = if (!isAnime && !isNovel && downloadState == Download.State.DOWNLOADED) {
                 translationManager.getChapterTranslationStatus(
                     chapter.id,
                     chapter.name,
@@ -899,10 +902,12 @@ class MangaViewModel(
     }
 
     fun toggleAutomaticTranslation() {
+        if (isAnime) return
         autoTranslationPreference.set(!autoTranslationPreference.get())
     }
 
     fun translateDownloadedChapters() {
+        if (isAnime) return
         val state = successState ?: return
         if (state.manga.isLocal()) return
         val chapters = state.chapters
@@ -1417,8 +1422,12 @@ class MangaViewModel(
             val filterActive: Boolean
                 get() = scanlatorFilterActive || manga.chaptersFiltered()
 
+            val isAnime: Boolean
+                get() = (source is eu.kanade.tachiyomi.animesource.AnimeSource) ||
+                    source.javaClass.name.contains("anime", ignoreCase = true)
+
             val hasDownloadedChaptersToTranslate: Boolean
-                get() = !manga.isLocal() && chapters.any { item ->
+                get() = !manga.isLocal() && !isAnime && chapters.any { item ->
                     TranslationCandidatePolicy.canQueue(item.downloadState, item.translationState)
                 }
 
