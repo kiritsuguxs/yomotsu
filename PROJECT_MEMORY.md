@@ -363,3 +363,26 @@
 - **Configurações de Exibição (`ChapterSettingsDialog.kt`):** Exibe "Número do episódio", "Configurações do episódio" e "Também se aplica a todos os animes da minha biblioteca" quando a obra for anime.
 - **Diálogos de Exclusão (`MangaDialogs.kt`, `UpdatesDeleteConfirmationDialog.kt`):** Pergunta se deseja excluir episódios selecionados (`AYMR.strings.confirm_delete_episodes`) para animes.
 - **Atualizações Recentes (`UpdatesUiItem.kt`):** Progresso de reprodução formatado com tempo decorrido `formatTime(it)` (`AYMR.strings.episode_progress_no_total`) para animes em vez de páginas de mangá.
+
+### AB. Perfil Yomotsu, Conquistas de Anime, Avatares Crunchyroll e Correção do Backup (Outubro 2026)
+- **Correção Definitiva do Backup (Nome, Título, Avatar e Banner):**
+  - O perfil original utilizava um arquivo isolado `yomotsu_profile_prefs` que não era capturado pelo criador de backup (`PreferenceBackupCreator.kt`). Além disso, as imagens eram apontadas apenas por caminho de arquivo local no armazenamento do app.
+  - `ProfilePreferences.kt` foi reescrito para utilizar diretamente o `PreferenceStore` injetado pelo app (`AndroidPreferenceStore`), com migração automática dos dados de `yomotsu_profile_prefs` no primeiro carregamento.
+  - Para imagens customizadas (avatar e banner), o app compacta e salva uma versão em Base64 no `PreferenceStore`. O arquivo `.tachibk` (compactado em GZip) carrega essas imagens dentro de si e, na restauração ou abertura do app em qualquer aparelho, `ProfilePreferences` recria os arquivos no diretório `profile_images/` automaticamente se o arquivo local estiver ausente.
+- **Seletor de Avatares e Banners estilo Crunchyroll / Netflix (`ProfilePresets.kt`):**
+  - Criada galeria com 16 avatares pré-definidos temáticos (Monarca das Sombras, Caçador Rank S, Ceifador de Almas, Protagonista Shonen, Maratonista Noturno, etc.) e 8 banners gradientes (Abismo, Monarca, Dragão, Cyberpunk, etc.).
+  - Ao clicar no avatar ou banner, abre um diálogo que permite escolher entre os presets prontos com um toque ou selecionar uma imagem da galeria (`[ 📷 Escolher da Galeria ]`).
+  - Presets não consomem espaço no backup, armazenando apenas o identificador do preset.
+- **42 Novas Conquistas de Anime (`YomotsuAchievementManager.kt`):**
+  - Adicionada a categoria `AchievementCategory.ANIME` com ícone `Icons.Outlined.PlayCircleOutline`.
+  - Criado o modelo `AchievementStats` suportando: `episodesWatched`, `animesInLibrary`, `animeDownloads`, `chaptersRead`, `mangasInLibrary`, `downloads`.
+  - 20 conquistas de Maratonista (de 1 a 25.000 episódios assistidos, tiers Bronze a Rubi).
+  - 12 conquistas de Colecionador Otaku (de 1 a 1.500 animes na biblioteca).
+  - 10 conquistas de Fansubber (de 1 a 5.000 episódios baixados via `AnimeDownloadManager`).
+- **Sala de Troféus e Estatísticas Integradas (`UserProfileScreen.kt`):**
+  - Adicionados chips de filtro no topo da Sala de Troféus: `[ Todas ]`, `[ 🍿 Anime ]`, `[ 📖 Mangá ]`, `[ 📚 Coleção ]`, `[ 📥 Downloads ]`.
+  - Grade 2x2 com estatísticas separadas: Capítulos Lidos, Episódios Assistidos, Mangás e Animes na Biblioteca.
+  - XP e Níveis 1 ao 200 agora somam tanto leitura de mangás quanto episódios de anime assistidos (`XP_PER_EPISODE_WATCHED = 90`) e baixados (`XP_PER_EPISODE_DOWNLOAD = 90`).
+- **Disparo de Conquistas em Tempo Real:**
+  - `ProfileChecker.checkAchievements(...)` é acionado pelo `PlayerViewModel.kt` ao assistir episódios e pelo `AnimeDownloader.kt` ao concluir downloads de episódios.
+

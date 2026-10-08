@@ -278,6 +278,25 @@
     <string name="achievement_collector_desc">Have %1$d entries in library.</string>
     <string name="achievement_archivist_name">Archivist Level %1$d</string>
     <string name="achievement_archivist_desc">Download %1$d chapters.</string>
+    <string name="achievement_anime_watcher_name">Binge Watcher Level %1$d</string>
+    <string name="achievement_anime_watcher_desc">Watch %1$d anime episodes.</string>
+    <string name="achievement_anime_collector_name">Otaku Level %1$d</string>
+    <string name="achievement_anime_collector_desc">Have %1$d animes in library.</string>
+    <string name="achievement_anime_archivist_name">Fansubber Level %1$d</string>
+    <string name="achievement_anime_archivist_desc">Download %1$d anime episodes.</string>
+    <string name="profile_stat_episodes_watched">Watched</string>
+    <string name="profile_stat_animes_in_library">Animes</string>
+    <string name="profile_stat_mangas_in_library">Mangas</string>
+    <string name="profile_dialog_choose_avatar">Choose Avatar</string>
+    <string name="profile_dialog_choose_banner">Choose Banner</string>
+    <string name="profile_action_pick_from_gallery">Choose from gallery</string>
+    <string name="profile_preset_avatars">Preset Avatars</string>
+    <string name="profile_preset_banners">Preset Banners</string>
+    <string name="profile_category_all">All</string>
+    <string name="profile_category_anime">Anime</string>
+    <string name="profile_category_manga">Manga</string>
+    <string name="profile_category_collection">Collection</string>
+    <string name="profile_category_downloads">Downloads</string>
 
     <string name="profile_title_1">Common Mortal</string>
     <string name="profile_title_10">Awakened</string>

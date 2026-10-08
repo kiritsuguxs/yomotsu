@@ -3,35 +3,47 @@ package eu.kanade.presentation.more.profile
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -47,27 +59,33 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import coil3.request.crossfade
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import eu.kanade.tachiyomi.data.profile.AchievementCategory
+import eu.kanade.tachiyomi.data.profile.ProfilePresetAvatar
+import eu.kanade.tachiyomi.data.profile.ProfilePresetBanner
+import eu.kanade.tachiyomi.data.profile.ProfilePresets
 import eu.kanade.tachiyomi.data.profile.YomotsuAchievement
 import eu.kanade.tachiyomi.data.profile.YomotsuLevelManager
 import eu.kanade.tachiyomi.data.profile.YomotsuTitle
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,21 +95,32 @@ fun UserProfileScreen(
     totalXp: Long,
     totalChaptersRead: Int,
     totalMangas: Int,
+    totalEpisodesWatched: Int = 0,
+    totalAnimes: Int = 0,
     unlockedAchievements: List<YomotsuAchievement>,
     lockedAchievements: List<YomotsuAchievement>,
     equippedTitle: YomotsuTitle,
     unlockedTitles: List<YomotsuTitle>,
     avatarUri: String?,
+    avatarPreset: String = "preset_yomotsu",
+    avatarType: String = "preset",
     bannerUri: String?,
+    bannerPreset: String = "banner_abyss",
+    bannerType: String = "preset",
     onUsernameChanged: (String) -> Unit,
     onTitleSelected: (YomotsuTitle) -> Unit,
     onAvatarSelected: (String?) -> Unit,
-    onBannerSelected: (String?) -> Unit
+    onAvatarPresetSelected: (String) -> Unit = {},
+    onBannerSelected: (String?) -> Unit,
+    onBannerPresetSelected: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showTitleDialog by remember { mutableStateOf(false) }
     var showNameDialog by remember { mutableStateOf(false) }
+    var showAvatarDialog by remember { mutableStateOf(false) }
+    var showBannerDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf(username) }
+    var selectedCategory by remember { mutableStateOf<AchievementCategory?>(null) }
 
     val currentLevel = YomotsuLevelManager.calculateLevelFromXp(totalXp)
     val currentLevelXp = YomotsuLevelManager.getXpRequiredForLevel(currentLevel)
@@ -124,7 +153,7 @@ fun UserProfileScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    if(newName.isNotBlank()) onUsernameChanged(newName.trim())
+                    if (newName.isNotBlank()) onUsernameChanged(newName.trim())
                     showNameDialog = false
                 }) { Text(stringResource(MR.strings.action_save)) }
             },
@@ -163,6 +192,160 @@ fun UserProfileScreen(
         )
     }
 
+    // DIÁLOGO SELETOR DE AVATAR ESTILO CRUNCHYROLL
+    if (showAvatarDialog) {
+        AlertDialog(
+            onDismissRequest = { showAvatarDialog = false },
+            title = { Text(stringResource(MR.strings.profile_dialog_choose_avatar)) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = {
+                            avatarLauncher.launch("image/*")
+                            showAvatarDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(MR.strings.profile_action_pick_from_gallery))
+                    }
+
+                    Text(
+                        text = stringResource(MR.strings.profile_preset_avatars),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 350.dp),
+                        contentPadding = PaddingValues(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(ProfilePresets.PRESET_AVATARS) { preset ->
+                            val isSelected = avatarType == "preset" && avatarPreset == preset.id
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        onAvatarPresetSelected(preset.id)
+                                        showAvatarDialog = false
+                                    }
+                                    .border(
+                                        width = if (isSelected) 2.dp else 0.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(6.dp)
+                            ) {
+                                PresetAvatarDisplay(preset = preset, modifier = Modifier.size(64.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = preset.name,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAvatarDialog = false }) {
+                    Text(stringResource(MR.strings.action_close))
+                }
+            }
+        )
+    }
+
+    // DIÁLOGO SELETOR DE BANNER
+    if (showBannerDialog) {
+        AlertDialog(
+            onDismissRequest = { showBannerDialog = false },
+            title = { Text(stringResource(MR.strings.profile_dialog_choose_banner)) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = {
+                            bannerLauncher.launch("image/*")
+                            showBannerDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(MR.strings.profile_action_pick_from_gallery))
+                    }
+
+                    Text(
+                        text = stringResource(MR.strings.profile_preset_banners),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 350.dp),
+                        contentPadding = PaddingValues(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(ProfilePresets.PRESET_BANNERS) { preset ->
+                            val isSelected = bannerType == "preset" && bannerPreset == preset.id
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(55.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        onBannerPresetSelected(preset.id)
+                                        showBannerDialog = false
+                                    }
+                                    .border(
+                                        width = if (isSelected) 2.dp else 0.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Brush.horizontalGradient(preset.gradient)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = preset.name,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(horizontal = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showBannerDialog = false }) {
+                    Text(stringResource(MR.strings.action_close))
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -185,19 +368,27 @@ fun UserProfileScreen(
             item {
                 Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
                     // BANNER
-                    Box(modifier = Modifier.fillMaxWidth().height(220.dp).clickable { bannerLauncher.launch("image/*") }) {
-                        if (bannerUri != null) {
+                    Box(modifier = Modifier.fillMaxWidth().height(220.dp).clickable { showBannerDialog = true }) {
+                        if (bannerType == "custom" && bannerUri != null) {
                             AsyncImage(
-                                model = ImageRequest.Builder(context).data(Uri.parse(bannerUri)).crossfade(true).build(),
+                                model = ImageRequest.Builder(context)
+                                    .data(if (bannerUri.startsWith("content://") || bannerUri.startsWith("file://")) Uri.parse(bannerUri) else File(bannerUri))
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Banner",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(Color(0xFF1E1E1E), Color(0xFF000000)))))
+                            val presetBanner = ProfilePresets.getPresetBanner(bannerPreset)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Brush.horizontalGradient(presetBanner.gradient))
+                            )
                         }
                         IconButton(
-                            onClick = { bannerLauncher.launch("image/*") },
+                            onClick = { showBannerDialog = true },
                             modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
                         ) {
                             Icon(Icons.Outlined.Edit, contentDescription = stringResource(MR.strings.profile_edit_banner), tint = Color.White.copy(alpha = 0.7f))
@@ -212,18 +403,22 @@ fun UserProfileScreen(
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .border(4.dp, MaterialTheme.colorScheme.background, CircleShape)
-                            .clickable { avatarLauncher.launch("image/*") },
+                            .clickable { showAvatarDialog = true },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (avatarUri != null) {
+                        if (avatarType == "custom" && avatarUri != null) {
                             AsyncImage(
-                                model = ImageRequest.Builder(context).data(Uri.parse(avatarUri)).crossfade(true).build(),
+                                model = ImageRequest.Builder(context)
+                                    .data(if (avatarUri.startsWith("content://") || avatarUri.startsWith("file://")) Uri.parse(avatarUri) else File(avatarUri))
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Avatar",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Text("V", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            val presetAvatar = ProfilePresets.getPresetAvatar(avatarPreset)
+                            PresetAvatarDisplay(preset = presetAvatar, modifier = Modifier.fillMaxSize())
                         }
                     }
                 }
@@ -265,38 +460,121 @@ fun UserProfileScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("$totalXp / $nextLevelXp XP", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ESTATÍSTICAS
+            // ESTATÍSTICAS (MANGÁ & ANIME)
             item {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    StatBox(Icons.Outlined.MenuBook, totalChaptersRead.toString(), stringResource(MR.strings.profile_stat_read))
-                    StatBox(Icons.Outlined.CollectionsBookmark, totalMangas.toString(), stringResource(MR.strings.profile_stat_in_library))
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        StatBox(
+                            icon = Icons.Outlined.MenuBook,
+                            value = totalChaptersRead.toString(),
+                            label = stringResource(MR.strings.profile_stat_read)
+                        )
+                        StatBox(
+                            icon = Icons.Outlined.PlayCircleOutline,
+                            value = totalEpisodesWatched.toString(),
+                            label = stringResource(MR.strings.profile_stat_episodes_watched)
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        StatBox(
+                            icon = Icons.Outlined.LibraryBooks,
+                            value = totalMangas.toString(),
+                            label = stringResource(MR.strings.profile_stat_mangas_in_library)
+                        )
+                        StatBox(
+                            icon = Icons.Outlined.CollectionsBookmark,
+                            value = totalAnimes.toString(),
+                            label = stringResource(MR.strings.profile_stat_animes_in_library)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(28.dp))
             }
 
-            // TÍTULO CONQUISTAS
+            // TÍTULO CONQUISTAS E FILTROS DE CATEGORIA
             item {
+                val totalAchievements = unlockedAchievements.size + lockedAchievements.size
                 Text(
-                    text = stringResource(MR.strings.profile_trophy_room, unlockedAchievements.size, unlockedAchievements.size + lockedAchievements.size),
+                    text = stringResource(MR.strings.profile_trophy_room, unlockedAchievements.size, totalAchievements),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedCategory == null,
+                            onClick = { selectedCategory = null },
+                            label = { Text(stringResource(MR.strings.profile_category_all)) },
+                            colors = FilterChipDefaults.filterChipColors()
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedCategory == AchievementCategory.ANIME,
+                            onClick = { selectedCategory = AchievementCategory.ANIME },
+                            label = { Text("🍿 " + stringResource(MR.strings.profile_category_anime)) },
+                            colors = FilterChipDefaults.filterChipColors()
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedCategory == AchievementCategory.READING,
+                            onClick = { selectedCategory = AchievementCategory.READING },
+                            label = { Text("📖 " + stringResource(MR.strings.profile_category_manga)) },
+                            colors = FilterChipDefaults.filterChipColors()
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedCategory == AchievementCategory.COLLECTION,
+                            onClick = { selectedCategory = AchievementCategory.COLLECTION },
+                            label = { Text("📚 " + stringResource(MR.strings.profile_category_collection)) },
+                            colors = FilterChipDefaults.filterChipColors()
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedCategory == AchievementCategory.DOWNLOADS,
+                            onClick = { selectedCategory = AchievementCategory.DOWNLOADS },
+                            label = { Text("📥 " + stringResource(MR.strings.profile_category_downloads)) },
+                            colors = FilterChipDefaults.filterChipColors()
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // LISTA FILTRADA DE CONQUISTAS
+            val displayUnlocked = if (selectedCategory == null) {
+                unlockedAchievements
+            } else {
+                unlockedAchievements.filter { it.category == selectedCategory }
+            }
+            val displayLocked = if (selectedCategory == null) {
+                lockedAchievements
+            } else {
+                lockedAchievements.filter { it.category == selectedCategory }
+            }
+
             // CONQUISTAS DESBLOQUEADAS
-            items(unlockedAchievements) { achievement ->
+            items(displayUnlocked) { achievement ->
                 Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
                     AchievementItem(achievement, isUnlocked = true)
                 }
             }
 
             // CONQUISTAS BLOQUEADAS
-            items(lockedAchievements) { achievement ->
+            items(displayLocked) { achievement ->
                 Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
                     AchievementItem(achievement, isUnlocked = false)
                 }
@@ -306,16 +584,45 @@ fun UserProfileScreen(
 }
 
 @Composable
+fun PresetAvatarDisplay(
+    preset: ProfilePresetAvatar,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(Brush.linearGradient(preset.backgroundGradient)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (preset.drawableRes != null) {
+            Image(
+                painter = painterResource(preset.drawableRes),
+                contentDescription = preset.name,
+                modifier = Modifier.fillMaxSize().padding(14.dp),
+                contentScale = ContentScale.Fit
+            )
+        } else if (preset.icon != null) {
+            Icon(
+                imageVector = preset.icon,
+                contentDescription = preset.name,
+                tint = preset.iconTint,
+                modifier = Modifier.fillMaxSize().padding(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
 fun StatBox(icon: ImageVector, value: String, label: String) {
     Card(
-        modifier = Modifier.width(140.dp).height(100.dp),
+        modifier = Modifier.width(156.dp).height(92.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(value, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(value, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -340,7 +647,6 @@ fun AchievementItem(achievement: YomotsuAchievement, isUnlocked: Boolean) {
             border = androidx.compose.foundation.BorderStroke(2.dp, gradient)
         ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Truque para pintar o ícone com gradiente
                 Icon(icon, contentDescription = null, tint = achievement.tier.color, modifier = Modifier.size(32.dp))
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
@@ -405,6 +711,14 @@ private fun getLocalizedAchievementName(achievement: YomotsuAchievement): String
             AchievementCategory.READING -> stringResource(MR.strings.achievement_reader_name, level)
             AchievementCategory.COLLECTION -> stringResource(MR.strings.achievement_collector_name, level)
             AchievementCategory.DOWNLOADS -> stringResource(MR.strings.achievement_archivist_name, level)
+            AchievementCategory.ANIME -> {
+                when {
+                    achievement.id.startsWith("anime_watch") -> stringResource(MR.strings.achievement_anime_watcher_name, level)
+                    achievement.id.startsWith("anime_lib") -> stringResource(MR.strings.achievement_anime_collector_name, level)
+                    achievement.id.startsWith("anime_dl") -> stringResource(MR.strings.achievement_anime_archivist_name, level)
+                    else -> achievement.name
+                }
+            }
             else -> achievement.name
         }
     } else {
@@ -420,6 +734,14 @@ private fun getLocalizedAchievementDesc(achievement: YomotsuAchievement): String
             AchievementCategory.READING -> stringResource(MR.strings.achievement_reader_desc, target)
             AchievementCategory.COLLECTION -> stringResource(MR.strings.achievement_collector_desc, target)
             AchievementCategory.DOWNLOADS -> stringResource(MR.strings.achievement_archivist_desc, target)
+            AchievementCategory.ANIME -> {
+                when {
+                    achievement.id.startsWith("anime_watch") -> stringResource(MR.strings.achievement_anime_watcher_desc, target)
+                    achievement.id.startsWith("anime_lib") -> stringResource(MR.strings.achievement_anime_collector_desc, target)
+                    achievement.id.startsWith("anime_dl") -> stringResource(MR.strings.achievement_anime_archivist_desc, target)
+                    else -> achievement.description
+                }
+            }
             else -> achievement.description
         }
     } else {

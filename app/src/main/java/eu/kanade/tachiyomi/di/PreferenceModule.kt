@@ -110,5 +110,8 @@ class PreferenceModule(val app: Application) : InjektModule {
         addSingletonFactory {
             AdvancedPlayerPreferences(get())
         }
+        addSingletonFactory {
+            eu.kanade.tachiyomi.data.profile.ProfilePreferences(get(), app)
+        }
     }
 }

@@ -2158,6 +2158,11 @@ class PlayerViewModel @JvmOverloads constructor(
             upsertHistory.await(
                 HistoryUpdate(episodeId, seenAt, 0),
             )
+            runCatching {
+                eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(
+                    uy.kohesive.injekt.Injekt.get<android.app.Application>()
+                )
+            }
         }
     }
 

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -13,6 +14,7 @@ enum class AchievementCategory(val icon: ImageVector) {
     READING(Icons.Outlined.MenuBook),
     COLLECTION(Icons.Outlined.LibraryBooks),
     DOWNLOADS(Icons.Outlined.CloudDownload),
+    ANIME(Icons.Outlined.PlayCircleOutline),
     HARDCORE(Icons.Outlined.LocalFireDepartment),
     SPECIAL(Icons.Outlined.EmojiEvents)
 }
@@ -24,14 +26,43 @@ enum class Tier(val color: Color, val isGradient: Boolean = false, val colorEnd:
     RUBI(Color(0xFFD50000), true, Color(0xFFFF1744)) // Vermelho Sangue para Fúcsia Neón
 }
 
+data class AchievementStats(
+    val chaptersRead: Int = 0,
+    val mangasInLibrary: Int = 0,
+    val downloads: Int = 0,
+    val episodesWatched: Int = 0,
+    val animesInLibrary: Int = 0,
+    val animeDownloads: Int = 0,
+)
+
 data class YomotsuAchievement(
     val id: String,
     val name: String,
     val description: String,
     val category: AchievementCategory,
     val tier: Tier,
-    val isUnlocked: (chaptersRead: Int, mangasInLibrary: Int, downloads: Int) -> Boolean
-)
+    val isUnlocked: (stats: AchievementStats) -> Boolean
+) {
+    constructor(
+        id: String,
+        name: String,
+        description: String,
+        category: AchievementCategory,
+        tier: Tier,
+        legacyCheck: (chaptersRead: Int, mangasInLibrary: Int, downloads: Int) -> Boolean
+    ) : this(
+        id,
+        name,
+        description,
+        category,
+        tier,
+        { stats -> legacyCheck(stats.chaptersRead, stats.mangasInLibrary, stats.downloads) }
+    )
+
+    fun isUnlocked(chaptersRead: Int, mangasInLibrary: Int, downloads: Int): Boolean {
+        return isUnlocked(AchievementStats(chaptersRead = chaptersRead, mangasInLibrary = mangasInLibrary, downloads = downloads))
+    }
+}
 
 object YomotsuAchievementManager {
 
@@ -136,5 +167,53 @@ object YomotsuAchievementManager {
         YomotsuAchievement("dl_22200", "Arquivista Nível 31", "Baixe 22200 capítulos.", AchievementCategory.DOWNLOADS, Tier.RUBI) { _, _, d -> d >= 22200 },
         YomotsuAchievement("dl_23100", "Arquivista Nível 32", "Baixe 23100 capítulos.", AchievementCategory.DOWNLOADS, Tier.RUBI) { _, _, d -> d >= 23100 },
         YomotsuAchievement("dl_24000", "Arquivista Nível 33", "Baixe 24000 capítulos.", AchievementCategory.DOWNLOADS, Tier.RUBI) { _, _, d -> d >= 24000 },
+
+        // ANIME - MARATONISTA (EPISÓDIOS ASSISTIDOS)
+        YomotsuAchievement("anime_watch_1", "Maratonista Nível 1", "Assista 1 episódios de anime.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 1 },
+        YomotsuAchievement("anime_watch_12", "Maratonista Nível 2", "Assista 12 episódios (1 Temporada).", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 12 },
+        YomotsuAchievement("anime_watch_24", "Maratonista Nível 3", "Assista 24 episódios.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 24 },
+        YomotsuAchievement("anime_watch_50", "Maratonista Nível 4", "Assista 50 episódios.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 50 },
+        YomotsuAchievement("anime_watch_100", "Maratonista Nível 5", "Assista 100 episódios.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 100 },
+        YomotsuAchievement("anime_watch_250", "Maratonista Nível 6", "Assista 250 episódios.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 250 },
+        YomotsuAchievement("anime_watch_500", "Maratonista Nível 7", "Assista 500 episódios.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 500 },
+        YomotsuAchievement("anime_watch_1000", "Maratonista Nível 8", "Assista 1000 episódios.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 1000 },
+        YomotsuAchievement("anime_watch_1500", "Maratonista Nível 9", "Assista 1500 episódios.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 1500 },
+        YomotsuAchievement("anime_watch_2400", "Maratonista Nível 10", "Assista 2400 episódios.", AchievementCategory.ANIME, Tier.PRATA) { it.episodesWatched >= 2400 },
+        YomotsuAchievement("anime_watch_3500", "Maratonista Nível 11", "Assista 3500 episódios.", AchievementCategory.ANIME, Tier.PRATA) { it.episodesWatched >= 3500 },
+        YomotsuAchievement("anime_watch_5000", "Maratonista Nível 12", "Assista 5000 episódios.", AchievementCategory.ANIME, Tier.PRATA) { it.episodesWatched >= 5000 },
+        YomotsuAchievement("anime_watch_6500", "Maratonista Nível 13", "Assista 6500 episódios.", AchievementCategory.ANIME, Tier.PRATA) { it.episodesWatched >= 6500 },
+        YomotsuAchievement("anime_watch_8000", "Maratonista Nível 14", "Assista 8000 episódios.", AchievementCategory.ANIME, Tier.PRATA) { it.episodesWatched >= 8000 },
+        YomotsuAchievement("anime_watch_10000", "Maratonista Nível 15", "Assista 10000 episódios.", AchievementCategory.ANIME, Tier.OURO) { it.episodesWatched >= 10000 },
+        YomotsuAchievement("anime_watch_12500", "Maratonista Nível 16", "Assista 12500 episódios.", AchievementCategory.ANIME, Tier.OURO) { it.episodesWatched >= 12500 },
+        YomotsuAchievement("anime_watch_15000", "Maratonista Nível 17", "Assista 15000 episódios.", AchievementCategory.ANIME, Tier.OURO) { it.episodesWatched >= 15000 },
+        YomotsuAchievement("anime_watch_18000", "Maratonista Nível 18", "Assista 18000 episódios.", AchievementCategory.ANIME, Tier.OURO) { it.episodesWatched >= 18000 },
+        YomotsuAchievement("anime_watch_21000", "Maratonista Nível 19", "Assista 21000 episódios.", AchievementCategory.ANIME, Tier.RUBI) { it.episodesWatched >= 21000 },
+        YomotsuAchievement("anime_watch_25000", "Maratonista Nível 20", "Assista 25000 episódios.", AchievementCategory.ANIME, Tier.RUBI) { it.episodesWatched >= 25000 },
+
+        // ANIME - OTAKU (ANIMES NA BIBLIOTECA)
+        YomotsuAchievement("anime_lib_1", "Otaku Nível 1", "Tenha 1 animes na biblioteca.", AchievementCategory.ANIME, Tier.BRONZE) { it.animesInLibrary >= 1 },
+        YomotsuAchievement("anime_lib_5", "Otaku Nível 2", "Tenha 5 animes na biblioteca.", AchievementCategory.ANIME, Tier.BRONZE) { it.animesInLibrary >= 5 },
+        YomotsuAchievement("anime_lib_10", "Otaku Nível 3", "Tenha 10 animes na biblioteca.", AchievementCategory.ANIME, Tier.BRONZE) { it.animesInLibrary >= 10 },
+        YomotsuAchievement("anime_lib_25", "Otaku Nível 4", "Tenha 25 animes na biblioteca.", AchievementCategory.ANIME, Tier.BRONZE) { it.animesInLibrary >= 25 },
+        YomotsuAchievement("anime_lib_50", "Otaku Nível 5", "Tenha 50 animes na biblioteca.", AchievementCategory.ANIME, Tier.BRONZE) { it.animesInLibrary >= 50 },
+        YomotsuAchievement("anime_lib_100", "Otaku Nível 6", "Tenha 100 animes na biblioteca.", AchievementCategory.ANIME, Tier.BRONZE) { it.animesInLibrary >= 100 },
+        YomotsuAchievement("anime_lib_200", "Otaku Nível 7", "Tenha 200 animes na biblioteca.", AchievementCategory.ANIME, Tier.PRATA) { it.animesInLibrary >= 200 },
+        YomotsuAchievement("anime_lib_350", "Otaku Nível 8", "Tenha 350 animes na biblioteca.", AchievementCategory.ANIME, Tier.PRATA) { it.animesInLibrary >= 350 },
+        YomotsuAchievement("anime_lib_500", "Otaku Nível 9", "Tenha 500 animes na biblioteca.", AchievementCategory.ANIME, Tier.PRATA) { it.animesInLibrary >= 500 },
+        YomotsuAchievement("anime_lib_750", "Otaku Nível 10", "Tenha 750 animes na biblioteca.", AchievementCategory.ANIME, Tier.OURO) { it.animesInLibrary >= 750 },
+        YomotsuAchievement("anime_lib_1000", "Otaku Nível 11", "Tenha 1000 animes na biblioteca.", AchievementCategory.ANIME, Tier.OURO) { it.animesInLibrary >= 1000 },
+        YomotsuAchievement("anime_lib_1500", "Otaku Nível 12", "Tenha 1500 animes na biblioteca.", AchievementCategory.ANIME, Tier.RUBI) { it.animesInLibrary >= 1500 },
+
+        // ANIME - FANSUBBER (DOWNLOADS DE ANIME)
+        YomotsuAchievement("anime_dl_1", "Fansubber Nível 1", "Baixe 1 episódios de anime.", AchievementCategory.ANIME, Tier.BRONZE) { it.animeDownloads >= 1 },
+        YomotsuAchievement("anime_dl_10", "Fansubber Nível 2", "Baixe 10 episódios de anime.", AchievementCategory.ANIME, Tier.BRONZE) { it.animeDownloads >= 10 },
+        YomotsuAchievement("anime_dl_25", "Fansubber Nível 3", "Baixe 25 episódios de anime.", AchievementCategory.ANIME, Tier.BRONZE) { it.animeDownloads >= 25 },
+        YomotsuAchievement("anime_dl_50", "Fansubber Nível 4", "Baixe 50 episódios de anime.", AchievementCategory.ANIME, Tier.BRONZE) { it.animeDownloads >= 50 },
+        YomotsuAchievement("anime_dl_100", "Fansubber Nível 5", "Baixe 100 episódios de anime.", AchievementCategory.ANIME, Tier.BRONZE) { it.animeDownloads >= 100 },
+        YomotsuAchievement("anime_dl_250", "Fansubber Nível 6", "Baixe 250 episódios de anime.", AchievementCategory.ANIME, Tier.PRATA) { it.animeDownloads >= 250 },
+        YomotsuAchievement("anime_dl_500", "Fansubber Nível 7", "Baixe 500 episódios de anime.", AchievementCategory.ANIME, Tier.PRATA) { it.animeDownloads >= 500 },
+        YomotsuAchievement("anime_dl_1000", "Fansubber Nível 8", "Baixe 1000 episódios de anime.", AchievementCategory.ANIME, Tier.OURO) { it.animeDownloads >= 1000 },
+        YomotsuAchievement("anime_dl_2000", "Fansubber Nível 9", "Baixe 2000 episódios de anime.", AchievementCategory.ANIME, Tier.OURO) { it.animeDownloads >= 2000 },
+        YomotsuAchievement("anime_dl_5000", "Fansubber Nível 10", "Baixe 5000 episódios de anime.", AchievementCategory.ANIME, Tier.RUBI) { it.animeDownloads >= 5000 },
     )
 }

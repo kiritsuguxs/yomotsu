@@ -969,6 +969,25 @@
     <string name="achievement_collector_desc">Tenha %1$d obras na biblioteca.</string>
     <string name="achievement_archivist_name">Arquivista Nível %1$d</string>
     <string name="achievement_archivist_desc">Baixe %1$d capítulos.</string>
+    <string name="achievement_anime_watcher_name">Maratonista Nível %1$d</string>
+    <string name="achievement_anime_watcher_desc">Assista %1$d episódios de anime.</string>
+    <string name="achievement_anime_collector_name">Otaku Nível %1$d</string>
+    <string name="achievement_anime_collector_desc">Tenha %1$d animes na biblioteca.</string>
+    <string name="achievement_anime_archivist_name">Fansubber Nível %1$d</string>
+    <string name="achievement_anime_archivist_desc">Baixe %1$d episódios de anime.</string>
+    <string name="profile_stat_episodes_watched">Assistidos</string>
+    <string name="profile_stat_animes_in_library">Animes</string>
+    <string name="profile_stat_mangas_in_library">Mangás</string>
+    <string name="profile_dialog_choose_avatar">Escolher Avatar</string>
+    <string name="profile_dialog_choose_banner">Escolher Banner</string>
+    <string name="profile_action_pick_from_gallery">Escolher da galeria</string>
+    <string name="profile_preset_avatars">Avatares Predefinidos</string>
+    <string name="profile_preset_banners">Banners Predefinidos</string>
+    <string name="profile_category_all">Todas</string>
+    <string name="profile_category_anime">Anime</string>
+    <string name="profile_category_manga">Mangá</string>
+    <string name="profile_category_collection">Coleção</string>
+    <string name="profile_category_downloads">Downloads</string>
 
     <string name="profile_title_1">Mortal Comum</string>
     <string name="profile_title_10">Desperto</string>

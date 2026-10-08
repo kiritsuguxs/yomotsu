@@ -442,6 +442,7 @@ class AnimeDownloader(
             DiskUtil.createNoMediaFile(tmpDir, context)
 
             download.status = AnimeDownload.State.DOWNLOADED
+            scope.launch { eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(context) }
         } catch (error: Throwable) {
             if (error is CancellationException) throw error
             // If the video threw, it will resume here
@@ -869,6 +870,7 @@ class AnimeDownloader(
                         tmpDir.delete()
                         queueState.value.find { anime -> anime.video == video }?.let { download ->
                             download.status = AnimeDownload.State.DOWNLOADED
+                            scope.launch { eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(context) }
                             // Delete successful downloads from queue
                             if (download.status == AnimeDownload.State.DOWNLOADED) {
                                 // Remove downloaded episode from queue
