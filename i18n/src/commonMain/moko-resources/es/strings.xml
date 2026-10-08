@@ -951,7 +951,7 @@
     <string name="telegram_cloud_deleting_manga">Eliminando %1$s de la Nube…</string>
     <string name="telegram_cloud_manga_deleted">¡%1$s eliminado de la Nube!</string>
 
-    <string name="profile_change_hunter_name">Cambiar Nombre de Cazador</string>
+    <string name="profile_change_hunter_name">Cambiar Nombre de Usuario</string>
     <string name="profile_name_label">Nombre</string>
     <string name="profile_choose_title">Elige tu Título</string>
     <string name="profile_edit_banner">Editar Portada</string>

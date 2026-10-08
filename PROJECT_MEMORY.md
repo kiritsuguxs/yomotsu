@@ -452,24 +452,24 @@
     - Compatibilidade retroativa garantida em `getPresetAvatar` mapeando IDs legados para os novos personagens sem quebrar preferências salvas.
 
 ### AF. Banners Temáticos com Paisagens e Cenários Autênticos de Anime (`ProfilePresets.kt`, `UserProfileScreen.kt`) (Outubro 2026)
-- **12 Banners de Cenários Reais e Icônicos de Franquias de Anime:**
-  - Substituídos os cenários genéricos por ilustrações panorâmicas oficiais e consagradas da animação japonesa, otimizadas em WebP widescreen 2:1 (~20-70KB cada) em `res/drawable-nodpi/`:
-    1. **Lago Itomori** (`banner_your_name` - *Your Name / Kimi no Na wa*: Cometa Tiamat cruzando o céu crepuscular sobre a cratera do Lago Itomori)
-    2. **Céu de Tóquio** (`banner_weathering` - *Weathering With You / Tenki no Ko*: Feixes de luz solar dourada rompendo as nuvens sobre o horizonte de Tóquio)
-    3. **Portão das Sombras** (`banner_solo_leveling` - *Solo Leveling*: Portal azul brilhante da Dungeon e o Exército das Sombras de Sung Jinwoo)
-    4. **Santuário Malevolente** (`banner_jujutsu_kaisen` - *Jujutsu Kaisen*: Expansão de Domínio de Ryomen Sukuna durante o clímax de Shibuya)
-    5. **Monte das Glicínias** (`banner_demon_slayer_wisteria` - *Demon Slayer*: Monte Fujikasane florido com glicínias roxas iluminadas à noite)
-    6. **Vila dos Ferreiros** (`banner_demon_slayer_village` - *Demon Slayer*: O vilarejo secreto dos ferreiros envolto pelas montanhas ao entardecer)
-    7. **Vila da Folha** (`banner_naruto_konoha` - *Naruto*: Panorama de Konohagakure vista do topo do Monumento dos Hokages)
-    8. **Vale do Fim** (`banner_naruto_valley` - *Naruto*: A lendária cachoeira e as estátuas colossais de Madara Uchiha e Hashirama Senju)
-    9. **País de Wano** (`banner_one_piece_wano` - *One Piece*: A florada de cerejeiras em frente à capital das flores e o Monte Fuji de Wano)
-    10. **Muralha de Shinganshina** (`banner_aot_shinganshina` - *Attack on Titan*: O Distrito de Shinganshina sob a imponência da Muralha Maria)
-    11. **Colina das Flores** (`banner_frieren_meadow` - *Sousou no Frieren*: A colina florida mágica de Frieren e Himmel com o vilarejo crepuscular ao fundo)
-    12. **Trilhos no Mar** (`banner_ghibli_spirited` - *Studio Ghibli / A Viagem de Chihiro*: Os trilhos aquáticos do trem misterioso sobre o oceano infinito)
+- **12 Banners de Cenários Reais, Oficiais e Icônicos de Franquias de Anime:**
+  - Removidas artes de fãs de baixa qualidade e posters poluídos com logos, substituindo por ilustrações panorâmicas cinematográficas fiéis aos títulos, otimizadas em WebP widescreen 2:1 (~25-100KB cada) em `res/drawable-nodpi/`:
+    1. **Cometa Tiamat** (`banner_your_name` - *Your Name / Kimi no Na wa*: Mitsuha e Taki sob o céu noturno e o cometa sobre o Lago Itomori)
+    2. **Céu de Tóquio** (`banner_weathering` - *Weathering With You / Tenki no Ko*: Hodaka e Hina no terraço sob os raios dourados atravessando as nuvens de chuva de Tóquio)
+    3. **Portão das Sombras** (`banner_solo_leveling` - *Solo Leveling*: Portal azul místico da dungeon e a armada das sombras de Sung Jin-woo)
+    4. **Santuário Malevolente** (`banner_jujutsu_kaisen` - *Jujutsu Kaisen*: A autêntica Expansão de Domínio Fukuma Mizushi de Ryomen Sukuna com chifres de boi, caveiras e aura carmesim)
+    5. **Castelo Infinito** (`banner_demon_slayer_infinity` - *Demon Slayer*: A deslumbrante fortaleza multidimensional de Muzan com salas de tatami, portas shoji e pontes de madeira)
+    6. **Thousand Sunny** (`banner_one_piece_sunny` - *One Piece*: O lendário navio dos Chapéus de Palha navegando em mar aberto sob raios de sol dourados)
+    7. **Vila da Folha** (`banner_naruto_konoha` - *Naruto*: Panorama espetacular de Konohagakure com o Monumento das Faces dos Hokages no paredão de pedra)
+    8. **Vale do Fim** (`banner_naruto_valley` - *Naruto*: As estátuas colossais de Hashirama Senju e Madara Uchiha frente a frente sobre a cachoeira ao pôr do sol)
+    9. **Muralha de Shinganshina** (`banner_aot_shinganshina` - *Attack on Titan*: O Distrito de Shinganshina sob a imponência da Muralha Maria)
+    10. **Colina das Flores** (`banner_frieren_meadow` - *Sousou no Frieren*: Frieren contemplando a colina florida mágica ao amanhecer)
+    11. **Trilhos no Mar** (`banner_ghibli_spirited` - *A Viagem de Chihiro*: O trem litorâneo deslizando calmamente sobre as águas marinhas douradas do entardecer)
+    12. **Jardim Secreto** (`banner_ghibli_howl` - *O Castelo Animado*: O chalé florido no campo de flores alpinas do Castelo de Howl)
   - Mantidos também os 8 banners gradientes abstratos minimalistas para personalização limpa.
 - **Seletor de Banners Estilizado:**
   - Grade 2 colunas com cartões com altura aprimorada (`74.dp`) e cantos arredondados (`10.dp`) exibindo a imagem do banner em `ContentScale.Crop`, gradiente escuro de alto contraste para leitura e identificação legível com nome do cenário e franquia de anime.
-  - Compatibilidade garantida em `getPresetBanner` com mapeamento suave de qualquer preferência antiga salva pelo usuário para os novos banners temáticos.
+  - Compatibilidade retroativa garantida em `getPresetBanner` com mapeamento suave de qualquer preferência antiga salva pelo usuário (`banner_demon_slayer_wisteria`, `banner_demon_slayer_village`, `banner_one_piece_wano`, etc.) para os novos banners temáticos.
 
 ### AG. Integração de Métricas de Rastreamento e Nota Média (AniList / Trackers) no Perfil Yomotsu (Outubro 2026)
 - **Estatísticas de Monitoramento Clássicas do Mihon no Perfil do Caçador (`UserProfileViewModel.kt`, `UserProfileScreen.kt`, `YomotsuProfileScreen.kt`):**

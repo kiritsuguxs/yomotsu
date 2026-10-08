@@ -262,7 +262,7 @@
     <string name="telegram_cloud_deleting_manga">Deleting %1$s from Cloud…</string>
     <string name="telegram_cloud_manga_deleted">%1$s deleted from Cloud!</string>
 
-    <string name="profile_change_hunter_name">Change Hunter Name</string>
+    <string name="profile_change_hunter_name">Change Profile Name</string>
     <string name="profile_name_label">Name</string>
     <string name="profile_choose_title">Choose your Title</string>
     <string name="profile_edit_banner">Edit Banner</string>

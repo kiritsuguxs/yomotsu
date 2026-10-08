@@ -209,7 +209,7 @@ object ProfilePresets {
     val PRESET_BANNERS: List<ProfilePresetBanner> = listOf(
         ProfilePresetBanner(
             id = "banner_your_name",
-            name = "Lago Itomori",
+            name = "Cometa Tiamat",
             group = "Your Name",
             drawableRes = R.drawable.banner_your_name
         ),
@@ -232,16 +232,16 @@ object ProfilePresets {
             drawableRes = R.drawable.banner_jujutsu_kaisen
         ),
         ProfilePresetBanner(
-            id = "banner_demon_slayer_wisteria",
-            name = "Monte das Glicínias",
+            id = "banner_demon_slayer_infinity",
+            name = "Castelo Infinito",
             group = "Demon Slayer",
-            drawableRes = R.drawable.banner_demon_slayer_wisteria
+            drawableRes = R.drawable.banner_demon_slayer_infinity
         ),
         ProfilePresetBanner(
-            id = "banner_demon_slayer_village",
-            name = "Vila dos Ferreiros",
-            group = "Demon Slayer",
-            drawableRes = R.drawable.banner_demon_slayer_village
+            id = "banner_one_piece_sunny",
+            name = "Thousand Sunny",
+            group = "One Piece",
+            drawableRes = R.drawable.banner_one_piece_sunny
         ),
         ProfilePresetBanner(
             id = "banner_naruto_konoha",
@@ -254,12 +254,6 @@ object ProfilePresets {
             name = "Vale do Fim",
             group = "Naruto",
             drawableRes = R.drawable.banner_naruto_valley
-        ),
-        ProfilePresetBanner(
-            id = "banner_one_piece_wano",
-            name = "País de Wano",
-            group = "One Piece",
-            drawableRes = R.drawable.banner_one_piece_wano
         ),
         ProfilePresetBanner(
             id = "banner_aot_shinganshina",
@@ -276,8 +270,14 @@ object ProfilePresets {
         ProfilePresetBanner(
             id = "banner_ghibli_spirited",
             name = "Trilhos no Mar",
-            group = "Studio Ghibli",
+            group = "A Viagem de Chihiro",
             drawableRes = R.drawable.banner_ghibli_spirited
+        ),
+        ProfilePresetBanner(
+            id = "banner_ghibli_howl",
+            name = "Jardim Secreto",
+            group = "O Castelo Animado",
+            drawableRes = R.drawable.banner_ghibli_howl
         ),
         ProfilePresetBanner(
             id = "banner_monarch",
@@ -345,7 +345,7 @@ object ProfilePresets {
         ProfileAvatarBorder(
             id = "border_auto",
             name = "Rank Dinâmico (Automático)",
-            description = "Evolui e reflete a cor da sua patente atual de caçador",
+            description = "Evolui e reflete a cor do seu nível atual no Yomotsu",
             colors = emptyList(),
             isDynamicRank = true
         ),
@@ -358,7 +358,7 @@ object ProfilePresets {
         ProfileAvatarBorder(
             id = "border_gold",
             name = "Aura Dourada",
-            description = "Resplendor dourado celestial dos caçadores lendários",
+            description = "Resplendor dourado celestial lendário e supremo",
             colors = listOf(Color(0xFFFFE082), Color(0xFFFFD700), Color(0xFFFF8F00), Color(0xFFFFE082))
         ),
         ProfileAvatarBorder(
@@ -419,9 +419,9 @@ object ProfilePresets {
         val mappedId = when (id) {
             "banner_starry_sky" -> "banner_your_name"
             "banner_shadow_castle" -> "banner_solo_leveling"
-            "banner_fuji_sunset" -> "banner_one_piece_wano"
-            "banner_sakura_village" -> "banner_demon_slayer_village"
-            "banner_sakura_night" -> "banner_demon_slayer_wisteria"
+            "banner_fuji_sunset", "banner_one_piece_wano" -> "banner_one_piece_sunny"
+            "banner_sakura_village", "banner_demon_slayer_village" -> "banner_ghibli_howl"
+            "banner_sakura_night", "banner_demon_slayer_wisteria" -> "banner_demon_slayer_infinity"
             "banner_tokyo_night" -> "banner_jujutsu_kaisen"
             "banner_torii_sea" -> "banner_ghibli_spirited"
             "banner_bamboo_zen" -> "banner_naruto_valley"
