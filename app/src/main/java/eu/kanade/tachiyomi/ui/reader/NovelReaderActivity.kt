@@ -91,7 +91,7 @@ import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.at.AYMR
+import tachiyomi.i18n.at.ATMR
 import tachiyomi.presentation.core.i18n.stringResource
 import androidx.core.view.WindowInsetsControllerCompat
 import eu.kanade.tachiyomi.extension.novel.NovelSourceWrapper
@@ -337,7 +337,7 @@ class NovelReaderActivity : ComponentActivity() {
                             isPortuguese = isTranslated,
                         )
                     } else {
-                        toast(AYMR.strings.novel_tts_wait_chapter)
+                        toast(ATMR.strings.novel_tts_wait_chapter)
                     }
                 }
             }
@@ -551,7 +551,7 @@ class NovelReaderActivity : ComponentActivity() {
                                             CircularProgressIndicator()
                                             Spacer(modifier = Modifier.height(12.dp))
                                             Text(
-                                                text = if (item.isTranslating) stringResource(AYMR.strings.novel_translating_chapter) else stringResource(AYMR.strings.novel_loading_chapter),
+                                                text = if (item.isTranslating) stringResource(ATMR.strings.novel_translating_chapter) else stringResource(ATMR.strings.novel_loading_chapter),
                                                 color = resolvedTextColor,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
@@ -645,7 +645,7 @@ class NovelReaderActivity : ComponentActivity() {
                             IconButton(onClick = { showSettingsDialog = true }) {
                                 Icon(
                                     imageVector = Icons.Outlined.FormatSize,
-                                    contentDescription = stringResource(AYMR.strings.novel_customize_reading),
+                                    contentDescription = stringResource(ATMR.strings.novel_customize_reading),
                                     tint = uiIconTint,
                                 )
                             }
@@ -654,7 +654,7 @@ class NovelReaderActivity : ComponentActivity() {
                             IconButton(onClick = { toggleTtsPlayback() }) {
                                 Icon(
                                     imageVector = if (isTtsPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                    contentDescription = if (isTtsPlaying) stringResource(AYMR.strings.novel_tts_pause) else stringResource(AYMR.strings.novel_tts_listen),
+                                    contentDescription = if (isTtsPlaying) stringResource(ATMR.strings.novel_tts_pause) else stringResource(ATMR.strings.novel_tts_listen),
                                     tint = if (isTtsPlaying) MaterialTheme.colorScheme.primary else uiIconTint,
                                 )
                             }
@@ -680,7 +680,7 @@ class NovelReaderActivity : ComponentActivity() {
                                 }) {
                                     Icon(
                                         imageVector = Icons.Outlined.Translate,
-                                        contentDescription = stringResource(AYMR.strings.manga_translate),
+                                        contentDescription = stringResource(ATMR.strings.manga_translate),
                                         tint = if (isTranslated) MaterialTheme.colorScheme.primary else uiSubtextColor,
                                     )
                                 }
@@ -817,7 +817,7 @@ class NovelReaderActivity : ComponentActivity() {
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Settings,
-                                        contentDescription = stringResource(AYMR.strings.novel_tts_title),
+                                        contentDescription = stringResource(ATMR.strings.novel_tts_title),
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(16.dp),
                                     )
@@ -836,12 +836,12 @@ class NovelReaderActivity : ComponentActivity() {
                                 ) {
                                     Icon(
                                         imageVector = if (isTtsPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                        contentDescription = if (isTtsPlaying) stringResource(AYMR.strings.novel_tts_pause) else stringResource(AYMR.strings.novel_tts_listen),
+                                        contentDescription = if (isTtsPlaying) stringResource(ATMR.strings.novel_tts_pause) else stringResource(ATMR.strings.novel_tts_listen),
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (isTtsPlaying) stringResource(AYMR.strings.novel_tts_pause_short) else stringResource(AYMR.strings.novel_tts_listen_short),
+                                        text = if (isTtsPlaying) stringResource(ATMR.strings.novel_tts_pause_short) else stringResource(ATMR.strings.novel_tts_listen_short),
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                     )
@@ -861,7 +861,7 @@ class NovelReaderActivity : ComponentActivity() {
                     textContentColor = uiTextColor,
                     title = {
                         Text(
-                            text = stringResource(AYMR.strings.novel_reader_settings),
+                            text = stringResource(ATMR.strings.novel_reader_settings),
                             color = uiTextColor,
                         )
                     },
@@ -869,7 +869,7 @@ class NovelReaderActivity : ComponentActivity() {
                         Column {
                             // Font Size Adjustment
                             Text(
-                                text = stringResource(AYMR.strings.novel_font_size, fontSize.toInt()),
+                                text = stringResource(ATMR.strings.novel_font_size, fontSize.toInt()),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = uiTextColor,
@@ -893,7 +893,7 @@ class NovelReaderActivity : ComponentActivity() {
 
                             // Theme Selection
                             Text(
-                                text = stringResource(AYMR.strings.novel_background_color),
+                                text = stringResource(ATMR.strings.novel_background_color),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = uiTextColor,
@@ -950,7 +950,7 @@ class NovelReaderActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.height(12.dp))
 
                             Text(
-                                text = stringResource(AYMR.strings.novel_voice_and_narration),
+                                text = stringResource(ATMR.strings.novel_voice_and_narration),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = uiTextColor,
@@ -969,7 +969,7 @@ class NovelReaderActivity : ComponentActivity() {
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(AYMR.strings.novel_configure_voice, selectedVoice.title.substringBefore(" "), speechSpeed))
+                                Text(stringResource(ATMR.strings.novel_configure_voice, selectedVoice.title.substringBefore(" "), speechSpeed))
                             }
                         }
                     },
@@ -993,7 +993,7 @@ class NovelReaderActivity : ComponentActivity() {
                     textContentColor = uiTextColor,
                     title = {
                         Text(
-                            text = stringResource(AYMR.strings.novel_tts_title),
+                            text = stringResource(ATMR.strings.novel_tts_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = uiTextColor,
@@ -1002,7 +1002,7 @@ class NovelReaderActivity : ComponentActivity() {
                     text = {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                text = stringResource(AYMR.strings.novel_tts_narrator_voice),
+                                text = stringResource(ATMR.strings.novel_tts_narrator_voice),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -1057,7 +1057,7 @@ class NovelReaderActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.height(10.dp))
 
                             Text(
-                                text = stringResource(AYMR.strings.novel_tts_reading_speed, speechSpeed),
+                                text = stringResource(ATMR.strings.novel_tts_reading_speed, speechSpeed),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -1099,7 +1099,7 @@ class NovelReaderActivity : ComponentActivity() {
 
                             Spacer(modifier = Modifier.height(14.dp))
                             Text(
-                                text = stringResource(AYMR.strings.novel_tts_background_notice),
+                                text = stringResource(ATMR.strings.novel_tts_background_notice),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = uiSubtextColor.copy(alpha = 0.8f),
                             )

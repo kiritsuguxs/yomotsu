@@ -34,7 +34,7 @@ import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.presentation.translation.TranslationGlossaryScreen
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.at.AYMR
+import tachiyomi.i18n.at.ATMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
 
@@ -174,7 +174,7 @@ fun MangaToolbar(
                     if (!isAnime && onClickToggleAutomaticTranslation != null) {
                         add(
                             AppBar.OverflowAction(
-                                title = stringResource(AYMR.strings.translation_glossary_title),
+                                title = stringResource(ATMR.strings.translation_glossary_title),
                                 onClick = { navigator.push(TranslationGlossaryScreen(title)) },
                             ),
                         )
