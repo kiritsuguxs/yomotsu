@@ -281,7 +281,16 @@ fun UserProfileScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = preset.name,
-                                    fontSize = 10.sp,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = preset.group,
+                                    fontSize = 9.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     textAlign = TextAlign.Center
@@ -800,8 +809,8 @@ fun PresetAvatarDisplay(
             Image(
                 painter = painterResource(preset.drawableRes),
                 contentDescription = preset.name,
-                modifier = Modifier.fillMaxSize().padding(14.dp),
-                contentScale = ContentScale.Fit
+                modifier = if (preset.isCharacter) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(14.dp),
+                contentScale = if (preset.isCharacter) ContentScale.Crop else ContentScale.Fit
             )
         } else if (preset.icon != null) {
             Icon(

@@ -422,3 +422,32 @@
   - **Internacionalização Completa:**
     - Strings adicionadas em `base`, `pt-rBR` e `pt` (`profile_stat_time_watched_sub`, `profile_stat_offline_sub`, `profile_stat_completed_sub`).
 
+### AE. Galeria de Avatares com Personagens Reais de Anime estilo Crunchyroll (Outubro 2026)
+- **Substituição dos Ícones Genéricos por 20 Personagens Icônicos de Animes (`ProfilePresets.kt`, `UserProfileScreen.kt`):**
+  - Removidos os ícones genéricos anteriores e introduzida uma galeria completa de avatares com fotos de rosto em alta definição empacotadas em WebP otimizado (apenas ~10KB cada) em `res/drawable-nodpi/`:
+    1. **Sung Jin-woo** (*Solo Leveling*)
+    2. **Satoru Gojo** (*Jujutsu Kaisen*)
+    3. **Ryomen Sukuna** (*Jujutsu Kaisen*)
+    4. **Monkey D. Luffy** (*One Piece*)
+    5. **Roronoa Zoro** (*One Piece*)
+    6. **Naruto Uzumaki** (*Naruto*)
+    7. **Tanjiro Kamado** (*Demon Slayer*)
+    8. **Nezuko Kamado** (*Demon Slayer*)
+    9. **Ichigo Kurosaki** (*Bleach*)
+    10. **Saitama** (*One Punch Man*)
+    11. **Eren Yeager** (*Attack on Titan*)
+    12. **Levi Ackerman** (*Attack on Titan*)
+    13. **Frieren** (*Sousou no Frieren*)
+    14. **Anya Forger** (*Spy x Family*)
+    15. **Killua Zoldyck** (*Hunter x Hunter*)
+    16. **Son Goku** (*Dragon Ball*)
+    17. **Guts** (*Berserk*)
+    18. **Rimuru Tempest** (*Slime Isekai*)
+    19. **Megumin** (*KonoSuba*)
+    20. **Alucard** (*Hellsing*)
+    21. **Yomotsu Original** (*Logo clássico Yomotsu*)
+  - **Renderização e Layout:**
+    - `PresetAvatarDisplay` utiliza `ContentScale.Crop` com preenchimento total circular (`Modifier.fillMaxSize()`) para personagens, integrando perfeitamente com todas as 10 molduras de avatar selecionáveis.
+    - Diálogo seletor estilo Crunchyroll exibindo o nome do personagem em destaque e a obra de origem logo abaixo.
+    - Compatibilidade retroativa garantida em `getPresetAvatar` mapeando IDs legados para os novos personagens sem quebrar preferências salvas.
+
