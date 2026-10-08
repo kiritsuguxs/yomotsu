@@ -318,6 +318,22 @@
     - Em `NovelsScreen.kt`:
       - Atualizada a exibição de idioma nos cartões de extensão e no diálogo de detalhes para utilizar `LocaleHelper.getSourceDisplayName`, padronizando a interface.
 
-
-
-
+### Y. Correção de Download Infinito e Arquivos .tmp com 0 Bytes (Outubro 2026)
+- **Problema (Download infinito em 'Fazendo download...' e arquivos de anime com tamanho 0B em `.tmp`):**
+  - **Causa Raiz 1:** Em `AnimeDownloader.kt`, o arquivo temporário `$filename.tmp` era pré-criado com 0 bytes antes da invocação do FFmpeg. O comando FFmpeg montado colocava a flag `-y` (sobrescrever) no final da linha após o nome do arquivo (`"\"$ffmpegFilename\" -y"`). No parser CLI nativo do FFmpeg (`ffmpeg.c`), opções colocadas após o arquivo de saída não são aplicadas a ele, sendo interpretadas como opções para um próximo arquivo. Sem a flag de overwrite válida antes do arquivo, o FFmpeg detectava que o arquivo de destino já existia no disco e executava `read_yesno()`, chamando `getchar()` / `read(0, ...)` bloqueando a thread nativa indefinidamente no `stdin` esperando resposta do usuário.
+  - **Causa Raiz 2:** A opção `-nostdin` estava ausente. Em processos em segundo plano no Android, sem `-nostdin`, qualquer questionamento interativo do FFmpeg trava a execução.
+  - **Causa Raiz 3:** Em `getDuration()`, o comando ffprobe passava `-o "$durationFilePath"` (opção inexistente no ffprobe) e executava via `FFprobeKit.executeWithArgumentsAsync` sem timeout, fazendo streams de rede HLS suspenderem a corrotina indefinidamente antes mesmo do FFmpeg iniciar.
+  - **Causa Raiz 4:** Em streams HLS (`.m3u8`), opções `-reconnect 1` antes de `-i` causavam falha imediata por incompatibilidade com o demuxer HLS do FFmpeg (`Option reconnect not found`).
+  - **Causa Raiz 5:** `toFFmpegString` não diferenciava URIs `content://` (SAF) de arquivos locais `file://`, gerando caminhos virtuais inválidos em armazenamentos sem SAF.
+- **Solução (Portado e aprimorado a partir do Anikku):**
+  - Criado [`FFmpegUtils.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/tachiyomi/util/storage/FFmpegUtils.kt) com extensões `toFFmpegString` seguras para `Uri` e `UniFile` suportando tanto SAF (`content://`) quanto caminhos de sistema de arquivos direto (`filePath`).
+  - Em `getFFmpegOptions`:
+    - Adicionado `-y -nostdin` no início global do comando e `-y` explicitamente antes de `"$ffmpegFilename"`, garantindo que o FFmpeg nunca pause ou espere em `stdin`.
+    - `-reconnect` ativado apenas para streams HTTP que não sejam playlists `.m3u8`.
+    - `headerOptions` sanitizado para não injetar `-headers ''` quando vazio.
+  - Em `getDuration`:
+    - Execução do FFprobe com timeout defensivo de 5s (`withTimeoutOrNull(5000L)`), lendo a duração diretamente de `session.allLogsAsString` sem escrita em arquivos temporários desnecessários.
+  - Em `ffmpegDownload`:
+    - Execução nativa direta via `FFmpegKitConfig.ffmpegExecute(session)` no despachante `Dispatchers.IO` sincronizada com `isFFmpegRunning`.
+    - Parse de `Duration:` e progresso contínuo integrados em `LogCallback` e `StatisticsCallback`.
+    - Cancelamento de sessões ativas do FFmpeg em `cancelDownloaderJob()`.
