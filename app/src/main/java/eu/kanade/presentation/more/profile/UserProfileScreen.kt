@@ -41,7 +41,10 @@ import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Timer
+import java.util.Locale
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -112,6 +115,10 @@ fun UserProfileScreen(
     animeDownloads: Int = 0,
     completedMangas: Int = 0,
     completedAnimes: Int = 0,
+    trackedTitleCount: Int = 0,
+    meanScore: Double = Double.NaN,
+    trackerCount: Int = 0,
+    trackerNames: String = "",
     totalReadDurationMs: Long = 0L,
     totalWatchDurationMs: Long = 0L,
     unlockedAchievements: List<YomotsuAchievement>,
@@ -754,6 +761,39 @@ fun UserProfileScreen(
                             value = totalCompleted.toString(),
                             label = stringResource(MR.strings.label_completed_titles),
                             subtitle = stringResource(MR.strings.profile_stat_completed_sub, completedMangas, completedAnimes),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Linha 4: Rastreamento & Avaliação Média (AniList / Trackers)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        val notApplicable = stringResource(MR.strings.not_applicable)
+                        val meanScoreStr = if (trackedTitleCount > 0 && !meanScore.isNaN()) {
+                            "%.2f ★".format(Locale.ENGLISH, meanScore)
+                        } else {
+                            notApplicable
+                        }
+                        val trackerSub = if (trackerCount > 0 && trackerNames.isNotBlank()) {
+                            trackerNames
+                        } else {
+                            stringResource(MR.strings.profile_stat_no_trackers)
+                        }
+
+                        StatBox(
+                            icon = Icons.Outlined.Sync,
+                            value = trackedTitleCount.toString(),
+                            label = stringResource(MR.strings.label_tracked_titles),
+                            subtitle = trackerSub,
+                            modifier = Modifier.weight(1f)
+                        )
+                        StatBox(
+                            icon = Icons.Outlined.Star,
+                            value = meanScoreStr,
+                            label = stringResource(MR.strings.label_mean_score),
+                            subtitle = if (meanScore.isNaN()) stringResource(MR.strings.label_tracker_section) else stringResource(MR.strings.profile_stat_mean_score_sub),
                             modifier = Modifier.weight(1f)
                         )
                     }

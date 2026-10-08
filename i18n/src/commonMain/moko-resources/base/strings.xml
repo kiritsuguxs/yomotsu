@@ -305,6 +305,8 @@
     <string name="profile_stat_time_watched_sub">Anime watch time</string>
     <string name="profile_stat_offline_sub">%1$d ch. • %2$d ep.</string>
     <string name="profile_stat_completed_sub">%1$d manga • %2$d anime</string>
+    <string name="profile_stat_no_trackers">No tracker connected</string>
+    <string name="profile_stat_mean_score_sub">Scale 0 - 10.0</string>
 
     <string name="profile_title_1">Common Mortal</string>
     <string name="profile_title_10">Awakened</string>

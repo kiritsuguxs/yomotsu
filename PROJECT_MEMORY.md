@@ -471,4 +471,14 @@
   - Grade 2 colunas com cartões retangulares exibindo a imagem do banner em `ContentScale.Crop`, gradiente escuro de leitura e identificação com nome e categoria/obra.
   - No perfil principal, o banner conta com gradiente vertical suave sobreposto para transição elegante com a área do avatar.
 
+### AG. Integração de Métricas de Rastreamento e Nota Média (AniList / Trackers) no Perfil Yomotsu (Outubro 2026)
+- **Estatísticas de Monitoramento Clássicas do Mihon no Perfil do Caçador (`UserProfileViewModel.kt`, `UserProfileScreen.kt`, `YomotsuProfileScreen.kt`):**
+  - Adicionada a 4ª linha na grade de estatísticas do perfil Yomotsu integrando os serviços de rastreamento (AniList, MyAnimeList, Kitsu, Shikimori, Bangumi, MangaUpdates, etc.):
+    - **Itens Monitorados (`trackedTitleCount`):** Contabiliza exatamente quantas obras da biblioteca estão associadas e sincronizadas com os rastreadores logados pelo usuário, exibindo o(s) serviço(s) ativo(s) no subtítulo (ex: `AniList` ou `AniList • MyAnimeList`).
+    - **Avaliação Média (`meanScore`):** Calcula a média aritmética das notas concedidas pelo usuário às obras rastreadas, normalizada para a escala universal de 10.0 estrelas (ex: `8.50 ★` ou `N/A` caso ainda não haja notas atribuídas).
+    - **Tratamento de Estado Desconectado:** Caso o usuário não tenha nenhum rastreador configurado, os cartões informam amigavelmente `0` / `Nenhum rastreador` e `N/A` sem quebras de layout.
+  - **Internacionalização e Strings:**
+    - Utiliza `MR.strings.label_tracked_titles` e `MR.strings.label_mean_score` do Mihon, com suporte multilíngue em `base`, `pt-rBR` e `pt` (`profile_stat_no_trackers`, `profile_stat_mean_score_sub`).
+
+
 

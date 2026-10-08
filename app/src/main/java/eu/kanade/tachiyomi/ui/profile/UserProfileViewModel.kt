@@ -12,12 +12,15 @@ import eu.kanade.tachiyomi.data.profile.YomotsuAchievement
 import eu.kanade.tachiyomi.data.profile.YomotsuAchievementManager
 import eu.kanade.tachiyomi.data.profile.YomotsuLevelManager
 import eu.kanade.tachiyomi.data.profile.YomotsuTitle
+import eu.kanade.tachiyomi.data.track.TrackerManager
 import kotlinx.coroutines.flow.update
 import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.history.interactor.GetTotalReadDuration
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.domain.track.interactor.GetTracks
+import tachiyomi.domain.track.model.Track
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
@@ -39,6 +42,10 @@ sealed interface UserProfileState {
         val animeDownloads: Int,
         val completedMangas: Int,
         val completedAnimes: Int,
+        val trackedTitleCount: Int,
+        val meanScore: Double,
+        val trackerCount: Int,
+        val trackerNames: String,
         val unlockedAchievements: List<YomotsuAchievement>,
         val lockedAchievements: List<YomotsuAchievement>,
         val equippedTitle: YomotsuTitle,
@@ -61,6 +68,8 @@ class UserProfileViewModel(
     private val sourceManager: SourceManager = Injekt.get(),
     private val getLibraryManga: GetLibraryManga = Injekt.get(),
     private val getTotalReadDuration: GetTotalReadDuration = Injekt.get(),
+    private val getTracks: GetTracks = Injekt.get(),
+    private val trackerManager: TrackerManager = Injekt.get(),
     private val profilePreferences: ProfilePreferences = Injekt.get(),
     private val context: Application = Injekt.get()
 ) : StateViewModel<UserProfileState>(UserProfileState.Loading) {
@@ -129,6 +138,32 @@ class UserProfileViewModel(
                 it.isUnlocked(stats)
             }
 
+            val loggedInTrackers = trackerManager.loggedInTrackers()
+            val loggedInTrackerIds = loggedInTrackers.map { it.id }.toHashSet()
+
+            val mangaTrackMap = distinctLibraryManga.associate { manga ->
+                val tracks = getTracks.await(manga.id)
+                    .filter { it.trackerId in loggedInTrackerIds }
+                manga.id to tracks
+            }
+            val trackedTitleCount = mangaTrackMap.count { it.value.isNotEmpty() }
+
+            val scoredTracks = mangaTrackMap.values.flatten().filter { it.score > 0.0 }
+            val meanScore = if (scoredTracks.isNotEmpty()) {
+                scoredTracks.mapNotNull { track ->
+                    val service = trackerManager.get(track.trackerId)
+                    service?.get10PointScore(track)
+                }.filter { !it.isNaN() }.average()
+            } else {
+                Double.NaN
+            }
+
+            val trackerNames = if (loggedInTrackers.isNotEmpty()) {
+                loggedInTrackers.joinToString(" • ") { it.name }
+            } else {
+                ""
+            }
+
             mutableState.update {
                 UserProfileState.Success(
                     username = profilePreferences.getUsername(),
@@ -144,6 +179,10 @@ class UserProfileViewModel(
                     animeDownloads = animeDownloadCount,
                     completedMangas = completedMangas,
                     completedAnimes = completedAnimes,
+                    trackedTitleCount = trackedTitleCount,
+                    meanScore = meanScore,
+                    trackerCount = loggedInTrackers.size,
+                    trackerNames = trackerNames,
                     unlockedAchievements = unlocked,
                     lockedAchievements = locked,
                     equippedTitle = equippedTitle,
