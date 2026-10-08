@@ -6,9 +6,9 @@
 
 # Yomotsu
 
-### Leitor de Mangás, Manhwas e Light Novels com Tradução por IA para Android
+### Central de Mangás, Novels e Animes com Tradução por IA para Android
 
-*Baseado no Mihon, com OCR avançado, tradução automática nos balões, leitor dedicado de novels e sincronização via Nuvem Telegram.*
+*Baseado no Mihon e Anikku, com OCR avançado, tradução automática nos balões, player nativo de animes (MPV), leitor dedicado de novels e sincronização via Nuvem Telegram.*
 
 <br/>
 
@@ -25,7 +25,7 @@
 
 <br/>
 
-[Recursos](#-principais-recursos) • [Motores de Tradução](#-motores-de-tradução) • [Nuvem Telegram](#-como-usar-a-nuvem-telegram) • [Download](#-download) • [Requisitos](#-requisitos) • [Créditos](#-créditos)
+[Recursos](#-principais-recursos) • [Animes](#-reprodução-de-animes--player-mpv) • [Motores de Tradução](#-motores-de-tradução) • [Nuvem Telegram](#-como-usar-a-nuvem-telegram) • [Download](#-download) • [Requisitos](#-requisitos) • [Créditos](#-créditos)
 
 </div>
 
@@ -42,25 +42,29 @@
 
 ## 💡 Sobre o Yomotsu
 
-O **Yomotsu** é um aplicativo Android completo de leitura que elimina a barreira do idioma. Ele reúne em um único lugar a leitura de **mangás, manhwas, webtoons, quadrinhos e Light Novels**, combinando tecnologias de **Visão Computacional (OCR)** e **Inteligência Artificial** para traduzir diálogos e textos diretamente na tela, sem necessidade de trocar de aplicativo ou usar tradutores externos.
+O **Yomotsu** é um aplicativo Android completo para os fãs de cultura pop asiática que elimina as barreiras de idioma e fragmentação. Ele reúne em um único lugar a leitura de **mangás, manhwas, webtoons, quadrinhos, Light Novels** e a **reprodução de animes em alta definição**, combinando tecnologias de **Visão Computacional (OCR)** e **Inteligência Artificial** para traduzir diálogos e textos diretamente na tela.
 
-O projeto foi construído sobre a consagrada base do **Mihon (Tachiyomi)**, trazendo toda a sua velocidade, organização e catálogo de fontes, acrescido de inovações exclusivas como tradução em tempo real focada em **Português Brasileiro**, um leitor de texto fluido para novels e o inovador sistema de **backup na Nuvem Telegram**.
+Construído a partir das bases consagradas do **Mihon (Tachiyomi)** e **Anikku (Aniyomi)**, o Yomotsu oferece máxima velocidade, organização e extenso catálogo de extensões, aliado a inovações exclusivas: player de vídeo MPV com aceleração de hardware, tradução em tempo real com foco em **Português Brasileiro**, leitor fluido de novels com narração neural e backup ilimitado na **Nuvem Telegram**.
 
 ---
 
-## 🌟 Os 3 Pilares do Yomotsu
+## 🌟 Os 4 Pilares do Yomotsu
 
 <table>
   <tr>
-    <td width="33%" align="center">
+    <td width="25%" align="center">
       <h3>🏮 Tradução Inteligente</h3>
-      <p>Reconhece o texto nos balões com OCR, limpa a arte original e insere a tradução em português perfeitamente diagramada.</p>
+      <p>Reconhece o texto nos balões com OCR, limpa a arte original e insere a tradução perfeitamente diagramada.</p>
     </td>
-    <td width="33%" align="center">
+    <td width="25%" align="center">
+      <h3>🎬 Player de Animes (MPV)</h3>
+      <p>Reprodução de vídeo acelerada por hardware (GPU), download offline, múltiplas faixas de áudio, legendas e qualidades.</p>
+    </td>
+    <td width="25%" align="center">
       <h3>📖 Leitor de Light Novels</h3>
-      <p>Modo de leitura de texto nativo com controle completo de fontes, tamanhos, margens e tradução de parágrafos.</p>
+      <p>Modo de leitura de texto nativo com tipografia ajustável estilo Kindle, tradução de parágrafos e narração TTS.</p>
     </td>
-    <td width="33%" align="center">
+    <td width="25%" align="center">
       <h3>☁️ Nuvem Telegram</h3>
       <p>Armazenamento ilimitado no seu canal do Telegram para fazer backup de capítulos e economizar memória do celular.</p>
     </td>
@@ -71,16 +75,24 @@ O projeto foi construído sobre a consagrada base do **Mihon (Tachiyomi)**, traz
 
 ## 🚀 Principais recursos
 
-### 🎮 Sistema de Progressão e Conquistas
-* **Sistema de XP e Níveis:** Ganhe XP automaticamente lendo ou baixando capítulos. Níveis infinitos com cálculo progressivo.
-* **Títulos Equipáveis:** Desbloqueie títulos de progressão sombria e minimalista (como *Iniciante das Sombras* ou *Mestre das Sombras*) e equipe-os no seu perfil.
-* **100 Conquistas Únicas:** Recompensas divididas em categorias (Bronze, Prata, Ouro e Rubi) para suas marcas de leitura, tamanho da biblioteca e histórico de downloads.
-* **Identidade Personalizada:** Escolha seu Nickname, Avatar e um Banner expandido (arquivos salvos com segurança no cache interno).
-* **Notificações em Tempo Real:** Alertas do sistema sempre que você conquistar um novo troféu.
+### 🎬 Reprodução de Animes & Player MPV
+* **Player Nativo MPV de Alta Performance:** Renderização acelerada por GPU garantindo reprodução lisa e baixo consumo de bateria.
+* **Seleção de Qualidade e Faixas:** Escolha entre múltiplas resoluções de vídeo (1080p, 720p, etc.), faixas de áudio (dublado/legendado) e legendas embutidas ou externas.
+* **Gerenciador de Downloads de Animes:** Baixe episódios completos diretamente pelo aplicativo para assistir offline onde quiser.
+* **Extensões de Animes Privadas:** Aba exclusiva de Fontes e Extensões para Animes no Explorar (base Anikku/Aniyomi) instaladas de forma interna e segura.
+* **Histórico e Atualizações Separados:** Controle inteligente de episódios assistidos e alertas de lançamentos de animes de forma independente de mangás.
 
-### 📖 Leitura e Visualização
+### 🎮 Perfil Yomotsu & Sistema de Progressão
+* **Perfil Yomotsu Totalmente Repaginado:** Painel completo exibindo seu progresso, nível, conquistas e patentes.
+* **20 Avatares Oficiais de Personagens:** Retratos de anime em alta definição (512x512) com enquadramento circular perfeito para fotos de perfil (Gojo, Sukuna, Sung Jin-woo, Luffy, Zoro, Tanjiro, Nezuko, Naruto, Ichigo, Saitama, Eren, Levi, Frieren, Anya, Killua, Goku, Guts, Rimuru, Megumin, Alucard e Yomotsu Original).
+* **20 Banners Exclusivos:** 12 cenários cinematográficos de animes (Santuário Malevolente, Castelo Infinito, Thousand Sunny, Vale do Fim, Vila da Folha, Cometa Tiamat, Céu de Tóquio, Portão das Sombras, Colina das Flores, Muralha Maria, Trilhos no Mar e Jardim Secreto) e 8 gradientes minimalistas.
+* **Bordas de Rank Dinâmicas:** Molduras de avatar incluindo o Rank Dinâmico que evolui e reflete a cor da sua patente e nível de leitura no app.
+* **Métricas Completas de Biblioteca & Trackers:** Estatísticas de capítulos lidos, episódios assistidos, tempo total dedicado, downloads offline, obras concluídas e integração com serviços de rastreamento (AniList, MyAnimeList, etc.) com nota média e contagem de títulos monitorados.
+* **Conquistas Temáticas:** Desafios e conquistas para desbloquear conforme você consome mangás, novels e animes.
+
+### 📖 Leitura e Visualização de Mangás & Novels
 * **Suporte Completo a Obras:** Leia mangás, manhwas, webtoons, quadrinhos e **Light Novels / Webnovels**.
-* **Leitor Dedicado de Novels:** Modo texto imersivo com tipografia ajustável (fontes, tamanho de letra, espaçamento entre linhas e margens personalizadas).
+* **Leitor Dedicado de Novels:** Modo texto imersivo com tipografia ajustável (fontes, tamanho de letra, espaçamento entre linhas e margens personalizadas) e narração neural ultra-realista.
 * **Modos de Imagem Avançados:** Modos de página simples, página dupla invertida e webtoon com rolagem vertical contínua.
 * **Organização Total:** Biblioteca com categorias personalizadas, histórico de leitura sincronizado, rastreadores e downloads locais.
 * **Interface Moderna:** Suporte completo a temas claro, escuro e dinâmico (Material You).
@@ -185,6 +197,9 @@ O Yomotsu é um software de código aberto e sem fins lucrativos, desenvolvido e
 
 O Yomotsu é fruto do esforço da comunidade open source:
 * **[Mihon / Tachiyomi](https://github.com/mihonapp/mihon)** — A base e arquitetura que tornam este leitor tão estável e completo.
+* **[Anikku / Aniyomi](https://github.com/aniyomiorg/aniyomi)** — Ecossistema e arquitetura pioneira de suporte a animes e extensões.
+* **[MPV Android](https://github.com/mpv-android/mpv-android)** — Motor de reprodução de vídeo leve, potente e com aceleração gráfica.
+* **[FFmpegKit](https://github.com/arthenica/ffmpeg-kit)** — Processamento e manipulação de fluxos de mídia e downloads seguros.
 * **[TDLib (Telegram Database Library)](https://github.com/tdlib/td)** — Motor que viabiliza a integração nativa e robusta com o Telegram.
 * **[Google ML Kit](https://developers.google.com/ml-kit)** — Reconhecimento e visão computacional em tempo real no dispositivo.
 * A todos os desenvolvedores e tradutores que apoiam o ecossistema de leitura livre no Android.
