@@ -8,6 +8,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.Text
+import androidx.compose.material3.ListItem
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Tv
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.LibraryBooks
+import androidx.compose.material.icons.outlined.Category
+import eu.kanade.presentation.components.AppBar
+import androidx.compose.runtime.mutableStateOf
+
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.Navigator
@@ -60,6 +74,10 @@ data object BrowseTab : Tab {
 
     @Composable
     override fun Content() {
+        var selectedMedia by androidx.compose.runtime.remember { mutableStateOf("Manga") }
+        var showMediaSheet by androidx.compose.runtime.remember { mutableStateOf(false) }
+        val sheetState = rememberModalBottomSheetState()
+
         val context = LocalContext.current
 
         val extensionsViewModel = viewModel<ExtensionsViewModel>()
@@ -69,14 +87,27 @@ data object BrowseTab : Tab {
 
         val novelsViewModel = viewModel<eu.kanade.tachiyomi.ui.browse.novel.NovelsViewModel>()
 
+        val mediaAction = AppBar.Action(
+            title = "Mídia: $selectedMedia",
+            icon = Icons.Outlined.Category,
+            onClick = { showMediaSheet = true }
+        )
+
+        val activeSourcesTab = when (selectedMedia) {
+            "Anime" -> animeSourcesTab()
+            "Novel" -> novelSourcesTab()
+            else -> sourcesTab()
+        }
+        val activeExtensionsTab = when (selectedMedia) {
+            "Anime" -> animeExtensionsTab(animeExtensionsViewModel)
+            "Novel" -> novelsTab(novelsViewModel)
+            else -> extensionsTab(extensionsViewModel)
+        }
+
         val tabs = listOf(
-            sourcesTab(),
-            extensionsTab(extensionsViewModel),
-            animeSourcesTab(),
-            animeExtensionsTab(animeExtensionsViewModel),
-            novelSourcesTab(),
-            novelsTab(novelsViewModel),
-            migrateSourceTab(),
+            activeSourcesTab.copy(actions = listOf(mediaAction) + activeSourcesTab.actions),
+            activeExtensionsTab.copy(actions = listOf(mediaAction) + activeExtensionsTab.actions),
+            migrateSourceTab().copy(actions = listOf(mediaAction) + migrateSourceTab().actions),
         )
 
         val state = rememberPagerState { tabs.size }
@@ -85,24 +116,51 @@ data object BrowseTab : Tab {
         TabbedScreen(
             titleRes = MR.strings.browse,
             tabs = tabs,
-            state = state,
-            searchQuery = when (state.currentPage) {
-                1 -> extensionsState.searchQuery
-                3 -> animeExtensionsState.searchQuery
-                5 -> novelSearchQuery
-                else -> null
-            },
-            onChangeSearchQuery = { query ->
-                when (state.currentPage) {
-                    1 -> extensionsViewModel.search(query)
-                    3 -> animeExtensionsViewModel.search(query)
-                    5 -> novelsViewModel.search(query)
+                onDismissRequest = { showMediaSheet = false },
+                sheetState = sheetState
+            ) {
+                androidx.compose.foundation.layout.Column(androidx.compose.foundation.layout.padding(bottom = 32.dp)) {
+                    ListItem(
+                        headlineContent = { Text("📖 Mangá") },
+                        modifier = Modifier.clickable { selectedMedia = "Manga"; showMediaSheet = false }
+                    )
+                    ListItem(
+                        headlineContent = { Text("🎬 Anime") },
+                        modifier = Modifier.clickable { selectedMedia = "Anime"; showMediaSheet = false }
+                    )
+                    ListItem(
+                        headlineContent = { Text("📚 Light Novel") },
+                        modifier = Modifier.clickable { selectedMedia = "Novel"; showMediaSheet = false }
+                    )
                 }
-            },
-        )
+            }
+        }
+
         LaunchedEffect(Unit) {
             switchToExtensionTabChannel.receiveAsFlow()
                 .collectLatest { state.scrollToPage(1) }
+        }
+
+        if (showMediaSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showMediaSheet = false },
+                sheetState = sheetState
+            ) {
+                androidx.compose.foundation.layout.Column(androidx.compose.foundation.layout.padding(bottom = 32.dp)) {
+                    ListItem(
+                        headlineContent = { Text("📖 Mangá") },
+                        modifier = Modifier.clickable { selectedMedia = "Manga"; showMediaSheet = false }
+                    )
+                    ListItem(
+                        headlineContent = { Text("🎬 Anime") },
+                        modifier = Modifier.clickable { selectedMedia = "Anime"; showMediaSheet = false }
+                    )
+                    ListItem(
+                        headlineContent = { Text("📚 Light Novel") },
+                        modifier = Modifier.clickable { selectedMedia = "Novel"; showMediaSheet = false }
+                    )
+                }
+            }
         }
 
         LaunchedEffect(Unit) {
