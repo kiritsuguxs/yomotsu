@@ -10,11 +10,13 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 - **Migração de Animes e Novels Independente:** Corrigido o erro crítico onde a tela de migração misturava as extensões. Agora o aplicativo filtra corretamente e exibe apenas extensões de animes na migração de animes, e extensões de mangás na migração de mangás (tanto na tela de seleção inicial quanto na tela de destino).
 - **Navegação Inteligente no Explorar:** A aba "Explorar" agora altera seu título de forma dinâmica (ex: "Explorar Animes" ou "Explorar Mangás") dependendo da mídia selecionada no menu principal. As sub-abas também foram renomeadas e padronizadas para melhor usabilidade.
 - **Correção no Carregamento de Fontes de Anime:** Ajuste no motor interno que impedia o reconhecimento de fontes de animes e novels como fontes online nativas. Isso resolve listas vazias e estabiliza o cache de downloads e migração.
+- 💡 **Dica:** Para alternar entre as telas de Mangás, Animes e Novels, basta tocar no símbolo/ícone localizado no canto superior esquerdo do aplicativo!
 
 🇺🇸 **Highlights & Fixes (English):**
 - **Independent Anime & Novel Migration:** Fixed a critical bug where the migration screen mixed extensions. The app now correctly filters and displays only anime extensions for anime migration, and manga extensions for manga migration (both in the source selection and target selection screens).
 - **Smart Explore Navigation:** The "Explore" tab now dynamically updates its title (e.g., "Explore Anime" or "Explore Manga") based on the media selected in the main menu. Sub-tabs were also unified and standardized for a smoother experience.
 - **Anime Source Loading Fix:** Fixed an internal engine issue that prevented anime and novel sources from being recognized as native online sources. This resolves empty lists and stabilizes the download cache and migration target features.
+- 💡 **Tip:** To switch between Manga, Anime, and Novel screens, simply tap the symbol/icon located in the top-left corner of the app!
 
 ## 0.20.4-Y41
 
