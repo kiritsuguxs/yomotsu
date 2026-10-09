@@ -113,7 +113,11 @@ data object BrowseTab : Tab {
         val novelSearchQuery by novelsViewModel.searchQuery.collectAsState()
 
         TabbedScreen(
-            titleRes = MR.strings.browse,
+            title = when (selectedMedia) {
+                "Anime" -> "Animes"
+                "Novel" -> "Light Novels"
+                else -> "Mangás"
+            },
             tabs = tabs,
             state = state,
             searchQuery = when (state.currentPage) {

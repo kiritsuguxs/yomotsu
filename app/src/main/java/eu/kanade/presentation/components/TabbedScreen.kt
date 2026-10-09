@@ -35,7 +35,8 @@ import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
 fun TabbedScreen(
-    titleRes: StringResource,
+    titleRes: StringResource? = null,
+    title: String? = null,
     tabs: List<TabContent>,
     state: PagerState = rememberPagerState { tabs.size },
     searchQuery: String? = null,
@@ -54,7 +55,7 @@ fun TabbedScreen(
                 titleContent = { 
                     androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         navigationIcon?.invoke()
-                        AppBarTitle(stringResource(titleRes)) 
+                        AppBarTitle(title ?: titleRes?.let { stringResource(it) }) 
                     }
                 },
                 searchEnabled = searchEnabled,
