@@ -498,3 +498,12 @@
   - Corrigidas todas as URLs canônicas, links de download e sitemap (`sitemap.xml`, `robots.txt`) de `Yomotsu-Oficial` para o nome canônico `yomotsu`.
   - Manifesto web (`site.webmanifest`) atualizado com PWA colors, `start_url: "/yomotsu/"` e ícones 192x192 / 512x512.
   - Criados assets de ícone locais otimizados (`site/icon.png` e `site/icon-192.png`) eliminando requisições lentas para links raw externos.
+
+### AJ. Lançamento da Versão Oficial 0.20.4-Y42 (Outubro 2026)
+- **Incremento de Versão:**
+  - `versionCode` elevado para `103` e `versionName` definido como `"0.20.4-Y42"` em `app/build.gradle.kts`.
+  - Tag oficial (a ser gerada via workflow): `v0.20.4-Y42`.
+- **Destaques do Release:**
+  - **Migração de Animes e Novels Independente:** Corrigido problema estrutural na tela de migração que mesclava indevidamente fontes de mangás, animes e novels, utilizando verificação rigorosa por `isAnime` e `isNovel`.
+  - **Identificação de Fontes Não-Http:** Resolvido erro de compilação e carregamento (no `SourceManager` e `SourceRepositoryImpl`) que omitia fontes de animes e novels nas listas devido ao uso legado de `filterIsInstance<HttpSource>()`. Adicionado filtro direto via `LocalSource.ID` e `TelegramSource.ID` constantes.
+  - **Navegação Inteligente no Explorar:** Textos dinâmicos nas abas (Explorar Animes / Mangás / Novels) internacionalizados em Português e Inglês para melhorar a navegação do usuário.
