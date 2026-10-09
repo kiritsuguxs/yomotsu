@@ -599,7 +599,7 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         try {
-            Injekt.get<animiru.feature.mpvfiles.MpvConfig>().copyFiles()
+            // Injekt.get<animiru.feature.mpvfiles.MpvConfig>().copyFiles() // Otimização: Movido para carregar apenas no Player
         } catch (_: Throwable) {}
     }
 

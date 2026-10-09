@@ -82,7 +82,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         // The disposable native detector worker must not initialize app storage or migrations.
         if (eu.kanade.translation.detection.DbnetProcess.isWorker(this)) return
         patchInjekt()
-        TelemetryConfig.init(applicationContext)
+        // TelemetryConfig.init(applicationContext) // Otimização: Telemetria externa desligada
 
         GlobalExceptionHandler.initialize(applicationContext, CrashActivity::class.java)
 
@@ -211,7 +211,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             )
 
             crossfade((300 * this@App.animatorDurationScale).toInt())
-            allowRgb565(DeviceUtil.isLowRamDevice(this@App))
+            allowRgb565(true) // Otimização: Força uso de memória reduzida (capinhas leves)
             if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
 
             // Coil spawns a new thread for every image load by default
