@@ -266,6 +266,7 @@ fun SearchToolbar(
     modifier: Modifier = Modifier,
     titleContent: @Composable () -> Unit = {},
     navigateUp: (() -> Unit)? = null,
+    navigationIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     searchEnabled: Boolean = true,
     placeholderText: String? = null,
     onSearch: (String) -> Unit = {},
@@ -339,6 +340,7 @@ fun SearchToolbar(
             )
         },
         navigateUp = if (searchQuery == null) navigateUp else onClickCloseSearch,
+        navigationIcon = if (searchQuery == null) navigationIcon else null,
         actions = {
             key("search") {
                 val onClick = { onChangeSearchQuery("") }

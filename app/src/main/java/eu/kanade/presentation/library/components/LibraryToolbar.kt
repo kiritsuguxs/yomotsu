@@ -24,11 +24,17 @@ import tachiyomi.presentation.core.components.Pill
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
 
+import androidx.compose.material.icons.outlined.Tv
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.LibraryBooks
+
 @Composable
 fun LibraryToolbar(
     hasActiveFilters: Boolean,
     selectedCount: Int,
     title: LibraryToolbarTitle,
+    selectedMedia: String,
+    onClickMediaSelect: () -> Unit,
     onClickUnselectAll: () -> Unit,
     onClickSelectAll: () -> Unit,
     onClickInvertSelection: () -> Unit,
@@ -48,6 +54,8 @@ fun LibraryToolbar(
     )
     else -> LibraryRegularToolbar(
         title = title,
+        selectedMedia = selectedMedia,
+        onClickMediaSelect = onClickMediaSelect,
         hasFilters = hasActiveFilters,
         searchQuery = searchQuery,
         onSearchQueryChange = onSearchQueryChange,
@@ -62,6 +70,8 @@ fun LibraryToolbar(
 @Composable
 private fun LibraryRegularToolbar(
     title: LibraryToolbarTitle,
+    selectedMedia: String,
+    onClickMediaSelect: () -> Unit,
     hasFilters: Boolean,
     searchQuery: String?,
     onSearchQueryChange: (String?) -> Unit,
@@ -73,6 +83,12 @@ private fun LibraryRegularToolbar(
 ) {
     val pillAlpha = if (isSystemInDarkTheme()) 0.12f else 0.08f
     SearchToolbar(
+        navigateUp = onClickMediaSelect,
+        navigationIcon = when (selectedMedia) {
+            "Anime" -> Icons.Outlined.Tv
+            "Novel" -> Icons.Outlined.LibraryBooks
+            else -> Icons.Outlined.MenuBook
+        },
         titleContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

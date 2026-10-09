@@ -37,6 +37,10 @@ class UiPreferences(
 
     val imagesInDescription: Preference<Boolean> = preferenceStore.getBoolean("pref_render_images_description", true)
 
+    val lastUsedLibraryMedia: Preference<String> = preferenceStore.getString("last_used_library_media", "Manga")
+
+    val lastUsedBrowseMedia: Preference<String> = preferenceStore.getString("last_used_browse_media", "Manga")
+
     companion object {
         fun dateFormat(format: String): DateTimeFormatter = when (format) {
             "" -> DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)

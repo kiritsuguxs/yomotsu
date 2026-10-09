@@ -5,6 +5,8 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.SnackbarHost
@@ -46,6 +48,7 @@ import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import tachiyomi.presentation.core.util.collectAsState
 import kotlinx.coroutines.launch
 import mihon.feature.migration.config.MigrationConfigScreen
 import tachiyomi.core.common.i18n.stringResource
@@ -89,6 +92,11 @@ data object LibraryTab : Tab {
         val scope = rememberCoroutineScope()
         val haptic = LocalHapticFeedback.current
 
+        val uiPreferences = remember { Injekt.get<eu.kanade.domain.ui.UiPreferences>() }
+        val selectedMedia by uiPreferences.lastUsedLibraryMedia.collectAsState()
+        var showMediaSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+
         val viewModel = viewModel<LibraryViewModel>()
         val settingsViewModel = viewModel<LibrarySettingsViewModel>()
         val state by viewModel.state.collectAsState()
@@ -110,8 +118,13 @@ data object LibraryTab : Tab {
 
         Scaffold(
             topBar = { scrollBehavior ->
+                val defaultTitleRes = when (selectedMedia) {
+                    "Anime" -> MR.strings.browse_media_anime
+                    "Novel" -> MR.strings.browse_media_novel
+                    else -> MR.strings.browse_media_manga
+                }
                 val title = state.getToolbarTitle(
-                    defaultTitle = stringResource(MR.strings.label_library),
+                    defaultTitle = stringResource(defaultTitleRes),
                     defaultCategoryTitle = stringResource(MR.strings.label_default),
                     page = state.coercedActiveCategoryIndex,
                 )
@@ -119,6 +132,8 @@ data object LibraryTab : Tab {
                     hasActiveFilters = state.hasActiveFilters,
                     selectedCount = state.selection.size,
                     title = title,
+                    selectedMedia = selectedMedia,
+                    onClickMediaSelect = { showMediaSheet = true },
                     onClickUnselectAll = viewModel::clearSelection,
                     onClickSelectAll = viewModel::selectAll,
                     onClickInvertSelection = viewModel::invertSelection,
@@ -281,6 +296,28 @@ data object LibraryTab : Tab {
         LaunchedEffect(Unit) {
             launch { queryEvent.receiveAsFlow().collect(viewModel::search) }
             launch { requestSettingsSheetEvent.receiveAsFlow().collectLatest { viewModel.showSettingsDialog() } }
+        }
+
+        if (showMediaSheet) {
+            androidx.compose.material3.ModalBottomSheet(
+                onDismissRequest = { showMediaSheet = false },
+                sheetState = sheetState
+            ) {
+                androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 32.dp)) {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { androidx.compose.material3.Text("📖 ${stringResource(MR.strings.browse_media_manga)}") },
+                        modifier = Modifier.clickable { uiPreferences.lastUsedLibraryMedia.set("Manga"); showMediaSheet = false }
+                    )
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { androidx.compose.material3.Text("🎬 ${stringResource(MR.strings.browse_media_anime)}") },
+                        modifier = Modifier.clickable { uiPreferences.lastUsedLibraryMedia.set("Anime"); showMediaSheet = false }
+                    )
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { androidx.compose.material3.Text("📚 ${stringResource(MR.strings.browse_media_novel)}") },
+                        modifier = Modifier.clickable { uiPreferences.lastUsedLibraryMedia.set("Novel"); showMediaSheet = false }
+                    )
+                }
+            }
         }
     }
 

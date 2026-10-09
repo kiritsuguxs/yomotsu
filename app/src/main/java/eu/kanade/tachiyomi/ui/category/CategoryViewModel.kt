@@ -44,9 +44,9 @@ class CategoryViewModel(
         }
     }
 
-    fun createCategory(name: String) {
+    fun createCategory(name: String, flags: Long = 0L) {
         viewModelScope.launch {
-            when (createCategoryWithName.await(name)) {
+            when (createCategoryWithName.await(name, flags)) {
                 is CreateCategoryWithName.Result.InternalError -> _events.send(CategoryEvent.InternalError)
                 else -> {}
             }

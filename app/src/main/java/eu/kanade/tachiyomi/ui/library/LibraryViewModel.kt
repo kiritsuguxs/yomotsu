@@ -92,11 +92,32 @@ class LibraryViewModel(
         mutableState.update { state ->
             state.copy(activeCategoryIndex = libraryPreferences.lastUsedCategory.get())
         }
+        val uiPreferences = Injekt.get<eu.kanade.domain.ui.UiPreferences>()
         viewModelScope.launchIO {
             combine(
                 state.map { it.searchQuery }.distinctUntilChanged().debounce(0.25.seconds),
-                getCategories.subscribe(),
-                getFavoritesFlow(),
+                combine(getCategories.subscribe(), uiPreferences.lastUsedLibraryMedia.changes()) { categories, media ->
+                    categories.filter { category ->
+                        if (category.isSystemCategory) return@filter true
+                        val type = category.mediaType
+                        type == tachiyomi.domain.category.model.Category.MediaType.ALL ||
+                        when (media) {
+                            "Anime" -> type == tachiyomi.domain.category.model.Category.MediaType.ANIME
+                            "Novel" -> type == tachiyomi.domain.category.model.Category.MediaType.NOVEL
+                            else -> type == tachiyomi.domain.category.model.Category.MediaType.MANGA
+                        }
+                    }
+                },
+                combine(getFavoritesFlow(), uiPreferences.lastUsedLibraryMedia.changes()) { favs, media ->
+                    favs.filter { item ->
+                        val source = sourceManager.get(item.libraryManga.manga.source)
+                        when (media) {
+                            "Anime" -> source is eu.kanade.tachiyomi.animesource.AnimeSource
+                            "Novel" -> source is eu.kanade.tachiyomi.novelsource.NovelSource
+                            else -> source !is eu.kanade.tachiyomi.animesource.AnimeSource && source !is eu.kanade.tachiyomi.novelsource.NovelSource
+                        }
+                    }
+                },
                 combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
                 getLibraryItemPreferencesFlow(),
             ) { searchQuery, categories, favorites, (tracksMap, trackingFilters), itemPreferences ->

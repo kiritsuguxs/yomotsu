@@ -36,10 +36,11 @@ import tachiyomi.presentation.core.i18n.stringResource
 @Composable
 fun CategoryCreateDialog(
     onDismissRequest: () -> Unit,
-    onCreate: (String) -> Unit,
+    onCreate: (String, Long) -> Unit,
     categories: List<String>,
 ) {
     var name by remember { mutableStateOf("") }
+    var selectedMedia by remember { mutableStateOf(tachiyomi.domain.category.model.Category.MediaType.ALL) }
 
     val focusRequester = remember { FocusRequester() }
     val nameAlreadyExists = remember(name) { categories.contains(name) }
@@ -50,7 +51,7 @@ fun CategoryCreateDialog(
             TextButton(
                 enabled = name.isNotEmpty() && !nameAlreadyExists,
                 onClick = {
-                    onCreate(name)
+                    onCreate(name, selectedMedia.flag)
                     onDismissRequest()
                 },
             ) {
@@ -66,25 +67,52 @@ fun CategoryCreateDialog(
             Text(text = stringResource(MR.strings.action_add_category))
         },
         text = {
-            OutlinedTextField(
-                modifier = Modifier
-                    .focusRequester(focusRequester),
-                value = name,
-                onValueChange = { name = it },
-                label = {
-                    Text(text = stringResource(MR.strings.name))
-                },
-                supportingText = {
-                    val msgRes = if (name.isNotEmpty() && nameAlreadyExists) {
-                        MR.strings.error_category_exists
-                    } else {
-                        MR.strings.information_required_plain
-                    }
-                    Text(text = stringResource(msgRes))
-                },
-                isError = name.isNotEmpty() && nameAlreadyExists,
-                singleLine = true,
-            )
+            Column {
+                OutlinedTextField(
+                    modifier = Modifier
+                        .focusRequester(focusRequester),
+                    value = name,
+                    onValueChange = { name = it },
+                    label = {
+                        Text(text = stringResource(MR.strings.name))
+                    },
+                    supportingText = {
+                        val msgRes = if (name.isNotEmpty() && nameAlreadyExists) {
+                            MR.strings.error_category_exists
+                        } else {
+                            MR.strings.information_required_plain
+                        }
+                        Text(text = stringResource(msgRes))
+                    },
+                    isError = name.isNotEmpty() && nameAlreadyExists,
+                    singleLine = true,
+                )
+                
+                Spacer(modifier = Modifier.padding(top = 16.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly) {
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedMedia == tachiyomi.domain.category.model.Category.MediaType.ALL,
+                        onClick = { selectedMedia = tachiyomi.domain.category.model.Category.MediaType.ALL },
+                        label = { Text("Geral") }
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedMedia == tachiyomi.domain.category.model.Category.MediaType.MANGA,
+                        onClick = { selectedMedia = tachiyomi.domain.category.model.Category.MediaType.MANGA },
+                        label = { Text("Mangá") }
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedMedia == tachiyomi.domain.category.model.Category.MediaType.ANIME,
+                        onClick = { selectedMedia = tachiyomi.domain.category.model.Category.MediaType.ANIME },
+                        label = { Text("Anime") }
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedMedia == tachiyomi.domain.category.model.Category.MediaType.NOVEL,
+                        onClick = { selectedMedia = tachiyomi.domain.category.model.Category.MediaType.NOVEL },
+                        label = { Text("Novel") }
+                    )
+                }
+            }
         },
     )
 

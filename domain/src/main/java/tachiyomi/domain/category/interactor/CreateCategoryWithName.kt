@@ -18,14 +18,14 @@ class CreateCategoryWithName(
             return sort.type.flag or sort.direction.flag
         }
 
-    suspend fun await(name: String): Result = withNonCancellableContext {
+    suspend fun await(name: String, flags: Long = 0L): Result = withNonCancellableContext {
         val categories = categoryRepository.getAll()
         val nextOrder = categories.maxOfOrNull { it.order }?.plus(1) ?: 0
         val newCategory = Category(
             id = 0,
             name = name,
             order = nextOrder,
-            flags = initialFlags,
+            flags = initialFlags or flags,
         )
 
         try {

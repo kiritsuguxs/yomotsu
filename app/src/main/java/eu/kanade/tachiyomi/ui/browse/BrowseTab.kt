@@ -10,6 +10,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
+import tachiyomi.presentation.core.util.collectAsState
+
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
@@ -78,7 +82,8 @@ data object BrowseTab : Tab {
 
     @Composable
     override fun Content() {
-        var selectedMedia by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Manga") }
+        val uiPreferences = androidx.compose.runtime.remember { Injekt.get<eu.kanade.domain.ui.UiPreferences>() }
+        val selectedMedia by uiPreferences.lastUsedBrowseMedia.collectAsState()
         var showMediaSheet by androidx.compose.runtime.remember { mutableStateOf(false) }
         val sheetState = rememberModalBottomSheetState()
 
@@ -164,15 +169,15 @@ data object BrowseTab : Tab {
                 androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 32.dp)) {
                     ListItem(
                         headlineContent = { Text("📖 ${stringResource(MR.strings.browse_media_manga)}") },
-                        modifier = Modifier.clickable { selectedMedia = "Manga"; showMediaSheet = false }
+                        modifier = Modifier.clickable { uiPreferences.lastUsedBrowseMedia.set("Manga"); showMediaSheet = false }
                     )
                     ListItem(
                         headlineContent = { Text("🎬 ${stringResource(MR.strings.browse_media_anime)}") },
-                        modifier = Modifier.clickable { selectedMedia = "Anime"; showMediaSheet = false }
+                        modifier = Modifier.clickable { uiPreferences.lastUsedBrowseMedia.set("Anime"); showMediaSheet = false }
                     )
                     ListItem(
                         headlineContent = { Text("📚 ${stringResource(MR.strings.browse_media_novel)}") },
-                        modifier = Modifier.clickable { selectedMedia = "Novel"; showMediaSheet = false }
+                        modifier = Modifier.clickable { uiPreferences.lastUsedBrowseMedia.set("Novel"); showMediaSheet = false }
                     )
                 }
             }
