@@ -486,3 +486,15 @@
   - Perfil Yomotsu repaginado com 20 avatares em alta definição, 20 banners exclusivos (12 cenários cinematográficos de animes + 8 gradientes minimalistas), molduras dinâmicas com evolução por nível, métricas de leitura/visualização e integração com trackers (AniList/MAL com contagem e média de notas).
   - 42 conquistas de animes e internacionalização em Português do Brasil, Inglês e Espanhol.
   - Correção de todas as incompatibilidades de compilação NDK C++, estabilidade no Android 15 e ausência de travamentos em downloads.
+
+### AI. Limpeza de Arquivos Inúteis, Otimização de Assets e Correção do Site Oficial (Outubro 2026)
+- **Remoção de Arquivos Obsoletos e Temporários:**
+  - Excluídos logs de build/execuções passadas na raiz (`action_log.txt`, `action_log2.txt`, `action_log3.txt`, `action_log4.txt`, `compile_output.txt`).
+  - Excluídos scripts soltos de migração/patch (`add_app_deps.py`, `add_player_deps.sh`, `add_strings.sh`, `fix_history_tab.sh`, `history_main.kt`).
+  - Excluída a pasta de rascunhos `scratch/` (scripts Python de patches temporários).
+  - Removido workflow quebrado legado do Mihon (`.github/workflows/update_website.yml`).
+  - Adicionadas regras no `.gitignore` para ignorar logs (`*.log`), arquivos de teste e pasta `scratch/`.
+- **Correção e Otimização do Site (GitHub Pages / `site/`):**
+  - Corrigidas todas as URLs canônicas, links de download e sitemap (`sitemap.xml`, `robots.txt`) de `Yomotsu-Oficial` para o nome canônico `yomotsu`.
+  - Manifesto web (`site.webmanifest`) atualizado com PWA colors, `start_url: "/yomotsu/"` e ícones 192x192 / 512x512.
+  - Criados assets de ícone locais otimizados (`site/icon.png` e `site/icon-192.png`) eliminando requisições lentas para links raw externos.
