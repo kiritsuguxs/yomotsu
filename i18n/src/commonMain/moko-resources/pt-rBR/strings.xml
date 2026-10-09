@@ -1053,4 +1053,9 @@
     <string name="backup_creating_yomotsu_folder">Criando backup na pasta Yomotsu…</string>
 
     <string name="label_update_available">Atualização disponível!</string>
+
+    <!-- Media Selection -->
+    <string name="browse_media_manga">Mangás</string>
+    <string name="browse_media_anime">Animes</string>
+    <string name="browse_media_novel">Light Novels</string>
 </resources>

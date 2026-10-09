@@ -114,9 +114,9 @@ data object BrowseTab : Tab {
 
         TabbedScreen(
             title = when (selectedMedia) {
-                "Anime" -> "Animes"
-                "Novel" -> "Light Novels"
-                else -> "Mangás"
+                "Anime" -> stringResource(MR.strings.browse_media_anime)
+                "Novel" -> stringResource(MR.strings.browse_media_novel)
+                else -> stringResource(MR.strings.browse_media_manga)
             },
             tabs = tabs,
             state = state,
@@ -163,15 +163,15 @@ data object BrowseTab : Tab {
             ) {
                 androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 32.dp)) {
                     ListItem(
-                        headlineContent = { Text("📖 Mangá") },
+                        headlineContent = { Text("📖 ${stringResource(MR.strings.browse_media_manga)}") },
                         modifier = Modifier.clickable { selectedMedia = "Manga"; showMediaSheet = false }
                     )
                     ListItem(
-                        headlineContent = { Text("🎬 Anime") },
+                        headlineContent = { Text("🎬 ${stringResource(MR.strings.browse_media_anime)}") },
                         modifier = Modifier.clickable { selectedMedia = "Anime"; showMediaSheet = false }
                     )
                     ListItem(
-                        headlineContent = { Text("📚 Light Novel") },
+                        headlineContent = { Text("📚 ${stringResource(MR.strings.browse_media_novel)}") },
                         modifier = Modifier.clickable { selectedMedia = "Novel"; showMediaSheet = false }
                     )
                 }
