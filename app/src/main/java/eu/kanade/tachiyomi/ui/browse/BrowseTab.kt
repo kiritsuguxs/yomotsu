@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -153,7 +154,7 @@ data object BrowseTab : Tab {
                 onDismissRequest = { showMediaSheet = false },
                 sheetState = sheetState
             ) {
-                androidx.compose.foundation.layout.Column(androidx.compose.foundation.layout.padding(bottom = 32.dp)) {
+                androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 32.dp)) {
                     ListItem(
                         headlineContent = { Text("📖 Mangá") },
                         modifier = Modifier.clickable { selectedMedia = "Manga"; showMediaSheet = false }
