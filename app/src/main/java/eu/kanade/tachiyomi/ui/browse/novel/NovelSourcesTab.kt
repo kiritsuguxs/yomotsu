@@ -25,7 +25,7 @@ fun novelSourcesTab(): TabContent {
     val state by viewModel.state.collectAsState()
 
     return TabContent(
-        titleRes = MR.strings.label_novel_sources,
+        titleRes = MR.strings.label_sources,
         actions = listOf(
             AppBar.Action(
                 title = stringResource(MR.strings.action_global_search),

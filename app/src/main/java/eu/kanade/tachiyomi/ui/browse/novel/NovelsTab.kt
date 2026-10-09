@@ -30,7 +30,7 @@ fun novelsTab(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     return TabContent(
-        titleRes = MR.strings.label_novels,
+        titleRes = MR.strings.label_extensions,
         badgeNumber = state.updates.size.takeIf { it > 0 },
         searchEnabled = true,
         actions = listOf(

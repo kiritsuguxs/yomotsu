@@ -16,7 +16,7 @@ import eu.kanade.presentation.components.TabContent
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalAnimeSearchScreen
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.aniyomi.AYMR
+
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
@@ -26,7 +26,7 @@ fun animeSourcesTab(): TabContent {
     val state by viewModel.state.collectAsState()
 
     return TabContent(
-        titleRes = AYMR.strings.label_anime_sources,
+        titleRes = MR.strings.label_sources,
         actions = listOf(
             AppBar.Action(
                 title = stringResource(MR.strings.action_global_search),
