@@ -80,6 +80,10 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
         val viewModel = viewModel<Model>()
         val state by viewModel.state.collectAsState()
 
+        androidx.compose.runtime.LaunchedEffect(mangaIds) {
+            viewModel.initSources(mangaIds)
+        }
+
         var migrationSheetOpen by rememberSaveable { mutableStateOf(false) }
 
         fun continueMigration(openSheet: Boolean, extraSearchQuery: String?) {
@@ -309,6 +313,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
     class Model(
         val sourcePreferences: SourcePreferences = Injekt.get(),
         private val sourceManager: SourceManager = Injekt.get(),
+        private val getManga: tachiyomi.domain.manga.interactor.GetManga = Injekt.get(),
     ) : StateViewModel<Model.State>(State()) {
 
         private val sourcesComparator = { includedSources: List<Long> ->
@@ -319,9 +324,13 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
             )
         }
 
-        init {
+        private var initialized = false
+
+        fun initSources(mangaIds: Collection<Long>) {
+            if (initialized) return
+            initialized = true
             viewModelScope.launchIO {
-                initSources()
+                loadSources(mangaIds)
                 mutableState.update { it.copy(isLoading = false) }
             }
         }
@@ -335,7 +344,38 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
             saveSources()
         }
 
-        private fun initSources() {
+        private fun isAnimeSource(source: eu.kanade.tachiyomi.source.Source): Boolean {
+            if (source is eu.kanade.tachiyomi.animesource.AnimeSource) return true
+            val clazz = source.javaClass
+            if (clazz.name.contains("anime", ignoreCase = true)) return true
+            var current: Class<*>? = clazz
+            while (current != null && current != Any::class.java) {
+                if (current.name.contains("anime", ignoreCase = true)) return true
+                if (current.interfaces.any { it.name.contains("anime", ignoreCase = true) }) return true
+                current = current.superclass
+            }
+            return false
+        }
+
+        private fun isNovelSource(source: eu.kanade.tachiyomi.source.Source): Boolean {
+            if (source is eu.kanade.tachiyomi.source.INovelSource) return true
+            val clazz = source.javaClass
+            if (clazz.name.contains("novel", ignoreCase = true)) return true
+            var current: Class<*>? = clazz
+            while (current != null && current != Any::class.java) {
+                if (current.name.contains("novel", ignoreCase = true)) return true
+                if (current.interfaces.any { it.name.contains("novel", ignoreCase = true) }) return true
+                current = current.superclass
+            }
+            return false
+        }
+
+        private suspend fun loadSources(mangaIds: Collection<Long>) {
+            val firstManga = mangaIds.firstOrNull()?.let { getManga.await(it) }
+            val firstMangaSource = firstManga?.source?.let { sourceManager.getOrStub(it) }
+            val isAnime = firstMangaSource?.let { isAnimeSource(it) } ?: false
+            val isNovel = firstMangaSource?.let { isNovelSource(it) } ?: false
+
             val languages = sourcePreferences.enabledLanguages.get()
             val pinnedSources = sourcePreferences.pinnedSources.get().mapNotNull { it.toLongOrNull() }
             val includedSources = sourcePreferences.migrationSources.get()
@@ -345,6 +385,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                 .asSequence()
                 .filterIsInstance<HttpSource>()
                 .filter { it.lang in languages }
+                .filter { isAnimeSource(it) == isAnime && isNovelSource(it) == isNovel }
                 .map {
                     val source = Source(
                         id = it.id,
