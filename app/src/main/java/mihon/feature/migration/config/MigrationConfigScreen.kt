@@ -383,7 +383,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                 .mapNotNull { it.toLongOrNull() }
             val sources = sourceManager.getAll()
                 .asSequence()
-                .filterIsInstance<HttpSource>()
+                .filter { it.id != tachiyomi.source.local.LocalSource.ID && it.id != eu.kanade.tachiyomi.source.TelegramSource.ID }
                 .filter { it.lang in languages }
                 .filter { isAnimeSource(it) == isAnime && isNovelSource(it) == isNovel }
                 .map {

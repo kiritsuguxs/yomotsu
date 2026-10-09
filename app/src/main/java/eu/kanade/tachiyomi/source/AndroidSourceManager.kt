@@ -113,7 +113,7 @@ class AndroidSourceManager(
 
     override fun getAll() = sourcesMapFlow.value.values.toList()
 
-    override fun getOnlineSources() = sourcesMapFlow.value.values.filterIsInstance<HttpSource>()
+    override fun getOnlineSources() = sourcesMapFlow.value.values.filter { it.id != LocalSource.ID && it.id != eu.kanade.tachiyomi.source.TelegramSource.ID }
 
     override fun getStubSources(): List<StubSource> {
         val onlineSourceIds = getOnlineSources().map { it.id }
