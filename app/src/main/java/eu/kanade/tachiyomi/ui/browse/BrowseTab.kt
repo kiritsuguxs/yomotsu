@@ -78,7 +78,7 @@ data object BrowseTab : Tab {
 
     @Composable
     override fun Content() {
-        var selectedMedia by androidx.compose.runtime.remember { mutableStateOf("Manga") }
+        var selectedMedia by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Manga") }
         var showMediaSheet by androidx.compose.runtime.remember { mutableStateOf(false) }
         val sheetState = rememberModalBottomSheetState()
 
@@ -90,16 +90,6 @@ data object BrowseTab : Tab {
         val extensionsState by extensionsViewModel.state.collectAsState()
 
         val novelsViewModel = viewModel<eu.kanade.tachiyomi.ui.browse.novel.NovelsViewModel>()
-
-        val mediaAction = AppBar.Action(
-            title = "Mídia: $selectedMedia",
-            icon = when (selectedMedia) {
-                "Anime" -> Icons.Outlined.Tv
-                "Novel" -> Icons.Outlined.LibraryBooks
-                else -> Icons.Outlined.MenuBook
-            },
-            onClick = { showMediaSheet = true }
-        )
 
         val activeSourcesTab = when (selectedMedia) {
             "Anime" -> animeSourcesTab()
@@ -113,9 +103,9 @@ data object BrowseTab : Tab {
         }
 
         val tabs = listOf(
-            activeSourcesTab.copy(actions = listOf(mediaAction) + activeSourcesTab.actions),
-            activeExtensionsTab.copy(actions = listOf(mediaAction) + activeExtensionsTab.actions),
-            migrateSourceTab().copy(actions = listOf(mediaAction) + migrateSourceTab().actions),
+            activeSourcesTab,
+            activeExtensionsTab,
+            migrateSourceTab(),
         )
 
         val state = rememberPagerState { tabs.size }
@@ -143,6 +133,18 @@ data object BrowseTab : Tab {
                     }
                 }
             },
+            navigationIcon = {
+                androidx.compose.material3.IconButton(onClick = { showMediaSheet = true }) {
+                    androidx.compose.material3.Icon(
+                        imageVector = when (selectedMedia) {
+                            "Anime" -> Icons.Outlined.Tv
+                            "Novel" -> Icons.Outlined.LibraryBooks
+                            else -> Icons.Outlined.MenuBook
+                        },
+                        contentDescription = "Selecionar Mídia"
+                    )
+                }
+            }
         )
 
         LaunchedEffect(Unit) {

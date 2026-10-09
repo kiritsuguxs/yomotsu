@@ -339,8 +339,15 @@ private fun ExtensionItemContent(
     Column(
         modifier = modifier.padding(start = MaterialTheme.padding.medium),
     ) {
+        val displayName = extension.name
+            .replace(Regex(" \\(Anikku\\)$", RegexOption.IGNORE_CASE), "")
+            .replace(Regex(" \\(Aniyomi\\)$", RegexOption.IGNORE_CASE), "")
+            .replace(Regex(" \\(Anime\\)$", RegexOption.IGNORE_CASE), "")
+            .replace(Regex(" \\(Novel\\)$", RegexOption.IGNORE_CASE), "")
+            .trim()
+        
         Text(
-            text = extension.name,
+            text = displayName,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyMedium,

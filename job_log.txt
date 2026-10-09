@@ -1,0 +1,1234 @@
+﻿2026-10-09T12:53:06.5850349Z Current runner version: '2.337.0'
+2026-10-09T12:53:06.5867045Z ##[group]Runner Image Provisioner
+2026-10-09T12:53:06.5867677Z Hosted Compute Agent
+2026-10-09T12:53:06.5868078Z Version: 20261002.596
+2026-10-09T12:53:06.5868580Z Commit: c3d12f3313a95f25162a1503be624f3b0617f8c0
+2026-10-09T12:53:06.5869114Z Build Date: 2026-10-02T22:28:27Z
+2026-10-09T12:53:06.5869606Z Worker ID: {972cb9ef-6cb7-4ab7-8c21-4ac003a351ca}
+2026-10-09T12:53:06.5870143Z Region: centralus
+2026-10-09T12:53:06.5870540Z Cloud: Azure
+2026-10-09T12:53:06.5870936Z ##[endgroup]
+2026-10-09T12:53:06.5871848Z ##[group]Operating System
+2026-10-09T12:53:06.5872308Z Ubuntu
+2026-10-09T12:53:06.5872679Z 24.04.5
+2026-10-09T12:53:06.5873083Z LTS
+2026-10-09T12:53:06.5873478Z ##[endgroup]
+2026-10-09T12:53:06.5873862Z ##[group]Runner Image
+2026-10-09T12:53:06.5874336Z Image: ubuntu-24.04
+2026-10-09T12:53:06.5874742Z Version: 20261004.327.1
+2026-10-09T12:53:06.5875799Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-09T12:53:06.5876896Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327
+2026-10-09T12:53:06.5877620Z ##[endgroup]
+2026-10-09T12:53:06.5878412Z ##[group]GITHUB_TOKEN Permissions
+2026-10-09T12:53:06.5879937Z Contents: read
+2026-10-09T12:53:06.5880324Z Metadata: read
+2026-10-09T12:53:06.5880763Z ##[endgroup]
+2026-10-09T12:53:06.5882107Z Secret source: Actions
+2026-10-09T12:53:06.5882786Z Cache mode: write
+2026-10-09T12:53:06.5883260Z Prepare workflow directory
+2026-10-09T12:53:06.6251085Z Prepare all required actions
+2026-10-09T12:53:06.6285283Z Getting action download info
+2026-10-09T12:53:06.8947106Z Download action repository 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-10-09T12:53:07.2057254Z Download action repository 'actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294' (SHA:a1d282b36b6f3519aa1f3fc636f609c47dddb294)
+2026-10-09T12:53:07.9441145Z Download action repository 'actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961' (SHA:b6effb05e454b25005698d916606bdc6ffcbf961)
+2026-10-09T12:53:09.3091811Z Download action repository 'gradle/actions@9c971963bec38e04b3d30dcc455b5382be2fdbfb' (SHA:9c971963bec38e04b3d30dcc455b5382be2fdbfb)
+2026-10-09T12:53:10.6256712Z Download action repository 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' (SHA:043fb46d1a93c77aae656e7c1c64a875d1fc6a0a)
+2026-10-09T12:53:10.7945301Z Complete job name: Build & Test App
+2026-10-09T12:53:10.8413689Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+2026-10-09T12:53:10.8414146Z with:
+2026-10-09T12:53:10.8414393Z   repository: kiritsuguxs/yomotsu
+2026-10-09T12:53:10.8416532Z   token: ***
+2026-10-09T12:53:10.8416758Z   ssh-strict: true
+2026-10-09T12:53:10.8417061Z   ssh-user: git
+2026-10-09T12:53:10.8417300Z   persist-credentials: true
+2026-10-09T12:53:10.8417561Z   clean: true
+2026-10-09T12:53:10.8417820Z   sparse-checkout-cone-mode: true
+2026-10-09T12:53:10.8418097Z   fetch-depth: 1
+2026-10-09T12:53:10.8418359Z   fetch-tags: false
+2026-10-09T12:53:10.8418600Z   show-progress: true
+2026-10-09T12:53:10.8418874Z   lfs: false
+2026-10-09T12:53:10.8419130Z   submodules: false
+2026-10-09T12:53:10.8419362Z   set-safe-directory: true
+2026-10-09T12:53:10.8419672Z   allow-unsafe-pr-checkout: false
+2026-10-09T12:53:10.8420034Z ##[endgroup]
+2026-10-09T12:53:10.9168297Z Syncing repository: kiritsuguxs/yomotsu
+2026-10-09T12:53:10.9169655Z ##[group]Getting Git version info
+2026-10-09T12:53:10.9170074Z Working directory is '/home/runner/work/yomotsu/yomotsu'
+2026-10-09T12:53:10.9170614Z [command]/usr/bin/git version
+2026-10-09T12:53:10.9217769Z git version 2.55.0
+2026-10-09T12:53:10.9241526Z ##[endgroup]
+2026-10-09T12:53:10.9249315Z Temporarily overriding HOME='/home/runner/work/_temp/6df035a3-ace8-4195-9f40-b8c75f7bdba3' before making global git config changes
+2026-10-09T12:53:10.9250435Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-09T12:53:10.9251408Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/yomotsu/yomotsu
+2026-10-09T12:53:10.9285562Z Deleting the contents of '/home/runner/work/yomotsu/yomotsu'
+2026-10-09T12:53:10.9296883Z ##[group]Determining repository object format
+2026-10-09T12:53:10.9298383Z ##[endgroup]
+2026-10-09T12:53:10.9299190Z ##[group]Initializing the repository
+2026-10-09T12:53:10.9300151Z [command]/usr/bin/git init /home/runner/work/yomotsu/yomotsu
+2026-10-09T12:53:10.9383365Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-09T12:53:10.9384009Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-09T12:53:10.9384662Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-09T12:53:10.9385188Z hint: call:
+2026-10-09T12:53:10.9385472Z hint:
+2026-10-09T12:53:10.9386026Z hint: 	git config --global init.defaultBranch <name>
+2026-10-09T12:53:10.9386446Z hint:
+2026-10-09T12:53:10.9386817Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-09T12:53:10.9387414Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-09T12:53:10.9387853Z hint:
+2026-10-09T12:53:10.9388155Z hint: 	git branch -m <name>
+2026-10-09T12:53:10.9388510Z hint:
+2026-10-09T12:53:10.9388965Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-09T12:53:10.9389731Z Initialized empty Git repository in /home/runner/work/yomotsu/yomotsu/.git/
+2026-10-09T12:53:10.9396451Z [command]/usr/bin/git remote add origin https://github.com/kiritsuguxs/yomotsu
+2026-10-09T12:53:10.9622784Z ##[endgroup]
+2026-10-09T12:53:10.9623565Z ##[group]Disabling automatic garbage collection
+2026-10-09T12:53:10.9625827Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-09T12:53:10.9650771Z ##[endgroup]
+2026-10-09T12:53:10.9651248Z ##[group]Setting up auth
+2026-10-09T12:53:10.9651601Z Removing SSH command configuration
+2026-10-09T12:53:10.9655885Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-09T12:53:10.9678416Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-09T12:53:10.9940047Z Removing HTTP extra header
+2026-10-09T12:53:10.9944249Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-09T12:53:10.9964496Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-09T12:53:11.0099981Z Removing includeIf entries pointing to credentials config files
+2026-10-09T12:53:11.0102703Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-09T12:53:11.0122465Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-09T12:53:11.0267967Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-09T12:53:11.0292620Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/yomotsu/yomotsu/.git.path /home/runner/work/_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config
+2026-10-09T12:53:11.0318357Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/yomotsu/yomotsu/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config
+2026-10-09T12:53:11.0343472Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config
+2026-10-09T12:53:11.0367942Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config
+2026-10-09T12:53:11.0388607Z ##[endgroup]
+2026-10-09T12:53:11.0389043Z ##[group]Fetching the repository
+2026-10-09T12:53:11.0393757Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +64295d2ec57a191ab3a160cc74618a9d8a24bc4e:refs/remotes/origin/ui-browse-refactor
+2026-10-09T12:53:12.6521404Z From https://github.com/kiritsuguxs/yomotsu
+2026-10-09T12:53:12.6522324Z  * [new ref]         64295d2ec57a191ab3a160cc74618a9d8a24bc4e -> origin/ui-browse-refactor
+2026-10-09T12:53:12.6529747Z [command]/usr/bin/git branch --list --remote origin/ui-browse-refactor
+2026-10-09T12:53:12.6548993Z   origin/ui-browse-refactor
+2026-10-09T12:53:12.6555430Z [command]/usr/bin/git rev-parse refs/remotes/origin/ui-browse-refactor
+2026-10-09T12:53:12.6583069Z 64295d2ec57a191ab3a160cc74618a9d8a24bc4e
+2026-10-09T12:53:12.6585074Z ##[endgroup]
+2026-10-09T12:53:12.6585820Z ##[group]Determining the checkout info
+2026-10-09T12:53:12.6586297Z ##[endgroup]
+2026-10-09T12:53:12.6590000Z [command]/usr/bin/git sparse-checkout disable
+2026-10-09T12:53:12.6636184Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-09T12:53:12.6662935Z ##[group]Checking out the ref
+2026-10-09T12:53:12.6666555Z [command]/usr/bin/git checkout --progress --force -B ui-browse-refactor refs/remotes/origin/ui-browse-refactor
+2026-10-09T12:53:12.9225084Z Switched to a new branch 'ui-browse-refactor'
+2026-10-09T12:53:12.9229339Z branch 'ui-browse-refactor' set up to track 'origin/ui-browse-refactor'.
+2026-10-09T12:53:12.9265287Z ##[endgroup]
+2026-10-09T12:53:12.9268654Z [command]/usr/bin/git log -1 --format=%H
+2026-10-09T12:53:12.9287469Z 64295d2ec57a191ab3a160cc74618a9d8a24bc4e
+2026-10-09T12:53:12.9524731Z ##[group]Run actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+2026-10-09T12:53:12.9525082Z with:
+2026-10-09T12:53:12.9525329Z   java-version-file: .github/.java-version
+2026-10-09T12:53:12.9525877Z   distribution: temurin
+2026-10-09T12:53:12.9526134Z   java-package: jdk
+2026-10-09T12:53:12.9526393Z   check-latest: false
+2026-10-09T12:53:12.9526666Z   set-default: true
+2026-10-09T12:53:12.9526905Z   verify-signature: false
+2026-10-09T12:53:12.9527153Z   server-id: github
+2026-10-09T12:53:12.9527390Z   server-username: GITHUB_ACTOR
+2026-10-09T12:53:12.9527687Z   server-password: GITHUB_TOKEN
+2026-10-09T12:53:12.9527977Z   overwrite-settings: true
+2026-10-09T12:53:12.9528255Z   job-status: success
+2026-10-09T12:53:12.9530273Z   token: ***
+2026-10-09T12:53:12.9530538Z   show-download-progress: false
+2026-10-09T12:53:12.9530798Z ##[endgroup]
+2026-10-09T12:53:13.0588478Z ##[group]Installed distributions
+2026-10-09T12:53:13.0774485Z Resolved Java 21.0.12+1 from tool-cache
+2026-10-09T12:53:13.0774981Z Setting Java 21.0.12+1 as the default
+2026-10-09T12:53:13.0781276Z Creating toolchains.xml for JDK version 21 from temurin
+2026-10-09T12:53:13.0828786Z Writing to /home/runner/.m2/toolchains.xml
+2026-10-09T12:53:13.0829141Z 
+2026-10-09T12:53:13.0829254Z Java configuration:
+2026-10-09T12:53:13.0829698Z   Distribution: temurin
+2026-10-09T12:53:13.0829997Z   Version: 21.0.12+1
+2026-10-09T12:53:13.0830340Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:13.0830599Z 
+2026-10-09T12:53:13.0830918Z ##[endgroup]
+2026-10-09T12:53:13.0866532Z Creating settings.xml with server-id: github
+2026-10-09T12:53:13.0867335Z Writing to /home/runner/.m2/settings.xml
+2026-10-09T12:53:13.0868198Z Configured MAVEN_ARGS to include -ntp to suppress Maven transfer progress logs. Set 'show-download-progress: true' to keep the download progress output.
+2026-10-09T12:53:13.1025970Z ##[group]Run gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+2026-10-09T12:53:13.1026538Z with:
+2026-10-09T12:53:13.1026800Z   cache-provider: enhanced
+2026-10-09T12:53:13.1027133Z   cache-disabled: false
+2026-10-09T12:53:13.1027458Z   cache-read-only: true
+2026-10-09T12:53:13.1027929Z   cache-write-only: false
+2026-10-09T12:53:13.1028655Z   cache-overwrite-existing: false
+2026-10-09T12:53:13.1029529Z   cache-cleanup: on-success
+2026-10-09T12:53:13.1030445Z   gradle-home-cache-includes: caches
+notifications
+
+2026-10-09T12:53:13.1031353Z   add-job-summary: always
+2026-10-09T12:53:13.1031704Z   add-job-summary-as-pr-comment: never
+2026-10-09T12:53:13.1032207Z   dependency-graph: disabled
+2026-10-09T12:53:13.1032630Z   dependency-graph-report-dir: dependency-graph-reports
+2026-10-09T12:53:13.1033026Z   dependency-graph-continue-on-failure: true
+2026-10-09T12:53:13.1033433Z   build-scan-publish: false
+2026-10-09T12:53:13.1033803Z   validate-wrappers: true
+2026-10-09T12:53:13.1034417Z   allow-snapshot-wrappers: false
+2026-10-09T12:53:13.1034768Z   gradle-home-cache-strict-match: false
+2026-10-09T12:53:13.1035176Z   workflow-job-context: null
+2026-10-09T12:53:13.1038261Z   github-token: ***
+2026-10-09T12:53:13.1038912Z env:
+2026-10-09T12:53:13.1039252Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:13.1041245Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:13.1044034Z   MAVEN_ARGS: -ntp
+2026-10-09T12:53:13.1045053Z ##[endgroup]
+2026-10-09T12:53:14.4928997Z Merged default JDK locations into /home/runner/.m2/toolchains.xml
+2026-10-09T12:53:14.4933879Z Enhanced Caching: This build is using the proprietary 'gradle-actions-caching' provider for optimized caching support. See https://github.com/gradle/actions/blob/main/DISTRIBUTION.md for terms of use and opt-out instructions.
+2026-10-09T12:53:14.5567272Z ##[group]Restore Gradle state from cache
+2026-10-09T12:53:14.6910600Z Cache hit for restore-key: gradle-home-v2|Linux-X64|build[067b7bdb166a8b73ce4d2fa66ad4a39a]-82d243d4bf39aead4463c05eafdd0e7fee190ba4
+2026-10-09T12:53:15.5697717Z Received 15817277 of 15817277 (100.0%), 21.2 MBs/sec
+2026-10-09T12:53:15.5698402Z Cache Size: ~15 MB (15817277 B)
+2026-10-09T12:53:15.5728425Z [command]/usr/bin/tar -xf /home/runner/work/_temp/38ea684f-dc5f-4272-a0d3-955be80b1ede/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:16.0384658Z Cache restored successfully
+2026-10-09T12:53:16.0392940Z Restored cache entry with key gradle-home-v2|Linux-X64|build[067b7bdb166a8b73ce4d2fa66ad4a39a]-64295d2ec57a191ab3a160cc74618a9d8a24bc4e in 1482ms
+2026-10-09T12:53:16.2256639Z Cache hit for: gradle-wrapper-zips-v2-852daf033b54d6f5dd2552660ef7de60
+2026-10-09T12:53:16.2274625Z Cache hit for: gradle-transforms-v2-4b930e1b6bf3f17a66fdb2640226dc74
+2026-10-09T12:53:16.2280584Z Cache hit for: gradle-generated-gradle-jars-v2-aab574994eb421acff6809687eadd5de
+2026-10-09T12:53:16.2348214Z Cache hit for: gradle-dependencies-v2-43f7f48d30cd3ecb267175e27d2e91e9
+2026-10-09T12:53:16.2369075Z Cache hit for: gradle-instrumented-jars-v2-bb910fcacf708cb42c10c2b5b22b5d19
+2026-10-09T12:53:16.2381844Z Cache hit for: gradle-build-cache-v2-a643230672b8e5a2109c4c762fc0b1ee
+2026-10-09T12:53:16.2385600Z Cache hit for: gradle-groovy-dsl-v2-9a6def251d442ee0f82547734e8ddef0
+2026-10-09T12:53:16.2415047Z Cache hit for: gradle-kotlin-dsl-v2-4fe46c8be546df08113467d4297ec2cc
+2026-10-09T12:53:16.5968868Z Received 460459 of 460459 (100.0%), 2.1 MBs/sec
+2026-10-09T12:53:16.5969488Z Cache Size: ~0 MB (460459 B)
+2026-10-09T12:53:16.5998902Z [command]/usr/bin/tar -xf /home/runner/work/_temp/76ac222f-e6af-482a-a640-23050b994260/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:16.6263579Z Received 60067 of 60067 (100.0%), 0.3 MBs/sec
+2026-10-09T12:53:16.6264440Z Cache Size: ~0 MB (60067 B)
+2026-10-09T12:53:16.6309030Z [command]/usr/bin/tar -xf /home/runner/work/_temp/c9db30c3-180e-463e-ae05-bbb19332d551/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:16.6426031Z Cache restored successfully
+2026-10-09T12:53:16.6427529Z Restored cache entry with key gradle-instrumented-jars-v2-bb910fcacf708cb42c10c2b5b22b5d19 in 602ms
+2026-10-09T12:53:16.6674482Z Received 91827 of 91827 (100.0%), 0.3 MBs/sec
+2026-10-09T12:53:16.6675377Z Cache Size: ~0 MB (91827 B)
+2026-10-09T12:53:16.6744396Z [command]/usr/bin/tar -xf /home/runner/work/_temp/f3af3175-2689-4f5c-98e7-96b66442d6b2/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:16.6836155Z Cache restored successfully
+2026-10-09T12:53:16.6838235Z Restored cache entry with key gradle-groovy-dsl-v2-9a6def251d442ee0f82547734e8ddef0 in 641ms
+2026-10-09T12:53:16.6887160Z Cache restored successfully
+2026-10-09T12:53:16.6890107Z Restored cache entry with key gradle-kotlin-dsl-v2-4fe46c8be546df08113467d4297ec2cc in 646ms
+2026-10-09T12:53:17.2874570Z Received 42158673 of 42158673 (100.0%), 43.6 MBs/sec
+2026-10-09T12:53:17.2875178Z Cache Size: ~40 MB (42158673 B)
+2026-10-09T12:53:17.3457557Z Received 100663296 of 534124533 (18.8%), 95.1 MBs/sec
+2026-10-09T12:53:17.3564875Z Received 75497472 of 139934688 (54.0%), 71.9 MBs/sec
+2026-10-09T12:53:17.3743538Z [command]/usr/bin/tar -xf /home/runner/work/_temp/9f2cea48-8c60-42cf-a66f-0500480edd2c/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:17.3846920Z Received 29360128 of 756007515 (3.9%), 27.8 MBs/sec
+2026-10-09T12:53:17.3971035Z Received 50331648 of 396079799 (12.7%), 47.5 MBs/sec
+2026-10-09T12:53:17.7237935Z Cache restored successfully
+2026-10-09T12:53:17.7332377Z Restored cache entry with key gradle-generated-gradle-jars-v2-aab574994eb421acff6809687eadd5de in 1691ms
+2026-10-09T12:53:18.0294775Z Received 139934688 of 139934688 (100.0%), 79.7 MBs/sec
+2026-10-09T12:53:18.0296066Z Cache Size: ~133 MB (139934688 B)
+2026-10-09T12:53:18.0650505Z [command]/usr/bin/tar -xf /home/runner/work/_temp/ac64df3f-f551-4332-9335-619477ce9f0e/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:18.2455758Z Cache restored successfully
+2026-10-09T12:53:18.2517994Z Restored cache entry with key gradle-wrapper-zips-v2-852daf033b54d6f5dd2552660ef7de60 in 2211ms
+2026-10-09T12:53:18.3753451Z Received 268435456 of 534124533 (50.3%), 125.6 MBs/sec
+2026-10-09T12:53:18.3919842Z Received 125829120 of 756007515 (16.6%), 59.5 MBs/sec
+2026-10-09T12:53:18.3976024Z Received 188743680 of 396079799 (47.7%), 89.5 MBs/sec
+2026-10-09T12:53:19.3779057Z Received 465567744 of 534124533 (87.2%), 146.0 MBs/sec
+2026-10-09T12:53:19.3956059Z Received 205520896 of 756007515 (27.2%), 64.9 MBs/sec
+2026-10-09T12:53:19.3996742Z Received 356515840 of 396079799 (90.0%), 112.8 MBs/sec
+2026-10-09T12:53:19.6261516Z Received 396079799 of 396079799 (100.0%), 116.6 MBs/sec
+2026-10-09T12:53:19.6262093Z Cache Size: ~378 MB (396079799 B)
+2026-10-09T12:53:19.6414295Z [command]/usr/bin/tar -xf /home/runner/work/_temp/ac4e7b08-55f4-471e-a6d1-1b3f8f72664b/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:19.9633243Z Received 534124533 of 534124533 (100.0%), 140.4 MBs/sec
+2026-10-09T12:53:19.9634353Z Cache Size: ~509 MB (534124533 B)
+2026-10-09T12:53:19.9801278Z [command]/usr/bin/tar -xf /home/runner/work/_temp/8e3ae0a2-e57a-4edf-88f4-3043f134cad5/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:20.6968151Z Received 268435456 of 756007515 (35.5%), 59.2 MBs/sec
+2026-10-09T12:53:21.4141239Z Cache restored successfully
+2026-10-09T12:53:21.4342352Z Restored cache entry with key gradle-build-cache-v2-a643230672b8e5a2109c4c762fc0b1ee in 5391ms
+2026-10-09T12:53:21.6972434Z Received 402653184 of 756007515 (53.3%), 72.1 MBs/sec
+2026-10-09T12:53:23.3657159Z Received 536870912 of 756007515 (71.0%), 73.3 MBs/sec
+2026-10-09T12:53:24.3640536Z Received 671088640 of 756007515 (88.8%), 80.1 MBs/sec
+2026-10-09T12:53:24.9550528Z Received 756007515 of 756007515 (100.0%), 84.0 MBs/sec
+2026-10-09T12:53:24.9551847Z Cache Size: ~721 MB (756007515 B)
+2026-10-09T12:53:24.9737958Z [command]/usr/bin/tar -xf /home/runner/work/_temp/42c5e262-a033-4a66-b06a-921ad74350d4/cache.tzst -P -C /home/runner/work/yomotsu/yomotsu --use-compress-program unzstd
+2026-10-09T12:53:36.6011079Z Cache restored successfully
+2026-10-09T12:53:36.6294745Z Restored cache entry with key gradle-dependencies-v2-43f7f48d30cd3ecb267175e27d2e91e9 in 20589ms
+2026-10-09T12:53:37.1011576Z Cache restored successfully
+2026-10-09T12:53:37.4538099Z Restored cache entry with key gradle-transforms-v2-4b930e1b6bf3f17a66fdb2640226dc74 in 21410ms
+2026-10-09T12:53:37.6631156Z ##[endgroup]
+2026-10-09T12:53:37.6946097Z ##[group]All Gradle Wrapper jars are valid
+2026-10-09T12:53:37.6947227Z ✓ Found known Gradle Wrapper JAR files:
+2026-10-09T12:53:37.6947786Z   497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7 gradle/wrapper/gradle-wrapper.jar
+2026-10-09T12:53:37.6948492Z ##[endgroup]
+2026-10-09T12:53:38.1344351Z ##[group]Run VERSION="$(sed -n 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
+2026-10-09T12:53:38.1345568Z [36;1mVERSION="$(sed -n 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"[0m
+2026-10-09T12:53:38.1346280Z [36;1mecho "version=${VERSION}" >> $GITHUB_OUTPUT[0m
+2026-10-09T12:53:38.1346703Z [36;1mecho "Extracted app version: ${VERSION}"[0m
+2026-10-09T12:53:38.1746468Z shell: /usr/bin/bash -e {0}
+2026-10-09T12:53:38.1746827Z env:
+2026-10-09T12:53:38.1747233Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:38.1747725Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:38.1748114Z   MAVEN_ARGS: -ntp
+2026-10-09T12:53:38.1748468Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-10-09T12:53:38.1748828Z   GRADLE_USER_HOME: /home/runner/.gradle
+2026-10-09T12:53:38.1749268Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-10-09T12:53:38.1749732Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-10-09T12:53:38.1750168Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-10-09T12:53:38.1750543Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-10-09T12:53:38.1750869Z ##[endgroup]
+2026-10-09T12:53:38.1866243Z Extracted app version: 0.20.4-Y41
+2026-10-09T12:53:38.2359634Z ##[group]Run base64 --decode branding/yomotsu-icon.png.b64 > "$RUNNER_TEMP/yomotsu-icon.png"
+2026-10-09T12:53:38.2360325Z [36;1mbase64 --decode branding/yomotsu-icon.png.b64 > "$RUNNER_TEMP/yomotsu-icon.png"[0m
+2026-10-09T12:53:38.2360859Z [36;1mfor density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do[0m
+2026-10-09T12:53:38.2361302Z [36;1m  mkdir -p "app/src/main/res/mipmap-$density"[0m
+2026-10-09T12:53:38.2361812Z [36;1m  cp "$RUNNER_TEMP/yomotsu-icon.png" "app/src/main/res/mipmap-$density/ic_launcher.png"[0m
+2026-10-09T12:53:38.2362423Z [36;1m  cp "$RUNNER_TEMP/yomotsu-icon.png" "app/src/main/res/mipmap-$density/ic_launcher_foreground.png"[0m
+2026-10-09T12:53:38.2362898Z [36;1mdone[0m
+2026-10-09T12:53:38.2390694Z shell: /usr/bin/bash -e {0}
+2026-10-09T12:53:38.2391096Z env:
+2026-10-09T12:53:38.2391460Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:38.2392098Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:38.2392514Z   MAVEN_ARGS: -ntp
+2026-10-09T12:53:38.2392858Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-10-09T12:53:38.2393271Z   GRADLE_USER_HOME: /home/runner/.gradle
+2026-10-09T12:53:38.2393601Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-10-09T12:53:38.2394093Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-10-09T12:53:38.2394610Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-10-09T12:53:38.2394965Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-10-09T12:53:38.2395318Z ##[endgroup]
+2026-10-09T12:53:38.4181740Z ##[group]Run ./gradlew verifySqlDelightMigration
+2026-10-09T12:53:38.4182267Z [36;1m./gradlew verifySqlDelightMigration[0m
+2026-10-09T12:53:38.4206346Z shell: /usr/bin/bash -e {0}
+2026-10-09T12:53:38.4206675Z env:
+2026-10-09T12:53:38.4207089Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:38.4207716Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:53:38.4208221Z   MAVEN_ARGS: -ntp
+2026-10-09T12:53:38.4208635Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-10-09T12:53:38.4209077Z   GRADLE_USER_HOME: /home/runner/.gradle
+2026-10-09T12:53:38.4209656Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-10-09T12:53:38.4210307Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-10-09T12:53:38.4210950Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-10-09T12:53:38.4211411Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-10-09T12:53:38.4212037Z ##[endgroup]
+2026-10-09T12:53:40.0803932Z Starting a Gradle Daemon (subsequent builds will be faster)
+2026-10-09T12:53:41.7802938Z Configuration on demand is an incubating feature.
+2026-10-09T12:53:44.5802542Z Type-safe project accessors is an incubating feature.
+2026-10-09T12:53:46.7817078Z > Task :build-logic:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-09T12:53:46.9810841Z > Task :build-logic:compileKotlin FROM-CACHE
+2026-10-09T12:53:46.9848149Z > Task :build-logic:compileJava NO-SOURCE
+2026-10-09T12:53:47.0801577Z > Task :build-logic:pluginDescriptors
+2026-10-09T12:53:47.0810087Z > Task :build-logic:processResources
+2026-10-09T12:53:47.0816777Z > Task :build-logic:classes
+2026-10-09T12:53:47.0817817Z > Task :build-logic:jar
+2026-10-09T12:53:53.6805168Z 
+2026-10-09T12:53:53.6808344Z > Configure project :dbnet-native
+2026-10-09T12:53:53.6809597Z Checking the license for package NDK (Side by side) 28.2.13676358 in /usr/local/lib/android/sdk/licenses
+2026-10-09T12:53:53.6810603Z License for package NDK (Side by side) 28.2.13676358 accepted.
+2026-10-09T12:53:53.6811414Z Preparing "Install NDK (Side by side) 28.2.13676358 v.28.2.13676358".
+2026-10-09T12:54:13.5800808Z "Install NDK (Side by side) 28.2.13676358 v.28.2.13676358" ready.
+2026-10-09T12:54:13.5801491Z Installing NDK (Side by side) 28.2.13676358 in /usr/local/lib/android/sdk/ndk/28.2.13676358
+2026-10-09T12:54:13.5802044Z "Install NDK (Side by side) 28.2.13676358 v.28.2.13676358" complete.
+2026-10-09T12:54:13.9801032Z "Install NDK (Side by side) 28.2.13676358 v.28.2.13676358" finished.
+2026-10-09T12:54:15.5816858Z 
+2026-10-09T12:54:15.5821509Z > Task :data:verifyDebugDatabaseMigration FROM-CACHE
+2026-10-09T12:54:15.5837804Z > Task :data:verifyReleaseDatabaseMigration FROM-CACHE
+2026-10-09T12:54:15.5838741Z > Task :data:verifySqlDelightMigration UP-TO-DATE
+2026-10-09T12:54:15.5839837Z gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1791550423118.json
+2026-10-09T12:54:15.5840488Z 
+2026-10-09T12:54:15.5840838Z BUILD SUCCESSFUL in 37s
+2026-10-09T12:54:15.5841438Z 6 actionable tasks: 3 executed, 3 from cache
+2026-10-09T12:54:15.5842444Z Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html
+2026-10-09T12:54:15.9083465Z ##[group]Run ./gradlew assembleRelease -Penable-updater
+2026-10-09T12:54:15.9084006Z [36;1m./gradlew assembleRelease -Penable-updater[0m
+2026-10-09T12:54:15.9084570Z [36;1mcp app/build/outputs/apk/release/app-arm64-v8a-release.apk app/build/outputs/apk/release/Yomotsu-0.20.4-Y41-arm64.apk[0m
+2026-10-09T12:54:15.9119362Z shell: /usr/bin/bash -e {0}
+2026-10-09T12:54:15.9119700Z env:
+2026-10-09T12:54:15.9120177Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:54:15.9120803Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+2026-10-09T12:54:15.9121273Z   MAVEN_ARGS: -ntp
+2026-10-09T12:54:15.9121655Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-10-09T12:54:15.9122028Z   GRADLE_USER_HOME: /home/runner/.gradle
+2026-10-09T12:54:15.9122554Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-10-09T12:54:15.9123020Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-10-09T12:54:15.9123643Z   DEVELOCITY_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-10-09T12:54:15.9124166Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-10-09T12:54:15.9124556Z   MIHON_GITHUB_RELEASE: true
+2026-10-09T12:54:15.9143585Z   storeFileBase64: ***
+2026-10-09T12:54:15.9144133Z   storePassword: ***
+2026-10-09T12:54:15.9144570Z   keyAlias: ***
+2026-10-09T12:54:15.9145040Z   keyPassword: ***
+2026-10-09T12:54:15.9145475Z ##[endgroup]
+2026-10-09T12:54:16.4126991Z Configuration on demand is an incubating feature.
+2026-10-09T12:54:16.4157239Z Type-safe project accessors is an incubating feature.
+2026-10-09T12:54:16.6079105Z > Task :build-logic:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-09T12:54:16.7074613Z > Task :build-logic:compileKotlin UP-TO-DATE
+2026-10-09T12:54:16.7098387Z > Task :build-logic:compileJava NO-SOURCE
+2026-10-09T12:54:16.7107170Z > Task :build-logic:pluginDescriptors UP-TO-DATE
+2026-10-09T12:54:16.7114958Z > Task :build-logic:processResources UP-TO-DATE
+2026-10-09T12:54:16.7116120Z > Task :build-logic:classes UP-TO-DATE
+2026-10-09T12:54:16.7116777Z > Task :build-logic:jar UP-TO-DATE
+2026-10-09T12:54:19.2077818Z > Task :app:preBuild UP-TO-DATE
+2026-10-09T12:54:19.2087563Z > Task :app:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:19.3077510Z > Task :app:mergeReleaseJniLibFolders
+2026-10-09T12:54:19.3095264Z > Task :core-metadata:preBuild UP-TO-DATE
+2026-10-09T12:54:19.3097724Z > Task :core-metadata:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:19.3098438Z > Task :core-metadata:mergeReleaseJniLibFolders
+2026-10-09T12:54:19.3099936Z > Task :core-metadata:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:19.3100613Z > Task :data:preBuild UP-TO-DATE
+2026-10-09T12:54:19.3101696Z > Task :core-metadata:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:19.3102550Z > Task :data:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:19.3103368Z > Task :data:mergeReleaseJniLibFolders
+2026-10-09T12:54:19.3104152Z > Task :data:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:19.4078245Z > Task :dbnet-native:preBuild UP-TO-DATE
+2026-10-09T12:54:19.4081329Z > Task :dbnet-native:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:19.4082214Z > Task :data:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:21.4070732Z 
+2026-10-09T12:54:21.4071642Z > Task :dbnet-native:configureCMakeRelWithDebInfo[arm64-v8a]
+2026-10-09T12:54:21.4074683Z Checking the license for package CMake 3.22.1 in /usr/local/lib/android/sdk/licenses
+2026-10-09T12:54:21.4075328Z License for package CMake 3.22.1 accepted.
+2026-10-09T12:54:21.4076062Z Preparing "Install CMake 3.22.1 v.3.22.1".
+2026-10-09T12:54:21.4076553Z "Install CMake 3.22.1 v.3.22.1" ready.
+2026-10-09T12:54:21.4077074Z Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
+2026-10-09T12:54:21.4077627Z "Install CMake 3.22.1 v.3.22.1" complete.
+2026-10-09T12:54:21.4078154Z "Install CMake 3.22.1 v.3.22.1" finished.
+2026-10-09T12:54:24.1088657Z 
+2026-10-09T12:54:24.1090507Z > Task :dbnet-native:buildCMakeRelWithDebInfo[arm64-v8a]
+2026-10-09T12:54:24.1091733Z > Task :dbnet-native:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.1092403Z > Task :domain:preBuild UP-TO-DATE
+2026-10-09T12:54:24.1093028Z > Task :domain:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.1093614Z > Task :domain:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.1094263Z > Task :domain:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.1094915Z > Task :domain:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.1095489Z > Task :i18n:androidPreBuild UP-TO-DATE
+2026-10-09T12:54:24.1096364Z > Task :i18n:preAndroidMainBuild UP-TO-DATE
+2026-10-09T12:54:24.1097030Z > Task :i18n:mergeAndroidMainJniLibFolders
+2026-10-09T12:54:24.1098030Z > Task :i18n:mergeAndroidMainNativeLibs NO-SOURCE
+2026-10-09T12:54:24.1098922Z > Task :i18n:copyAndroidMainJniLibsProjectOnly
+2026-10-09T12:54:24.1099559Z > Task :i18n-aniyomi:androidPreBuild UP-TO-DATE
+2026-10-09T12:54:24.1100634Z > Task :i18n-aniyomi:preAndroidMainBuild UP-TO-DATE
+2026-10-09T12:54:24.1101479Z > Task :i18n-aniyomi:mergeAndroidMainJniLibFolders
+2026-10-09T12:54:24.1102347Z > Task :i18n-aniyomi:mergeAndroidMainNativeLibs NO-SOURCE
+2026-10-09T12:54:24.1103891Z > Task :i18n-aniyomi:copyAndroidMainJniLibsProjectOnly
+2026-10-09T12:54:24.1104757Z > Task :i18n-at:androidPreBuild UP-TO-DATE
+2026-10-09T12:54:24.1105386Z > Task :i18n-at:preAndroidMainBuild UP-TO-DATE
+2026-10-09T12:54:24.1106179Z > Task :dbnet-native:mergeReleaseNativeLibs
+2026-10-09T12:54:24.1106859Z > Task :i18n-at:mergeAndroidMainJniLibFolders
+2026-10-09T12:54:24.1107467Z > Task :i18n-at:mergeAndroidMainNativeLibs NO-SOURCE
+2026-10-09T12:54:24.1108846Z > Task :i18n-at:copyAndroidMainJniLibsProjectOnly
+2026-10-09T12:54:24.1110399Z > Task :ppocr-sdk:preBuild UP-TO-DATE
+2026-10-09T12:54:24.1111533Z > Task :ppocr-sdk:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.1112232Z > Task :dbnet-native:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2087352Z > Task :ppocr-sdk:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2098858Z > Task :ppocr-sdk:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2101886Z > Task :presentation-core:preBuild UP-TO-DATE
+2026-10-09T12:54:24.2102724Z > Task :presentation-core:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.2103399Z > Task :ppocr-sdk:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2104097Z > Task :presentation-core:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2104823Z > Task :presentation-core:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2105807Z > Task :presentation-widget:preBuild UP-TO-DATE
+2026-10-09T12:54:24.2106532Z > Task :presentation-core:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2107279Z > Task :presentation-widget:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.2107965Z > Task :presentation-widget:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2108688Z > Task :presentation-widget:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2109543Z > Task :source-api:preBuild UP-TO-DATE
+2026-10-09T12:54:24.2110158Z > Task :source-api:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.2110879Z > Task :presentation-widget:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2111607Z > Task :source-api:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2112275Z > Task :source-api:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2112940Z > Task :source-local:preBuild UP-TO-DATE
+2026-10-09T12:54:24.2113603Z > Task :source-local:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.2114298Z > Task :source-api:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2114960Z > Task :source-local:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2115788Z > Task :source-local:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2116478Z > Task :telemetry:preBuild UP-TO-DATE
+2026-10-09T12:54:24.2131269Z > Task :telemetry:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.2132165Z > Task :source-local:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2132872Z > Task :telemetry:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2134643Z > Task :telemetry:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2135331Z > Task :core:archive:preBuild UP-TO-DATE
+2026-10-09T12:54:24.2136350Z > Task :telemetry:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2137687Z > Task :core:archive:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.2138504Z > Task :core:archive:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2139109Z > Task :core:archive:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2139780Z > Task :core:common:preBuild UP-TO-DATE
+2026-10-09T12:54:24.2140341Z > Task :core:common:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.2141001Z > Task :core:archive:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2141628Z > Task :core:common:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2142271Z > Task :core:common:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2142924Z > Task :core:common:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.2144719Z > Task :core:viewmodel:preBuild UP-TO-DATE
+2026-10-09T12:54:24.2145381Z > Task :core:viewmodel:preReleaseBuild UP-TO-DATE
+2026-10-09T12:54:24.2146227Z > Task :core:viewmodel:mergeReleaseJniLibFolders
+2026-10-09T12:54:24.2146941Z > Task :core:viewmodel:mergeReleaseNativeLibs NO-SOURCE
+2026-10-09T12:54:24.2147586Z > Task :core:viewmodel:copyReleaseJniLibsProjectOnly
+2026-10-09T12:54:24.3078031Z > Task :core-metadata:prepareReleaseArtProfile
+2026-10-09T12:54:24.7106887Z > Task :data:prepareReleaseArtProfile
+2026-10-09T12:54:24.7196784Z > Task :dbnet-native:prepareReleaseArtProfile
+2026-10-09T12:54:24.7197523Z > Task :domain:prepareReleaseArtProfile
+2026-10-09T12:54:24.7198068Z > Task :i18n:prepareAndroidMainArtProfile
+2026-10-09T12:54:24.7198660Z > Task :i18n-aniyomi:prepareAndroidMainArtProfile
+2026-10-09T12:54:24.7199244Z > Task :i18n-at:prepareAndroidMainArtProfile
+2026-10-09T12:54:24.7199782Z > Task :ppocr-sdk:prepareReleaseArtProfile
+2026-10-09T12:54:24.7200335Z > Task :presentation-core:prepareReleaseArtProfile
+2026-10-09T12:54:24.7200994Z > Task :presentation-widget:prepareReleaseArtProfile
+2026-10-09T12:54:24.7201542Z > Task :source-api:prepareReleaseArtProfile
+2026-10-09T12:54:24.7202108Z > Task :source-local:prepareReleaseArtProfile
+2026-10-09T12:54:24.7202715Z > Task :telemetry:prepareReleaseArtProfile
+2026-10-09T12:54:24.7203266Z > Task :core:archive:prepareReleaseArtProfile
+2026-10-09T12:54:24.7203859Z > Task :core:common:prepareReleaseArtProfile
+2026-10-09T12:54:24.7204372Z > Task :core:viewmodel:prepareReleaseArtProfile
+2026-10-09T12:54:24.9071704Z > Task :app:mergeReleaseArtProfile
+2026-10-09T12:54:25.8071105Z > Task :app:mergeReleaseNativeLibs
+2026-10-09T12:54:27.4093605Z > Task :app:expandReleaseL8ArtProfileWildcards FROM-CACHE
+2026-10-09T12:54:27.4095043Z > Task :core-metadata:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:27.4096047Z > Task :core-metadata:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:27.4097073Z > Task :core-metadata:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:27.4097819Z > Task :core-metadata:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:27.4100290Z > Task :source-api:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:27.4100995Z > Task :source-api:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:27.4101819Z > Task :source-api:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:27.4102621Z > Task :source-api:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:27.4103317Z > Task :i18n:generateAndroidMainEmptyResourceFiles
+2026-10-09T12:54:27.5269859Z > Task :i18n:generateAndroidMainLocalesConfig
+2026-10-09T12:54:27.5296603Z > Task :i18n:generateMRcommonTest FROM-CACHE
+2026-10-09T12:54:27.5297107Z > Task :i18n:generateMRandroidHostTest FROM-CACHE
+2026-10-09T12:54:27.5297474Z > Task :i18n:generateMRcommonMain FROM-CACHE
+2026-10-09T12:54:27.6088503Z > Task :i18n:generateMRandroidMain FROM-CACHE
+2026-10-09T12:54:27.7071657Z > Task :i18n:packageAndroidMainResources FROM-CACHE
+2026-10-09T12:54:27.7137852Z > Task :i18n:parseAndroidMainLocalResources FROM-CACHE
+2026-10-09T12:54:27.7175130Z > Task :i18n:generateAndroidMainRFile FROM-CACHE
+2026-10-09T12:54:27.7206503Z > Task :core:common:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:27.7226505Z > Task :core:common:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:27.7256916Z > Task :core:common:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:27.7286456Z > Task :core:common:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:27.8091442Z > Task :core:common:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:27.9080417Z > Task :source-api:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:27.9107152Z > Task :core-metadata:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:27.9114853Z > Task :i18n:kmpPartiallyResolvedDependenciesChecker
+2026-10-09T12:54:27.9116004Z > Task :i18n:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-09T12:54:28.0073702Z > Task :i18n:compileAndroidMain FROM-CACHE
+2026-10-09T12:54:28.2079453Z > Task :i18n:bundleAndroidMainClassesToCompileJar
+2026-10-09T12:54:29.0092777Z > Task :app:stripReleaseDebugSymbols
+2026-10-09T12:54:29.0106865Z > Task :core:common:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:29.8117052Z > Task :app:extractReleaseNativeSymbolTables FROM-CACHE
+2026-10-09T12:54:29.8117718Z > Task :core:common:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:29.8118198Z > Task :core:common:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:29.8118920Z > Task :core:common:bundleLibCompileToJarRelease
+2026-10-09T12:54:29.9107729Z > Task :source-api:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:29.9127724Z > Task :source-api:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:29.9151219Z > Task :source-api:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:29.9176724Z > Task :source-api:bundleLibCompileToJarRelease
+2026-10-09T12:54:30.0136622Z > Task :core-metadata:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:30.0196538Z > Task :core-metadata:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:30.0226492Z > Task :core-metadata:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:30.0256334Z > Task :core-metadata:bundleLibCompileToJarRelease
+2026-10-09T12:54:30.0316327Z > Task :domain:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:30.0376352Z > Task :domain:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:30.0406348Z > Task :domain:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:30.0436310Z > Task :domain:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:30.1076211Z > Task :domain:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:30.3073254Z > Task :domain:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:30.3096447Z > Task :domain:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:30.3116398Z > Task :domain:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:30.4070950Z > Task :domain:bundleLibCompileToJarRelease
+2026-10-09T12:54:30.4075014Z > Task :source-local:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:30.4075884Z > Task :source-local:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:30.4076569Z > Task :source-local:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:30.4077229Z > Task :source-local:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:30.4077844Z > Task :core:archive:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:30.4078472Z > Task :core:archive:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:30.4079095Z > Task :core:archive:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:30.4079745Z > Task :core:archive:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:30.4080314Z > Task :core:archive:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:30.4080878Z > Task :source-local:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:30.4081426Z > Task :core:archive:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:30.4081967Z > Task :core:archive:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:30.5070943Z > Task :core:archive:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:30.5096586Z > Task :core:archive:bundleLibCompileToJarRelease
+2026-10-09T12:54:30.5126446Z > Task :source-local:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:30.5127152Z > Task :source-local:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:30.5156609Z > Task :source-local:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:30.5172345Z > Task :source-local:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:30.5173505Z > Task :source-local:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:30.5174544Z > Task :core-metadata:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:30.5175135Z > Task :core-metadata:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:30.5175881Z > Task :data:generateReleaseDatabaseInterface FROM-CACHE
+2026-10-09T12:54:30.5176468Z > Task :data:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:30.5176984Z > Task :data:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:30.6080571Z > Task :data:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:30.6095934Z > Task :data:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:30.6096616Z > Task :data:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:30.7086404Z > Task :data:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:30.7089183Z > Task :data:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:30.7106526Z > Task :data:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:30.7107198Z > Task :data:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:30.7108333Z > Task :data:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:30.7108941Z > Task :presentation-core:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:30.7109599Z > Task :presentation-core:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:30.7110305Z > Task :presentation-core:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:30.7110975Z > Task :presentation-core:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:30.7111606Z > Task :presentation-core:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:30.8106696Z > Task :presentation-core:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:30.8121349Z > Task :presentation-core:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:30.9079209Z > Task :presentation-core:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:30.9102083Z > Task :presentation-core:bundleLibCompileToJarRelease
+2026-10-09T12:54:30.9126167Z > Task :presentation-widget:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:30.9156399Z > Task :presentation-widget:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:30.9186420Z > Task :presentation-widget:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:30.9220743Z > Task :presentation-widget:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:31.0086515Z > Task :presentation-widget:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:31.0099728Z > Task :presentation-widget:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:31.0126517Z > Task :presentation-widget:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:31.0156365Z > Task :presentation-widget:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:31.0157112Z > Task :presentation-widget:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.0186458Z > Task :presentation-widget:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.0216398Z > Task :domain:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.0243535Z > Task :domain:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.0244239Z > Task :source-api:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.0276412Z > Task :source-api:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.0306402Z > Task :presentation-core:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.0313801Z > Task :presentation-core:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.0336411Z > Task :telemetry:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:31.0366398Z > Task :telemetry:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:31.0386712Z > Task :telemetry:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:31.0387367Z > Task :telemetry:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:31.1082377Z > Task :telemetry:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:31.1106855Z > Task :telemetry:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:31.1145482Z > Task :telemetry:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:31.1176753Z > Task :telemetry:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:31.1196516Z > Task :telemetry:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.1226276Z > Task :telemetry:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.1236824Z > Task :core:common:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.1266461Z > Task :core:common:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.1296371Z > Task :i18n:mergeAndroidMainGeneratedProguardFiles
+2026-10-09T12:54:31.1311885Z > Task :i18n:exportAndroidMainConsumerProguardFiles
+2026-10-09T12:54:31.1326390Z > Task :i18n-aniyomi:kmpPartiallyResolvedDependenciesChecker
+2026-10-09T12:54:31.1355100Z > Task :i18n-aniyomi:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-09T12:54:31.1369282Z > Task :i18n-aniyomi:generateAndroidMainEmptyResourceFiles
+2026-10-09T12:54:31.1391633Z > Task :i18n-aniyomi:generateAndroidMainLocalesConfig
+2026-10-09T12:54:31.1392312Z > Task :i18n-aniyomi:generateMRcommonTest FROM-CACHE
+2026-10-09T12:54:31.1392868Z > Task :i18n-aniyomi:generateMRandroidHostTest FROM-CACHE
+2026-10-09T12:54:31.2096378Z > Task :i18n-aniyomi:generateMRcommonMain FROM-CACHE
+2026-10-09T12:54:31.2106836Z > Task :i18n-aniyomi:generateMRandroidMain FROM-CACHE
+2026-10-09T12:54:31.2121251Z > Task :i18n-aniyomi:packageAndroidMainResources FROM-CACHE
+2026-10-09T12:54:31.2137713Z > Task :i18n-aniyomi:parseAndroidMainLocalResources FROM-CACHE
+2026-10-09T12:54:31.2169909Z > Task :i18n-aniyomi:generateAndroidMainRFile FROM-CACHE
+2026-10-09T12:54:31.3081980Z > Task :i18n-aniyomi:compileAndroidMain FROM-CACHE
+2026-10-09T12:54:31.3093982Z > Task :i18n-aniyomi:mergeAndroidMainGeneratedProguardFiles
+2026-10-09T12:54:31.3094699Z > Task :i18n-aniyomi:exportAndroidMainConsumerProguardFiles
+2026-10-09T12:54:31.3095247Z > Task :i18n-at:kmpPartiallyResolvedDependenciesChecker
+2026-10-09T12:54:31.3095938Z > Task :i18n-at:checkKotlinGradlePluginConfigurationErrors SKIPPED
+2026-10-09T12:54:31.3096514Z > Task :i18n-at:generateAndroidMainEmptyResourceFiles
+2026-10-09T12:54:31.3096995Z > Task :i18n-at:generateMRcommonTest FROM-CACHE
+2026-10-09T12:54:31.3097508Z > Task :i18n-at:generateMRandroidHostTest FROM-CACHE
+2026-10-09T12:54:31.3098014Z > Task :i18n-at:generateMRcommonMain FROM-CACHE
+2026-10-09T12:54:31.3098621Z > Task :i18n-at:generateMRandroidMain FROM-CACHE
+2026-10-09T12:54:31.3099092Z > Task :i18n-at:packageAndroidMainResources FROM-CACHE
+2026-10-09T12:54:31.3099717Z > Task :i18n-at:parseAndroidMainLocalResources FROM-CACHE
+2026-10-09T12:54:31.3100166Z > Task :i18n-at:generateAndroidMainRFile FROM-CACHE
+2026-10-09T12:54:31.3107229Z > Task :i18n-at:compileAndroidMain FROM-CACHE
+2026-10-09T12:54:31.3117345Z > Task :i18n-at:mergeAndroidMainGeneratedProguardFiles
+2026-10-09T12:54:31.3118024Z > Task :i18n-at:exportAndroidMainConsumerProguardFiles
+2026-10-09T12:54:31.3118581Z > Task :core:archive:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.3119158Z > Task :core:archive:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.3119766Z > Task :core:viewmodel:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:31.3120372Z > Task :core:viewmodel:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:31.3121015Z > Task :core:viewmodel:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:31.3121653Z > Task :core:viewmodel:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:31.3122215Z > Task :core:viewmodel:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:31.3122751Z > Task :core:viewmodel:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:31.3123302Z > Task :core:viewmodel:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:31.3123879Z > Task :core:viewmodel:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:31.3124474Z > Task :core:viewmodel:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.4070366Z > Task :core:viewmodel:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.4071117Z > Task :dbnet-native:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:31.4126337Z > Task :dbnet-native:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:31.4127061Z > Task :dbnet-native:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:31.4157207Z > Task :dbnet-native:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:31.4182736Z > Task :dbnet-native:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:31.4206311Z > Task :dbnet-native:compileReleaseKotlin NO-SOURCE
+2026-10-09T12:54:31.4236332Z > Task :dbnet-native:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:31.4237040Z > Task :dbnet-native:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:31.4267140Z > Task :dbnet-native:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.4296288Z > Task :dbnet-native:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.4309058Z > Task :ppocr-sdk:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:31.4356305Z > Task :ppocr-sdk:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:31.4366553Z > Task :ppocr-sdk:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:31.4397980Z > Task :ppocr-sdk:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:31.4420229Z > Task :ppocr-sdk:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:31.5096425Z > Task :ppocr-sdk:compileReleaseKotlin FROM-CACHE
+2026-10-09T12:54:31.5097069Z > Task :ppocr-sdk:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:31.5126485Z > Task :ppocr-sdk:compileReleaseJavaWithJavac NO-SOURCE
+2026-10-09T12:54:31.5156336Z > Task :ppocr-sdk:mergeReleaseGeneratedProguardFiles
+2026-10-09T12:54:31.5186312Z > Task :ppocr-sdk:exportReleaseConsumerProguardFiles
+2026-10-09T12:54:31.8078250Z > Task :app:checkReleaseDuplicateClasses
+2026-10-09T12:54:31.9075829Z > Task :app:compileReleaseAidl FROM-CACHE
+2026-10-09T12:54:32.0086506Z > Task :app:dataBindingMergeDependencyArtifactsRelease
+2026-10-09T12:54:32.0096268Z > Task :app:generateReleaseResources FROM-CACHE
+2026-10-09T12:54:32.1070509Z > Task :app:prepareLibraryDefinitionsRelease FROM-CACHE
+2026-10-09T12:54:32.1072895Z > Task :app:replaceReleaseShortcutPlaceholder
+2026-10-09T12:54:32.5096512Z > Task :app:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:32.6071121Z > Task :app:dataBindingGenBaseClassesRelease FROM-CACHE
+2026-10-09T12:54:32.7106580Z > Task :app:generateReleaseBuildConfig
+2026-10-09T12:54:32.7126473Z > Task :app:packageReleaseResources FROM-CACHE
+2026-10-09T12:54:32.9086970Z > Task :app:processReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:32.9116731Z > Task :app:parseReleaseLocalResources FROM-CACHE
+2026-10-09T12:54:33.0076914Z > Task :app:generateReleaseRFile FROM-CACHE
+2026-10-09T12:54:33.0088962Z > Task :data:bundleLibCompileToJarRelease
+2026-10-09T12:54:33.0098692Z > Task :dbnet-native:bundleLibCompileToJarRelease
+2026-10-09T12:54:33.0131580Z > Task :i18n-aniyomi:bundleAndroidMainClassesToCompileJar
+2026-10-09T12:54:33.0132188Z > Task :i18n-at:bundleAndroidMainClassesToCompileJar
+2026-10-09T12:54:33.0132683Z > Task :ppocr-sdk:bundleLibCompileToJarRelease
+2026-10-09T12:54:33.0133174Z > Task :presentation-widget:bundleLibCompileToJarRelease
+2026-10-09T12:54:33.0133655Z > Task :source-local:bundleLibCompileToJarRelease
+2026-10-09T12:54:33.0134057Z > Task :telemetry:bundleLibCompileToJarRelease
+2026-10-09T12:54:33.1090192Z > Task :core:viewmodel:bundleLibCompileToJarRelease
+2026-10-09T12:54:34.8078296Z > Task :app:mergeReleaseNativeDebugMetadata
+2026-10-09T12:54:34.8126858Z > Task :app:javaPreCompileRelease FROM-CACHE
+2026-10-09T12:54:34.8151816Z > Task :core-metadata:writeReleaseAarMetadata
+2026-10-09T12:54:34.8186485Z > Task :data:writeReleaseAarMetadata
+2026-10-09T12:54:34.8196719Z > Task :dbnet-native:writeReleaseAarMetadata
+2026-10-09T12:54:34.9101418Z > Task :domain:writeReleaseAarMetadata
+2026-10-09T12:54:34.9126367Z > Task :i18n:writeAndroidMainAarMetadata
+2026-10-09T12:54:34.9127537Z > Task :i18n-aniyomi:writeAndroidMainAarMetadata
+2026-10-09T12:54:34.9156489Z > Task :i18n-at:writeAndroidMainAarMetadata
+2026-10-09T12:54:34.9186325Z > Task :ppocr-sdk:writeReleaseAarMetadata
+2026-10-09T12:54:34.9216274Z > Task :presentation-core:writeReleaseAarMetadata
+2026-10-09T12:54:34.9217007Z > Task :presentation-widget:writeReleaseAarMetadata
+2026-10-09T12:54:34.9246235Z > Task :source-api:writeReleaseAarMetadata
+2026-10-09T12:54:34.9266829Z > Task :source-local:writeReleaseAarMetadata
+2026-10-09T12:54:34.9274347Z > Task :telemetry:writeReleaseAarMetadata
+2026-10-09T12:54:34.9274968Z > Task :core:archive:writeReleaseAarMetadata
+2026-10-09T12:54:35.0096469Z > Task :core:common:writeReleaseAarMetadata
+2026-10-09T12:54:35.0126469Z > Task :core:viewmodel:writeReleaseAarMetadata
+2026-10-09T12:54:35.1079718Z > Task :app:checkReleaseAarMetadata
+2026-10-09T12:54:35.1086798Z > Task :app:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.1087525Z > Task :app:compileReleaseNavigationResources FROM-CACHE
+2026-10-09T12:54:35.1088153Z > Task :app:createReleaseCompatibleScreenManifests
+2026-10-09T12:54:35.1088750Z > Task :app:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.1089364Z > Task :core-metadata:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.1108697Z > Task :core-metadata:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.1125023Z > Task :data:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.1132088Z > Task :data:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.1139819Z > Task :dbnet-native:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.1146549Z > Task :dbnet-native:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.1147191Z > Task :domain:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.1147740Z > Task :domain:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.1148309Z > Task :i18n:processAndroidMainManifest FROM-CACHE
+2026-10-09T12:54:35.1148899Z > Task :i18n-aniyomi:processAndroidMainManifest FROM-CACHE
+2026-10-09T12:54:35.1149487Z > Task :i18n-at:processAndroidMainManifest FROM-CACHE
+2026-10-09T12:54:35.1150070Z > Task :ppocr-sdk:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.1150631Z > Task :ppocr-sdk:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.1151227Z > Task :presentation-core:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.1151829Z > Task :presentation-core:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.2070401Z > Task :presentation-widget:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.2073668Z > Task :presentation-widget:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.2074442Z > Task :source-api:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.2074967Z > Task :source-api:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.2075512Z > Task :source-local:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.2076280Z > Task :source-local:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.2076819Z > Task :telemetry:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.2077358Z > Task :telemetry:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.2077892Z > Task :core:archive:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.2078402Z > Task :core:archive:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.2078903Z > Task :core:common:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.2079440Z > Task :core:common:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.2079991Z > Task :core:viewmodel:extractDeepLinksRelease FROM-CACHE
+2026-10-09T12:54:35.2080555Z > Task :core:viewmodel:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.4073578Z > Task :app:processReleaseMainManifest FROM-CACHE
+2026-10-09T12:54:35.4108301Z > Task :app:processReleaseManifest FROM-CACHE
+2026-10-09T12:54:35.4110510Z > Task :app:processReleaseManifestForPackage FROM-CACHE
+2026-10-09T12:54:35.4111037Z > Task :core-metadata:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4113423Z > Task :core-metadata:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4128606Z > Task :data:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4149348Z > Task :data:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4150073Z > Task :dbnet-native:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4150690Z > Task :dbnet-native:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4151274Z > Task :domain:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4151789Z > Task :domain:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4152294Z > Task :i18n:mapAndroidMainSourceSetPaths
+2026-10-09T12:54:35.4153105Z > Task :i18n:compileAndroidMainLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4153725Z > Task :i18n-aniyomi:mapAndroidMainSourceSetPaths
+2026-10-09T12:54:35.4154302Z > Task :i18n-aniyomi:compileAndroidMainLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4154917Z > Task :i18n-at:mapAndroidMainSourceSetPaths
+2026-10-09T12:54:35.4155487Z > Task :i18n-at:compileAndroidMainLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4156352Z > Task :ppocr-sdk:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4156948Z > Task :ppocr-sdk:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4157562Z > Task :presentation-core:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4186433Z > Task :presentation-core:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4187988Z > Task :presentation-widget:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4203063Z > Task :presentation-widget:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4204529Z > Task :source-api:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4266356Z > Task :source-api:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4267329Z > Task :source-local:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.4296547Z > Task :source-local:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.4326358Z > Task :telemetry:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.5072385Z > Task :telemetry:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.5096537Z > Task :core:archive:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.5106719Z > Task :core:archive:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.5107365Z > Task :core:common:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.5107935Z > Task :core:common:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:35.5108537Z > Task :core:viewmodel:mapReleaseSourceSetPaths
+2026-10-09T12:54:35.5109109Z > Task :core:viewmodel:compileReleaseLibraryResources FROM-CACHE
+2026-10-09T12:54:36.1102175Z > Task :app:processReleaseResources FROM-CACHE
+2026-10-09T12:54:36.1124555Z > Task :core-metadata:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1145441Z > Task :data:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1176381Z > Task :dbnet-native:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1177085Z > Task :domain:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1206559Z > Task :i18n:bundleAndroidMainClassesToRuntimeJar
+2026-10-09T12:54:36.1236386Z > Task :i18n-aniyomi:bundleAndroidMainClassesToRuntimeJar
+2026-10-09T12:54:36.1246345Z > Task :i18n-at:bundleAndroidMainClassesToRuntimeJar
+2026-10-09T12:54:36.1266530Z > Task :ppocr-sdk:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1296416Z > Task :presentation-core:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1305164Z > Task :presentation-widget:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1343673Z > Task :source-api:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1356394Z > Task :source-local:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.1386651Z > Task :telemetry:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.2070434Z > Task :core:archive:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.2120005Z > Task :core:common:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.2126638Z > Task :core:viewmodel:bundleLibRuntimeToJarRelease
+2026-10-09T12:54:36.2127150Z > Task :app:extractProguardFiles
+2026-10-09T12:54:36.2127535Z > Task :core-metadata:processReleaseJavaRes
+2026-10-09T12:54:36.3076452Z > Task :data:processReleaseJavaRes
+2026-10-09T12:54:36.3146313Z > Task :dbnet-native:processReleaseJavaRes NO-SOURCE
+2026-10-09T12:54:36.3176300Z > Task :domain:processReleaseJavaRes
+2026-10-09T12:54:36.3196703Z > Task :i18n:processAndroidMainJavaRes
+2026-10-09T12:54:36.3206769Z > Task :i18n-aniyomi:processAndroidMainJavaRes
+2026-10-09T12:54:36.3217341Z > Task :i18n-at:processAndroidMainJavaRes
+2026-10-09T12:54:36.3217888Z > Task :ppocr-sdk:processReleaseJavaRes
+2026-10-09T12:54:36.3218519Z > Task :presentation-core:processReleaseJavaRes
+2026-10-09T12:54:36.3219134Z > Task :presentation-widget:processReleaseJavaRes
+2026-10-09T12:54:36.3219984Z > Task :source-api:processReleaseJavaRes
+2026-10-09T12:54:36.3220495Z > Task :source-local:processReleaseJavaRes
+2026-10-09T12:54:36.3220995Z > Task :telemetry:processReleaseJavaRes
+2026-10-09T12:54:36.4070694Z > Task :core:archive:processReleaseJavaRes
+2026-10-09T12:54:36.4086523Z > Task :core:common:processReleaseJavaRes
+2026-10-09T12:54:36.4104136Z > Task :core:viewmodel:processReleaseJavaRes
+2026-10-09T12:54:36.4126361Z > Task :app:mergeReleaseStartupProfile
+2026-10-09T12:54:36.4139259Z > Task :app:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.4159733Z > Task :core-metadata:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.4186428Z > Task :core-metadata:mergeReleaseAssets
+2026-10-09T12:54:36.4206390Z > Task :data:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.4236196Z > Task :data:mergeReleaseAssets
+2026-10-09T12:54:36.4246505Z > Task :dbnet-native:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.4252504Z > Task :dbnet-native:mergeReleaseAssets
+2026-10-09T12:54:36.4253189Z > Task :domain:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.4261731Z > Task :domain:mergeReleaseAssets
+2026-10-09T12:54:36.4276423Z > Task :i18n:generateAndroidMainAssets UP-TO-DATE
+2026-10-09T12:54:36.4296335Z > Task :i18n:mergeAndroidMainAssets
+2026-10-09T12:54:36.4326445Z > Task :i18n-aniyomi:generateAndroidMainAssets UP-TO-DATE
+2026-10-09T12:54:36.4349568Z > Task :i18n-aniyomi:mergeAndroidMainAssets
+2026-10-09T12:54:36.4376391Z > Task :i18n-at:generateAndroidMainAssets UP-TO-DATE
+2026-10-09T12:54:36.4386235Z > Task :i18n-at:mergeAndroidMainAssets
+2026-10-09T12:54:36.4406463Z > Task :ppocr-sdk:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6070787Z > Task :ppocr-sdk:mergeReleaseAssets
+2026-10-09T12:54:36.6071412Z > Task :presentation-core:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6071938Z > Task :presentation-core:mergeReleaseAssets
+2026-10-09T12:54:36.6072539Z > Task :presentation-widget:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6073063Z > Task :presentation-widget:mergeReleaseAssets
+2026-10-09T12:54:36.6073577Z > Task :source-api:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6074071Z > Task :source-api:mergeReleaseAssets
+2026-10-09T12:54:36.6074527Z > Task :source-local:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6074969Z > Task :source-local:mergeReleaseAssets
+2026-10-09T12:54:36.6075474Z > Task :telemetry:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6076079Z > Task :telemetry:mergeReleaseAssets
+2026-10-09T12:54:36.6076505Z > Task :core:archive:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6076945Z > Task :core:archive:mergeReleaseAssets
+2026-10-09T12:54:36.6077386Z > Task :core:common:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6077893Z > Task :core:common:mergeReleaseAssets
+2026-10-09T12:54:36.6078348Z > Task :core:viewmodel:generateReleaseAssets UP-TO-DATE
+2026-10-09T12:54:36.6078808Z > Task :core:viewmodel:mergeReleaseAssets
+2026-10-09T12:54:36.8116531Z > Task :app:mergeReleaseAssets
+2026-10-09T12:54:36.9070723Z > Task :app:compressReleaseAssets FROM-CACHE
+2026-10-09T12:54:37.0070626Z > Task :app:extractReleaseVersionControlInfo
+2026-10-09T12:54:37.0081980Z > Task :app:validateSigningRelease
+2026-10-09T12:54:37.0106420Z > Task :app:writeReleaseAppMetadata
+2026-10-09T12:54:37.0107087Z > Task :app:writeReleaseSigningConfigVersions
+2026-10-09T12:54:37.1098898Z > Task :core-metadata:checkReleaseAarMetadata
+2026-10-09T12:54:37.1116838Z > Task :core-metadata:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:37.1118829Z > Task :core-metadata:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:37.1153467Z > Task :core-metadata:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:37.9071847Z > Task :core-metadata:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:37.9096826Z > Task :core-metadata:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:37.9126546Z > Task :core-metadata:prepareLintJarForPublish
+2026-10-09T12:54:38.1098003Z > Task :core-metadata:mergeReleaseJavaResource
+2026-10-09T12:54:38.1146825Z > Task :core-metadata:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:38.1176472Z > Task :core-metadata:bundleReleaseAar
+2026-10-09T12:54:38.6108703Z > Task :core-metadata:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:38.8071841Z > Task :core-metadata:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:38.8156748Z > Task :core-metadata:assembleRelease
+2026-10-09T12:54:38.8216573Z > Task :data:checkReleaseAarMetadata
+2026-10-09T12:54:38.8246545Z > Task :data:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:38.8276551Z > Task :data:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:38.8336534Z > Task :data:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:38.9076051Z > Task :data:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:38.9106675Z > Task :data:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:38.9136441Z > Task :data:prepareLintJarForPublish
+2026-10-09T12:54:39.0126589Z > Task :data:mergeReleaseJavaResource
+2026-10-09T12:54:39.0156729Z > Task :data:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:39.1070492Z > Task :data:bundleReleaseAar
+2026-10-09T12:54:39.3071812Z > Task :data:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:39.5077631Z > Task :data:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:39.5116650Z > Task :data:assembleRelease
+2026-10-09T12:54:39.5117327Z > Task :dbnet-native:checkReleaseAarMetadata
+2026-10-09T12:54:39.6076693Z > Task :dbnet-native:stripReleaseDebugSymbols
+2026-10-09T12:54:39.6106865Z > Task :dbnet-native:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:39.6178387Z > Task :dbnet-native:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:39.6226578Z > Task :dbnet-native:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:39.6278234Z > Task :dbnet-native:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:39.6336222Z > Task :dbnet-native:prepareLintJarForPublish
+2026-10-09T12:54:39.6366313Z > Task :dbnet-native:mergeReleaseJavaResource
+2026-10-09T12:54:39.7085541Z > Task :dbnet-native:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:40.1106828Z > Task :dbnet-native:bundleReleaseAar
+2026-10-09T12:54:40.1132864Z > Task :dbnet-native:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:40.1166683Z > Task :dbnet-native:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:40.1206323Z > Task :dbnet-native:assembleRelease
+2026-10-09T12:54:40.1237830Z > Task :domain:checkReleaseAarMetadata
+2026-10-09T12:54:40.1246852Z > Task :domain:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:40.1247615Z > Task :domain:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:40.1249696Z > Task :domain:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:40.2098434Z > Task :domain:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:40.2116573Z > Task :domain:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:40.2139488Z > Task :domain:prepareLintJarForPublish
+2026-10-09T12:54:40.2167419Z > Task :domain:mergeReleaseJavaResource
+2026-10-09T12:54:40.2196420Z > Task :domain:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:40.2226320Z > Task :domain:bundleReleaseAar
+2026-10-09T12:54:40.5077156Z > Task :domain:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:40.6091692Z > Task :domain:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:40.6097998Z > Task :domain:assembleRelease
+2026-10-09T12:54:40.6112486Z > Task :ppocr-sdk:checkReleaseAarMetadata
+2026-10-09T12:54:40.6116604Z > Task :ppocr-sdk:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:40.6117363Z > Task :ppocr-sdk:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:40.6118070Z > Task :ppocr-sdk:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:40.6118702Z > Task :ppocr-sdk:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:40.6121873Z > Task :ppocr-sdk:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:40.6122516Z > Task :ppocr-sdk:prepareLintJarForPublish
+2026-10-09T12:54:40.7070842Z > Task :ppocr-sdk:mergeReleaseJavaResource
+2026-10-09T12:54:40.7136428Z > Task :ppocr-sdk:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:42.1083076Z > Task :ppocr-sdk:bundleReleaseAar
+2026-10-09T12:54:42.1097528Z > Task :ppocr-sdk:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:42.1098234Z > Task :ppocr-sdk:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:42.1098884Z > Task :ppocr-sdk:assembleRelease
+2026-10-09T12:54:42.2126894Z > Task :presentation-core:checkReleaseAarMetadata
+2026-10-09T12:54:42.2127775Z > Task :presentation-core:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:42.2186738Z > Task :presentation-core:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:42.2246577Z > Task :presentation-core:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:42.2296468Z > Task :presentation-core:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:42.2356564Z > Task :presentation-core:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:42.2398179Z > Task :presentation-core:prepareLintJarForPublish
+2026-10-09T12:54:42.2456472Z > Task :presentation-core:mergeReleaseJavaResource
+2026-10-09T12:54:42.2459773Z > Task :presentation-core:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:42.3126463Z > Task :presentation-core:bundleReleaseAar
+2026-10-09T12:54:42.5071200Z > Task :presentation-core:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:42.6086979Z > Task :presentation-core:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:42.6136526Z > Task :presentation-core:assembleRelease
+2026-10-09T12:54:42.7096691Z > Task :presentation-widget:checkReleaseAarMetadata
+2026-10-09T12:54:42.7156629Z > Task :presentation-widget:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:42.7206608Z > Task :presentation-widget:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:42.7236863Z > Task :presentation-widget:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:42.8126625Z > Task :presentation-widget:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:42.8196202Z > Task :presentation-widget:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:42.8256104Z > Task :presentation-widget:prepareLintJarForPublish
+2026-10-09T12:54:42.8316210Z > Task :presentation-widget:mergeReleaseJavaResource
+2026-10-09T12:54:42.8346231Z > Task :presentation-widget:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:42.8356068Z > Task :presentation-widget:bundleReleaseAar
+2026-10-09T12:54:43.1076403Z > Task :presentation-widget:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:43.3116947Z > Task :presentation-widget:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:43.3160740Z > Task :presentation-widget:assembleRelease
+2026-10-09T12:54:43.4070549Z > Task :source-api:checkReleaseAarMetadata
+2026-10-09T12:54:43.4072478Z > Task :source-api:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:43.4073069Z > Task :source-api:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:43.4073671Z > Task :source-api:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:43.4074215Z > Task :source-api:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:43.4074755Z > Task :source-api:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:43.4075286Z > Task :source-api:prepareLintJarForPublish
+2026-10-09T12:54:43.4075979Z > Task :source-api:mergeReleaseJavaResource
+2026-10-09T12:54:43.4076496Z > Task :source-api:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:43.4076916Z > Task :source-api:bundleReleaseAar
+2026-10-09T12:54:43.6094867Z > Task :source-api:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:43.7101575Z > Task :source-api:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:43.7148357Z > Task :source-api:assembleRelease
+2026-10-09T12:54:43.8107387Z > Task :source-local:checkReleaseAarMetadata
+2026-10-09T12:54:43.8146467Z > Task :source-local:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:43.8156744Z > Task :source-local:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:43.8157512Z > Task :source-local:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:43.8158206Z > Task :source-local:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:43.8158753Z > Task :source-local:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:43.8159224Z > Task :source-local:prepareLintJarForPublish
+2026-10-09T12:54:43.8159704Z > Task :source-local:mergeReleaseJavaResource
+2026-10-09T12:54:43.8160495Z > Task :source-local:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:43.9096445Z > Task :source-local:bundleReleaseAar
+2026-10-09T12:54:44.1096619Z > Task :source-local:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:44.2106694Z > Task :source-local:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:44.2126387Z > Task :source-local:assembleRelease
+2026-10-09T12:54:44.3097503Z > Task :telemetry:checkReleaseAarMetadata
+2026-10-09T12:54:44.3117800Z > Task :telemetry:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:44.3156290Z > Task :telemetry:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:44.3216357Z > Task :telemetry:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:44.3276319Z > Task :telemetry:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:44.3336346Z > Task :telemetry:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:44.3396239Z > Task :telemetry:prepareLintJarForPublish
+2026-10-09T12:54:44.3447780Z > Task :telemetry:mergeReleaseJavaResource
+2026-10-09T12:54:44.3506471Z > Task :telemetry:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:44.4106322Z > Task :telemetry:bundleReleaseAar
+2026-10-09T12:54:44.5085206Z > Task :telemetry:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:44.6096893Z > Task :telemetry:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:44.6126348Z > Task :telemetry:assembleRelease
+2026-10-09T12:54:44.6126937Z > Task :core:archive:checkReleaseAarMetadata
+2026-10-09T12:54:44.6156533Z > Task :core:archive:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:44.6186478Z > Task :core:archive:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:44.6187151Z > Task :core:archive:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:44.6216380Z > Task :core:archive:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:44.6246448Z > Task :core:archive:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:44.6273045Z > Task :core:archive:prepareLintJarForPublish
+2026-10-09T12:54:44.7071395Z > Task :core:archive:mergeReleaseJavaResource
+2026-10-09T12:54:44.7096464Z > Task :core:archive:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:44.7126268Z > Task :core:archive:bundleReleaseAar
+2026-10-09T12:54:44.7134269Z > Task :core:archive:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:44.7156487Z > Task :core:archive:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:44.7186327Z > Task :core:archive:assembleRelease
+2026-10-09T12:54:44.7216414Z > Task :core:common:checkReleaseAarMetadata
+2026-10-09T12:54:44.7217117Z > Task :core:common:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:44.7246482Z > Task :core:common:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:44.7273388Z > Task :core:common:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:44.7274060Z > Task :core:common:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:44.7274559Z > Task :core:common:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:44.7275003Z > Task :core:common:prepareLintJarForPublish
+2026-10-09T12:54:44.7275517Z > Task :core:common:mergeReleaseJavaResource
+2026-10-09T12:54:44.8086478Z > Task :core:common:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:44.8116295Z > Task :core:common:bundleReleaseAar
+2026-10-09T12:54:45.1085103Z > Task :core:common:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:45.2071475Z > Task :core:common:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:45.2086660Z > Task :core:common:assembleRelease
+2026-10-09T12:54:45.2116637Z > Task :core:viewmodel:checkReleaseAarMetadata
+2026-10-09T12:54:45.2124709Z > Task :core:viewmodel:stripReleaseDebugSymbols NO-SOURCE
+2026-10-09T12:54:45.2125459Z > Task :core:viewmodel:copyReleaseJniLibsProjectAndLocalJars
+2026-10-09T12:54:45.2126353Z > Task :core:viewmodel:extractDeepLinksForAarRelease FROM-CACHE
+2026-10-09T12:54:45.2127554Z > Task :core:viewmodel:extractReleaseAnnotations FROM-CACHE
+2026-10-09T12:54:45.2128162Z > Task :core:viewmodel:mergeReleaseConsumerProguardFiles
+2026-10-09T12:54:45.2128745Z > Task :core:viewmodel:prepareLintJarForPublish
+2026-10-09T12:54:45.2129295Z > Task :core:viewmodel:mergeReleaseJavaResource
+2026-10-09T12:54:45.2130122Z > Task :core:viewmodel:syncReleaseLibJars FROM-CACHE
+2026-10-09T12:54:45.3096420Z > Task :core:viewmodel:bundleReleaseAar
+2026-10-09T12:54:45.3126330Z > Task :core:viewmodel:mergeReleaseResources FROM-CACHE
+2026-10-09T12:54:45.3176429Z > Task :core:viewmodel:verifyReleaseResources FROM-CACHE
+2026-10-09T12:54:45.3206189Z > Task :core:viewmodel:assembleRelease
+2026-10-09T12:55:03.1077190Z > Task :app:compileReleaseKotlin
+2026-10-09T12:55:12.8074710Z e: file:///home/runner/work/yomotsu/yomotsu/app/src/main/java/eu/kanade/tachiyomi/ui/browse/BrowseTab.kt:77:27 Type 'MutableState<String>' has no method 'setValue(Nothing?, KMutableProperty0<*>, String)', so it cannot serve as a delegate for var (read-write property).
+2026-10-09T12:55:12.8097980Z e: file:///home/runner/work/yomotsu/yomotsu/app/src/main/java/eu/kanade/tachiyomi/ui/browse/BrowseTab.kt:78:28 Type 'MutableState<Boolean>' has no method 'setValue(Nothing?, KMutableProperty0<*>, Boolean)', so it cannot serve as a delegate for var (read-write property).
+2026-10-09T12:55:12.8107022Z e: file:///home/runner/work/yomotsu/yomotsu/app/src/main/java/eu/kanade/tachiyomi/ui/browse/BrowseTab.kt:154:94 Unresolved reference 'padding'.
+2026-10-09T12:55:12.8108442Z e: file:///home/runner/work/yomotsu/yomotsu/app/src/main/java/eu/kanade/tachiyomi/ui/browse/BrowseTab.kt:154:114 Unresolved reference 'dp'.
+2026-10-09T12:55:12.8109525Z e: file:///home/runner/work/yomotsu/yomotsu/app/src/main/java/eu/kanade/tachiyomi/ui/browse/BrowseTab.kt:157:36 Unresolved reference 'Modifier'.
+2026-10-09T12:55:12.8110808Z e: file:///home/runner/work/yomotsu/yomotsu/app/src/main/java/eu/kanade/tachiyomi/ui/browse/BrowseTab.kt:161:36 Unresolved reference 'Modifier'.
+2026-10-09T12:55:12.8112052Z e: file:///home/runner/work/yomotsu/yomotsu/app/src/main/java/eu/kanade/tachiyomi/ui/browse/BrowseTab.kt:165:36 Unresolved reference 'Modifier'.
+2026-10-09T12:55:12.9070280Z 
+2026-10-09T12:55:12.9071091Z > Task :app:compileReleaseKotlin FAILED
+2026-10-09T12:55:12.9071615Z gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1791550456348.json
+2026-10-09T12:55:13.0069818Z 
+2026-10-09T12:55:13.0069856Z 
+2026-10-09T12:55:13.0070907Z [Incubating] Problems report is available at: file:///home/runner/work/yomotsu/yomotsu/build/reports/problems/problems-report.html
+2026-10-09T12:55:13.0071920Z FAILURE: Build failed with an exception.
+2026-10-09T12:55:13.0072305Z 
+2026-10-09T12:55:13.0073690Z * What went wrong:
+2026-10-09T12:55:13.0074143Z 533 actionable tasks: 285 executed, 244 from cache, 4 up-to-date
+2026-10-09T12:55:13.0075388Z Execution failed for task ':app:compileReleaseKotlin' (registered by plugin 'com.android.internal.application').
+2026-10-09T12:55:13.0076816Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+2026-10-09T12:55:13.0077726Z    > Compilation error. See log for more details
+2026-10-09T12:55:13.0078148Z 
+2026-10-09T12:55:13.0078379Z * Try:
+2026-10-09T12:55:13.0078868Z > Run with --stacktrace option to get the stack trace.
+2026-10-09T12:55:13.0079506Z > Run with --info or --debug option to get more log output.
+2026-10-09T12:55:13.0080201Z > Run with --scan to get full insights from a Build Scan (powered by Develocity).
+2026-10-09T12:55:13.0080946Z > Get more help at https://help.gradle.org.
+2026-10-09T12:55:13.0081319Z 
+2026-10-09T12:55:13.0081580Z BUILD FAILED in 56s
+2026-10-09T12:55:13.1052930Z ##[error]Process completed with exit code 1.
+2026-10-09T12:55:13.1246348Z Post job cleanup.
+2026-10-09T12:55:13.3761218Z In post-action step
+2026-10-09T12:55:13.3766691Z Enhanced Caching: This build is using the proprietary 'gradle-actions-caching' provider for optimized caching support. See https://github.com/gradle/actions/blob/main/DISTRIBUTION.md for terms of use and opt-out instructions.
+2026-10-09T12:55:13.4760828Z Cache is read-only: will not save state for use in subsequent builds.
+2026-10-09T12:55:13.4764676Z ##[group]Generating Job Summary
+2026-10-09T12:55:13.4768901Z 
+2026-10-09T12:55:13.4769114Z 
+2026-10-09T12:55:13.4769305Z <table>
+2026-10-09T12:55:13.4769621Z     <tr>
+2026-10-09T12:55:13.4769979Z         <th>Gradle Root Project</th>
+2026-10-09T12:55:13.4770354Z         <th>Requested Tasks</th>
+2026-10-09T12:55:13.4770677Z         <th>Gradle Version</th>
+2026-10-09T12:55:13.4770983Z         <th>Build Outcome</th>
+2026-10-09T12:55:13.4771606Z         <th>Build&nbsp;Scan®</th>
+2026-10-09T12:55:13.4771940Z     </tr>
+2026-10-09T12:55:13.4772293Z     <tr>
+2026-10-09T12:55:13.4772488Z         <td>Mihon</td>
+2026-10-09T12:55:13.4772729Z         <td>verifySqlDelightMigration</td>
+2026-10-09T12:55:13.4772990Z         <td align='center'>9.6.1</td>
+2026-10-09T12:55:13.4773260Z         <td align='center'>:white_check_mark:</td>
+2026-10-09T12:55:13.4773852Z         <td><a href="https://scans.gradle.com" rel="nofollow" target="_blank"><img src="https://img.shields.io/badge/Not%20published-lightgrey" alt="Build Scan not published" /></a></td>
+2026-10-09T12:55:13.4774381Z     </tr>
+2026-10-09T12:55:13.4774563Z     <tr>
+2026-10-09T12:55:13.4774740Z         <td>Mihon</td>
+2026-10-09T12:55:13.4775344Z         <td>assembleRelease</td>
+2026-10-09T12:55:13.4775766Z         <td align='center'>9.6.1</td>
+2026-10-09T12:55:13.4776081Z         <td align='center'>:x:</td>
+2026-10-09T12:55:13.4776844Z         <td><a href="https://scans.gradle.com" rel="nofollow" target="_blank"><img src="https://img.shields.io/badge/Not%20published-lightgrey" alt="Build Scan not published" /></a></td>
+2026-10-09T12:55:13.4777481Z     </tr>
+2026-10-09T12:55:13.4777669Z </table>
+2026-10-09T12:55:13.4777842Z     
+2026-10-09T12:55:13.4778036Z ============================
+2026-10-09T12:55:13.4778426Z <h4>Gradle State Caching - ⚡ Enhanced (read-only)</h4>
+2026-10-09T12:55:13.4778607Z 
+2026-10-09T12:55:13.4779257Z **[Enhanced Caching](https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#enhanced-caching)** uses the proprietary `gradle-actions-caching` provider. See [DISTRIBUTION.md](https://github.com/gradle/actions/blob/main/DISTRIBUTION.md) for terms of use and opt-out instructions.
+2026-10-09T12:55:13.4779980Z 
+2026-10-09T12:55:13.4780061Z <details>
+2026-10-09T12:55:13.4780412Z <summary>Entries: 9 restored (1797Mb), 0 saved (0Mb) - Expand for more details</summary>
+2026-10-09T12:55:13.4780660Z 
+2026-10-09T12:55:13.4781203Z [Cache was read-only](https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#using-the-cache-read-only) — by default, the action only writes to the cache for jobs running on the default branch.
+2026-10-09T12:55:13.4781704Z 
+2026-10-09T12:55:13.4781786Z <table>
+2026-10-09T12:55:13.4782055Z     <tr><td></td><th>Count</th><th>Total Size (Mb)</th><th>Total Time (ms)</th></tr>
+2026-10-09T12:55:13.4782362Z     <tr><td>Entries Restored</td>
+2026-10-09T12:55:13.4782603Z         <td>9</td>
+2026-10-09T12:55:13.4782801Z         <td>1797</td>
+2026-10-09T12:55:13.4783010Z         <td>54663</td>
+2026-10-09T12:55:13.4783211Z     </tr>
+2026-10-09T12:55:13.4783396Z     <tr><td>Entries Saved</td>
+2026-10-09T12:55:13.4783614Z         <td>0</td>
+2026-10-09T12:55:13.4783800Z         <td>0</td>
+2026-10-09T12:55:13.4784003Z         <td>0</td>
+2026-10-09T12:55:13.4784192Z     </tr>
+2026-10-09T12:55:13.4784360Z </table>
+2026-10-09T12:55:13.4784453Z 
+2026-10-09T12:55:13.4784539Z <pre>
+2026-10-09T12:55:13.4784725Z Entry: Gradle User Home
+2026-10-09T12:55:13.4785294Z     Requested Key : gradle-home-v2|Linux-X64|build[067b7bdb166a8b73ce4d2fa66ad4a39a]-64295d2ec57a191ab3a160cc74618a9d8a24bc4e
+2026-10-09T12:55:13.4786133Z     Restored  Key : gradle-home-v2|Linux-X64|build[067b7bdb166a8b73ce4d2fa66ad4a39a]-82d243d4bf39aead4463c05eafdd0e7fee190ba4
+2026-10-09T12:55:13.4786656Z               Size: 15 MB (15817277 B)
+2026-10-09T12:55:13.4786912Z               Time: 1482 ms
+2026-10-09T12:55:13.4787162Z               (Entry restored: partial match found)
+2026-10-09T12:55:13.4787427Z     Saved     Key : 
+2026-10-09T12:55:13.4787636Z               Size: 
+2026-10-09T12:55:13.4787831Z               Time: 
+2026-10-09T12:55:13.4788056Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4788304Z ---
+2026-10-09T12:55:13.4788561Z Entry: caches/9.6.1/generated-gradle-jars/gradle-api-9.6.1.jar
+2026-10-09T12:55:13.4788957Z     Requested Key : gradle-generated-gradle-jars-v2-aab574994eb421acff6809687eadd5de
+2026-10-09T12:55:13.4789458Z     Restored  Key : gradle-generated-gradle-jars-v2-aab574994eb421acff6809687eadd5de
+2026-10-09T12:55:13.4789849Z               Size: 40 MB (42158673 B)
+2026-10-09T12:55:13.4790087Z               Time: 1691 ms
+2026-10-09T12:55:13.4790331Z               (Entry restored: exact match found)
+2026-10-09T12:55:13.4790673Z     Saved     Key : 
+2026-10-09T12:55:13.4790902Z               Size: 
+2026-10-09T12:55:13.4791102Z               Time: 
+2026-10-09T12:55:13.4791332Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4791656Z ---
+2026-10-09T12:55:13.4792012Z Entry: wrapper/dists/gradle-9.6.1-bin/4ticwg1pgcbps2hj28r8so764
+2026-10-09T12:55:13.4792468Z     Requested Key : gradle-wrapper-zips-v2-852daf033b54d6f5dd2552660ef7de60
+2026-10-09T12:55:13.4792876Z     Restored  Key : gradle-wrapper-zips-v2-852daf033b54d6f5dd2552660ef7de60
+2026-10-09T12:55:13.4793433Z               Size: 133 MB (139934688 B)
+2026-10-09T12:55:13.4793675Z               Time: 2211 ms
+2026-10-09T12:55:13.4793953Z               (Entry restored: exact match found)
+2026-10-09T12:55:13.4794424Z     Saved     Key : 
+2026-10-09T12:55:13.4794696Z               Size: 
+2026-10-09T12:55:13.4794928Z               Time: 
+2026-10-09T12:55:13.4795153Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4795605Z ---
+2026-10-09T12:55:13.4795945Z Entry: dependencies
+2026-10-09T12:55:13.4796345Z     Requested Key : gradle-dependencies-v2-43f7f48d30cd3ecb267175e27d2e91e9
+2026-10-09T12:55:13.4796901Z     Restored  Key : gradle-dependencies-v2-43f7f48d30cd3ecb267175e27d2e91e9
+2026-10-09T12:55:13.4797360Z               Size: 721 MB (756007515 B)
+2026-10-09T12:55:13.4797686Z               Time: 20589 ms
+2026-10-09T12:55:13.4797948Z               (Entry restored: exact match found)
+2026-10-09T12:55:13.4798205Z     Saved     Key : 
+2026-10-09T12:55:13.4798475Z               Size: 
+2026-10-09T12:55:13.4798670Z               Time: 
+2026-10-09T12:55:13.4798937Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4799246Z ---
+2026-10-09T12:55:13.4799450Z Entry: instrumented-jars
+2026-10-09T12:55:13.4799789Z     Requested Key : gradle-instrumented-jars-v2-bb910fcacf708cb42c10c2b5b22b5d19
+2026-10-09T12:55:13.4801639Z     Restored  Key : gradle-instrumented-jars-v2-bb910fcacf708cb42c10c2b5b22b5d19
+2026-10-09T12:55:13.4802126Z               Size: 0 MB (60067 B)
+2026-10-09T12:55:13.4802452Z               Time: 602 ms
+2026-10-09T12:55:13.4802770Z               (Entry restored: exact match found)
+2026-10-09T12:55:13.4803118Z     Saved     Key : 
+2026-10-09T12:55:13.4803382Z               Size: 
+2026-10-09T12:55:13.4803645Z               Time: 
+2026-10-09T12:55:13.4803937Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4804284Z ---
+2026-10-09T12:55:13.4804549Z Entry: build-cache
+2026-10-09T12:55:13.4804960Z     Requested Key : gradle-build-cache-v2-a643230672b8e5a2109c4c762fc0b1ee
+2026-10-09T12:55:13.4805539Z     Restored  Key : gradle-build-cache-v2-a643230672b8e5a2109c4c762fc0b1ee
+2026-10-09T12:55:13.4806120Z               Size: 378 MB (396079799 B)
+2026-10-09T12:55:13.4806475Z               Time: 5391 ms
+2026-10-09T12:55:13.4807003Z               (Entry restored: exact match found)
+2026-10-09T12:55:13.4807304Z     Saved     Key : 
+2026-10-09T12:55:13.4807631Z               Size: 
+2026-10-09T12:55:13.4807926Z               Time: 
+2026-10-09T12:55:13.4808235Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4808579Z ---
+2026-10-09T12:55:13.4808772Z Entry: kotlin-dsl
+2026-10-09T12:55:13.4809062Z     Requested Key : gradle-kotlin-dsl-v2-4fe46c8be546df08113467d4297ec2cc
+2026-10-09T12:55:13.4809518Z     Restored  Key : gradle-kotlin-dsl-v2-4fe46c8be546df08113467d4297ec2cc
+2026-10-09T12:55:13.4809838Z               Size: 0 MB (460459 B)
+2026-10-09T12:55:13.4810371Z               Time: 646 ms
+2026-10-09T12:55:13.4810641Z               (Entry restored: exact match found)
+2026-10-09T12:55:13.4810969Z     Saved     Key : 
+2026-10-09T12:55:13.4811168Z               Size: 
+2026-10-09T12:55:13.4811360Z               Time: 
+2026-10-09T12:55:13.4811571Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4811888Z ---
+2026-10-09T12:55:13.4812083Z Entry: groovy-dsl
+2026-10-09T12:55:13.4812360Z     Requested Key : gradle-groovy-dsl-v2-9a6def251d442ee0f82547734e8ddef0
+2026-10-09T12:55:13.4812809Z     Restored  Key : gradle-groovy-dsl-v2-9a6def251d442ee0f82547734e8ddef0
+2026-10-09T12:55:13.4813110Z               Size: 0 MB (91827 B)
+2026-10-09T12:55:13.4813411Z               Time: 641 ms
+2026-10-09T12:55:13.4813651Z               (Entry restored: exact match found)
+2026-10-09T12:55:13.4813897Z     Saved     Key : 
+2026-10-09T12:55:13.4814160Z               Size: 
+2026-10-09T12:55:13.4814353Z               Time: 
+2026-10-09T12:55:13.4814585Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4815003Z ---
+2026-10-09T12:55:13.4815204Z Entry: transforms
+2026-10-09T12:55:13.4815500Z     Requested Key : gradle-transforms-v2-4b930e1b6bf3f17a66fdb2640226dc74
+2026-10-09T12:55:13.4816143Z     Restored  Key : gradle-transforms-v2-4b930e1b6bf3f17a66fdb2640226dc74
+2026-10-09T12:55:13.4816793Z               Size: 509 MB (534124533 B)
+2026-10-09T12:55:13.4817324Z               Time: 21410 ms
+2026-10-09T12:55:13.4817779Z               (Entry restored: exact match found)
+2026-10-09T12:55:13.4818254Z     Saved     Key : 
+2026-10-09T12:55:13.4818627Z               Size: 
+2026-10-09T12:55:13.4819026Z               Time: 
+2026-10-09T12:55:13.4819410Z               (Entry not saved: cache is read-only)
+2026-10-09T12:55:13.4819809Z </pre>
+2026-10-09T12:55:13.4820186Z </details>
+2026-10-09T12:55:13.4820368Z 
+2026-10-09T12:55:13.4821140Z ##[endgroup]
+2026-10-09T12:55:13.4821567Z Completed post-action step
+2026-10-09T12:55:13.5542042Z Post job cleanup.
+2026-10-09T12:55:13.6980190Z Post job cleanup.
+2026-10-09T12:55:13.7797288Z [command]/usr/bin/git version
+2026-10-09T12:55:13.7840348Z git version 2.55.0
+2026-10-09T12:55:13.7882217Z Temporarily overriding HOME='/home/runner/work/_temp/6f8e72a3-8115-4ffb-95b7-d1660d7b62d0' before making global git config changes
+2026-10-09T12:55:13.7883056Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-09T12:55:13.7886197Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/yomotsu/yomotsu
+2026-10-09T12:55:13.8154395Z Removing SSH command configuration
+2026-10-09T12:55:13.8159593Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-09T12:55:13.8216924Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-09T12:55:13.8390693Z Removing HTTP extra header
+2026-10-09T12:55:13.8395166Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-09T12:55:13.8421481Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-09T12:55:13.8570520Z Removing includeIf entries pointing to credentials config files
+2026-10-09T12:55:13.8574552Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-09T12:55:13.8594355Z includeif.gitdir:/home/runner/work/yomotsu/yomotsu/.git.path
+2026-10-09T12:55:13.8594865Z includeif.gitdir:/home/runner/work/yomotsu/yomotsu/.git/worktrees/*.path
+2026-10-09T12:55:13.8595310Z includeif.gitdir:/github/workspace/.git.path
+2026-10-09T12:55:13.8595865Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-09T12:55:13.8599752Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/yomotsu/yomotsu/.git.path
+2026-10-09T12:55:13.8615990Z /home/runner/work/_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config
+2026-10-09T12:55:13.8623097Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/yomotsu/yomotsu/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-526a9727\-a17a\-4978\-9158\-2c010a085d51\.config
+2026-10-09T12:55:13.8849380Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/yomotsu/yomotsu/.git/worktrees/*.path
+2026-10-09T12:55:13.8864507Z /home/runner/work/_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config
+2026-10-09T12:55:13.8874700Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/yomotsu/yomotsu/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-526a9727\-a17a\-4978\-9158\-2c010a085d51\.config
+2026-10-09T12:55:13.8990490Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-10-09T12:55:13.9005929Z /github/runner_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config
+2026-10-09T12:55:13.9010936Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-526a9727\-a17a\-4978\-9158\-2c010a085d51\.config
+2026-10-09T12:55:13.9205437Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-09T12:55:13.9220456Z /github/runner_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config
+2026-10-09T12:55:13.9224984Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-526a9727\-a17a\-4978\-9158\-2c010a085d51\.config
+2026-10-09T12:55:13.9367545Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-09T12:55:13.9510516Z Removing credentials config '/home/runner/work/_temp/git-credentials-526a9727-a17a-4978-9158-2c010a085d51.config'
+2026-10-09T12:55:13.9621768Z Cleaning up orphan processes
+2026-10-09T12:55:13.9835753Z Terminate orphan process: pid (2266) (java)
+2026-10-09T12:55:13.9879277Z Terminate orphan process: pid (2700) (java)
