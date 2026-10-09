@@ -22,6 +22,8 @@ import androidx.compose.material.icons.outlined.Category
 import eu.kanade.presentation.components.AppBar
 import androidx.compose.runtime.mutableStateOf
 
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.Navigator
