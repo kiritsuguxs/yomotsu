@@ -111,30 +111,31 @@ data object BrowseTab : Tab {
         )
 
         val state = rememberPagerState { tabs.size }
+
         val novelSearchQuery by novelsViewModel.searchQuery.collectAsState()
 
         TabbedScreen(
             titleRes = MR.strings.browse,
             tabs = tabs,
-                onDismissRequest = { showMediaSheet = false },
-                sheetState = sheetState
-            ) {
-                androidx.compose.foundation.layout.Column(androidx.compose.foundation.layout.padding(bottom = 32.dp)) {
-                    ListItem(
-                        headlineContent = { Text("📖 Mangá") },
-                        modifier = Modifier.clickable { selectedMedia = "Manga"; showMediaSheet = false }
-                    )
-                    ListItem(
-                        headlineContent = { Text("🎬 Anime") },
-                        modifier = Modifier.clickable { selectedMedia = "Anime"; showMediaSheet = false }
-                    )
-                    ListItem(
-                        headlineContent = { Text("📚 Light Novel") },
-                        modifier = Modifier.clickable { selectedMedia = "Novel"; showMediaSheet = false }
-                    )
+            state = state,
+            searchQuery = when (state.currentPage) {
+                1 -> when (selectedMedia) {
+                    "Anime" -> animeExtensionsState.searchQuery
+                    "Novel" -> novelSearchQuery
+                    else -> extensionsState.searchQuery
                 }
-            }
-        }
+                else -> null
+            },
+            onChangeSearchQuery = { query ->
+                when (state.currentPage) {
+                    1 -> when (selectedMedia) {
+                        "Anime" -> animeExtensionsViewModel.search(query)
+                        "Novel" -> novelsViewModel.search(query)
+                        else -> extensionsViewModel.search(query)
+                    }
+                }
+            },
+        )
 
         LaunchedEffect(Unit) {
             switchToExtensionTabChannel.receiveAsFlow()
