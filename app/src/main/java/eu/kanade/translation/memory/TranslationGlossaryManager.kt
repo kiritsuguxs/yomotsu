@@ -51,29 +51,43 @@ object TranslationGlossaryManager {
         isProtected: Boolean = false,
     ): GlossaryBatchSaveResult {
         val parsed = parseMany(text, type, isProtected)
+        if (parsed.entries.isEmpty()) {
+            return GlossaryBatchSaveResult(
+                created = 0,
+                updated = 0,
+                skipped = parsed.invalidLineNumbers.size,
+                invalidLineNumbers = parsed.invalidLineNumbers,
+            )
+        }
+
+        val existingKeys = TranslationMemory.glossaryEntries(context)
+            .map { it.source.trim().lowercase() }
+            .toSet()
+
         var created = 0
         var updated = 0
-        var skipped = 0
+
+        // Use a set to track unique new entries to avoid double counting created items in the same batch
+        val processedKeys = mutableSetOf<String>()
 
         parsed.entries.forEach { entry ->
-            when (
-                save(
-                    context = context,
-                    source = entry.source,
-                    target = entry.target,
-                    type = entry.type,
-                    isProtected = entry.isProtected,
-                )
-            ) {
-                GlossarySaveResult.CREATED -> created++
-                GlossarySaveResult.UPDATED -> updated++
-                else -> skipped++
+            val key = entry.source.trim().lowercase()
+            if (!processedKeys.contains(key)) {
+                if (existingKeys.contains(key)) {
+                    updated++
+                } else {
+                    created++
+                }
+                processedKeys.add(key)
             }
         }
+
+        TranslationMemory.replaceEntries(context, parsed.entries, merge = true)
+
         return GlossaryBatchSaveResult(
             created = created,
             updated = updated,
-            skipped = skipped + parsed.invalidLineNumbers.size,
+            skipped = parsed.invalidLineNumbers.size,
             invalidLineNumbers = parsed.invalidLineNumbers,
         )
     }
