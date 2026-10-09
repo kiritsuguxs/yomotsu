@@ -112,9 +112,9 @@ class LibraryViewModel(
                     favs.filter { item ->
                         val source = sourceManager.get(item.libraryManga.manga.source)
                         when (media) {
-                            "Anime" -> source?.isAnime == true
-                            "Novel" -> source?.isNovel == true
-                            else -> source?.isAnime != true && source?.isNovel != true
+                            "Anime" -> source is eu.kanade.tachiyomi.animesource.AnimeSource
+                            "Novel" -> source is eu.kanade.tachiyomi.novelsource.NovelSource
+                            else -> source !is eu.kanade.tachiyomi.animesource.AnimeSource && source !is eu.kanade.tachiyomi.novelsource.NovelSource
                         }
                     }
                 },
