@@ -18,7 +18,7 @@ interface SourceManager {
 
     fun getAll(): List<Source>
 
-    fun getOnlineSources(): List<HttpSource>
+    fun getOnlineSources(): List<Source>
 
     fun getStubSources(): List<StubSource>
 }
