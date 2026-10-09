@@ -105,7 +105,7 @@ data object BrowseTab : Tab {
         val tabs = listOf(
             activeSourcesTab,
             activeExtensionsTab,
-            migrateSourceTab(),
+            migrateSourceTab(selectedMedia),
         )
 
         val state = rememberPagerState { tabs.size }

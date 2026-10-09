@@ -18,11 +18,20 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
-fun Screen.migrateSourceTab(): TabContent {
+fun Screen.migrateSourceTab(selectedMedia: String): TabContent {
     val uriHandler = LocalUriHandler.current
     val navigator = LocalNavigator.currentOrThrow
     val viewModel = viewModel<MigrateSourceViewModel>()
     val state by viewModel.state.collectAsState()
+
+    val filteredItems = state.items.filter { (source, _) ->
+        when (selectedMedia) {
+            "Anime" -> source.isAnime
+            "Novel" -> source.isNovel
+            else -> !source.isAnime && !source.isNovel
+        }
+    }
+    val filteredState = state.copy(items = filteredItems)
 
     return TabContent(
         titleRes = MR.strings.label_migration,
@@ -37,7 +46,7 @@ fun Screen.migrateSourceTab(): TabContent {
         ),
         content = { contentPadding, _ ->
             MigrateSourceScreen(
-                state = state,
+                state = filteredState,
                 contentPadding = contentPadding,
                 onClickItem = { source ->
                     navigator.push(MigrateMangaScreen(source.id))
