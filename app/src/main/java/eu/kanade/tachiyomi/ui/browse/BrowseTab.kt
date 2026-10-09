@@ -89,7 +89,11 @@ data object BrowseTab : Tab {
 
         val mediaAction = AppBar.Action(
             title = "Mídia: $selectedMedia",
-            icon = Icons.Outlined.Category,
+            icon = when (selectedMedia) {
+                "Anime" -> Icons.Outlined.Tv
+                "Novel" -> Icons.Outlined.LibraryBooks
+                else -> Icons.Outlined.MenuBook
+            },
             onClick = { showMediaSheet = true }
         )
 
