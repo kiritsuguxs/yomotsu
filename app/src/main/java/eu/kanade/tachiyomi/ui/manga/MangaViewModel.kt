@@ -389,7 +389,7 @@ class MangaViewModel(
                 }
 
                 // Now check if user previously set categories, when available
-                val categories = getCategories()
+                val categories = getCategories(state.source)
                 val defaultCategoryId = libraryPreferences.defaultCategory.get().toLong()
                 val defaultCategory = categories.find { it.id == defaultCategoryId }
                 when {
@@ -419,8 +419,9 @@ class MangaViewModel(
 
     fun showChangeCategoryDialog() {
         val manga = successState?.manga ?: return
+        val source = successState?.source ?: return
         viewModelScope.launch {
-            val categories = getCategories()
+            val categories = getCategories(source)
             val selection = getMangaCategoryIds(manga)
             updateSuccessState { successState ->
                 successState.copy(
@@ -482,8 +483,18 @@ class MangaViewModel(
      *
      * @return List of categories, not including the default category
      */
-    suspend fun getCategories(): List<Category> {
-        return getCategories.await().filterNot { it.isSystemCategory }
+    suspend fun getCategories(source: eu.kanade.tachiyomi.source.Source? = null): List<Category> {
+        return getCategories.await()
+            .filterNot { it.isSystemCategory }
+            .filter { category ->
+                if (source == null) return@filter true
+                val type = category.mediaType
+                when {
+                    source is eu.kanade.tachiyomi.animesource.AnimeSource -> type == tachiyomi.domain.category.model.Category.MediaType.ANIME
+                    source is eu.kanade.tachiyomi.novelsource.NovelSource -> type == tachiyomi.domain.category.model.Category.MediaType.NOVEL
+                    else -> type == tachiyomi.domain.category.model.Category.MediaType.MANGA
+                }
+            }
     }
 
     /**

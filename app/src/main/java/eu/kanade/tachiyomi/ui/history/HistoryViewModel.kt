@@ -140,8 +140,19 @@ class HistoryViewModel(
      *
      * @return List of categories, not including the default category
      */
-    suspend fun getCategories(): List<Category> {
-        return getCategories.await().filterNot { it.isSystemCategory }
+    suspend fun getCategories(manga: Manga? = null): List<Category> {
+        return getCategories.await()
+            .filterNot { it.isSystemCategory }
+            .filter { category ->
+                if (manga == null) return@filter true
+                val source = Injekt.get<eu.kanade.tachiyomi.source.SourceManager>().get(manga.source)
+                val type = category.mediaType
+                when {
+                    source is eu.kanade.tachiyomi.animesource.AnimeSource -> type == tachiyomi.domain.category.model.Category.MediaType.ANIME
+                    source is eu.kanade.tachiyomi.novelsource.NovelSource -> type == tachiyomi.domain.category.model.Category.MediaType.NOVEL
+                    else -> type == tachiyomi.domain.category.model.Category.MediaType.MANGA
+                }
+            }
     }
 
     private fun moveMangaToCategory(mangaId: Long, categories: Category?) {
@@ -186,7 +197,7 @@ class HistoryViewModel(
     fun addFavorite(manga: Manga) {
         viewModelScope.launchIO {
             // Move to default category if applicable
-            val categories = getCategories()
+            val categories = getCategories(manga)
             val defaultCategoryId = libraryPreferences.defaultCategory.get().toLong()
             val defaultCategory = categories.find { it.id == defaultCategoryId }
 
@@ -222,7 +233,7 @@ class HistoryViewModel(
 
     fun showChangeCategoryDialog(manga: Manga) {
         viewModelScope.launch {
-            val categories = getCategories()
+            val categories = getCategories(manga)
             val selection = getMangaCategoryIds(manga)
             mutableState.update { currentState ->
                 currentState.copy(

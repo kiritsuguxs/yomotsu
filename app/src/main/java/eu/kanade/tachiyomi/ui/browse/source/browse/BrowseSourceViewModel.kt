@@ -297,6 +297,14 @@ class BrowseSourceViewModel(
         return getCategories.subscribe()
             .firstOrNull()
             ?.filterNot { it.isSystemCategory }
+            ?.filter { category ->
+                val type = category.mediaType
+                when {
+                    source is eu.kanade.tachiyomi.animesource.AnimeSource -> type == tachiyomi.domain.category.model.Category.MediaType.ANIME
+                    source is eu.kanade.tachiyomi.novelsource.NovelSource -> type == tachiyomi.domain.category.model.Category.MediaType.NOVEL
+                    else -> type == tachiyomi.domain.category.model.Category.MediaType.MANGA
+                }
+            }
             .orEmpty()
     }
 
