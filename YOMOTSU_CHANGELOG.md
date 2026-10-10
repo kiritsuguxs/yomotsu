@@ -4,6 +4,20 @@ Este arquivo contém somente as mudanças importantes para quem usa o aplicativo
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
 
+## 0.20.4-Y43
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Separação Nativa de Extensões:** Todo o sistema de extensões foi reescrito. Agora extensões de Animes, Mangás e Novels não entram mais em conflito de atualizações e possuem identificações separadas.
+- **Opção de Qualidade Melhorada no Player:** O reprodutor de animes agora exibe as faixas de resoluções nativas (como 1080p, 720p) contidas no vídeo original. Elas aparecem perfeitamente integradas no visual oficial, no formato curto, na tela de Qualidades do Player.
+- **Preparação para Filtro de Categorias:** Começamos a preparar as telas do aplicativo para filtrar corretamente as opções dependendo se a obra é anime, mangá ou novel, garantindo que tudo fique organizado na sua respectiva categoria.
+- **Correções do Sistema:** Código limpo, erros de formatação de ações automáticas corrigidos, e melhor compatibilidade com as extensões originais do Aniyomi para que tudo rode de maneira mais leve e estável.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Native Extension Separation:** The entire extension system has been rewritten. Anime, Manga, and Novel extensions no longer conflict during updates and have properly separated identities.
+- **Improved Player Quality Selection:** The anime player now reads and displays native video resolution tracks (such as 1080p, 720p) directly from the stream. These are perfectly integrated into the official UI with simplified names in the Quality Sheet.
+- **Smart Categorization UI (WIP):** We've started laying the groundwork for library dialogs to properly filter categories depending on the media type (anime, manga, or novel) so things stay organized in their respective boundaries.
+- **System Fixes:** Cleaned up code formatting, fixed automated action build errors, and improved compatibility with original Aniyomi extensions for a smoother and more stable experience.
+
 ## 0.20.4-Y42
 
 🇧🇷 **Novidades e Correções (Português):**
