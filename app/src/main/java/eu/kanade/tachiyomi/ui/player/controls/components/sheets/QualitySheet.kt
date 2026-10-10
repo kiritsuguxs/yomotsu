@@ -175,8 +175,8 @@ fun QualitySheetVideoContent(
     videoState: List<Video.State>,
     selectedVideoIndex: Int,
     onClickVideo: (Int, Int) -> Unit,
-    videoTracks: List<TrackNode>,
-    onSelectVideoTrack: (Int) -> Unit,
+    videoTracks: List<TrackNode> = emptyList(),
+    onSelectVideoTrack: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(modifier = modifier.fillMaxWidth()) {
@@ -204,8 +204,8 @@ fun QualitySheetHosterContent(
     selectedVideoIndex: Pair<Int, Int>,
     onClickHoster: (Int) -> Unit,
     onClickVideo: (Int, Int) -> Unit,
-    videoTracks: List<TrackNode>,
-    onSelectVideoTrack: (Int) -> Unit,
+    videoTracks: List<TrackNode> = emptyList(),
+    onSelectVideoTrack: (Int) -> Unit = {},
     displayHosters: Pair<Boolean, Boolean>,
     modifier: Modifier = Modifier,
 ) {
