@@ -93,7 +93,7 @@ import eu.kanade.tachiyomi.data.profile.YomotsuAchievement
 import eu.kanade.tachiyomi.data.profile.YomotsuLevelManager
 import eu.kanade.tachiyomi.data.profile.YomotsuTitle
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.at.MR as ATMR
+import tachiyomi.i18n.at.ATMR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import java.io.File
