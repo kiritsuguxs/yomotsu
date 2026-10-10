@@ -11,45 +11,79 @@ data class YomotsuTitle(
 
 object YomotsuLevelManager {
 
-    const val MAX_LEVEL = 200
+    const val MAX_LEVEL = 500
     const val XP_PER_CHAPTER_READ = 90
     const val XP_PER_CHAPTER_DOWNLOAD = 90
     const val XP_PER_EPISODE_WATCHED = 90
     const val XP_PER_EPISODE_DOWNLOAD = 90
 
-    // Lista de Títulos baseada na evolução do Nível 1 ao 200
+    // Lista de Títulos baseada na evolução do Nível 1 ao 500
     val ALL_TITLES = listOf(
-        YomotsuTitle(1, "Mortal Comum", Color(0xFF9E9E9E), Color(0xFFBDBDBD)), // Cinza suave
-        YomotsuTitle(10, "Desperto", Color(0xFF8D6E63), Color(0xFFA1887F)), // Marrom/Terra minimalista
-        YomotsuTitle(20, "Caçador Novato", Color(0xFF78909C), Color(0xFF90A4AE)), // Azul metálico suave
-        YomotsuTitle(30, "Discípulo Externo", Color(0xFF5D4037), Color(0xFF795548)), // Madeira/Bronze escuro
-        YomotsuTitle(40, "Explorador do Abismo", Color(0xFF263238), Color(0xFF37474F)), // Abismo (Quase preto para chumbo)
-        YomotsuTitle(50, "Caçador Rank C", Color(0xFF455A64), Color(0xFF546E7A)), // Aço escuro
-        YomotsuTitle(60, "Especialista Marcial", Color(0xFF827717), Color(0xFF9E9D24)), // Musgo/Verde envelhecido
-        YomotsuTitle(70, "Caçador Rank B", Color(0xFF006064), Color(0xFF00838F)), // Petróleo escuro
-        YomotsuTitle(80, "Mestre das Sombras", Color(0xFF121212), Color(0xFF424242)), // Sombras (Preto absoluto para grafite)
-        YomotsuTitle(90, "Caçador Rank A", Color(0xFF880E4F), Color(0xFFAD1457)), // Vinho/Bordô elegante
-        YomotsuTitle(100, "Formação do Núcleo", Color(0xFFB71C1C), Color(0xFFC62828)), // Vermelho sangue puro e fechado (Zero neon)
-        YomotsuTitle(110, "Senhor de Domínio", Color(0xFFF57F17), Color(0xFFF9A825)), // Ouro envelhecido
-        YomotsuTitle(120, "Caçador Rank S", Color(0xFF1A237E), Color(0xFF283593)), // Azul Marinho Profundo
-        YomotsuTitle(130, "Caçador Nacional", Color(0xFF004D40), Color(0xFF00695C)), // Verde Esmeralda escuro
-        YomotsuTitle(140, "Alma Nascente", Color(0xFFE0E0E0), Color(0xFFFFFFFF)), // Branco etéreo limpo
-        YomotsuTitle(150, "Soberano", Color(0xFFFFD54F), Color(0xFFFFE082)), // Ouro pálido e nobre
-        YomotsuTitle(160, "Monarca", Color(0xFFCFD8DC), Color(0xFFECEFF1)), // Prata polida clara
-        YomotsuTitle(170, "Shinigami", Color(0xFF212121), Color(0xFF616161)), // Escuridão e névoa
-        YomotsuTitle(180, "Imortal", Color(0xFF311B92), Color(0xFF4527A0)), // Roxo imperial escuro
-        YomotsuTitle(190, "Deus Marcial", Color(0xFFBF360C), Color(0xFFD84315)), // Fogo profundo (laranja escuro)
-        YomotsuTitle(200, "Izanagi do Submundo", Color(0xFF000000), Color(0xFF1A1A1A)) // O Vazio Absoluto (Preto)
+        // Fase 1: O Despertar (Nível 1 ao 100)
+        YomotsuTitle(1, "Mortal Comum", Color(0xFFBDBDBD), Color(0xFF757575)),
+        YomotsuTitle(10, "Desperto", Color(0xFF8D6E63), Color(0xFF5D4037)),
+        YomotsuTitle(20, "Leitor Novato", Color(0xFF81D4FA), Color(0xFF0288D1)),
+        YomotsuTitle(30, "Caçador Rank E", Color(0xFF90A4AE), Color(0xFF546E7A)),
+        YomotsuTitle(40, "Caçador Rank D", Color(0xFFAED581), Color(0xFF558B2F)),
+        YomotsuTitle(50, "Caçador Rank C", Color(0xFF4FC3F7), Color(0xFF0277BD)),
+        YomotsuTitle(60, "Caçador Rank B", Color(0xFF4DB6AC), Color(0xFF00695C)),
+        YomotsuTitle(70, "Caçador Rank A", Color(0xFFF06292), Color(0xFFC2185B)),
+        YomotsuTitle(80, "Caçador Rank S", Color(0xFFFFF176), Color(0xFFFBC02D)),
+        YomotsuTitle(90, "Caçador Nacional", Color(0xFFFFB74D), Color(0xFFEF6C00)),
+        YomotsuTitle(100, "Autoridade Suprema", Color(0xFFE57373), Color(0xFFC62828)),
+
+        // Fase 2: O Caminho Marcial (Nível 110 ao 200)
+        YomotsuTitle(110, "Refinador de Qi", Color(0xFFE0F7FA), Color(0xFF80DEEA)),
+        YomotsuTitle(120, "Discípulo Externo", Color(0xFFFFCC80), Color(0xFFFF8F00)),
+        YomotsuTitle(130, "Formação do Núcleo", Color(0xFFA5D6A7), Color(0xFF2E7D32)),
+        YomotsuTitle(140, "Alma Nascente", Color(0xFF18FFFF), Color(0xFF00B8D4)),
+        YomotsuTitle(150, "Senhor de Domínio", Color(0xFFFF9E80), Color(0xFFDD2C00)),
+        YomotsuTitle(160, "Especialista Marcial", Color(0xFFFF5252), Color(0xFFD50000)),
+        YomotsuTitle(170, "Soberano Marcial", Color(0xFFB388FF), Color(0xFF6200EA)),
+        YomotsuTitle(180, "Monarca", Color(0xFFECEFF1), Color(0xFF90A4AE)),
+        YomotsuTitle(190, "Imortal", Color(0xFFFFF59D), Color(0xFFF57F17)),
+        YomotsuTitle(200, "Divindade Marcial", Color(0xFFFFD54F), Color(0xFF1A1A1A)),
+
+        // Fase 3: O Buscador do Conhecimento (Nível 210 ao 300)
+        YomotsuTitle(210, "Rato de Biblioteca", Color(0xFFBCAAA4), Color(0xFF6D4C41)),
+        YomotsuTitle(220, "Colecionador de Tomos", Color(0xFFFFE082), Color(0xFFF57F17)),
+        YomotsuTitle(230, "Devorador de Páginas", Color(0xFF9FA8DA), Color(0xFF283593)),
+        YomotsuTitle(240, "Erudito das Sombras", Color(0xFF78909C), Color(0xFF263238)),
+        YomotsuTitle(250, "Guardião dos Pergaminhos", Color(0xFFCFD8DC), Color(0xFF455A64)),
+        YomotsuTitle(260, "Bibliotecário do Abismo", Color(0xFF1A237E), Color(0xFF000000)),
+        YomotsuTitle(270, "Arquivista Akáshico", Color(0xFFE040FB), Color(0xFF4A148C)),
+        YomotsuTitle(280, "Senhor das Crônicas", Color(0xFFCE93D8), Color(0xFF6A1B9A)),
+        YomotsuTitle(290, "Leitor Onisciente", Color(0xFFFFFFFF), Color(0xFF424242)),
+        YomotsuTitle(300, "Aquele Que Tudo Lê", Color(0xFFE1F5FE), Color(0xFF01579B)),
+
+        // Fase 4: O Domínio das Constelações (Nível 310 ao 400)
+        YomotsuTitle(310, "Encarnação", Color(0xFFFFAB40), Color(0xFFFF6D00)),
+        YomotsuTitle(320, "Transcendente", Color(0xFF69F0AE), Color(0xFF00C853)),
+        YomotsuTitle(330, "Semideus", Color(0xFFFFE082), Color(0xFFFF8F00)),
+        YomotsuTitle(340, "Constelação Menor", Color(0xFF448AFF), Color(0xFF2962FF)),
+        YomotsuTitle(350, "Mito Esquecido", Color(0xFFB0BEC5), Color(0xFF37474F)),
+        YomotsuTitle(360, "Constelação Soberana", Color(0xFF7C4DFF), Color(0xFF311B92)),
+        YomotsuTitle(370, "Executor de Mundos", Color(0xFFFF5252), Color(0xFFBF360C)),
+        YomotsuTitle(380, "Rei Demônio", Color(0xFF212121), Color(0xFFD50000)),
+        YomotsuTitle(390, "Shinigami", Color(0xFF424242), Color(0xFF212121)),
+        YomotsuTitle(400, "Rei do Submundo", Color(0xFF1A1A1A), Color(0xFF4A148C)),
+
+        // Fase 5: O Fim do Abismo (Nível 410 ao 500)
+        YomotsuTitle(410, "Entidade Conceptual", Color(0xFF00E5FF), Color(0xFF006064)),
+        YomotsuTitle(420, "Devorador de Dimensões", Color(0xFF1A1A1A), Color(0xFF00E676)),
+        YomotsuTitle(430, "Arauto do Vazio", Color(0xFF311B92), Color(0xFF000000)),
+        YomotsuTitle(440, "Ancestral do Dao", Color(0xFFFFF9C4), Color(0xFFFBC02D)),
+        YomotsuTitle(450, "Tecelão do Destino", Color(0xFFFF4081), Color(0xFF00E5FF)),
+        YomotsuTitle(460, "Izanagi", Color(0xFF1A1A1A), Color(0xFFFFD54F)),
+        YomotsuTitle(470, "Deus Externo", Color(0xFF000051), Color(0xFF000000)),
+        YomotsuTitle(480, "Avatar do Sistema", Color(0xFF76FF03), Color(0xFFD50000)),
+        YomotsuTitle(490, "A Singularidade", Color(0xFFFFFFFF), Color(0xFFE0E0E0)),
+        YomotsuTitle(500, "O Vazio Absoluto", Color(0xFF000000), Color(0xFF111111))
     )
 
     /**
      * Fórmula Curva Exponencial (Quadrática)
      * XP(Level) = 125 * (Level - 1)^2
-     * Isso resulta em exatos 5.000.000 XP para o Nível 200.
-     * Early game (Lv 10) = 10.125 XP
-     * Mid game (Lv 100) = 1.225.125 XP
-     * Late game (Lv 150) = 2.775.125 XP
-     * Endgame (Lv 200) = 4.950.125 XP
      */
     fun calculateLevelFromXp(xp: Long): Int {
         var level = 1

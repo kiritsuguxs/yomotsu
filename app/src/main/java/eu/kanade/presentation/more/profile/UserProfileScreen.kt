@@ -1024,30 +1024,7 @@ fun AchievementItem(achievement: YomotsuAchievement, isUnlocked: Boolean) {
 
 @Composable
 fun getLocalizedTitleName(title: YomotsuTitle): String {
-    return when (title.unlockLevel) {
-        1 -> stringResource(MR.strings.profile_title_1)
-        10 -> stringResource(MR.strings.profile_title_10)
-        20 -> stringResource(MR.strings.profile_title_20)
-        30 -> stringResource(MR.strings.profile_title_30)
-        40 -> stringResource(MR.strings.profile_title_40)
-        50 -> stringResource(MR.strings.profile_title_50)
-        60 -> stringResource(MR.strings.profile_title_60)
-        70 -> stringResource(MR.strings.profile_title_70)
-        80 -> stringResource(MR.strings.profile_title_80)
-        90 -> stringResource(MR.strings.profile_title_90)
-        100 -> stringResource(MR.strings.profile_title_100)
-        110 -> stringResource(MR.strings.profile_title_110)
-        120 -> stringResource(MR.strings.profile_title_120)
-        130 -> stringResource(MR.strings.profile_title_130)
-        140 -> stringResource(MR.strings.profile_title_140)
-        150 -> stringResource(MR.strings.profile_title_150)
-        160 -> stringResource(MR.strings.profile_title_160)
-        170 -> stringResource(MR.strings.profile_title_170)
-        180 -> stringResource(MR.strings.profile_title_180)
-        190 -> stringResource(MR.strings.profile_title_190)
-        200 -> stringResource(MR.strings.profile_title_200)
-        else -> title.name
-    }
+    return title.name
 }
 
 @Composable
