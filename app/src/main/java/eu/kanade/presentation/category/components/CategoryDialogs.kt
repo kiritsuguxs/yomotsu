@@ -105,7 +105,7 @@ fun CategoryCreateDialog(
                     androidx.compose.material3.FilterChip(
                         selected = selectedMedia == tachiyomi.domain.category.model.Category.MediaType.NOVEL,
                         onClick = { selectedMedia = tachiyomi.domain.category.model.Category.MediaType.NOVEL },
-                        label = { Text("LN") }
+                        label = { Text("Novel") }
                     )
                 }
             }
