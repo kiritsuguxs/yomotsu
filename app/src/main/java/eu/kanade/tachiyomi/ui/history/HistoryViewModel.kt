@@ -145,7 +145,7 @@ class HistoryViewModel(
             .filterNot { it.isSystemCategory }
             .filter { category ->
                 if (manga == null) return@filter true
-                val source = Injekt.get<eu.kanade.tachiyomi.source.SourceManager>().get(manga.source)
+                val source = sourceManager.get(manga.source)
                 val type = category.mediaType
                 when {
                     source is eu.kanade.tachiyomi.animesource.AnimeSource -> type == tachiyomi.domain.category.model.Category.MediaType.ANIME
