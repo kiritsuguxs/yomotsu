@@ -171,8 +171,8 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             val source = sourceManager.get(item.manga.source)
             when (mediaType) {
                 "Anime" -> source is eu.kanade.tachiyomi.animesource.AnimeSource
-                "Novel" -> source is eu.kanade.tachiyomi.novelsource.NovelSource
-                else -> source !is eu.kanade.tachiyomi.animesource.AnimeSource && source !is eu.kanade.tachiyomi.novelsource.NovelSource
+                "Novel" -> source is eu.kanade.tachiyomi.novelsource.NovelSource || source is eu.kanade.tachiyomi.source.INovelSource
+                else -> source !is eu.kanade.tachiyomi.animesource.AnimeSource && source !is eu.kanade.tachiyomi.novelsource.NovelSource && source !is eu.kanade.tachiyomi.source.INovelSource
             }
         }
 
