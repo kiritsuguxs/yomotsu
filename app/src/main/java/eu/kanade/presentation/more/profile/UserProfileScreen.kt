@@ -658,7 +658,12 @@ fun UserProfileScreen(
             // NOME E TÍTULO
             item {
                 Row(modifier = Modifier.fillMaxWidth().clickable { showNameDialog = true }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Text(username, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                    Text(
+                        text = username,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        style = androidx.compose.ui.text.TextStyle(brush = Brush.horizontalGradient(colors = listOf(equippedTitle.colorStart, equippedTitle.colorEnd)))
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.Outlined.Edit, contentDescription = stringResource(MR.strings.profile_edit_name), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

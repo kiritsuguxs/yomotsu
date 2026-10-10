@@ -78,7 +78,7 @@ object YomotsuLevelManager {
         YomotsuTitle(470, "Deus Externo", Color(0xFF000051), Color(0xFF000000)),
         YomotsuTitle(480, "Avatar do Sistema", Color(0xFF76FF03), Color(0xFFD50000)),
         YomotsuTitle(490, "A Singularidade", Color(0xFFFFFFFF), Color(0xFFE0E0E0)),
-        YomotsuTitle(500, "O Vazio Absoluto", Color(0xFF000000), Color(0xFF111111))
+        YomotsuTitle(500, "O Vazio Absoluto", Color(0xFF000000), Color(0xFFFFFFFF))
     )
 
     /**
