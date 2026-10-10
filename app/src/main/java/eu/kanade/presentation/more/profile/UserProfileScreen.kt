@@ -716,7 +716,7 @@ fun UserProfileScreen(
                             icon = Icons.Outlined.MenuBook,
                             value = mangaValue,
                             label = stringResource(MR.strings.profile_stat_read),
-                            subtitle = if (totalNovels > 0) "$totalMangas Mangás • $totalNovels Novels" else "$totalMangas " + stringResource(MR.strings.profile_stat_mangas_in_library),
+                            subtitle = "$totalMangas Mangás • $totalNovels Novels",
                             modifier = Modifier.weight(1f)
                         )
 
@@ -760,7 +760,7 @@ fun UserProfileScreen(
                             icon = Icons.Outlined.CloudDownload,
                             value = totalDownloads.toString(),
                             label = stringResource(MR.strings.label_downloaded),
-                            subtitle = if (totalNovels > 0) "M/N: $mangaDownloads | Ani: $animeDownloads" else stringResource(MR.strings.profile_stat_offline_sub, mangaDownloads, animeDownloads),
+                            subtitle = "M/N: $mangaDownloads | Ani: $animeDownloads",
                             modifier = Modifier.weight(1f)
                         )
                         val totalCompleted = completedMangas + completedNovels + completedAnimes
@@ -768,7 +768,7 @@ fun UserProfileScreen(
                             icon = Icons.Outlined.DoneAll,
                             value = totalCompleted.toString(),
                             label = stringResource(MR.strings.label_completed_titles),
-                            subtitle = if (totalNovels > 0) "M: $completedMangas | N: $completedNovels | A: $completedAnimes" else stringResource(MR.strings.profile_stat_completed_sub, completedMangas, completedAnimes),
+                            subtitle = "M: $completedMangas | N: $completedNovels | A: $completedAnimes",
                             modifier = Modifier.weight(1f)
                         )
                     }
