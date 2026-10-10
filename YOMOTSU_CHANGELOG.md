@@ -6,13 +6,13 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 ## 0.20.4-Y43.1
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
-- **Sistema de RPG Rebalanceado:** A fórmula de experiência foi ajustada para que o nível máximo (500) seja mais justo e alcançável em cerca de 2 anos de uso ativo (antes levaria quase 10 anos). O XP ganho ao ler capítulos, assistir episódios e fazer downloads foi aumentado!
+- **Sistema de RPG Rebalanceado:** A fórmula de experiência foi ajustada para que o ganho de XP e a progressão até o nível máximo (500) sejam mais fluidos, justos e recompensadores. O XP ganho ao ler capítulos, assistir episódios e fazer downloads foi aumentado!
 - **Perfil Estiloso:** O seu nome de usuário na tela de perfil agora adota automaticamente as cores do título de RPG que você estiver usando!
 - **Recompensa do Nível 500:** Adicionado um gradiente exclusivo em Preto e Branco para os verdadeiros Deuses que alcançarem o nível 500.
 - **Melhorias nas Novels:** As abas de estatísticas e o filtro de conquistas para Novels, bem como as categorias na Biblioteca, agora ficam fixas e sempre visíveis, mesmo que a sua biblioteca de Novels ainda esteja vazia.
 
 🇺🇸 **News, Improvements & Fixes (English):**
-- **RPG System Rebalanced:** The experience formula has been adjusted to make the max level (500) fairer and achievable in about 2 years of active use (previously took almost a decade). Base XP for reading, watching, and downloading has been increased!
+- **RPG System Rebalanced:** The experience formula has been adjusted to make XP gains and progression towards the max level (500) smoother, fairer, and more rewarding. Base XP for reading, watching, and downloading has been increased!
 - **Stylish Profile:** Your username on the profile screen now automatically matches the gradient colors of your currently equipped RPG Title!
 - **Level 500 Reward:** Added an exclusive Black and White gradient for true Gods who reach level 500.
 - **Novel UI Improvements:** Novel stats and achievement filters, as well as Library categories, are now permanently visible, even if your Novel library is empty.
