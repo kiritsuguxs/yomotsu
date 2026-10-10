@@ -41,7 +41,7 @@ fun CategoryCreateDialog(
     categories: List<String>,
 ) {
     var name by remember { mutableStateOf("") }
-    var selectedMedia by remember { mutableStateOf(tachiyomi.domain.category.model.Category.MediaType.ALL) }
+    var selectedMedia by remember { mutableStateOf(tachiyomi.domain.category.model.Category.MediaType.MANGA) }
 
     val focusRequester = remember { FocusRequester() }
     val nameAlreadyExists = remember(name) { categories.contains(name) }
@@ -93,11 +93,6 @@ fun CategoryCreateDialog(
                 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly) {
                     androidx.compose.material3.FilterChip(
-                        selected = selectedMedia == tachiyomi.domain.category.model.Category.MediaType.ALL,
-                        onClick = { selectedMedia = tachiyomi.domain.category.model.Category.MediaType.ALL },
-                        label = { Text("Geral") }
-                    )
-                    androidx.compose.material3.FilterChip(
                         selected = selectedMedia == tachiyomi.domain.category.model.Category.MediaType.MANGA,
                         onClick = { selectedMedia = tachiyomi.domain.category.model.Category.MediaType.MANGA },
                         label = { Text("Mangá") }
@@ -110,7 +105,7 @@ fun CategoryCreateDialog(
                     androidx.compose.material3.FilterChip(
                         selected = selectedMedia == tachiyomi.domain.category.model.Category.MediaType.NOVEL,
                         onClick = { selectedMedia = tachiyomi.domain.category.model.Category.MediaType.NOVEL },
-                        label = { Text("Novel") }
+                        label = { Text("LN") }
                     )
                 }
             }

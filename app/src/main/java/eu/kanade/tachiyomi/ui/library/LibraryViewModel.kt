@@ -89,10 +89,17 @@ class LibraryViewModel(
 ) : StateViewModel<LibraryViewModel.State>(State()) {
 
     init {
-        mutableState.update { state ->
-            state.copy(activeCategoryIndex = libraryPreferences.lastUsedCategory.get())
-        }
         val uiPreferences = Injekt.get<eu.kanade.domain.ui.UiPreferences>()
+        viewModelScope.launchIO {
+            uiPreferences.lastUsedLibraryMedia.changes().collectLatest { media ->
+                val lastUsedIndex = when (media) {
+                    "Anime" -> libraryPreferences.lastUsedCategoryAnime.get()
+                    "Novel" -> libraryPreferences.lastUsedCategoryNovel.get()
+                    else -> libraryPreferences.lastUsedCategory.get()
+                }
+                mutableState.update { state -> state.copy(activeCategoryIndex = lastUsedIndex) }
+            }
+        }
         viewModelScope.launchIO {
             combine(
                 state.map { it.searchQuery }.distinctUntilChanged().debounce(0.25.seconds),
@@ -100,7 +107,7 @@ class LibraryViewModel(
                     categories.filter { category ->
                         if (category.isSystemCategory) return@filter true
                         val type = category.mediaType
-                        type == tachiyomi.domain.category.model.Category.MediaType.ALL ||
+                        
                         when (media) {
                             "Anime" -> type == tachiyomi.domain.category.model.Category.MediaType.ANIME
                             "Novel" -> type == tachiyomi.domain.category.model.Category.MediaType.NOVEL
@@ -722,7 +729,12 @@ class LibraryViewModel(
         }
             .coercedActiveCategoryIndex
 
-        libraryPreferences.lastUsedCategory.set(newIndex)
+        val uiPreferences = Injekt.get<eu.kanade.domain.ui.UiPreferences>()
+        when (uiPreferences.lastUsedLibraryMedia.get()) {
+            "Anime" -> libraryPreferences.lastUsedCategoryAnime.set(newIndex)
+            "Novel" -> libraryPreferences.lastUsedCategoryNovel.set(newIndex)
+            else -> libraryPreferences.lastUsedCategory.set(newIndex)
+        }
     }
 
     fun openChangeCategoryDialog() {

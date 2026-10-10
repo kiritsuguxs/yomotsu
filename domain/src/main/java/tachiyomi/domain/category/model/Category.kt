@@ -21,7 +21,7 @@ data class Category(
     }
 
     val mediaType: MediaType
-        get() = MediaType.entries.find { this.flags and it.mask == it.flag && it != MediaType.ALL } ?: MediaType.ALL
+        get() = MediaType.entries.find { this.flags and it.mask == it.flag && it != MediaType.ALL } ?: MediaType.MANGA
 
     companion object {
         const val UNCATEGORIZED_ID = 0L
