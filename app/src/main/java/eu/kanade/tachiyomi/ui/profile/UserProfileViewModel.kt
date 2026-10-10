@@ -34,6 +34,9 @@ sealed interface UserProfileState {
         val totalChaptersRead: Int,
         val totalChapters: Int,
         val totalMangas: Int,
+        val totalNovels: Int,
+        val novelDownloads: Int,
+        val completedNovels: Int,
         val totalEpisodesWatched: Int,
         val totalEpisodes: Int,
         val totalAnimes: Int,
@@ -87,17 +90,25 @@ class UserProfileViewModel(
                 val s = sourceManager.get(item.manga.source)
                 s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true
             }
+            val novelList = distinctLibraryManga.filter { item ->
+                val s = sourceManager.get(item.manga.source)
+                s is eu.kanade.tachiyomi.novelsource.NovelSource || s is eu.kanade.tachiyomi.source.INovelSource || s?.javaClass?.name?.contains("novel", ignoreCase = true) == true
+            }
             val mangaList = distinctLibraryManga.filter { item ->
                 val s = sourceManager.get(item.manga.source)
-                !(s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true)
+                !(s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true) &&
+                !(s is eu.kanade.tachiyomi.novelsource.NovelSource || s is eu.kanade.tachiyomi.source.INovelSource || s?.javaClass?.name?.contains("novel", ignoreCase = true) == true)
             }
 
             val totalMangas = mangaList.size
-            val readChapterCount = mangaList.sumOf { it.readCount }.toInt()
-            val totalChapterCount = mangaList.sumOf { it.totalChapters }.toInt()
             val completedMangas = mangaList.count { it.manga.status.toInt() == eu.kanade.tachiyomi.source.model.SManga.COMPLETED && it.unreadCount == 0L }
-            val downloadCount = downloadManager.getDownloadCount()
+            
+            val totalNovels = novelList.size
+            val completedNovels = novelList.count { it.manga.status.toInt() == eu.kanade.tachiyomi.source.model.SManga.COMPLETED && it.unreadCount == 0L }
 
+            val readChapterCount = mangaList.sumOf { it.readCount }.toInt() + novelList.sumOf { it.readCount }.toInt()
+            val totalChapterCount = mangaList.sumOf { it.totalChapters }.toInt() + novelList.sumOf { it.totalChapters }.toInt()
+            val downloadCount = downloadManager.getDownloadCount() // This is still shared for Manga and Novel
             val totalAnimes = animeList.size
             val watchedEpisodesCount = animeList.sumOf { it.readCount }.toInt()
             val totalEpisodeCount = animeList.sumOf { it.totalChapters }.toInt()
@@ -128,6 +139,8 @@ class UserProfileViewModel(
                 downloads = downloadCount,
                 episodesWatched = watchedEpisodesCount,
                 animesInLibrary = totalAnimes,
+                novelsInLibrary = totalNovels,
+                novelChaptersRead = novelList.sumOf { it.readCount }.toInt(),
                 animeDownloads = animeDownloadCount
             )
 
@@ -171,6 +184,9 @@ class UserProfileViewModel(
                     totalChaptersRead = readChapterCount,
                     totalChapters = totalChapterCount,
                     totalMangas = totalMangas,
+                    totalNovels = totalNovels,
+                    novelDownloads = 0, // downloadManager getDownloadCount() already includes novels but we cant split easily without querying. For now let\'s just use the shared downloadCount for manga, or we can just pass 0 if not used separately
+                    completedNovels = completedNovels,
                     totalEpisodesWatched = watchedEpisodesCount,
                     totalEpisodes = totalEpisodeCount,
                     totalAnimes = totalAnimes,

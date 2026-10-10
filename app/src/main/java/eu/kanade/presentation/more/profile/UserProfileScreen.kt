@@ -107,6 +107,9 @@ fun UserProfileScreen(
     totalChaptersRead: Int,
     totalChapters: Int = 0,
     totalMangas: Int,
+    totalNovels: Int = 0,
+    novelDownloads: Int = 0,
+    completedNovels: Int = 0,
     totalEpisodesWatched: Int = 0,
     totalEpisodes: Int = 0,
     totalAnimes: Int = 0,
@@ -708,7 +711,7 @@ fun UserProfileScreen(
                             icon = Icons.Outlined.MenuBook,
                             value = mangaValue,
                             label = stringResource(MR.strings.profile_stat_read),
-                            subtitle = "$totalMangas " + stringResource(MR.strings.profile_stat_mangas_in_library),
+                            subtitle = if (totalNovels > 0) "$totalMangas Mangás • $totalNovels Novels" else "$totalMangas " + stringResource(MR.strings.profile_stat_mangas_in_library),
                             modifier = Modifier.weight(1f)
                         )
 
@@ -752,15 +755,15 @@ fun UserProfileScreen(
                             icon = Icons.Outlined.CloudDownload,
                             value = totalDownloads.toString(),
                             label = stringResource(MR.strings.label_downloaded),
-                            subtitle = stringResource(MR.strings.profile_stat_offline_sub, mangaDownloads, animeDownloads),
+                            subtitle = if (totalNovels > 0) "M/N: $mangaDownloads | Ani: $animeDownloads" else stringResource(MR.strings.profile_stat_offline_sub, mangaDownloads, animeDownloads),
                             modifier = Modifier.weight(1f)
                         )
-                        val totalCompleted = completedMangas + completedAnimes
+                        val totalCompleted = completedMangas + completedNovels + completedAnimes
                         StatBox(
                             icon = Icons.Outlined.DoneAll,
                             value = totalCompleted.toString(),
                             label = stringResource(MR.strings.label_completed_titles),
-                            subtitle = stringResource(MR.strings.profile_stat_completed_sub, completedMangas, completedAnimes),
+                            subtitle = if (totalNovels > 0) "M: $completedMangas | N: $completedNovels | A: $completedAnimes" else stringResource(MR.strings.profile_stat_completed_sub, completedMangas, completedAnimes),
                             modifier = Modifier.weight(1f)
                         )
                     }
