@@ -113,7 +113,8 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         libraryPreferences.lastUpdatedTimestamp.set(Clock.System.now().toEpochMilliseconds())
 
         val categoryId = inputData.getLong(KEY_CATEGORY, -1L)
-        addMangaToQueue(categoryId)
+        val mediaType = inputData.getString(KEY_MEDIA_TYPE)
+        addMangaToQueue(categoryId, mediaType)
 
         return withIOContext {
             try {
@@ -151,7 +152,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
      *
      * @param categoryId the ID of the category to update, or -1 if no category specified.
      */
-    private suspend fun addMangaToQueue(categoryId: Long) {
+    private suspend fun addMangaToQueue(categoryId: Long, mediaType: String?) {
         val libraryManga = getLibraryManga.await()
 
         val listToUpdate = if (categoryId != -1L) {
@@ -164,6 +165,14 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                 val included = includedCategories.isEmpty() || it.categories.intersect(includedCategories).isNotEmpty()
                 val excluded = it.categories.intersect(excludedCategories).isNotEmpty()
                 included && !excluded
+            }
+        }.filter { item ->
+            if (mediaType == null) return@filter true
+            val source = sourceManager.get(item.manga.source)
+            when (mediaType) {
+                "Anime" -> source is eu.kanade.tachiyomi.animesource.AnimeSource
+                "Novel" -> source is eu.kanade.tachiyomi.novelsource.NovelSource
+                else -> source !is eu.kanade.tachiyomi.animesource.AnimeSource && source !is eu.kanade.tachiyomi.novelsource.NovelSource
             }
         }
 
@@ -422,6 +431,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
          * Key for category to update.
          */
         private const val KEY_CATEGORY = "category"
+        private const val KEY_MEDIA_TYPE = "media_type"
 
         fun setupTask(
             context: Context,
@@ -478,6 +488,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         fun startNow(
             context: Context,
             category: Category? = null,
+            mediaType: String? = null,
         ): Boolean {
             val wm = context.workManager
             if (wm.isRunning(TAG)) {
@@ -487,6 +498,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
             val inputData = workDataOf(
                 KEY_CATEGORY to category?.id,
+                KEY_MEDIA_TYPE to mediaType,
             )
             val request = OneTimeWorkRequestBuilder<LibraryUpdateJob>()
                 .addTag(TAG)

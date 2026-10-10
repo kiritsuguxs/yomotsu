@@ -105,7 +105,7 @@ data object LibraryTab : Tab {
         val snackbarHostState = remember { SnackbarHostState() }
 
         val onClickRefresh: (Category?) -> Boolean = { category ->
-            val started = LibraryUpdateJob.startNow(context, category)
+            val started = LibraryUpdateJob.startNow(context, category, selectedMedia)
             scope.launch {
                 val msgRes = when {
                     !started -> MR.strings.update_already_running
