@@ -6,15 +6,15 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 ## 0.20.4-Y43.1
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
-- **Sistema de RPG Rebalanceado:** A fórmula de experiência foi ajustada para que o ganho de XP e a progressão até o nível máximo (500) sejam mais fluidos, justos e recompensadores. O ganho de XP foi *buffado*: Ler Capítulos (200 XP), Assistir Episódios (300 XP) e Baixar (100 XP)! *(💡 Dica de Mestre: Consumir conteúdo baixado acumula os bônus, rendendo muito mais XP!)*
+- **Sistema de RPG Rebalanceado:** O Nível Máximo foi elevado de 500 para **1000**! Mais de 50 novos Títulos Épicos e Celestiais foram adicionados (incluindo *Leitor Onisciente*, *Aquele que Tudo Controla*, *Deus Supremo*). O ganho de XP foi ajustado: Ler (150 XP), Assistir (200 XP) e Baixar (50 XP)! *(💡 Dica: Ler/Assistir algo que já está baixado acumula os bônus!)*
 - **Perfil Estiloso:** O seu nome de usuário na tela de perfil agora adota automaticamente as cores do título de RPG que você estiver usando!
-- **Recompensa do Nível 500:** Adicionado um gradiente exclusivo em Preto e Branco para os verdadeiros Deuses que alcançarem o nível 500.
+- **Recompensa do Nível 1000:** Adicionado o gradiente definitivo em Preto e Branco para a verdadeira divindade que atingir o inalcançável Nível 1000.
 - **Melhorias nas Novels:** As abas de estatísticas e o filtro de conquistas para Novels, bem como as categorias na Biblioteca, agora ficam fixas e sempre visíveis, mesmo que a sua biblioteca de Novels ainda esteja vazia.
 
 🇺🇸 **News, Improvements & Fixes (English):**
-- **RPG System Rebalanced:** The experience formula has been adjusted to make XP gains and progression towards the max level (500) smoother, fairer, and more rewarding. Base XP was *buffed*: Reading Chapters (200 XP), Watching Episodes (300 XP), and Downloading (100 XP)! *(💡 Pro Tip: Consuming downloaded content stacks the bonuses, granting you a lot more XP!)*
+- **RPG System Rebalanced:** Max Level has been raised from 500 to **1000**! Over 50 new Epic and Celestial Titles have been added (including *Omniscient Reader*, *Supreme God*). Base XP adjusted: Read (150 XP), Watch (200 XP), Download (50 XP)! *(💡 Tip: Reading/Watching downloaded content stacks the bonuses!)*
 - **Stylish Profile:** Your username on the profile screen now automatically matches the gradient colors of your currently equipped RPG Title!
-- **Level 500 Reward:** Added an exclusive Black and White gradient for true Gods who reach level 500.
+- **Level 1000 Reward:** Added the ultimate Black and White gradient for the true deity who reaches the unreachable Level 1000.
 - **Novel UI Improvements:** Novel stats and achievement filters, as well as Library categories, are now permanently visible, even if your Novel library is empty.
 
 
