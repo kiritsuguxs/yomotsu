@@ -475,7 +475,7 @@ internal fun LazyListScope.internalVideoTracksContent(
     item {
         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.padding.small))
         Text(
-            text = tachiyomi.presentation.core.i18n.stringResource(AYMR.strings.player_sheets_qualities_title) + " (Nativas)",
+            text = tachiyomi.presentation.core.i18n.stringResource(AYMR.strings.player_sheets_qualities_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = MaterialTheme.padding.small),
@@ -497,12 +497,9 @@ fun InternalVideoTrackRow(
     modifier: Modifier = Modifier,
 ) {
     val trackTitle = if (track.demuxH != null && track.demuxH > 0) {
-        val w = track.demuxW?.let { "${it}x" } ?: ""
-        val h = "${track.demuxH}p"
-        val fps = track.demuxFps?.let { " (${it} fps)" } ?: ""
-        "$w$h$fps"
+        "${track.demuxH}p"
     } else {
-        track.title ?: "Track ${track.id}"
+        track.title ?: "Qualidade ${track.id}"
     }
     
     val isSelected = track.selected == true
@@ -510,21 +507,21 @@ fun InternalVideoTrackRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = MaterialTheme.padding.small),
+            .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
     ) {
-        androidx.compose.material3.RadioButton(
-            selected = isSelected,
-            onClick = onClick,
-        )
+        androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(20.dp))
         Text(
             text = trackTitle,
             fontStyle = if (isSelected) FontStyle.Italic else FontStyle.Normal,
             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
             style = MaterialTheme.typography.bodyMedium,
             color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Unspecified,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = MaterialTheme.padding.extraSmall),
         )
     }
 }
