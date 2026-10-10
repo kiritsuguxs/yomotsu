@@ -14,7 +14,7 @@ object YomotsuLevelManager {
     const val MAX_LEVEL = 500
     const val XP_PER_CHAPTER_READ = 200
     const val XP_PER_CHAPTER_DOWNLOAD = 100
-    const val XP_PER_EPISODE_WATCHED = 200
+    const val XP_PER_EPISODE_WATCHED = 300
     const val XP_PER_EPISODE_DOWNLOAD = 100
 
     // Lista de Títulos baseada na evolução do Nível 1 ao 500
