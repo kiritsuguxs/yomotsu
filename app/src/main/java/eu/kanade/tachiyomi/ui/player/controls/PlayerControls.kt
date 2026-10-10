@@ -599,6 +599,7 @@ fun PlayerControls(
         val pitchCorrection by audioPreferences.enablePitchCorrection().collectAsState()
         val mpvAudioPitchCorrection by viewModel.mpv.propFlow<Boolean>("audio-pitch-correction").collectAsState()
         val internalAudioTracks by viewModel.audioTracks.collectAsState(persistentListOf())
+        val internalVideoTracks by viewModel.videoTracks.collectAsState(persistentListOf())
         val externalAudioTracks by viewModel.externalAudioTracks.collectAsState()
         val audioTracks = remember(internalAudioTracks, externalAudioTracks) {
             internalAudioTracks.map { VideoTrack.Internal(it) } + externalAudioTracks
@@ -622,6 +623,8 @@ fun PlayerControls(
             selectedVideoIndex = selectedHosterVideoIndex,
             onClickHoster = viewModel::onHosterClicked,
             onClickVideo = viewModel::onVideoClicked,
+            videoTracks = internalVideoTracks,
+            onSelectVideoTrack = viewModel::selectVideoTrackById,
             displayHosters = Pair(showFailedHosters, emptyHosters),
 
             chapter = chapters.getOrNull(currentChapter ?: 0),

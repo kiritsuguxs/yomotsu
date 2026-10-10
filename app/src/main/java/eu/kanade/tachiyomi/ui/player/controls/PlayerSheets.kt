@@ -38,6 +38,7 @@ import eu.kanade.tachiyomi.ui.player.controls.components.sheets.SubtitlesSheet
 import eu.kanade.tachiyomi.ui.player.settings.AudioChannels
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import eu.kanade.tachiyomi.ui.player.TrackNode
 import java.io.InputStream
 
 @Composable
@@ -61,6 +62,8 @@ fun PlayerSheets(
     selectedVideoIndex: Pair<Int, Int>,
     onClickHoster: (Int) -> Unit,
     onClickVideo: (Int, Int) -> Unit,
+    videoTracks: ImmutableList<TrackNode>,
+    onSelectVideoTrack: (Int) -> Unit,
     displayHosters: Pair<Boolean, Boolean>,
 
     // chapters sheet
@@ -144,15 +147,17 @@ fun PlayerSheets(
 
         Sheets.QualityTracks -> {
             QualitySheet(
-                isLoadingHosters = isLoadingHosters,
-                hosterState = hosterState,
-                expandedState = expandedState,
-                selectedVideoIndex = selectedVideoIndex,
-                onClickHoster = onClickHoster,
-                onClickVideo = onClickVideo,
-                displayHosters = displayHosters,
-                onDismissRequest = onDismissRequest,
-                dismissSheet = dismissSheet,
+            isLoadingHosters = isLoadingHosters,
+            hosterState = hosterState,
+            expandedState = expandedState,
+            selectedVideoIndex = selectedVideoIndex,
+            onClickHoster = onClickHoster,
+            onClickVideo = onClickVideo,
+            videoTracks = videoTracks,
+            onSelectVideoTrack = onSelectVideoTrack,
+            displayHosters = displayHosters,
+            onDismissRequest = onDismissRequest,
+            dismissSheet = dismissSheet,
             )
         }
 

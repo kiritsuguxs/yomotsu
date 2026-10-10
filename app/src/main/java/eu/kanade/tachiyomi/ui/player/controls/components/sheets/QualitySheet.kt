@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.player.components.PlayerSheet
 import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.Video
+import eu.kanade.tachiyomi.ui.player.TrackNode
 import kotlinx.collections.immutable.ImmutableList
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
@@ -82,6 +83,8 @@ fun QualitySheet(
     selectedVideoIndex: Pair<Int, Int>,
     onClickHoster: (Int) -> Unit,
     onClickVideo: (Int, Int) -> Unit,
+    videoTracks: ImmutableList<TrackNode>,
+    onSelectVideoTrack: (Int) -> Unit,
     displayHosters: Pair<Boolean, Boolean>,
     onDismissRequest: () -> Unit,
     dismissSheet: Boolean,
@@ -144,6 +147,8 @@ fun QualitySheet(
                         videoState = (hosterState.first() as HosterState.Ready).videoState,
                         selectedVideoIndex = selectedVideoIndex.second,
                         onClickVideo = onClickVideo,
+                        videoTracks = videoTracks,
+                        onSelectVideoTrack = onSelectVideoTrack,
                         modifier = Modifier.padding(paddingValues = qualitySheetPadding),
                     )
                 } else {
@@ -153,6 +158,8 @@ fun QualitySheet(
                         selectedVideoIndex = selectedVideoIndex,
                         onClickHoster = onClickHoster,
                         onClickVideo = onClickVideo,
+                        videoTracks = videoTracks,
+                        onSelectVideoTrack = onSelectVideoTrack,
                         displayHosters = displayHosters,
                         modifier = modifier.padding(paddingValues = qualitySheetPadding),
                     )
@@ -168,6 +175,8 @@ fun QualitySheetVideoContent(
     videoState: List<Video.State>,
     selectedVideoIndex: Int,
     onClickVideo: (Int, Int) -> Unit,
+    videoTracks: List<TrackNode>,
+    onSelectVideoTrack: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(modifier = modifier.fillMaxWidth()) {
@@ -180,6 +189,11 @@ fun QualitySheetVideoContent(
                 noHoster = true,
             )
         }
+        
+        internalVideoTracksContent(
+            videoTracks = videoTracks,
+            onSelectVideoTrack = onSelectVideoTrack,
+        )
     }
 }
 
@@ -190,6 +204,8 @@ fun QualitySheetHosterContent(
     selectedVideoIndex: Pair<Int, Int>,
     onClickHoster: (Int) -> Unit,
     onClickVideo: (Int, Int) -> Unit,
+    videoTracks: List<TrackNode>,
+    onSelectVideoTrack: (Int) -> Unit,
     displayHosters: Pair<Boolean, Boolean>,
     modifier: Modifier = Modifier,
 ) {
@@ -233,6 +249,11 @@ fun QualitySheetHosterContent(
                 onClickVideo = onClickVideo,
             )
         }
+        
+        internalVideoTracksContent(
+            videoTracks = videoTracks,
+            onSelectVideoTrack = onSelectVideoTrack,
+        )
     }
 }
 
@@ -443,4 +464,67 @@ private fun VideoText(
                 vertical = if (noHoster) MaterialTheme.padding.small else MaterialTheme.padding.extraSmall,
             ),
     )
+}
+
+internal fun LazyListScope.internalVideoTracksContent(
+    videoTracks: List<TrackNode>,
+    onSelectVideoTrack: (Int) -> Unit,
+) {
+    if (videoTracks.isEmpty()) return
+
+    item {
+        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.padding.small))
+        Text(
+            text = tachiyomi.presentation.core.i18n.stringResource(AYMR.strings.player_sheets_qualities_title) + " (Nativas)",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = MaterialTheme.padding.small),
+        )
+    }
+
+    itemsIndexed(videoTracks) { _, track ->
+        InternalVideoTrackRow(
+            track = track,
+            onClick = { onSelectVideoTrack(track.id) },
+        )
+    }
+}
+
+@Composable
+fun InternalVideoTrackRow(
+    track: TrackNode,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val trackTitle = if (track.demuxH != null && track.demuxH > 0) {
+        val w = track.demuxW?.let { "${it}x" } ?: ""
+        val h = "${track.demuxH}p"
+        val fps = track.demuxFps?.let { " (${it} fps)" } ?: ""
+        "$w$h$fps"
+    } else {
+        track.title ?: "Track ${track.id}"
+    }
+    
+    val isSelected = track.selected == true
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = MaterialTheme.padding.small),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+    ) {
+        androidx.compose.material3.RadioButton(
+            selected = isSelected,
+            onClick = onClick,
+        )
+        Text(
+            text = trackTitle,
+            fontStyle = if (isSelected) FontStyle.Italic else FontStyle.Normal,
+            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Unspecified,
+        )
+    }
 }

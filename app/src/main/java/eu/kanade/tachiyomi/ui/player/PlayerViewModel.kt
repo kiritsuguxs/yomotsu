@@ -282,6 +282,16 @@ class PlayerViewModel @JvmOverloads constructor(
                 ).toImmutableList()
         }
 
+    val videoTracks = mpv.propFlow<MPVNode>("track-list")
+        .map { node ->
+            (
+                node?.toObject<List<TrackNode>>(json)
+                    ?.filter { it.isVideo }
+                    ?.filterNot { it.image == true } // ignore cover art
+                    ?: persistentListOf()
+                ).toImmutableList()
+        }
+
     val chapters = mpv.propFlow<MPVNode>("chapter-list")
         .map { (it?.toObject<List<ChapterNode>>(json) ?: persistentListOf()).map { it.toSegment() }.toImmutableList() }
 
@@ -759,6 +769,12 @@ class PlayerViewModel @JvmOverloads constructor(
             mpv.setPropertyBoolean("aid", false)
         } else {
             mpv.setPropertyInt("aid", id)
+        }
+    }
+
+    fun selectVideoTrackById(id: Int) {
+        if (id != mpv.getPropertyInt("vid")) {
+            mpv.setPropertyInt("vid", id)
         }
     }
 
