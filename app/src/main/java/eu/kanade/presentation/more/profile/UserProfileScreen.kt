@@ -851,6 +851,14 @@ fun UserProfileScreen(
                     }
                     item {
                         FilterChip(
+                            selected = selectedCategory == AchievementCategory.NOVEL,
+                            onClick = { selectedCategory = AchievementCategory.NOVEL },
+                            label = { Text("📝 " + stringResource(MR.strings.novels)) },
+                            colors = FilterChipDefaults.filterChipColors()
+                        )
+                    }
+                    item {
+                        FilterChip(
                             selected = selectedCategory == AchievementCategory.COLLECTION,
                             onClick = { selectedCategory = AchievementCategory.COLLECTION },
                             label = { Text("📚 " + stringResource(MR.strings.profile_category_collection)) },
