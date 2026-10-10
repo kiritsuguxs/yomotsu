@@ -491,7 +491,7 @@ class MangaViewModel(
                 val type = category.mediaType
                 when {
                     source is eu.kanade.tachiyomi.animesource.AnimeSource -> type == tachiyomi.domain.category.model.Category.MediaType.ANIME
-                    source is eu.kanade.tachiyomi.novelsource.NovelSource -> type == tachiyomi.domain.category.model.Category.MediaType.NOVEL
+                    source is eu.kanade.tachiyomi.novelsource.NovelSource || source is eu.kanade.tachiyomi.source.INovelSource -> type == tachiyomi.domain.category.model.Category.MediaType.NOVEL
                     else -> type == tachiyomi.domain.category.model.Category.MediaType.MANGA
                 }
             }

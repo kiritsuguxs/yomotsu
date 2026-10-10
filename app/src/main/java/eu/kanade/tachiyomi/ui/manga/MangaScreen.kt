@@ -44,6 +44,8 @@ import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.isLocalOrStub
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
+import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalAnimeSearchScreen
+import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalNovelSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
@@ -157,11 +159,11 @@ class MangaScreen(
                     viewModel.showTrackDialog()
                 }
             },
-            onTagSearch = { scope.launch { performGenreSearch(navigator, it, viewModel.source!!) } },
+            onTagSearch = { scope.launch { performGenreSearch(navigator, it, viewModel.source!!, isAnime, isNovel) } },
             onFilterButtonClicked = viewModel::showSettingsDialog,
             onRefresh = viewModel::fetchAllFromSource,
             onContinueReading = { continueReading(context, viewModel.getNextUnreadChapter(), successState.source, isAnime) },
-            onSearch = { query, global -> scope.launch { performSearch(navigator, query, global) } },
+            onSearch = { query, global -> scope.launch { performSearch(navigator, query, global, isAnime, isNovel) } },
             onCoverClicked = viewModel::showCoverDialog,
             onShareClicked = { shareManga(context, viewModel.manga, viewModel.source) }.takeIf { isHttpSource },
             onDownloadActionClicked = viewModel::runDownloadAction.takeIf { !successState.source.isLocalOrStub() },
@@ -375,9 +377,13 @@ class MangaScreen(
      *
      * @param query the search query to the parent controller
      */
-    private suspend fun performSearch(navigator: Navigator, query: String, global: Boolean) {
+    private suspend fun performSearch(navigator: Navigator, query: String, global: Boolean, isAnime: Boolean, isNovel: Boolean) {
         if (global) {
-            navigator.push(GlobalSearchScreen(query))
+            when {
+                isAnime -> navigator.push(GlobalAnimeSearchScreen(query))
+                isNovel -> navigator.push(GlobalNovelSearchScreen(query))
+                else -> navigator.push(GlobalSearchScreen(query))
+            }
             return
         }
 
@@ -403,7 +409,7 @@ class MangaScreen(
      *
      * @param genreName the search genre to the parent controller
      */
-    private suspend fun performGenreSearch(navigator: Navigator, genreName: String, source: Source) {
+    private suspend fun performGenreSearch(navigator: Navigator, genreName: String, source: Source, isAnime: Boolean, isNovel: Boolean) {
         if (navigator.size < 2) {
             return
         }
@@ -413,7 +419,7 @@ class MangaScreen(
             navigator.pop()
             previousController.searchGenre(genreName)
         } else {
-            performSearch(navigator, genreName, global = false)
+            performSearch(navigator, genreName, global = false, isAnime, isNovel)
         }
     }
 
