@@ -20,12 +20,13 @@ package eu.kanade.tachiyomi.ui.player.controls
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import eu.kanade.tachiyomi.ui.player.Segment
 import androidx.compose.runtime.Composable
 import eu.kanade.tachiyomi.ui.player.ArtType
 import eu.kanade.tachiyomi.ui.player.Decoder
 import eu.kanade.tachiyomi.ui.player.Panels
+import eu.kanade.tachiyomi.ui.player.Segment
 import eu.kanade.tachiyomi.ui.player.Sheets
+import eu.kanade.tachiyomi.ui.player.TrackNode
 import eu.kanade.tachiyomi.ui.player.VideoTrack
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.AudioTracksSheet
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.ChaptersSheet
@@ -36,10 +37,9 @@ import eu.kanade.tachiyomi.ui.player.controls.components.sheets.QualitySheet
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.ScreenshotSheet
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.SubtitlesSheet
 import eu.kanade.tachiyomi.ui.player.settings.AudioChannels
+import java.io.InputStream
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import eu.kanade.tachiyomi.ui.player.TrackNode
-import java.io.InputStream
 
 @Composable
 fun PlayerSheets(
@@ -115,7 +115,7 @@ fun PlayerSheets(
         Sheets.SubtitleTracks -> {
             val subtitlesPicker = rememberLauncherForActivityResult(
                 ActivityResultContracts.OpenDocument(),
-            ) {
+                ) {
                 if (it == null) return@rememberLauncherForActivityResult
                 onAddSubtitle(it)
             }
@@ -126,13 +126,13 @@ fun PlayerSheets(
                 onOpenSubtitleSettings = { onOpenPanel(Panels.SubtitleSettings) },
                 onOpenSubtitleDelay = { onOpenPanel(Panels.SubtitleDelay) },
                 onDismissRequest = onDismissRequest,
-            )
+                )
         }
 
         Sheets.AudioTracks -> {
             val audioPicker = rememberLauncherForActivityResult(
                 ActivityResultContracts.OpenDocument(),
-            ) {
+                ) {
                 if (it == null) return@rememberLauncherForActivityResult
                 onAddAudio(it)
             }
@@ -142,23 +142,23 @@ fun PlayerSheets(
                 onAddAudioTrack = { audioPicker.launch(arrayOf("*/*")) },
                 onOpenDelayPanel = { onOpenPanel(Panels.AudioDelay) },
                 onDismissRequest = onDismissRequest,
-            )
+                )
         }
 
         Sheets.QualityTracks -> {
             QualitySheet(
-            isLoadingHosters = isLoadingHosters,
-            hosterState = hosterState,
-            expandedState = expandedState,
-            selectedVideoIndex = selectedVideoIndex,
-            onClickHoster = onClickHoster,
-            onClickVideo = onClickVideo,
-            videoTracks = videoTracks,
-            onSelectVideoTrack = onSelectVideoTrack,
-            displayHosters = displayHosters,
-            onDismissRequest = onDismissRequest,
-            dismissSheet = dismissSheet,
-            )
+                isLoadingHosters = isLoadingHosters,
+                hosterState = hosterState,
+                expandedState = expandedState,
+                selectedVideoIndex = selectedVideoIndex,
+                onClickHoster = onClickHoster,
+                onClickVideo = onClickVideo,
+                videoTracks = videoTracks,
+                onSelectVideoTrack = onSelectVideoTrack,
+                displayHosters = displayHosters,
+                onDismissRequest = onDismissRequest,
+                dismissSheet = dismissSheet,
+                )
         }
 
         Sheets.Chapters -> {
@@ -169,7 +169,7 @@ fun PlayerSheets(
                 onClick = { onSeekToChapter(chapters.indexOf(it)) },
                 onDismissRequest = onDismissRequest,
                 dismissSheet = dismissSheet,
-            )
+                )
         }
 
         Sheets.More -> {
@@ -184,7 +184,7 @@ fun PlayerSheets(
                 onAudioChannelsChange = onAudioChannelsChange,
                 onDismissRequest = onDismissRequest,
                 onEnterFiltersPanel = { onOpenPanel(Panels.VideoFilters) },
-            )
+                )
         }
 
         Sheets.PlaybackSpeed -> {
@@ -200,7 +200,7 @@ fun PlayerSheets(
                 onMakeDefault = onMakeDefaultSpeed,
                 onResetDefault = onResetDefaultSpeed,
                 onDismissRequest = onDismissRequest,
-            )
+                )
         }
 
         Sheets.Screenshot -> {
@@ -215,7 +215,7 @@ fun PlayerSheets(
                 onSave = onSave,
                 takeScreenshot = takeScreenshot,
                 onDismissRequest = onDismissScreenshot,
-            )
+                )
         }
     }
 }
