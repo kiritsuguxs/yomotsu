@@ -83,12 +83,12 @@ object YomotsuLevelManager {
 
     /**
      * Fórmula Curva Exponencial (Quadrática)
-     * XP(Level) = 125 * (Level - 1)^2
+     * XP(Level) = 25 * (Level - 1)^2
      */
     fun calculateLevelFromXp(xp: Long): Int {
         var level = 1
         while (level < MAX_LEVEL) {
-            val nextLevelXp = 125L * (level) * (level)
+            val nextLevelXp = 25L * (level) * (level)
             if (xp < nextLevelXp) {
                 break
             }
@@ -99,8 +99,8 @@ object YomotsuLevelManager {
 
     fun getXpRequiredForLevel(level: Int): Long {
         if (level <= 1) return 0L
-        if (level > MAX_LEVEL) return 125L * (MAX_LEVEL - 1) * (MAX_LEVEL - 1)
-        return 125L * (level - 1) * (level - 1)
+        if (level > MAX_LEVEL) return 25L * (MAX_LEVEL - 1) * (MAX_LEVEL - 1)
+        return 25L * (level - 1) * (level - 1)
     }
 
     fun getUnlockedTitles(currentLevel: Int): List<YomotsuTitle> {
