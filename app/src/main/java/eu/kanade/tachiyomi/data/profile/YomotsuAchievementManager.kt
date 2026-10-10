@@ -187,18 +187,18 @@ object YomotsuAchievementManager {
         YomotsuAchievement("novel_read_20000", "Leitor de Novel Nível 9", "Leia 20000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelChaptersRead >= 20000 },
         YomotsuAchievement("novel_read_30000", "Leitor de Novel Nível 10", "Leia 30000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelChaptersRead >= 30000 },
 
+
         // NOVEL - BIBLIOTECÁRIO (NOVELS NA BIBLIOTECA)
         YomotsuAchievement("novel_lib_1", "Bibliotecário Nível 1", "Tenha 1 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 1 },
-        YomotsuAchievement("novel_lib_50", "Bibliotecário Nível 2", "Tenha 50 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 50 },
-        YomotsuAchievement("novel_lib_100", "Bibliotecário Nível 3", "Tenha 100 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 100 },
-        YomotsuAchievement("novel_lib_250", "Bibliotecário Nível 4", "Tenha 250 novels na biblioteca.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelsInLibrary >= 250 },
-        YomotsuAchievement("novel_lib_500", "Bibliotecário Nível 5", "Tenha 500 novels na biblioteca.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelsInLibrary >= 500 },
-        YomotsuAchievement("novel_lib_1000", "Bibliotecário Nível 6", "Tenha 1000 novels na biblioteca.", AchievementCategory.NOVEL, Tier.OURO) { it.novelsInLibrary >= 1000 },
-        YomotsuAchievement("novel_lib_1500", "Bibliotecário Nível 7", "Tenha 1500 novels na biblioteca.", AchievementCategory.NOVEL, Tier.OURO) { it.novelsInLibrary >= 1500 },
-        YomotsuAchievement("novel_lib_2500", "Bibliotecário Nível 8", "Tenha 2500 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 2500 },
-        YomotsuAchievement("novel_lib_5000", "Bibliotecário Nível 9", "Tenha 5000 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 5000 },
-        YomotsuAchievement("novel_lib_10000", "Bibliotecário Nível 10", "Tenha 10000 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 10000 },
-
+        YomotsuAchievement("novel_lib_5", "Bibliotecário Nível 2", "Tenha 5 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 5 },
+        YomotsuAchievement("novel_lib_10", "Bibliotecário Nível 3", "Tenha 10 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 10 },
+        YomotsuAchievement("novel_lib_25", "Bibliotecário Nível 4", "Tenha 25 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 25 },
+        YomotsuAchievement("novel_lib_50", "Bibliotecário Nível 5", "Tenha 50 novels na biblioteca.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelsInLibrary >= 50 },
+        YomotsuAchievement("novel_lib_100", "Bibliotecário Nível 6", "Tenha 100 novels na biblioteca.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelsInLibrary >= 100 },
+        YomotsuAchievement("novel_lib_200", "Bibliotecário Nível 7", "Tenha 200 novels na biblioteca.", AchievementCategory.NOVEL, Tier.OURO) { it.novelsInLibrary >= 200 },
+        YomotsuAchievement("novel_lib_300", "Bibliotecário Nível 8", "Tenha 300 novels na biblioteca.", AchievementCategory.NOVEL, Tier.OURO) { it.novelsInLibrary >= 300 },
+        YomotsuAchievement("novel_lib_400", "Bibliotecário Nível 9", "Tenha 400 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 400 },
+        YomotsuAchievement("novel_lib_500", "Bibliotecário Nível 10", "Tenha 500 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 500 },
         // NOVEL - ACUMULADOR (DOWNLOADS DE NOVEL)
         YomotsuAchievement("novel_dl_1", "Acumulador de Novel Nível 1", "Baixe 1 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelDownloads >= 1 },
         YomotsuAchievement("novel_dl_100", "Acumulador de Novel Nível 2", "Baixe 100 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelDownloads >= 100 },
