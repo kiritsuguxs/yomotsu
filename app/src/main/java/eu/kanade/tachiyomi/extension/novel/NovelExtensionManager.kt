@@ -43,6 +43,8 @@ class NovelExtensionManager(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private var availablePluginsMap: Map<String, NovelPlugin> = emptyMap()
+
     init {
         loadInstalledExtensions()
         refreshAvailablePlugins()
@@ -117,6 +119,7 @@ class NovelExtensionManager(
                 }
                 
                 val availableMap = allPlugins.associateBy { it.id }
+                availablePluginsMap = availableMap
                 val updatedInstalled = _installedExtensions.value.map { inst ->
                     val avail = availableMap[inst.plugin.id]
                     val hasUpdate = if (avail != null && avail.version.isNotBlank() && inst.plugin.version.isNotBlank()) {
@@ -137,15 +140,16 @@ class NovelExtensionManager(
     }
 
     fun installPlugin(plugin: NovelPlugin, onComplete: (Boolean) -> Unit) {
+        val pluginToInstall = availablePluginsMap[plugin.id] ?: plugin
         scope.launch {
             try {
-                val response = network.client.newCall(GET(plugin.url)).awaitSuccess()
-                val targetFile = File(pluginsDir, "${plugin.id}.js")
+                val response = network.client.newCall(GET(pluginToInstall.url)).awaitSuccess()
+                val targetFile = File(pluginsDir, "${pluginToInstall.id}.js")
                 targetFile.sink().buffer().use { sink ->
                     sink.writeAll(response.body.source())
                 }
-                val metaFile = File(pluginsDir, "${plugin.id}.json")
-                metaFile.writeText(json.encodeToString(plugin))
+                val metaFile = File(pluginsDir, "${pluginToInstall.id}.json")
+                metaFile.writeText(json.encodeToString(pluginToInstall))
                 loadInstalledExtensions()
                 refreshAvailablePlugins()
                 onComplete(true)
