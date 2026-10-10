@@ -37,6 +37,7 @@ data class AchievementStats(
     val animeDownloads: Int = 0,
     val novelsInLibrary: Int = 0,
     val novelChaptersRead: Int = 0,
+    val novelDownloads: Int = 0,
 )
 
 data class YomotsuAchievement(
@@ -173,25 +174,42 @@ object YomotsuAchievementManager {
         YomotsuAchievement("dl_24000", "Arquivista Nível 33", "Baixe 24000 capítulos.", AchievementCategory.DOWNLOADS, Tier.RUBI) { _, _, d -> d >= 24000 },
 
         
+
         // NOVEL - LEITOR (CAPÍTULOS DE NOVEL)
         YomotsuAchievement("novel_read_1", "Leitor de Novel Nível 1", "Leia 1 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelChaptersRead >= 1 },
-        YomotsuAchievement("novel_read_50", "Leitor de Novel Nível 2", "Leia 50 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelChaptersRead >= 50 },
-        YomotsuAchievement("novel_read_100", "Leitor de Novel Nível 3", "Leia 100 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelChaptersRead >= 100 },
-        YomotsuAchievement("novel_read_500", "Leitor de Novel Nível 4", "Leia 500 capítulos de novel.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelChaptersRead >= 500 },
-        YomotsuAchievement("novel_read_1000", "Leitor de Novel Nível 5", "Leia 1000 capítulos de novel.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelChaptersRead >= 1000 },
-        YomotsuAchievement("novel_read_2500", "Leitor de Novel Nível 6", "Leia 2500 capítulos de novel.", AchievementCategory.NOVEL, Tier.OURO) { it.novelChaptersRead >= 2500 },
-        YomotsuAchievement("novel_read_5000", "Leitor de Novel Nível 7", "Leia 5000 capítulos de novel.", AchievementCategory.NOVEL, Tier.OURO) { it.novelChaptersRead >= 5000 },
-        YomotsuAchievement("novel_read_10000", "Leitor de Novel Nível 8", "Leia 10000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelChaptersRead >= 10000 },
+        YomotsuAchievement("novel_read_100", "Leitor de Novel Nível 2", "Leia 100 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelChaptersRead >= 100 },
+        YomotsuAchievement("novel_read_500", "Leitor de Novel Nível 3", "Leia 500 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelChaptersRead >= 500 },
+        YomotsuAchievement("novel_read_1000", "Leitor de Novel Nível 4", "Leia 1000 capítulos de novel.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelChaptersRead >= 1000 },
+        YomotsuAchievement("novel_read_2500", "Leitor de Novel Nível 5", "Leia 2500 capítulos de novel.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelChaptersRead >= 2500 },
+        YomotsuAchievement("novel_read_5000", "Leitor de Novel Nível 6", "Leia 5000 capítulos de novel.", AchievementCategory.NOVEL, Tier.OURO) { it.novelChaptersRead >= 5000 },
+        YomotsuAchievement("novel_read_10000", "Leitor de Novel Nível 7", "Leia 10000 capítulos de novel.", AchievementCategory.NOVEL, Tier.OURO) { it.novelChaptersRead >= 10000 },
+        YomotsuAchievement("novel_read_15000", "Leitor de Novel Nível 8", "Leia 15000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelChaptersRead >= 15000 },
+        YomotsuAchievement("novel_read_20000", "Leitor de Novel Nível 9", "Leia 20000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelChaptersRead >= 20000 },
+        YomotsuAchievement("novel_read_30000", "Leitor de Novel Nível 10", "Leia 30000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelChaptersRead >= 30000 },
 
         // NOVEL - BIBLIOTECÁRIO (NOVELS NA BIBLIOTECA)
         YomotsuAchievement("novel_lib_1", "Bibliotecário Nível 1", "Tenha 1 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 1 },
-        YomotsuAchievement("novel_lib_10", "Bibliotecário Nível 2", "Tenha 10 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 10 },
-        YomotsuAchievement("novel_lib_50", "Bibliotecário Nível 3", "Tenha 50 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 50 },
-        YomotsuAchievement("novel_lib_100", "Bibliotecário Nível 4", "Tenha 100 novels na biblioteca.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelsInLibrary >= 100 },
-        YomotsuAchievement("novel_lib_250", "Bibliotecário Nível 5", "Tenha 250 novels na biblioteca.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelsInLibrary >= 250 },
-        YomotsuAchievement("novel_lib_500", "Bibliotecário Nível 6", "Tenha 500 novels na biblioteca.", AchievementCategory.NOVEL, Tier.OURO) { it.novelsInLibrary >= 500 },
-        YomotsuAchievement("novel_lib_1000", "Bibliotecário Nível 7", "Tenha 1000 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 1000 },
+        YomotsuAchievement("novel_lib_50", "Bibliotecário Nível 2", "Tenha 50 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 50 },
+        YomotsuAchievement("novel_lib_100", "Bibliotecário Nível 3", "Tenha 100 novels na biblioteca.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelsInLibrary >= 100 },
+        YomotsuAchievement("novel_lib_250", "Bibliotecário Nível 4", "Tenha 250 novels na biblioteca.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelsInLibrary >= 250 },
+        YomotsuAchievement("novel_lib_500", "Bibliotecário Nível 5", "Tenha 500 novels na biblioteca.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelsInLibrary >= 500 },
+        YomotsuAchievement("novel_lib_1000", "Bibliotecário Nível 6", "Tenha 1000 novels na biblioteca.", AchievementCategory.NOVEL, Tier.OURO) { it.novelsInLibrary >= 1000 },
+        YomotsuAchievement("novel_lib_1500", "Bibliotecário Nível 7", "Tenha 1500 novels na biblioteca.", AchievementCategory.NOVEL, Tier.OURO) { it.novelsInLibrary >= 1500 },
+        YomotsuAchievement("novel_lib_2500", "Bibliotecário Nível 8", "Tenha 2500 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 2500 },
+        YomotsuAchievement("novel_lib_5000", "Bibliotecário Nível 9", "Tenha 5000 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 5000 },
+        YomotsuAchievement("novel_lib_10000", "Bibliotecário Nível 10", "Tenha 10000 novels na biblioteca.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelsInLibrary >= 10000 },
 
+        // NOVEL - ACUMULADOR (DOWNLOADS DE NOVEL)
+        YomotsuAchievement("novel_dl_1", "Acumulador de Novel Nível 1", "Baixe 1 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelDownloads >= 1 },
+        YomotsuAchievement("novel_dl_100", "Acumulador de Novel Nível 2", "Baixe 100 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelDownloads >= 100 },
+        YomotsuAchievement("novel_dl_500", "Acumulador de Novel Nível 3", "Baixe 500 capítulos de novel.", AchievementCategory.NOVEL, Tier.BRONZE) { it.novelDownloads >= 500 },
+        YomotsuAchievement("novel_dl_1000", "Acumulador de Novel Nível 4", "Baixe 1000 capítulos de novel.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelDownloads >= 1000 },
+        YomotsuAchievement("novel_dl_2500", "Acumulador de Novel Nível 5", "Baixe 2500 capítulos de novel.", AchievementCategory.NOVEL, Tier.PRATA) { it.novelDownloads >= 2500 },
+        YomotsuAchievement("novel_dl_5000", "Acumulador de Novel Nível 6", "Baixe 5000 capítulos de novel.", AchievementCategory.NOVEL, Tier.OURO) { it.novelDownloads >= 5000 },
+        YomotsuAchievement("novel_dl_10000", "Acumulador de Novel Nível 7", "Baixe 10000 capítulos de novel.", AchievementCategory.NOVEL, Tier.OURO) { it.novelDownloads >= 10000 },
+        YomotsuAchievement("novel_dl_15000", "Acumulador de Novel Nível 8", "Baixe 15000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelDownloads >= 15000 },
+        YomotsuAchievement("novel_dl_20000", "Acumulador de Novel Nível 9", "Baixe 20000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelDownloads >= 20000 },
+        YomotsuAchievement("novel_dl_30000", "Acumulador de Novel Nível 10", "Baixe 30000 capítulos de novel.", AchievementCategory.NOVEL, Tier.RUBI) { it.novelDownloads >= 30000 },
         // ANIME - MARATONISTA (EPISÓDIOS ASSISTIDOS)
         YomotsuAchievement("anime_watch_1", "Maratonista Nível 1", "Assista 1 episódios de anime.", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 1 },
         YomotsuAchievement("anime_watch_12", "Maratonista Nível 2", "Assista 12 episódios (1 Temporada).", AchievementCategory.ANIME, Tier.BRONZE) { it.episodesWatched >= 12 },

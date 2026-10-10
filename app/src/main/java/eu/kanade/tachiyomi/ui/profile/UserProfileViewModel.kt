@@ -108,20 +108,22 @@ class UserProfileViewModel(
 
             val readChapterCount = mangaList.sumOf { it.readCount }.toInt() + novelList.sumOf { it.readCount }.toInt()
             val totalChapterCount = mangaList.sumOf { it.totalChapters }.toInt() + novelList.sumOf { it.totalChapters }.toInt()
-            val downloadCount = downloadManager.getDownloadCount() // This is still shared for Manga and Novel
+            val totalDownloadCount = downloadManager.getDownloadCount()
+            val novelDownloadCount = novelList.sumOf { downloadManager.getDownloadCount(it.manga) }
+            val downloadCount = totalDownloadCount - novelDownloadCount
             val totalAnimes = animeList.size
             val watchedEpisodesCount = animeList.sumOf { it.readCount }.toInt()
             val totalEpisodeCount = animeList.sumOf { it.totalChapters }.toInt()
             val completedAnimes = animeList.count { it.manga.status.toInt() == eu.kanade.tachiyomi.source.model.SManga.COMPLETED && it.unreadCount == 0L }
             val animeDownloadCount = animeDownloadManager.getDownloadCount()
 
-            val totalDownloads = downloadCount + animeDownloadCount
+            val totalDownloads = downloadCount + novelDownloadCount + animeDownloadCount
 
             val totalReadDurationMs = getTotalReadDuration.await()
             val totalWatchDurationMs = watchedEpisodesCount * 23L * 60 * 1000L
 
             val totalXp = (readChapterCount * YomotsuLevelManager.XP_PER_CHAPTER_READ.toLong()) +
-                          (downloadCount * YomotsuLevelManager.XP_PER_CHAPTER_DOWNLOAD.toLong()) +
+                          ((downloadCount + novelDownloadCount) * YomotsuLevelManager.XP_PER_CHAPTER_DOWNLOAD.toLong()) +
                           (watchedEpisodesCount * YomotsuLevelManager.XP_PER_EPISODE_WATCHED.toLong()) +
                           (animeDownloadCount * YomotsuLevelManager.XP_PER_EPISODE_DOWNLOAD.toLong())
 
@@ -141,6 +143,7 @@ class UserProfileViewModel(
                 animesInLibrary = totalAnimes,
                 novelsInLibrary = totalNovels,
                 novelChaptersRead = novelList.sumOf { it.readCount }.toInt(),
+                novelDownloads = novelDownloadCount,
                 animeDownloads = animeDownloadCount
             )
 
@@ -185,7 +188,7 @@ class UserProfileViewModel(
                     totalChapters = totalChapterCount,
                     totalMangas = totalMangas,
                     totalNovels = totalNovels,
-                    novelDownloads = 0, // downloadManager getDownloadCount() already includes novels but we cant split easily without querying. For now let\'s just use the shared downloadCount for manga, or we can just pass 0 if not used separately
+                    novelDownloads = novelDownloadCount,
                     completedNovels = completedNovels,
                     totalEpisodesWatched = watchedEpisodesCount,
                     totalEpisodes = totalEpisodeCount,
