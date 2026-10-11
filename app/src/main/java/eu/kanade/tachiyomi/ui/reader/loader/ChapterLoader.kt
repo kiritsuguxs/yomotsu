@@ -29,7 +29,6 @@ class ChapterLoader(
     private val downloadProvider: DownloadProvider,
     private val manga: Manga,
     private val source: Source,
-    private val appScope: CoroutineScope = Injekt.get(),
     private val canLoadAhead: () -> Boolean = { true },
 ) {
 
@@ -105,7 +104,7 @@ class ChapterLoader(
                     is Format.Epub -> EpubPageLoader(format.file.epubReader(context))
                 }
             }
-            source is HttpSource -> HttpPageLoader(chapter, source, appScope = appScope, canLoadAhead = canLoadAhead)
+            source is HttpSource -> HttpPageLoader(chapter, source, canLoadAhead = canLoadAhead)
             source is StubSource -> error(context.stringResource(MR.strings.source_not_installed, source.toString()))
             else -> error(context.stringResource(MR.strings.loader_not_implemented_error))
         }

@@ -110,8 +110,6 @@ class ReaderViewModel @JvmOverloads constructor(
     private val setMangaViewerFlags: SetMangaViewerFlags = Injekt.get(),
     private val getIncognitoState: GetIncognitoState = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    private val context: Application = Injekt.get(),
-    private val appScope: CoroutineScope = Injekt.get(),
 ) : ViewModel() {
 
     private val mutableState = MutableStateFlow(State())
@@ -307,8 +305,7 @@ class ReaderViewModel @JvmOverloads constructor(
                     downloadProvider,
                     manga,
                     source,
-                    appScope,
-                    ::canLoadAhead,
+                    canLoadAhead = ::canLoadAhead,
                 )
 
                 loadChapter(loader!!, chapterList.first { chapterId == it.chapter.id })
@@ -381,7 +378,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * Whether online chapters may load past the pages near the one being read.
      */
     private fun canLoadAhead(): Boolean =
-        !readerPreferences.loadAheadOnlyOverWifi.get() || context.activeNetworkState().isWifi
+        !readerPreferences.loadAheadOnlyOverWifi.get() || Injekt.get<Application>().activeNetworkState().isWifi
 
     /**
      * Called when the user changed to the given [chapter] when changing pages from the viewer.

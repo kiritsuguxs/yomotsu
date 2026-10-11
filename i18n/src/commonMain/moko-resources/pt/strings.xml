@@ -59,6 +59,8 @@
     <string name="pref_auto_update_manga_sync">Atualizar progresso após a leitura</string>
     <string name="pref_fullscreen">Ecrã inteiro</string>
     <string name="pref_page_transitions">Animar transições de página</string>
+    <string name="pref_load_ahead_only_over_wifi">Carregar com antecedência apenas no Wi-Fi</string>
+    <string name="pref_load_ahead_only_over_wifi_summary">Poupa dados móveis carregando apenas as páginas próximas da que está a ler</string>
     <string name="pref_show_page_number">Mostrar número de página</string>
     <string name="pref_custom_brightness">Brilho personalizado</string>
     <string name="pref_keep_screen_on">Manter o ecrã ligado</string>

@@ -88,6 +88,8 @@
     <string name="default_category_summary">Sempre perguntar</string>
     <string name="pref_fullscreen">Tela cheia</string>
     <string name="pref_page_transitions">Animar as transições de página</string>
+    <string name="pref_load_ahead_only_over_wifi">Carregar com antecedência apenas no Wi-Fi</string>
+    <string name="pref_load_ahead_only_over_wifi_summary">Economiza dados móveis carregando apenas as páginas próximas da que você está lendo</string>
     <string name="pref_show_page_number">Mostrar o número da página</string>
     <string name="pref_crop_borders">Aparar as bordas</string>
     <string name="pref_custom_brightness">Brilho personalizado</string>
