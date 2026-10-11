@@ -116,7 +116,7 @@ internal class HttpPageLoader(
                 try {
                     // Convert to pages without reader information
                     val pagesToSave = pages.map { Page(it.index, it.url, it.imageUrl) }
-                    chapterCache.putPageListToCache(chapter.chapter.toDomainChapter()!, pagesToSave)
+                    chapterCache.putPageListToCache(chapter.chapter.toDomainChapter()!!, pagesToSave)
                 } catch (e: Throwable) {
                     if (e is CancellationException) {
                         throw e
