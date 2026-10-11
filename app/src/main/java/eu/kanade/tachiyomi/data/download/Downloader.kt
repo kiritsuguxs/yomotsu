@@ -281,42 +281,47 @@ class Downloader(
 
         val source = sourceManager.get(manga.source) as? HttpSource ?: return
         val wasEmpty = queueState.value.isEmpty()
-        val chaptersToQueue = chapters.asSequence()
-            // Filter out those already downloaded.
-            .filter { provider.findChapterDir(it.name, it.scanlator, it.url, manga.title, source) == null }
-            // Add chapters to queue from the start.
-            .sortedByDescending { it.sourceOrder }
-            // Filter out those already enqueued.
-            .filter { chapter -> queueState.value.none { it.chapter.id == chapter.id } }
-            // Create a download for each one.
-            .map { Download(source, manga, it) }
-            .toList()
+        scope.launch {
+            val downloadedChapterIds = provider.findDownloadedChapterIds(chapters, manga, source)
+            val queuedChapterIds = queueState.value.mapTo(HashSet()) { it.chapter.id }
+            val chaptersToQueue = chapters
+                // Filter out those already downloaded.
+                .filter { it.id !in downloadedChapterIds }
+                .asSequence()
+                // Add chapters to queue from the start.
+                .sortedByDescending { it.sourceOrder }
+                // Filter out those already enqueued.
+                .filter { it.id !in queuedChapterIds }
+                // Create a download for each one.
+                .map { Download(source, manga, it) }
+                .toList()
 
-        if (chaptersToQueue.isNotEmpty()) {
-            addAllToQueue(chaptersToQueue)
+            if (chaptersToQueue.isNotEmpty()) {
+                addAllToQueue(chaptersToQueue)
 
-            // Start downloader if needed
-            if (autoStart && wasEmpty) {
-                val queuedDownloads = queueState.value.count { it.source !is UnmeteredSource }
-                val maxDownloadsFromSource = queueState.value
-                    .groupBy { it.source }
-                    .filterKeys { it !is UnmeteredSource }
-                    .maxOfOrNull { it.value.size }
-                    ?: 0
-                if (
-                    queuedDownloads > DOWNLOADS_QUEUED_WARNING_THRESHOLD ||
-                    maxDownloadsFromSource > CHAPTERS_PER_SOURCE_QUEUE_WARNING_THRESHOLD
-                ) {
-                    notifier.onWarning(
-                        context.stringResource(
-                            MR.strings.download_queue_size_warning,
-                            context.stringResource(MR.strings.app_name),
-                        ),
-                        WARNING_NOTIF_TIMEOUT_MS,
-                        NotificationHandler.openUrl(context, LibraryUpdateNotifier.HELP_WARNING_URL),
-                    )
+                // Start downloader if needed
+                if (autoStart && wasEmpty) {
+                    val queuedDownloads = queueState.value.count { it.source !is UnmeteredSource }
+                    val maxDownloadsFromSource = queueState.value
+                        .groupBy { it.source }
+                        .filterKeys { it !is UnmeteredSource }
+                        .maxOfOrNull { it.value.size }
+                        ?: 0
+                    if (
+                        queuedDownloads > DOWNLOADS_QUEUED_WARNING_THRESHOLD ||
+                        maxDownloadsFromSource > CHAPTERS_PER_SOURCE_QUEUE_WARNING_THRESHOLD
+                    ) {
+                        notifier.onWarning(
+                            context.stringResource(
+                                MR.strings.download_queue_size_warning,
+                                context.stringResource(MR.strings.app_name),
+                            ),
+                            WARNING_NOTIF_TIMEOUT_MS,
+                            NotificationHandler.openUrl(context, LibraryUpdateNotifier.HELP_WARNING_URL),
+                        )
+                    }
+                    DownloadJob.start(context)
                 }
-                DownloadJob.start(context)
             }
         }
     }
@@ -715,12 +720,15 @@ class Downloader(
     }
 
     private fun addAllToQueue(downloads: List<Download>) {
-        _queueState.update {
-            downloads.forEach { download ->
+        _queueState.update { queue ->
+            // Callers filter off the queue's thread, so a chapter may have been queued in the meantime
+            val queuedChapterIds = queue.mapTo(HashSet()) { it.chapter.id }
+            val toAdd = downloads.filter { it.chapter.id !in queuedChapterIds }
+            toAdd.forEach { download ->
                 download.status = Download.State.QUEUE
             }
-            store.addAll(downloads)
-            it + downloads
+            store.addAll(toAdd)
+            queue + toAdd
         }
     }
 

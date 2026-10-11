@@ -12,10 +12,13 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
+import kotlinx.coroutines.CoroutineScope
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
 import tachiyomi.source.local.LocalSource
 import tachiyomi.source.local.io.Format
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 /**
  * Loader used to retrieve the [PageLoader] for a given chapter.
@@ -26,6 +29,8 @@ class ChapterLoader(
     private val downloadProvider: DownloadProvider,
     private val manga: Manga,
     private val source: Source,
+    private val appScope: CoroutineScope = Injekt.get(),
+    private val canLoadAhead: () -> Boolean = { true },
 ) {
 
     /**
@@ -100,7 +105,7 @@ class ChapterLoader(
                     is Format.Epub -> EpubPageLoader(format.file.epubReader(context))
                 }
             }
-            source is HttpSource -> HttpPageLoader(chapter, source)
+            source is HttpSource -> HttpPageLoader(chapter, source, appScope = appScope, canLoadAhead = canLoadAhead)
             source is StubSource -> error(context.stringResource(MR.strings.source_not_installed, source.toString()))
             else -> error(context.stringResource(MR.strings.loader_not_implemented_error))
         }

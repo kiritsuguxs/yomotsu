@@ -102,9 +102,8 @@ class WebtoonPageHolder(
     private fun refreshLayoutParams() {
         frame.layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
             if (!viewer.isContinuous) bottomMargin = 15.dpToPx
-            val margin = Resources.getSystem().displayMetrics.widthPixels * (viewer.config.sidePadding / 100f)
-            marginEnd = margin.toInt()
-            marginStart = margin.toInt()
+            marginEnd = viewer.recycler.sidePaddingPixels
+            marginStart = viewer.recycler.sidePaddingPixels
         }
     }
 

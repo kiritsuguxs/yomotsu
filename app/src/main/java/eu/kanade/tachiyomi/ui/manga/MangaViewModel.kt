@@ -679,9 +679,11 @@ class MangaViewModel(
         val isLocal = manga.isLocal()
         val isAnime = (source is eu.kanade.tachiyomi.animesource.AnimeSource) || (sourceManager.get(manga.source) is eu.kanade.tachiyomi.animesource.AnimeSource)
         val isNovel = (source is eu.kanade.tachiyomi.source.INovelSource) || (sourceManager.get(manga.source) is eu.kanade.tachiyomi.source.INovelSource)
+        val queuedDownloads = if (isLocal || isAnime) emptyMap() else downloadManager.getQueuedDownloadsByChapterId()
+        val downloadedChapterIds = if (isLocal || isAnime || isNovel) emptySet() else downloadManager.getDownloadedChapterIds(this, manga)
         return map { chapter ->
             val activeAnimeDownload = if (isAnime) animeDownloadManager.getQueuedDownloadOrNull(chapter.id) else null
-            val activeDownload = if (!isAnime) downloadManager.getQueuedDownloadOrNull(chapter.id) else null
+            val activeDownload = if (!isAnime) queuedDownloads[chapter.id] else null
             val isNovelDownloaded = NovelDownloadManager.isChapterDownloaded(manga.id, chapter.id)
             val isNovelDownloading = NovelDownloadManager.isChapterDownloading(chapter.id)
             val isAnimeDownloaded = if (isAnime) animeDownloadManager.isChapterDownloaded(chapter.name, chapter.scanlator, manga.title, manga.source) else false
@@ -690,13 +692,7 @@ class MangaViewModel(
             } else if (isAnime) {
                 false
             } else {
-                downloadManager.isChapterDownloaded(
-                    chapter.name,
-                    chapter.scanlator,
-                    chapter.url,
-                    manga.title,
-                    manga.source,
-                )
+                chapter.id in downloadedChapterIds
             }
             val downloadState = when {
                 isNovelDownloading -> Download.State.DOWNLOADING

@@ -26,6 +26,9 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.reader.loader.ChapterLoader
 import eu.kanade.tachiyomi.ui.reader.loader.DownloadPageLoader
+import eu.kanade.tachiyomi.ui.reader.loader.HttpPageLoader
+import eu.kanade.tachiyomi.util.system.activeNetworkState
+import kotlinx.coroutines.Job
 import eu.kanade.tachiyomi.ui.reader.model.InsertPage
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -43,6 +46,7 @@ import eu.kanade.tachiyomi.util.storage.cacheImageDir
 import eu.kanade.translation.model.ManualTranslationPosition
 import eu.kanade.translation.model.PageTranslation
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,6 +110,8 @@ class ReaderViewModel @JvmOverloads constructor(
     private val setMangaViewerFlags: SetMangaViewerFlags = Injekt.get(),
     private val getIncognitoState: GetIncognitoState = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    private val context: Application = Injekt.get(),
+    private val appScope: CoroutineScope = Injekt.get(),
 ) : ViewModel() {
 
     private val mutableState = MutableStateFlow(State())
@@ -295,7 +301,15 @@ class ReaderViewModel @JvmOverloads constructor(
 
                 val context = Injekt.get<Application>()
                 val source = sourceManager.getOrStub(manga.source)
-                loader = ChapterLoader(context, downloadManager, downloadProvider, manga, source)
+                loader = ChapterLoader(
+                    context,
+                    downloadManager,
+                    downloadProvider,
+                    manga,
+                    source,
+                    appScope,
+                    ::canLoadAhead,
+                )
 
                 loadChapter(loader!!, chapterList.first { chapterId == it.chapter.id })
             } catch (e: Throwable) {
@@ -323,6 +337,7 @@ class ReaderViewModel @JvmOverloads constructor(
             chapterList.getOrNull(chapterPos - 1),
             chapterList.getOrNull(chapterPos + 1),
         )
+        preloadNextChapterAfter(newChapters)
 
         withUIContext {
             mutableState.update {
@@ -339,6 +354,34 @@ class ReaderViewModel @JvmOverloads constructor(
         }
         return newChapters
     }
+
+    private var nextChapterPreloadJob: Job? = null
+
+    /**
+     * Preloads the next chapter of [chapters] once the current one has loaded, so it doesn't take bandwidth from the
+     * pages being read. Skipped when loading ahead isn't allowed on this network.
+     */
+    private fun preloadNextChapterAfter(chapters: ViewerChapters) {
+        val nextChapter = chapters.nextChapter ?: return
+        nextChapterPreloadJob?.cancel()
+        nextChapterPreloadJob = viewModelScope.launch(Dispatchers.IO) {
+            if (!canLoadAhead()) return@launch
+            val current = chapters.currChapter
+            // Only online pages load in the background; other loaders load a page once it's shown
+            if (current.pageLoader is HttpPageLoader) {
+                current.pages.orEmpty().forEach { page ->
+                    page.statusFlow.first { it == Page.State.Ready || it is Page.State.Error }
+                }
+            }
+            preload(nextChapter)
+        }
+    }
+
+    /**
+     * Whether online chapters may load past the pages near the one being read.
+     */
+    private fun canLoadAhead(): Boolean =
+        !readerPreferences.loadAheadOnlyOverWifi.get() || context.activeNetworkState().isWifi
 
     /**
      * Called when the user changed to the given [chapter] when changing pages from the viewer.
