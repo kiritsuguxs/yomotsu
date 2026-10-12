@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.DoneAll
@@ -91,6 +92,7 @@ import eu.kanade.tachiyomi.data.profile.ProfilePresetBanner
 import eu.kanade.tachiyomi.data.profile.ProfilePresets
 import eu.kanade.tachiyomi.data.profile.YomotsuAchievement
 import eu.kanade.tachiyomi.data.profile.YomotsuLevelManager
+import eu.kanade.tachiyomi.data.profile.YomotsuRarity
 import eu.kanade.tachiyomi.data.profile.YomotsuTitle
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.at.ATMR
@@ -146,6 +148,7 @@ fun UserProfileScreen(
 ) {
     val context = LocalContext.current
     var showTitleDialog by remember { mutableStateOf(false) }
+    var selectedRarity by remember { mutableStateOf<YomotsuRarity?>(null) }
     var showNameDialog by remember { mutableStateOf(false) }
     var showAvatarDialog by remember { mutableStateOf(false) }
     var showBorderDialog by remember { mutableStateOf(false) }
@@ -195,25 +198,211 @@ fun UserProfileScreen(
     }
 
     if (showTitleDialog) {
+        val displayedTitles = remember(selectedRarity) {
+            if (selectedRarity == null) {
+                YomotsuLevelManager.ALL_TITLES
+            } else {
+                YomotsuLevelManager.ALL_TITLES.filter { it.rarity == selectedRarity }
+            }
+        }
+        val isPt = Locale.getDefault().language.startsWith("pt")
+
         AlertDialog(
             onDismissRequest = { showTitleDialog = false },
-            title = { Text(stringResource(MR.strings.profile_choose_title)) },
-            text = {
-                LazyColumn {
-                    items(unlockedTitles) { title ->
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .heightIn(min = 380.dp, max = 460.dp),
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(MR.strings.profile_choose_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
                         Text(
-                            text = getLocalizedTitleName(title),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onTitleSelected(title)
-                                    showTitleDialog = false
-                                }
-                                .padding(16.dp),
-                            style = androidx.compose.ui.text.TextStyle(brush = Brush.horizontalGradient(colors = listOf(title.colorStart, title.colorEnd))),
+                            text = stringResource(MR.strings.profile_level, currentLevel),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                    }
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(340.dp)
+                ) {
+                    // Seletor de Raridade (Chips horizontais)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item {
+                            FilterChip(
+                                selected = selectedRarity == null,
+                                onClick = { selectedRarity = null },
+                                label = { Text(stringResource(MR.strings.rarity_all)) },
+                            )
+                        }
+                        items(YomotsuRarity.entries.toTypedArray()) { rarity ->
+                            FilterChip(
+                                selected = selectedRarity == rarity,
+                                onClick = { selectedRarity = rarity },
+                                label = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(rarity.color)
+                                        )
+                                        Text(rarity.getDisplayName())
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(displayedTitles, key = { it.unlockLevel }) { title ->
+                            val isUnlocked = title.unlockLevel <= currentLevel
+                            val isEquipped = title.name == equippedTitle.name
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isEquipped) {
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                } else if (isUnlocked) {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                                },
+                                border = if (isEquipped) {
+                                    androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+                                } else if (isUnlocked) {
+                                    androidx.compose.foundation.BorderStroke(1.dp, title.rarity.color.copy(alpha = 0.45f))
+                                } else {
+                                    androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (isUnlocked) {
+                                            Modifier.clickable {
+                                                onTitleSelected(title)
+                                                showTitleDialog = false
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 4.dp, height = 28.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(if (isUnlocked) title.rarity.color else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                                    )
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        if (isUnlocked) {
+                                            Text(
+                                                text = getLocalizedTitleName(title),
+                                                style = androidx.compose.ui.text.TextStyle(
+                                                    brush = Brush.horizontalGradient(colors = listOf(title.colorStart, title.colorEnd))
+                                                ),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = stringResource(MR.strings.profile_level, title.unlockLevel),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                if (isEquipped) {
+                                                    Text(
+                                                        text = "• " + if (isPt) "Equipado" else "Equipped",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Text(
+                                                text = "???",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Lock,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(11.dp),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                )
+                                                Text(
+                                                    text = stringResource(MR.strings.profile_level, title.unlockLevel),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Normal,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (isEquipped) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1038,7 +1227,7 @@ fun AchievementItem(achievement: YomotsuAchievement, isUnlocked: Boolean) {
 
 @Composable
 fun getLocalizedTitleName(title: YomotsuTitle): String {
-    return title.name
+    return YomotsuLevelManager.getLocalizedTitleName(title)
 }
 
 @Composable

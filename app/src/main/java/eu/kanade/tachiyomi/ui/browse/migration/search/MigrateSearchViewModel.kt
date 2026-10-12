@@ -20,6 +20,7 @@ class MigrateSearchViewModel(
     getManga: GetManga = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val sourcePreferences: SourcePreferences = Injekt.get(),
+    private val novelExtensionManager: eu.kanade.tachiyomi.extension.novel.NovelExtensionManager = Injekt.get(),
 ) : SearchViewModel() {
 
     companion object {
@@ -57,6 +58,24 @@ class MigrateSearchViewModel(
     }
 
     override fun getEnabledSources(): List<Source> {
-        return migrationSources.mapNotNull { sourceManager.get(it) }
+        val sources = migrationSources.mapNotNull { sourceId ->
+            sourceManager.get(sourceId)
+                ?: novelExtensionManager.installedExtensions.value
+                    .flatMap { it.sources }
+                    .firstOrNull { it.id == sourceId }
+        }
+        if (sources.isNotEmpty()) return sources
+
+        val manga = state.value.from
+        val isNovel = manga?.let { m ->
+            val s = sourceManager.getOrStub(m.source)
+            s is eu.kanade.tachiyomi.source.INovelSource ||
+                s is eu.kanade.tachiyomi.novelsource.NovelSource ||
+                novelExtensionManager.installedExtensions.value.any { ext -> ext.sources.any { it.id == m.source } }
+        } ?: false
+        if (isNovel) {
+            return novelExtensionManager.installedExtensions.value.flatMap { it.sources }
+        }
+        return emptyList()
     }
 }

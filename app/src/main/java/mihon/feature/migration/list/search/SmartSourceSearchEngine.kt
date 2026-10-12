@@ -22,6 +22,10 @@ class SmartSourceSearchEngine(extraSearchParams: String?) : BaseSmartSearchEngin
     }
 
     private fun makeSearchAction(source: Source): SearchAction<SManga> = { query ->
-        source.getSearchManga(1, query, source.getFilterList()).mangas
+        if (source is eu.kanade.tachiyomi.animesource.AnimeCatalogueSource) {
+            source.getSearchAnime(1, query, source.getFilterList()).mangas
+        } else {
+            source.getSearchManga(1, query, source.getFilterList()).mangas
+        }
     }
 }

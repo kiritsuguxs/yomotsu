@@ -49,6 +49,7 @@ class MigrationListViewModel(
     private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
     private val migrateManga: MigrateMangaUseCase = Injekt.get(),
     private val updateMangaFromRemote: UpdateMangaFromRemote = Injekt.get(),
+    private val novelExtensionManager: eu.kanade.tachiyomi.extension.novel.NovelExtensionManager = Injekt.get(),
 ) : StateViewModel<MigrationListViewModel.State>(State()) {
 
     companion object {
@@ -125,7 +126,12 @@ class MigrationListViewModel(
         val deepSearchMode = preferences.migrationDeepSearchMode.get()
 
         val sources = preferences.migrationSources.get()
-            .mapNotNull { sourceManager.get(it) }
+            .mapNotNull { sourceId ->
+                sourceManager.get(sourceId)
+                    ?: novelExtensionManager.installedExtensions.value
+                        .flatMap { ext -> ext.sources }
+                        .firstOrNull { it.id == sourceId }
+            }
 
         for (manga in mangas) {
             if (!currentCoroutineContext().isActive) break

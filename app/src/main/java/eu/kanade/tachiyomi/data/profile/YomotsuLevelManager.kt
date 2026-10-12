@@ -2,11 +2,35 @@ package eu.kanade.tachiyomi.data.profile
 
 import androidx.compose.ui.graphics.Color
 
+enum class YomotsuRarity(
+    val color: Color,
+    val minLevel: Int,
+    val maxLevel: Int,
+    val ptName: String,
+    val enName: String,
+) {
+    COMMON(Color(0xFF9E9E9E), 1, 100, "Comum", "Common"),
+    RARE(Color(0xFF2196F3), 101, 300, "Raro", "Rare"),
+    EPIC(Color(0xFFAB47BC), 301, 500, "Épico", "Epic"),
+    LEGENDARY(Color(0xFFFF9800), 501, 700, "Lendário", "Legendary"),
+    MYTHIC(Color(0xFFE91E63), 701, 900, "Mítico", "Mythic"),
+    DIVINE(Color(0xFF00E5FF), 901, 1000, "Divino", "Divine");
+
+    fun getDisplayName(isPt: Boolean = java.util.Locale.getDefault().language.startsWith("pt")): String =
+        if (isPt) ptName else enName
+
+    companion object {
+        fun fromLevel(level: Int): YomotsuRarity =
+            entries.firstOrNull { level in it.minLevel..it.maxLevel } ?: COMMON
+    }
+}
+
 data class YomotsuTitle(
     val unlockLevel: Int,
     val name: String,
     val colorStart: Color,
-    val colorEnd: Color
+    val colorEnd: Color,
+    val rarity: YomotsuRarity = YomotsuRarity.fromLevel(unlockLevel),
 )
 
 object YomotsuLevelManager {
@@ -169,5 +193,123 @@ object YomotsuLevelManager {
 
     fun getCurrentTitleByLevel(level: Int): YomotsuTitle {
         return ALL_TITLES.lastOrNull { it.unlockLevel <= level } ?: ALL_TITLES.first()
+    }
+
+    val ENGLISH_TITLES: Map<Int, String> = mapOf(
+        1 to "Common Mortal",
+        10 to "Awakened",
+        20 to "Novice Reader",
+        30 to "Rank E Hunter",
+        40 to "Rank D Hunter",
+        50 to "Rank C Hunter",
+        60 to "Rank B Hunter",
+        70 to "Rank A Hunter",
+        80 to "Rank S Hunter",
+        90 to "National Hunter",
+        100 to "Supreme Authority",
+
+        110 to "Qi Refiner",
+        120 to "Outer Disciple",
+        130 to "Core Formation",
+        140 to "Nascent Soul",
+        150 to "Domain Lord",
+        160 to "Martial Expert",
+        170 to "Martial Sovereign",
+        180 to "Monarch",
+        190 to "Immortal",
+        200 to "Martial Deity",
+
+        210 to "Bookworm",
+        220 to "Tome Collector",
+        230 to "Page Devourer",
+        240 to "Shadow Scholar",
+        250 to "Scroll Guardian",
+        260 to "Abyss Librarian",
+        270 to "Akashic Archivist",
+        280 to "Lord of Chronicles",
+        290 to "Reading Sage",
+        300 to "The One Who Reads All",
+
+        310 to "Incarnation",
+        320 to "Transcendent",
+        330 to "Demigod",
+        340 to "Lesser Constellation",
+        350 to "Forgotten Myth",
+        360 to "Sovereign Constellation",
+        370 to "World Executor",
+        380 to "Demon King",
+        390 to "Shinigami",
+        400 to "King of the Underworld",
+
+        410 to "Conceptual Entity",
+        420 to "Dimension Devourer",
+        430 to "Void Herald",
+        440 to "Dao Ancestor",
+        450 to "Fate Weaver",
+        460 to "Izanagi",
+        470 to "Outer God",
+        480 to "System Avatar",
+        490 to "The Singularity",
+        500 to "Time Sovereign",
+
+        510 to "Ethereal Observer",
+        520 to "Clairvoyant Reader",
+        530 to "Story Oracle",
+        540 to "Plot Devourer",
+        550 to "The All-Seeing Eye",
+        560 to "Multiverse Traveler",
+        570 to "Fourth Wall Guardian",
+        580 to "Eternity Sage",
+        590 to "Cosmic Mind",
+        600 to "Omnipresent Reader",
+
+        610 to "Lord of Karma",
+        620 to "Fate Manipulator",
+        630 to "Celestial Judge",
+        640 to "The End of Eras",
+        650 to "Infinite Walker",
+        660 to "Creator God",
+        670 to "Destroyer God",
+        680 to "Primordial Supreme",
+        690 to "The Source",
+        700 to "Omniscient Reader",
+
+        710 to "The One Who Lived a Thousand Lives",
+        720 to "Demonic Buddha",
+        730 to "Immortal Emperor",
+        740 to "Lord of Reincarnation",
+        750 to "Heaven's Will",
+        760 to "The Supreme Law",
+        770 to "The Paradox",
+        780 to "Being Beyond the System",
+        790 to "End Dreamer",
+        800 to "Omnipotent Reader",
+
+        810 to "The One Who Writes the Stars",
+        820 to "The False God",
+        830 to "Progenitor",
+        840 to "Universal Archmage",
+        850 to "Pure Entity",
+        860 to "Lord of All Fictions",
+        870 to "Creator of Universes",
+        880 to "Chaos Incarnate",
+        890 to "The Edge of Reality",
+        900 to "The Alpha and the Omega",
+
+        910 to "Lord of the Multiverse",
+        920 to "Primordial Will",
+        930 to "Infinite Light",
+        940 to "Perfect Darkness",
+        950 to "The Author's Hand",
+        960 to "Throne of Creation",
+        970 to "The Architect",
+        980 to "The One Who Controls All",
+        990 to "Omicron Entity",
+        1000 to "Supreme God of Yomotsu"
+    )
+
+    fun getLocalizedTitleName(title: YomotsuTitle): String {
+        val isPt = java.util.Locale.getDefault().language.startsWith("pt")
+        return if (isPt) title.name else (ENGLISH_TITLES[title.unlockLevel] ?: title.name)
     }
 }

@@ -314,6 +314,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
         val sourcePreferences: SourcePreferences = Injekt.get(),
         private val sourceManager: SourceManager = Injekt.get(),
         private val getManga: tachiyomi.domain.manga.interactor.GetManga = Injekt.get(),
+        private val novelExtensionManager: eu.kanade.tachiyomi.extension.novel.NovelExtensionManager = Injekt.get(),
     ) : StateViewModel<Model.State>(State()) {
 
         private val sourcesComparator = { includedSources: List<Long> ->
@@ -359,6 +360,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
 
         private fun isNovelSource(source: eu.kanade.tachiyomi.source.Source): Boolean {
             if (source is eu.kanade.tachiyomi.source.INovelSource) return true
+            if (source is eu.kanade.tachiyomi.novelsource.NovelSource) return true
             val clazz = source.javaClass
             if (clazz.name.contains("novel", ignoreCase = true)) return true
             var current: Class<*>? = clazz
@@ -367,6 +369,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                 if (current.interfaces.any { it.name.contains("novel", ignoreCase = true) }) return true
                 current = current.superclass
             }
+            if (novelExtensionManager.installedExtensions.value.any { ext -> ext.sources.any { it.id == source.id } }) return true
             return false
         }
 
@@ -374,17 +377,40 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
             val firstManga = mangaIds.firstOrNull()?.let { getManga.await(it) }
             val firstMangaSource = firstManga?.source?.let { sourceManager.getOrStub(it) }
             val isAnime = firstMangaSource?.let { isAnimeSource(it) } ?: false
-            val isNovel = firstMangaSource?.let { isNovelSource(it) } ?: false
+            val isNovel = (firstMangaSource?.let { isNovelSource(it) } == true) ||
+                (firstManga?.source?.let { sid ->
+                    novelExtensionManager.installedExtensions.value.any { ext -> ext.sources.any { it.id == sid } }
+                } == true)
 
             val languages = sourcePreferences.enabledLanguages.get()
+            val novelLanguages = sourcePreferences.enabledNovelLanguages.get()
+            val animeLanguages = sourcePreferences.enabledAnimeLanguages.get()
             val pinnedSources = sourcePreferences.pinnedSources.get().mapNotNull { it.toLongOrNull() }
             val includedSources = sourcePreferences.migrationSources.get()
             val disabledSources = sourcePreferences.disabledSources.get()
                 .mapNotNull { it.toLongOrNull() }
-            val sources = sourceManager.getAll()
+
+            val allSources = (sourceManager.getAll() + novelExtensionManager.installedExtensions.value.flatMap { it.sources }).distinctBy { it.id }
+
+            val sources = allSources
                 .asSequence()
                 .filter { it.id != tachiyomi.source.local.LocalSource.ID && it.id != eu.kanade.tachiyomi.source.TelegramSource.ID }
-                .filter { it.lang in languages }
+                .filter {
+                    if (isNovel) {
+                        novelLanguages.isEmpty() ||
+                            it.lang.isBlank() ||
+                            it.lang in novelLanguages ||
+                            novelLanguages.any { enabled ->
+                                val enabledCode = LocaleHelper.mapNovelLangToCode(enabled)
+                                val sourceCode = LocaleHelper.mapNovelLangToCode(it.lang)
+                                enabledCode == sourceCode || (sourceCode.startsWith("pt") && enabledCode.startsWith("pt"))
+                            }
+                    } else if (isAnime) {
+                        animeLanguages.isEmpty() || it.lang in animeLanguages || it.lang in languages
+                    } else {
+                        it.lang in languages
+                    }
+                }
                 .filter { isAnimeSource(it) == isAnime && isNovelSource(it) == isNovel }
                 .map {
                     val source = Source(
