@@ -419,6 +419,8 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                         name = it.name,
                         supportsLatest = false,
                         isStub = false,
+                        isNovel = isNovelSource(it),
+                        isAnime = isAnimeSource(it),
                     )
                     MigrationSource(
                         source = source,

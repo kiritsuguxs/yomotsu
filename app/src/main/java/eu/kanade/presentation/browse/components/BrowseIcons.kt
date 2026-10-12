@@ -49,32 +49,32 @@ fun SourceIcon(
 ) {
     val icon = source.icon
 
+    val novelIconUrl = remember(source.id, source.name) {
+        try {
+            Injekt.get<eu.kanade.tachiyomi.extension.novel.NovelExtensionManager>().getSourceIconUrl(source.id, source.name)
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
     when {
+        !novelIconUrl.isNullOrBlank() -> {
+            AsyncImage(
+                model = novelIconUrl,
+                contentDescription = null,
+                placeholder = ColorPainter(Color(0x1F888888)),
+                error = rememberResourceBitmapPainter(id = R.mipmap.ic_default_source),
+                modifier = modifier
+                    .then(defaultModifier)
+                    .clip(MaterialTheme.shapes.extraSmall),
+            )
+        }
         source.isNovel -> {
-            val novelIconUrl = remember(source.id) {
-                try {
-                    Injekt.get<eu.kanade.tachiyomi.extension.novel.NovelExtensionManager>().getSourceIconUrl(source.id)
-                } catch (e: Throwable) {
-                    null
-                }
-            }
-            if (!novelIconUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = novelIconUrl,
-                    contentDescription = null,
-                    placeholder = ColorPainter(Color(0x1F888888)),
-                    error = rememberResourceBitmapPainter(id = R.mipmap.ic_default_source),
-                    modifier = modifier
-                        .then(defaultModifier)
-                        .clip(MaterialTheme.shapes.extraSmall),
-                )
-            } else {
-                Image(
-                    painter = painterResource(R.mipmap.ic_default_source),
-                    contentDescription = null,
-                    modifier = modifier.then(defaultModifier),
-                )
-            }
+            Image(
+                painter = painterResource(R.mipmap.ic_default_source),
+                contentDescription = null,
+                modifier = modifier.then(defaultModifier),
+            )
         }
         source.isStub && icon == null -> {
             Image(

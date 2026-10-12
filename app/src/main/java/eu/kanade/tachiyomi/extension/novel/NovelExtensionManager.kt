@@ -75,13 +75,19 @@ class NovelExtensionManager(
         _installedExtensions.value = installed
     }
 
-    fun getSourceIconUrl(sourceId: Long): String? {
+    fun getSourceIconUrl(sourceId: Long, sourceName: String? = null): String? {
         val installed = _installedExtensions.value.firstOrNull { ext ->
-            ext.sources.any { it.id == sourceId }
+            ext.sources.any { it.id == sourceId } || (sourceName != null && ext.plugin.name.equals(sourceName, ignoreCase = true))
         }
         val icon = installed?.plugin?.iconUrl
         if (!icon.isNullOrBlank()) return icon
-        return _availableExtensions.value.firstOrNull { it.plugin.id == installed?.plugin?.id }?.plugin?.iconUrl
+        val availByPluginId = _availableExtensions.value.firstOrNull { it.plugin.id == installed?.plugin?.id }?.plugin?.iconUrl
+        if (!availByPluginId.isNullOrBlank()) return availByPluginId
+        if (sourceName != null) {
+            val availByName = _availableExtensions.value.firstOrNull { it.plugin.name.equals(sourceName, ignoreCase = true) }?.plugin?.iconUrl
+            if (!availByName.isNullOrBlank()) return availByName
+        }
+        return null
     }
 
     private fun isNewerVersion(available: String, installed: String): Boolean {

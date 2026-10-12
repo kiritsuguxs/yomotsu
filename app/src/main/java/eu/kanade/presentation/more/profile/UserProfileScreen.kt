@@ -149,7 +149,7 @@ fun UserProfileScreen(
 ) {
     val context = LocalContext.current
     var showTitleDialog by remember { mutableStateOf(false) }
-    var selectedRarity by remember { mutableStateOf<YomotsuRarity?>(null) }
+    var selectedRarity by remember(equippedTitle) { mutableStateOf(equippedTitle.rarity) }
     var showNameDialog by remember { mutableStateOf(false) }
     var showAvatarDialog by remember { mutableStateOf(false) }
     var showBorderDialog by remember { mutableStateOf(false) }
@@ -200,11 +200,7 @@ fun UserProfileScreen(
 
     if (showTitleDialog) {
         val displayedTitles = remember(selectedRarity) {
-            if (selectedRarity == null) {
-                YomotsuLevelManager.ALL_TITLES
-            } else {
-                YomotsuLevelManager.ALL_TITLES.filter { it.rarity == selectedRarity }
-            }
+            YomotsuLevelManager.ALL_TITLES.filter { it.rarity == selectedRarity }
         }
         val isPt = Locale.getDefault().language.startsWith("pt")
 
@@ -244,18 +240,11 @@ fun UserProfileScreen(
                         .fillMaxWidth()
                         .height(340.dp)
                 ) {
-                    // Seletor de Raridade (Chips horizontais)
+                    // Seletor de Raridade (Chips horizontais: Comum até Divino)
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        item {
-                            FilterChip(
-                                selected = selectedRarity == null,
-                                onClick = { selectedRarity = null },
-                                label = { Text(stringResource(MR.strings.rarity_all)) },
-                            )
-                        }
                         items(YomotsuRarity.entries.toTypedArray()) { rarity ->
                             FilterChip(
                                 selected = selectedRarity == rarity,
