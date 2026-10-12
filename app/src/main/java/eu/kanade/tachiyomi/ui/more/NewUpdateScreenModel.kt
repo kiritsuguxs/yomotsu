@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.work.WorkInfo
+import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
 import eu.kanade.tachiyomi.extension.util.ExtensionInstaller
 import eu.kanade.tachiyomi.util.storage.getUriCompat
@@ -26,6 +27,7 @@ class NewUpdateScreenModel(
     changelogInfo: String,
     private val downloadLink: String,
     private val context: Context = Injekt.get(),
+    private val preferences: BasePreferences = Injekt.get(),
 ) : StateViewModel<NewUpdateScreenModel.State>(State(changelogInfo = changelogInfo)) {
 
     init {
@@ -76,6 +78,11 @@ class NewUpdateScreenModel(
     fun startDownload() {
         mutableState.update { it.copy(downloadProgress = 0, stage = Stage.Downloading) }
         AppUpdateDownloadJob.start(context, downloadLink)
+    }
+
+    fun skipUpdate(versionName: String) {
+        AppUpdateDownloadJob.stop(context)
+        preferences.skippedAppUpdate.set(versionName)
     }
 
     fun installUpdate() {

@@ -216,6 +216,9 @@
     <string name="file_select_cover">Selecionar imagem de capa</string>
     <string name="file_select_backup">Selecionar arquivo de backup</string>
     <string name="update_check_confirm">Fazer download</string>
+    <string name="update_check_skip">Ignorar esta versão</string>
+    <string name="update_check_skip_title">Ignorar %s?</string>
+    <string name="update_check_skip_message">As atualizações geralmente contêm correções de erros e melhorias de segurança. Você não será lembrado sobre esta versão novamente, mas ainda será notificado quando uma mais recente for lançada.</string>
     <string name="update_check_no_new_updates">Sem atualizações disponíveis</string>
     <string name="update_check_notification_download_in_progress">Fazendo download…</string>
     <string name="update_check_notification_update_available">Nova versão disponível!</string>
@@ -905,6 +908,8 @@
     <string name="pref_display_images_description">Renderizar imagens em descrições de mangá</string>
     <string name="pref_disallow_non_ascii_filenames">Não permitir nomes de arquivos não ASCII</string>
     <string name="pref_disallow_non_ascii_filenames_details">Garante a compatibilidade com determinadas mídias de armazenamento que não suportam Unicode. Quando esta opção estiver ativada, você precisará renomear manualmente as pastas de origem e de mangá, substituindo os caracteres não ASCII por suas representações hexadecimais UTF-8 em minúsculas. Os arquivos de capítulos não precisam ser renomeados.</string>
+    <string name="pref_enable_chapter_name_hash">Ativar sufixo hash no nome dos capítulos</string>
+    <string name="pref_enable_chapter_name_hash_details">Garante que um sufixo hash exclusivo seja adicionado aos nomes dos capítulos para evitar conflitos de nomes. Se desativado, capítulos com nomes idênticos não poderão ser baixados.</string>
     <string name="download_bookmarked">Favoritos</string>
     <string name="pref_download_concurrent_pages">Download simultâneo de páginas</string>
     <string name="pref_download_concurrent_pages_summary">Páginas baixadas simultâneamente por fonte</string>

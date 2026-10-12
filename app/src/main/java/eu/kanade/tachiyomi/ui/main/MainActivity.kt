@@ -314,7 +314,10 @@ class MainActivity : BaseActivity() {
             if (updaterEnabled) {
                 try {
                     val result = AppUpdateChecker().checkForUpdate()
-                    if (result is GetApplicationRelease.Result.NewUpdate) {
+                    if (
+                        result is GetApplicationRelease.Result.NewUpdate &&
+                        result.release.version != preferences.skippedAppUpdate.get()
+                    ) {
                         val updateScreen = NewUpdateScreen(
                             versionName = result.release.version,
                             changelogInfo = result.release.info,

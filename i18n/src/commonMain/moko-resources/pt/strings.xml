@@ -152,6 +152,9 @@
     <string name="file_select_cover">Selecionar imagem de capa</string>
     <string name="file_select_backup">Selecionar ficheiro de cópia de segurança</string>
     <string name="update_check_confirm">Transferir</string>
+    <string name="update_check_skip">Ignorar esta versão</string>
+    <string name="update_check_skip_title">Ignorar %s?</string>
+    <string name="update_check_skip_message">As atualizações geralmente contêm correções de erros e melhorias de segurança. Não voltará a ser notificado sobre esta versão, mas continuará a receber notificações quando for lançada uma versão mais recente.</string>
     <string name="update_check_no_new_updates">Sem atualizações disponíveis</string>
     <string name="update_check_notification_download_in_progress">A transferir…</string>
     <string name="update_check_notification_update_available">Nova versão disponível!</string>
@@ -831,6 +834,8 @@
     <string name="pref_hide_missing_chapter_indicators">Ocultar indicadores de capítulos ausentes</string>
     <string name="pref_disallow_non_ascii_filenames">Não permitir nomes de ficheiros não ASCII</string>
     <string name="pref_disallow_non_ascii_filenames_details">Garante a compatibilidade com determinadas médias de armazenamento que não suportam Unicode. Quando esta opção estiver ativada, precisará renomear manualmente as pastas de origem e de mangá, a substituir os caracteres não ASCII pelas suas representações hexadecimais UTF-8 em minúsculas. Os ficheiros de capítulos não precisam ser renomeados.</string>
+    <string name="pref_enable_chapter_name_hash">Ativar sufixo hash no nome dos capítulos</string>
+    <string name="pref_enable_chapter_name_hash_details">Garante que um sufixo hash exclusivo seja adicionado aos nomes dos capítulos para evitar conflitos de nomes. Se desativado, capítulos com nomes idênticos não poderão ser descarregados.</string>
     <string name="pref_flash_duration">Duração do flash</string>
     <string name="pref_flash_page_interval">Flash a cada</string>
     <string name="pref_flash_with">Flash com</string>
