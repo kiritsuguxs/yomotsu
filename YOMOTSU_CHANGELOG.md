@@ -2,6 +2,36 @@
 
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
+## 0.21.0-Y1
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Migração Completa para Novels:** O sistema de migração agora detecta, lista e permite buscar diretamente em todas as fontes e extensões de Novels instaladas, incluindo a exibição correta dos seus ícones.
+- **Sistema de Raridades de Títulos RPG:** Os títulos de perfil agora possuem categorias de raridade (*Comum*, *Raro*, *Épico*, *Lendário*, *Mítico* e *Divino*) com filtros dinâmicos e cores temáticas.
+- **Novo Diálogo Compacto de Títulos:** Interface de seleção de títulos redesenhada, compacta e quadrada, com filtros diretos por raridade e prévia de títulos bloqueados exibindo o nível necessário para desbloquear.
+- **Internacionalização Bilíngue (PT-BR / EN):** Todos os 101 títulos RPG e suas raridades possuem tradução oficial para inglês e português.
+- **Novo Rastreador Comick:** Suporte nativo ao rastreador Comick integrado ao ecossistema de rastreamento de obras.
+- **Confirmação ao Desfavoritar:** Nova opção de confirmação ao remover obras dos favoritos para evitar remoções acidentais da biblioteca.
+- **Novo Indicador Wavy de Downloads:** Indicador moderno com barra ondulada do Material 3 nos downloads em andamento.
+- **Otimizações no Leitor e Downloader:** Cache de páginas aprimorado para carregamento mais ágil, menor uso de memória RAM e melhor gestão de disco.
+- **Novas Opções de Controle:** Opção para economizar dados móveis no leitor e controle de hash de capítulos em disco.
+- 💡 **Dica de Configurações:**
+  - Em **Mais > Configurações > Leitor**, ative *"Carregar com antecedência apenas por Wi-Fi"* para economizar seus dados móveis.
+  - Em **Mais > Configurações > Avançado**, você pode alternar *"Ativar hash do nome do capítulo"* para acelerar a indexação de downloads.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Full Novel Migration Support:** Migration system now discovers and allows searching across all installed novel extensions and sources, with accurate plugin icon rendering.
+- **RPG Title Rarity System:** Profile titles now feature distinct rarity tiers (*Common*, *Rare*, *Epic*, *Legendary*, *Mythic*, and *Divine*) with dynamic filter chips.
+- **Compact Titles Modal:** Redesigned square modal with clean layout, quick rarity navigation, and locked titles preview displaying required unlock levels.
+- **Bilingual Localization (PT-BR / EN):** All 101 RPG titles and their rarities fully translated to English and Portuguese.
+- **New Comick Tracker:** Native Comick tracker integration into the app tracking ecosystem.
+- **Confirm Unfavorite:** Added confirmation prompt when removing entries from library favorites.
+- **Material 3 Wavy Download Indicator:** Modern wavy progress indicator for active downloads.
+- **Reader & Downloader Optimizations:** Enhanced page cache for faster loading, lower memory overhead, and improved disk performance.
+- **New Control Settings:** Option to save mobile data while reading and storage chapter hash toggling.
+- 💡 **Settings Tip:**
+  - Under **More > Settings > Reader**, toggle *"Load ahead only over Wi-Fi"* to save cellular mobile data.
+  - Under **More > Settings > Advanced**, you can toggle *"Enable chapter name hash"* for faster download indexing.
+
 
 ## 0.20.4-Y43.1
 
