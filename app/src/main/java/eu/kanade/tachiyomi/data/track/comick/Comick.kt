@@ -108,7 +108,7 @@ class Comick(id: Long) : BaseTracker(id, "Comick"), DeletableTracker {
         }
     }
 
-    override suspend fun updateUserConfig() {
+    suspend fun updateUserConfig() {
         val currentUser = api.getCurrentUser()
         saveDisplayUsername(currentUser.username ?: currentUser.id)
     }
