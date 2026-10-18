@@ -17,6 +17,7 @@ import eu.kanade.translation.model.DbnetMaskCleanup
 import eu.kanade.translation.model.LegacyCleanup
 import eu.kanade.translation.model.NoCleanup
 import eu.kanade.translation.model.TranslationBlock
+import eu.kanade.translation.model.clamped
 import eu.kanade.translation.model.resolveCleanup
 
 @Composable
