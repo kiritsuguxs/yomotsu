@@ -170,9 +170,10 @@ fun SmartTranslationBlock(
             }[0].measure(Constraints(maxWidth = selected.widthPx))
 
             layout(outerWidthPx, outerHeightPx) {
+                val yOffset = if (placeable.height > outerHeightPx) 0 else (outerHeightPx - placeable.height) / 2
                 placeable.placeRelative(
                     x = (outerWidthPx - placeable.width) / 2,
-                    y = (outerHeightPx - placeable.height) / 2,
+                    y = yOffset,
                 )
             }
         }

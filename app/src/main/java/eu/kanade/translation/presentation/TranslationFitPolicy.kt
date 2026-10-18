@@ -18,15 +18,15 @@ object TranslationFitPolicy {
     fun progressiveProfiles(block: TranslationBlock): List<TranslationFitProfile> {
         return if (block.balloonDetected) {
             listOf(
-                TranslationFitProfile(0.82f, 0.76f, 6),
-                TranslationFitProfile(0.88f, 0.82f, 5),
-                TranslationFitProfile(0.90f, 0.86f, 4),
+                TranslationFitProfile(0.80f, 0.74f, 6),
+                TranslationFitProfile(0.85f, 0.80f, 5),
+                TranslationFitProfile(0.88f, 0.84f, 4),
             )
         } else {
             listOf(
                 TranslationFitProfile(0.88f, 0.84f, 6),
                 TranslationFitProfile(0.92f, 0.90f, 5),
-                TranslationFitProfile(0.95f, 0.93f, 4),
+                TranslationFitProfile(0.96f, 0.94f, 4),
             )
         }
     }

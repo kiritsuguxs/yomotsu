@@ -5,6 +5,7 @@ import eu.kanade.translation.context.TranslationContext
 import eu.kanade.translation.memory.TranslationCache
 import eu.kanade.translation.memory.TranslationGlossary
 import eu.kanade.translation.model.PageTranslation
+import eu.kanade.translation.model.TranslationRecoveryPolicy
 import eu.kanade.translation.recognizer.TextRecognizerLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.addJsonObject
@@ -75,7 +76,12 @@ class OpenRouterTranslator(
                     continuity.remember(block.text, block.translation)
                 }
                 pages.values.forEach { page ->
-                    page.blocks = page.blocks.filterNot { it.translation.contains("RTMTH") }.toMutableList()
+                    page.blocks = page.blocks.filterNot {
+                        it.translation.isBlank() ||
+                        it.translation.contains("RTMTH", ignoreCase = true) ||
+                        TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
+                        TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
+                    }.toMutableList()
                 }
                 return
             }
@@ -141,21 +147,30 @@ class OpenRouterTranslator(
             for ((pageKey, page) in pages) {
                 page.blocks.forEachIndexed { index, block ->
                     val res = resJson.optJSONArray(pageKey)?.optString(index, "NULL")
-                    val raw = if (res == null || res == "NULL") block.text else res
-                    val postEdited = postEditMachineTranslation(block.text, raw, toLang)
-                    val finalTranslation = TranslationGlossary.resolve(
-                        prepared = preparedTexts[globalIndex],
-                        translatedText = postEdited,
-                        context = context,
-                    )
+                    val raw = if (res == null || res == "NULL" || res.isBlank()) "" else res
+                    val postEdited = if (raw.isNotBlank()) postEditMachineTranslation(block.text, raw, toLang) else ""
+                    val finalTranslation = if (postEdited.isNotBlank()) {
+                        TranslationGlossary.resolve(
+                            prepared = preparedTexts[globalIndex],
+                            translatedText = postEdited,
+                            context = context,
+                        )
+                    } else ""
                     block.translation = finalTranslation
-                    if (cached.getOrNull(globalIndex) == null) {
+                    if (finalTranslation.isNotBlank() && cached.getOrNull(globalIndex) == null) {
                         TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], finalTranslation)
                     }
-                    continuity.remember(block.text, finalTranslation)
+                    if (finalTranslation.isNotBlank()) {
+                        continuity.remember(block.text, finalTranslation)
+                    }
                     globalIndex++
                 }
-                page.blocks = page.blocks.filterNot { it.translation.contains("RTMTH") }.toMutableList()
+                page.blocks = page.blocks.filterNot {
+                    it.translation.isBlank() ||
+                    it.translation.contains("RTMTH", ignoreCase = true) ||
+                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
+                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
+                }.toMutableList()
             }
         } catch (error: CancellationException) {
             throw error

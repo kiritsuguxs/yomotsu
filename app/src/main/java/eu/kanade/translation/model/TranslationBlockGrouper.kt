@@ -65,7 +65,7 @@ object TranslationBlockGrouper {
                     }
                     if (continuousParagraph) return true
                     // Inside the same balloon area or proximity, allow dialogue sentences to merge
-                    if (!layoutsClearlySeparated && visualSizeCompatible && shouldMergeByProximity(a, b, paragraphGlyphGap * 1.25f)) return true
+                    if (!layoutsClearlySeparated && (visualSizeCompatible || shouldMergeByProximity(a, b, paragraphGlyphGap * 1.5f))) return true
                     if (connectorContinuation && layoutsClearlySeparated) return false
                 }
                 return continuousParagraph || connectorContinuation
@@ -78,7 +78,7 @@ object TranslationBlockGrouper {
                 val candidateCenterY = candidate.y + candidate.height / 2f
                 val centerIsInside = candidateCenterX in detectedLayout.x..(detectedLayout.x + detectedLayout.width) && candidateCenterY in detectedLayout.y..(detectedLayout.y + detectedLayout.height)
                 val overlapsDetected = intersectionArea(candidate.sourceRegion(), detectedLayout) > 0f
-                if ((centerIsInside || overlapsDetected) && visualSizeCompatible) return true
+                if (centerIsInside || overlapsDetected) return true
             }
             return continuousParagraph || connectorContinuation
         }
@@ -191,6 +191,6 @@ object TranslationBlockGrouper {
     private fun enclosingNullable(first: TranslationRegion?, second: TranslationRegion?): TranslationRegion? = when { first == null -> second; second == null -> first; else -> enclosing(first, second) }
     private fun enclosing(first: TranslationRegion, second: TranslationRegion): TranslationRegion { val l = minOf(first.x, second.x); val t = minOf(first.y, second.y); val r = maxOf(first.x + first.width, second.x + second.width); val b = maxOf(first.y + first.height, second.y + second.height); return TranslationRegion(l, t, r - l, b - t) }
     private val readingOrder = compareBy<TranslationBlock> { it.y }.thenBy { it.x }
-    private const val MAX_ANGLE_DIFFERENCE = 12f; private const val MIN_SHARED_BALLOON_RATIO = 0.20f; private const val MAX_CENTER_OFFSET_RATIO = 0.55f; private const val MAX_GLYPH_GAP = 1.65f; private const val MAX_COMIC_PARAGRAPH_GLYPH_GAP = 2.4f; private const val MAX_PADDLE_PARAGRAPH_GLYPH_GAP = 2.4f; private const val MAX_CONNECTOR_GLYPH_GAP = 3.5f; private const val MAX_DETECTED_LAYOUT_GLYPH_GAP = 0.75f; private const val MIN_HORIZONTAL_OVERLAP = 0.20f; private const val MAX_COLOR_DISTANCE_SQUARED = 3_600; private const val MAX_VISUAL_SIZE_RATIO = 1.65f
+    private const val MAX_ANGLE_DIFFERENCE = 12f; private const val MIN_SHARED_BALLOON_RATIO = 0.15f; private const val MAX_CENTER_OFFSET_RATIO = 0.65f; private const val MAX_GLYPH_GAP = 2.0f; private const val MAX_COMIC_PARAGRAPH_GLYPH_GAP = 2.8f; private const val MAX_PADDLE_PARAGRAPH_GLYPH_GAP = 2.6f; private const val MAX_CONNECTOR_GLYPH_GAP = 3.8f; private const val MAX_DETECTED_LAYOUT_GLYPH_GAP = 0.85f; private const val MIN_HORIZONTAL_OVERLAP = 0.15f; private const val MAX_COLOR_DISTANCE_SQUARED = 4_900; private const val MAX_VISUAL_SIZE_RATIO = 2.2f
     private val continuationConnectors = setOf("a", "an", "the", "of", "to", "in", "on", "at", "from", "for", "with", "by", "and", "or", "but", "my", "your", "his", "her", "our", "their", "this", "that", "o", "os", "as", "um", "uma", "uns", "umas", "de", "do", "da", "dos", "das", "em", "no", "na", "nos", "nas", "ao", "aos", "à", "às", "para", "por", "com", "sem", "pelo", "pela", "num", "numa", "e", "ou", "mas", "meu", "minha", "seu", "sua", "nosso", "nossa", "que")
 }

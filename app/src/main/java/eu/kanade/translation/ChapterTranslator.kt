@@ -276,7 +276,7 @@ class ChapterTranslator(
                             accumulatedOcrTimeMs += result.metrics?.ocrTimeMs ?: 0L
                             val blocks = result.blocks.map { block ->
                                 block.copy(text = normalizeTranslationText(block.text))
-                            }.filter { it.text.length > 1 }
+                            }.filter { it.text.length > 1 && !TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) }
                             val analysisBitmap = decodeAnalysisBitmap(tmpFile, result.width, result.height)
                             val pageTranslation = try {
                                 convertToPageTranslation(
@@ -335,7 +335,14 @@ class ChapterTranslator(
 
                 pages.forEach { (pageKey, page) ->
                     val manualCandidates = manualCandidatesByPage[pageKey].orEmpty()
+                        .filterNot { TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) }
                     val translatedBlocks = automaticPages[pageKey]?.blocks.orEmpty()
+                        .filterNot {
+                            it.translation.isBlank() ||
+                            it.translation.contains("RTMTH", ignoreCase = true) ||
+                            TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
+                            TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
+                        }
                     page.blocks = (translatedBlocks + manualCandidates)
                         .sortedWith(compareBy<TranslationBlock> { it.y }.thenBy { it.x }).toMutableList()
                 }
@@ -373,12 +380,14 @@ class ChapterTranslator(
         }
         if (bubbleAnalyzer == null) {
             if (!includeSoundEffects) translation.blocks.removeAll { block -> isLikelySoundEffect(block, width, height) }
+            translation.blocks.removeAll { block -> TranslationRecoveryPolicy.isWatermarkOrCredit(block.text) }
             return translation
         }
         analyzeTranslationBlocks(translation.blocks, bubbleAnalyzer)
         translation.blocks = TranslationBlockGrouper.group(translation.blocks, strict = strictOcrGrouping)
         analyzeTranslationBlocks(translation.blocks, bubbleAnalyzer)
         if (!includeSoundEffects) translation.blocks.removeAll { block -> isLikelySoundEffect(block, width, height) }
+        translation.blocks.removeAll { block -> TranslationRecoveryPolicy.isWatermarkOrCredit(block.text) }
         return translation
     }
 

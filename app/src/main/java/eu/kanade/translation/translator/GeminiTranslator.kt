@@ -6,6 +6,7 @@ import eu.kanade.translation.context.TranslationContext
 import eu.kanade.translation.memory.TranslationCache
 import eu.kanade.translation.memory.TranslationGlossary
 import eu.kanade.translation.model.PageTranslation
+import eu.kanade.translation.model.TranslationRecoveryPolicy
 import eu.kanade.translation.recognizer.TextRecognizerLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.add
@@ -56,7 +57,12 @@ class GeminiTranslator(
                     continuity.remember(block.text, block.translation)
                 }
                 pages.values.forEach { page ->
-                    page.blocks = page.blocks.filterNot { it.translation.contains("RTMTH") }.toMutableList()
+                    page.blocks = page.blocks.filterNot {
+                        it.translation.isBlank() ||
+                        it.translation.contains("RTMTH", ignoreCase = true) ||
+                        TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
+                        TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
+                    }.toMutableList()
                 }
                 return
             }
@@ -125,15 +131,26 @@ class GeminiTranslator(
             for ((k, v) in pages) {
                 v.blocks.forEachIndexed { i, b ->
                     val res = resJson.optJSONArray(k)?.optString(i, "NULL")
-                    val raw = if (res == null || res == "NULL") b.text else res
-                    val postEdited = postEditMachineTranslation(b.text, raw, toLang)
-                    val finalTranslation = TranslationGlossary.resolve(preparedTexts[globalIndex], postEdited, context)
+                    val raw = if (res == null || res == "NULL" || res.isBlank()) "" else res
+                    val postEdited = if (raw.isNotBlank()) postEditMachineTranslation(b.text, raw, toLang) else ""
+                    val finalTranslation = if (postEdited.isNotBlank()) {
+                        TranslationGlossary.resolve(preparedTexts[globalIndex], postEdited, context)
+                    } else ""
                     b.translation = finalTranslation
-                    if (cached.getOrNull(globalIndex) == null) TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], finalTranslation)
-                    continuity.remember(b.text, finalTranslation)
+                    if (finalTranslation.isNotBlank() && cached.getOrNull(globalIndex) == null) {
+                        TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], finalTranslation)
+                    }
+                    if (finalTranslation.isNotBlank()) {
+                        continuity.remember(b.text, finalTranslation)
+                    }
                     globalIndex++
                 }
-                v.blocks = v.blocks.filterNot { it.translation.contains("RTMTH") }.toMutableList()
+                v.blocks = v.blocks.filterNot {
+                    it.translation.isBlank() ||
+                    it.translation.contains("RTMTH", ignoreCase = true) ||
+                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
+                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
+                }.toMutableList()
             }
         } catch (error: CancellationException) {
             throw error

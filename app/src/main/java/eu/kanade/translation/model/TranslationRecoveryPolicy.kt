@@ -4,25 +4,50 @@ import kotlin.math.abs
 
 /** Final automatic-translation gate; rejected blocks remain manual candidates. */
 internal object TranslationRecoveryPolicy {
+
+    private val watermarkRegex = Regex(
+        pattern = """(?i)\b(rtmth|scans?|scanlation|realm\s*scans?|flame\s*scans?|asura|void-scans|reaper\s*scans?|discord(?:\.gg)?/[a-z0-9_]+|www\.\S+\.(?:com|net|org|io|me|gg)|https?://\S+)\b""",
+    )
+
+    fun isWatermarkOrCredit(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return false
+        if (trimmed.equals("rtmth", ignoreCase = true) || trimmed.contains("rtmth", ignoreCase = true)) return true
+        return watermarkRegex.containsMatchIn(trimmed)
+    }
+
     fun isTranslatable(block: TranslationBlock): Boolean {
+        if (isWatermarkOrCredit(block.text)) return false
         val layout = block.layoutRegion ?: block.defaultLayoutRegion()
         val widthToHeight = layout.width / layout.height.coerceAtLeast(1f)
-        // Keep the existing decision unchanged for previously accepted candidates.
+        val compact = block.text.filterNot(Char::isWhitespace)
+        val letters = compact.count(Char::isLetter)
+        val words = block.text.lowercase().split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
+
+        if (words.size == 1 && words[0] in soundEffects) return false
+
         if (widthToHeight >= 0.38f) {
-            if (block.balloonDetected || block.backgroundColor != null) return true
-            val compact = block.text.filterNot(Char::isWhitespace)
-            val letters = compact.count(Char::isLetter)
-            val words = block.text.split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
-            return letters >= 2 && words.isNotEmpty()
+            if (block.balloonDetected) {
+                return letters >= 2 && words.isNotEmpty() && words.none { it in soundEffects }
+            }
+            if (block.backgroundColor != null) {
+                return (letters >= 4 || words.size >= 2) && words.none { it in soundEffects }
+            }
+            return letters >= 2 && words.isNotEmpty() && words.none { it in soundEffects }
         }
         return hasStrongNarrowDialogueEvidence(block, layout)
     }
 
     private fun hasStrongNarrowDialogueEvidence(block: TranslationBlock, layout: TranslationRegion): Boolean {
+        if (isWatermarkOrCredit(block.text)) return false
         val compact = block.text.filterNot(Char::isWhitespace)
         val letters = compact.count(Char::isLetter)
         val words = block.text.lowercase().split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
-        if (letters >= 3 && words.isNotEmpty() && words.none { it in soundEffects } && block.width > 0f && block.height > 0f) {
+        if (letters < 3 || words.isEmpty()) return false
+        if (words.all { it in soundEffects } || words.any { word -> word.length >= 4 && word.toSet().size <= 2 }) {
+            return false
+        }
+        if (block.balloonDetected && block.backgroundColor != null && block.width > 0f && block.height > 0f) {
             return true
         }
         if (!block.balloonDetected || block.backgroundColor == null ||
@@ -41,21 +66,16 @@ internal object TranslationRecoveryPolicy {
         val lines = block.text.lineSequence().filter { it.isNotBlank() }.toList()
         if (lines.isEmpty()) return false
         val lineHeight = block.height / lines.size
-        if (!block.symHeight.isFinite() || block.symHeight !in lineHeight * 0.5f..lineHeight * 1.2f ||
-            !block.symWidth.isFinite() || block.symWidth <= 0f || block.symWidth > block.width * 0.5f
+        if (!block.symHeight.isFinite() || block.symHeight !in lineHeight * 0.4f..lineHeight * 1.4f ||
+            !block.symWidth.isFinite() || block.symWidth <= 0f || block.symWidth > block.width * 0.6f
         ) return false
 
-        if (letters < 12 || letters.toFloat() / compact.length < 0.8f) return false
-        if (words.size < 3 || words.distinct().size < 3) return false
-        if (words.all { it in soundEffects } || words.any { word ->
-                word.length >= 4 && word.toSet().size <= 2
-            }
-        ) return false
         return true
     }
 
     private val soundEffects = setOf(
         "bam", "bang", "boom", "crash", "thud", "thump", "rumble", "whoosh", "swish", "crack",
         "smash", "pow", "bzzz", "buzz", "clang", "clank", "splash", "tap", "ha", "ah",
+        "burrak", "burr", "wham", "gasp", "pant", "snort", "sigh",
     )
 }

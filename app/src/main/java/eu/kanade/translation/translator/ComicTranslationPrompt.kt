@@ -79,7 +79,7 @@ internal fun buildComicTranslationPrompt(
         - Return only one valid JSON object, without Markdown or explanations.
         - Preserve every input key, array order, and array length exactly.
         - Every output item must be a string containing only its final translation.
-        - Replace watermarks, credits, and site links with the exact marker RTMTH.
+        - Never translate watermarks, credits, chapter notes, scanlation group names, or site links; return an empty string "" for any such element.
     """.trimIndent()
 }
 

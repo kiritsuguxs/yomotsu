@@ -51,8 +51,11 @@ fun TranslationBlock.defaultLayoutRegion(
     pageWidth: Float = Float.MAX_VALUE,
     pageHeight: Float = Float.MAX_VALUE,
 ): TranslationRegion {
+    val sourceLen = text.count { !it.isWhitespace() }.coerceAtLeast(1)
+    val transLen = translation.count { !it.isWhitespace() }
+    val lengthFactor = if (transLen > 0) (transLen.toFloat() / sourceLen).coerceIn(1.0f, 1.6f) else 1.15f
     val horizontalPadding = max(symWidth * 4.0f, width * 0.22f)
-    val verticalPadding = max(symHeight * 2.8f, height * 0.22f)
+    val verticalPadding = max(symHeight * (2.8f * lengthFactor), height * (0.22f * lengthFactor))
     return sourceRegion().expanded(horizontalPadding, verticalPadding, pageWidth, pageHeight)
 }
 
@@ -60,11 +63,25 @@ fun TranslationBlock.defaultLayoutRegion(
  * Geometry saved by the first Y9 build was too generous. Falling back to the
  * OCR bounds upgrades those existing chapter files without deleting them.
  */
-fun TranslationBlock.resolvedLayoutRegion(pageWidth: Float, pageHeight: Float): TranslationRegion =
-    layoutRegion
+fun TranslationBlock.resolvedLayoutRegion(pageWidth: Float, pageHeight: Float): TranslationRegion {
+    val base = layoutRegion
         ?.takeIf { geometryVersion >= CURRENT_TRANSLATION_GEOMETRY_VERSION }
         ?.clamped(pageWidth, pageHeight)
         ?: defaultLayoutRegion(pageWidth, pageHeight)
+
+    // For rectangular narration boxes or free-form text where Portuguese translation is significantly
+    // longer than the English source, expand downward slightly within page bounds to prevent clipping.
+    if (!balloonDetected && translation.isNotBlank()) {
+        val sourceLen = text.count { !it.isWhitespace() }.coerceAtLeast(1)
+        val transLen = translation.count { !it.isWhitespace() }
+        if (transLen > sourceLen * 1.15f) {
+            val extraHeight = minOf(base.height * 0.35f, symHeight * 2.5f)
+            val newHeight = minOf(pageHeight - base.y, base.height + extraHeight)
+            return TranslationRegion(base.x, base.y, base.width, newHeight)
+        }
+    }
+    return base
+}
 
 fun TranslationBlock.sourceRegion(): TranslationRegion = TranslationRegion(
     x = x,
