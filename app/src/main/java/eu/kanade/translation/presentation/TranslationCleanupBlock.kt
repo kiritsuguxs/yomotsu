@@ -29,6 +29,7 @@ fun TranslationCleanupBlock(
 ) {
     when (val cleanup = block.resolveCleanup(pageWidth, pageHeight, experimentalMaskPageValid)) {
         is LegacyCleanup -> cleanup.patches.forEach { patch ->
+            val region = patch.region
             val padX = maxOf(block.symWidth * 0.35f, (pageWidth * 0.006f).coerceAtLeast(5f))
             val padY = maxOf(block.symHeight * 0.25f, (pageWidth * 0.005f).coerceAtLeast(4f))
             val adjustedX = (region.x - padX).coerceAtLeast(0f)
