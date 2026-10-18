@@ -45,10 +45,7 @@ internal object TranslationRecoveryPolicy {
             !block.symWidth.isFinite() || block.symWidth <= 0f || block.symWidth > block.width * 0.5f
         ) return false
 
-        val compact = block.text.filterNot(Char::isWhitespace)
-        val letters = compact.count(Char::isLetter)
         if (letters < 12 || letters.toFloat() / compact.length < 0.8f) return false
-        val words = block.text.lowercase().split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
         if (words.size < 3 || words.distinct().size < 3) return false
         if (words.all { it in soundEffects } || words.any { word ->
                 word.length >= 4 && word.toSet().size <= 2
