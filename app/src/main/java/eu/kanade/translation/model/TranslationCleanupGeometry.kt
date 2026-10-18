@@ -24,7 +24,15 @@ fun TranslationBlock.resolveCleanup(
 
 fun TranslationBlock.resolvedCleanupPatches(pageWidth: Float, pageHeight: Float): List<TranslationCleanupPatch> {
     val sources = sourceRegions.ifEmpty { listOf(sourceRegion()) }
-    return sources.mapIndexed { index, source ->
+    val patches = mutableListOf<TranslationCleanupPatch>()
+
+    // For multi-line paragraphs or balloons, include the unified enclosing cleanup box
+    if (sources.size > 1 || balloonDetected) {
+        val unified = (cleanupRegion ?: defaultCleanupRegion(pageWidth, pageHeight)).clamped(pageWidth, pageHeight)
+        patches.add(TranslationCleanupPatch(unified, minOf(minOf(unified.width, unified.height) * 0.15f, 4f)))
+    }
+
+    sources.forEachIndexed { index, source ->
         val measured = sourceCleanupRegions.takeIf { it.size == sources.size }?.get(index)
         val region = (measured ?: if (sourceRegions.isEmpty()) {
             cleanupRegion ?: defaultCleanupRegion(pageWidth, pageHeight)
@@ -38,6 +46,8 @@ fun TranslationBlock.resolvedCleanupPatches(pageWidth: Float, pageHeight: Float)
         val verticalPadding = minOf(source.y - region.y, region.y + region.height - source.y - source.height).coerceAtLeast(0f)
         // Keep round-corner radius small so it does not expose glyph corners or punctuation.
         val coveringRadius = horizontalPadding + verticalPadding + sqrt(2f * horizontalPadding * verticalPadding)
-        TranslationCleanupPatch(region, minOf(minOf(region.width, region.height) * 0.15f, coveringRadius))
+        val safeRadius = if (coveringRadius.isFinite()) coveringRadius else 0f
+        patches.add(TranslationCleanupPatch(region, minOf(minOf(region.width, region.height) * 0.15f, safeRadius)))
     }
+    return patches
 }

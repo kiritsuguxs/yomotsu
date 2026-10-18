@@ -82,7 +82,7 @@ object TranslationBlockGrouper {
             }
             return continuousParagraph || connectorContinuation
         }
-        return visualSizeCompatible && shouldMergeByProximity(a, b)
+        return visualSizeCompatible && (continuousParagraph || connectorContinuation || shouldMergeByProximity(a, b, paragraphGlyphGap))
     }
 
     private fun detectedLayoutsClearlySeparated(a: TranslationBlock, b: TranslationBlock, first: TranslationRegion, second: TranslationRegion): Boolean {
@@ -165,9 +165,9 @@ object TranslationBlockGrouper {
                     enclosingNullable(first, second)
                 }
             }
-            a.balloonDetected -> a.layoutRegion
-            b.balloonDetected -> b.layoutRegion
-            else -> null
+            a.balloonDetected -> a.layoutRegion ?: a.defaultLayoutRegion()
+            b.balloonDetected -> b.layoutRegion ?: b.defaultLayoutRegion()
+            else -> enclosingNullable(a.layoutRegion, b.layoutRegion) ?: enclosing(a.defaultLayoutRegion(), b.defaultLayoutRegion())
         }
         return TranslationBlock(
             text = ordered.joinToString(" ") { it.text.trim() }, translation = ordered.map { it.translation.trim() }.filter(String::isNotEmpty).joinToString(" "),

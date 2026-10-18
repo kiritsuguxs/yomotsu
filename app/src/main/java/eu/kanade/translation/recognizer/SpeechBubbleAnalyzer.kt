@@ -91,15 +91,24 @@ class SpeechBubbleAnalyzer(
         val top = toBitmapY(block.y)
         val bottom = toBitmapY(block.y + block.height)
         if (right > left && bottom > top) {
-            val stepX = maxOf(1, (right - left) / 10)
-            val stepY = maxOf(1, (bottom - top) / 10)
+            val stepX = maxOf(1, (right - left) / 12)
+            val stepY = maxOf(1, (bottom - top) / 12)
             for (y in top..bottom step stepY) {
                 for (x in left..right step stepX) {
-                    addPixel(interior, x, y)
+                    if (x in 0 until bitmap.width && y in 0 until bitmap.height) {
+                        val pixel = pixels[y * bitmap.width + x]
+                        val r = pixel ushr 16 and 0xff
+                        val g = pixel ushr 8 and 0xff
+                        val b = pixel and 0xff
+                        val lum = (r * 299 + g * 587 + b * 114) / 1000
+                        if (lum >= 150) {
+                            interior.add(pixel)
+                        }
+                    }
                 }
             }
         }
-        return dominantBackground(interior)?.takeIf { it.confidence >= 0.50f }
+        return dominantBackground(interior)?.takeIf { it.confidence >= 0.40f }
     }
 
     private fun hasColorSupport(samples: List<Int>, color: Int): Boolean =

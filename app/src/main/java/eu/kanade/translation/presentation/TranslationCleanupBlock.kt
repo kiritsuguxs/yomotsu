@@ -30,15 +30,16 @@ fun TranslationCleanupBlock(
     when (val cleanup = block.resolveCleanup(pageWidth, pageHeight, experimentalMaskPageValid)) {
         is LegacyCleanup -> cleanup.patches.forEach { patch ->
             val region = patch.region
-            val padX = maxOf(block.symWidth * 0.35f, (pageWidth * 0.006f).coerceAtLeast(5f))
-            val padY = maxOf(block.symHeight * 0.25f, (pageWidth * 0.005f).coerceAtLeast(4f))
+            val padX = maxOf(block.symWidth * 0.40f, (pageWidth * 0.008f).coerceAtLeast(6f))
+            val padY = maxOf(block.symHeight * 0.30f, (pageWidth * 0.006f).coerceAtLeast(5f))
             val adjustedX = (region.x - padX).coerceAtLeast(0f)
             val adjustedY = (region.y - padY).coerceAtLeast(0f)
             val adjustedWidth = minOf(pageWidth - adjustedX, region.width + padX * 2f)
             val adjustedHeight = minOf(pageHeight - adjustedY, region.height + padY * 2f)
             val color = block.backgroundColor?.let { Color(it) } ?: Color.White
             val maxCornerDp = 3.dp
-            val cleanupShape = RoundedCornerShape(minOf(maxCornerDp, (patch.cornerRadius * scaleFactor).pxToDp()))
+            val rawRadius = if (patch.cornerRadius.isFinite()) patch.cornerRadius else 0f
+            val cleanupShape = RoundedCornerShape(minOf(maxCornerDp, (rawRadius * scaleFactor).pxToDp()))
             Box(
                 modifier = Modifier
                     .offset((adjustedX * scaleFactor).pxToDp(), (adjustedY * scaleFactor).pxToDp())

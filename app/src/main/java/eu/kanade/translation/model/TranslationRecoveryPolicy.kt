@@ -5,20 +5,26 @@ import kotlin.math.abs
 /** Final automatic-translation gate; rejected blocks remain manual candidates. */
 internal object TranslationRecoveryPolicy {
     fun isTranslatable(block: TranslationBlock): Boolean {
-        val layout = block.layoutRegion ?: return false
+        val layout = block.layoutRegion ?: block.defaultLayoutRegion()
         val widthToHeight = layout.width / layout.height.coerceAtLeast(1f)
         // Keep the existing decision unchanged for previously accepted candidates.
         if (widthToHeight >= 0.38f) {
             if (block.balloonDetected || block.backgroundColor != null) return true
             val compact = block.text.filterNot(Char::isWhitespace)
             val letters = compact.count(Char::isLetter)
-            val words = block.text.split(Regex("[^\\p{L}]+")).filter { it.length >= 2 }
-            return letters >= 8 && words.size >= 2
+            val words = block.text.split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
+            return letters >= 2 && words.isNotEmpty()
         }
         return hasStrongNarrowDialogueEvidence(block, layout)
     }
 
     private fun hasStrongNarrowDialogueEvidence(block: TranslationBlock, layout: TranslationRegion): Boolean {
+        val compact = block.text.filterNot(Char::isWhitespace)
+        val letters = compact.count(Char::isLetter)
+        val words = block.text.lowercase().split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
+        if (letters >= 3 && words.isNotEmpty() && words.none { it in soundEffects } && block.width > 0f && block.height > 0f) {
+            return true
+        }
         if (!block.balloonDetected || block.backgroundColor == null ||
             block.geometryVersion < CURRENT_TRANSLATION_GEOMETRY_VERSION ||
             !block.angle.isFinite() || abs(block.angle) > 12f ||
