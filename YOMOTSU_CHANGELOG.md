@@ -2,6 +2,21 @@
 
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
+## 0.21.0-Y2
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Prompt de IA Abrasileirado para Quadrinhos:** Novo sistema de tradução com IA adaptado especificamente para português brasileiro (pt-BR). O prompt sintetiza e condensa diálogos usando linguagem coloquial, contrações e expressões naturais de quadrinhos e mangás brasileiros (como *tá*, *pra*, *cara*, *bora*), garantindo que as falas caibam perfeitamente dentro dos balões de fala sem transbordar.
+- **Preservação de Arte e Contornos de Balões:** Refinamento completo da geometria de limpeza do leitor. O apagador atua exclusivamente linha por linha com bordas arredondadas e suaves, eliminando qualquer risco de caixas brancas cobrirem o desenho, o cabelo dos personagens ou os contornos dos balões.
+- **Detecção de Balões de Grito e Formatos Irregulares:** O analisador de balões agora conta com amostragem direta de luminância interna, identificando com precisão balões pontiagudos de ação/grito que antes eram ignorados pelo OCR.
+- **Recuperação Precisa de Diálogos:** Ajustadas as regras de validação para recuperar frases curtas, diálogos pontuados e balões próximos, evitando que falas legítimas sejam descartadas como onomatopeias ou ruídos.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Brazilian Portuguese Comic AI Prompt:** Introduced a specialized colloquial pt-BR translation prompt for LLM translators. Condenses dialogues using natural Brazilian phrasing, idioms, and contractions to ensure translated text fits comfortably inside manga and comic speech bubbles.
+- **Art & Balloon Contour Preservation:** Complete overhaul of reader text cleanup geometry. The eraser operates strictly on a line-by-line basis with soft rounded corners matching balloon curvature, preventing white rectangular patches from erasing character art, hair, or balloon borders.
+- **Shout & Jagged Bubble Detection:** Speech bubble analyzer upgraded with interior luminance sampling, reliably recognizing jagged, spiky shout bubbles that previously failed detection.
+- **Enhanced Dialogue Recovery:** Fine-tuned heuristic gates to capture short sentences, punctuated lines, and tightly grouped speech blocks, preventing valid dialogue from being misidentified as sound effects.
+
+
 ## 0.21.0-Y1
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
