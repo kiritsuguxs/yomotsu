@@ -8,7 +8,13 @@ internal object TranslationRecoveryPolicy {
         val layout = block.layoutRegion ?: return false
         val widthToHeight = layout.width / layout.height.coerceAtLeast(1f)
         // Keep the existing decision unchanged for previously accepted candidates.
-        if (widthToHeight >= 0.38f) return block.balloonDetected || block.backgroundColor != null
+        if (widthToHeight >= 0.38f) {
+            if (block.balloonDetected || block.backgroundColor != null) return true
+            val compact = block.text.filterNot(Char::isWhitespace)
+            val letters = compact.count(Char::isLetter)
+            val words = block.text.split(Regex("[^\\p{L}]+")).filter { it.length >= 2 }
+            return letters >= 8 && words.size >= 2
+        }
         return hasStrongNarrowDialogueEvidence(block, layout)
     }
 

@@ -411,8 +411,11 @@ class ChapterTranslator(
     }.getOrNull()
 
     private fun isLikelySoundEffect(block: TranslationBlock, pageWidth: Int, pageHeight: Int): Boolean {
+        if (block.balloonDetected) return false
         val compactText = block.text.filterNot(Char::isWhitespace)
         if (compactText.length !in 1..12) return false
+        val words = block.text.split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
+        if (words.size >= 2 || block.text.any { it in "?!.," }) return false
         val glyphWidthRatio = block.symWidth / pageWidth.coerceAtLeast(1)
         val glyphHeightRatio = block.symHeight / pageHeight.coerceAtLeast(1)
         return glyphWidthRatio >= 0.045f || glyphHeightRatio >= 0.045f

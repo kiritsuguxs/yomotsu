@@ -29,23 +29,15 @@ fun TranslationCleanupBlock(
 ) {
     when (val cleanup = block.resolveCleanup(pageWidth, pageHeight, experimentalMaskPageValid)) {
         is LegacyCleanup -> cleanup.patches.forEach { patch ->
-            val region = patch.region
-            val padding = (pageWidth * 0.003f).coerceAtLeast(2f)
-            val adjustedX = region.x - padding
-            val adjustedY = region.y - padding
-            val adjustedWidth = region.width + padding * 2
-            val adjustedHeight = region.height + padding * 2
+            val padX = maxOf(block.symWidth * 0.35f, (pageWidth * 0.006f).coerceAtLeast(5f))
+            val padY = maxOf(block.symHeight * 0.25f, (pageWidth * 0.005f).coerceAtLeast(4f))
+            val adjustedX = (region.x - padX).coerceAtLeast(0f)
+            val adjustedY = (region.y - padY).coerceAtLeast(0f)
+            val adjustedWidth = minOf(pageWidth - adjustedX, region.width + padX * 2f)
+            val adjustedHeight = minOf(pageHeight - adjustedY, region.height + padY * 2f)
             val color = block.backgroundColor?.let { Color(it) } ?: Color.White
-            val cleanupShape = if (block.balloonDetected || (!block.balloonDetected && block.backgroundColor == null)) {
-                // Manual fallback blocks deliberately avoid reopening the page bitmap.
-                // A soft oval hides their cleanup boundary inside common speech bubbles
-                // without bringing back the archive decode that could close the reader.
-                // The detected balloon background is rounded too. A near-square
-                // cleanup mask exposed small white side tabs on oval balloons.
-                RoundedCornerShape((patch.cornerRadius * scaleFactor).pxToDp())
-            } else {
-                RoundedCornerShape(minOf(3.dp, (patch.cornerRadius * scaleFactor).pxToDp()))
-            }
+            val maxCornerDp = 3.dp
+            val cleanupShape = RoundedCornerShape(minOf(maxCornerDp, (patch.cornerRadius * scaleFactor).pxToDp()))
             Box(
                 modifier = Modifier
                     .offset((adjustedX * scaleFactor).pxToDp(), (adjustedY * scaleFactor).pxToDp())

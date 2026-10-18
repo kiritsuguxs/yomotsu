@@ -42,12 +42,15 @@ internal fun buildComicTranslationPrompt(
     }
     val brazilianPortugueseRules = if (toLang == TextTranslatorLanguage.PORTUGUESE) {
         """
-        Brazilian Portuguese requirements:
-        - Write exclusively in natural contemporary Brazilian Portuguese.
-        - Use Brazilian vocabulary, pronouns, contractions, and dialogue rhythm.
-        - Do not use European Portuguese vocabulary or grammar.
-        - Prefer natural Brazilian phrasing over word-for-word translation.
-        - Keep established proper names unchanged and translate kinship terms consistently.
+        Brazilian Portuguese requirements (CRITICAL FOR COMIC BUBBLE FIT):
+        - Write exclusively in natural, modern, colloquial Brazilian Portuguese (pt-BR).
+        - AVOID VERBOSE OR FORMAL PHRASING: Portuguese text naturally tends to be longer than English. You MUST actively condense sentences so the text fits comfortably inside small comic speech bubbles.
+        - Use natural spoken Brazilian contractions and idioms (e.g., use 'tá', 'tô', 'pra', 'pro', 'ce', 'né', 'num', 'numa', 'dali', 'daqui' in casual dialogue).
+        - NEVER use European Portuguese grammar, vocabulary, or syntax (no 'está a fazer', 'rapariga', 'miúdo', 'ecrã', etc.).
+        - Use direct, expressive, informal Brazilian comic phrasing (gírias e expressões naturais de quadrinhos e mangás brasileiros, ex: 'beleza', 'cara', 'droga', 'valeu', 'bora').
+        - Prefer shorter synonyms and punchy, direct sentence structures over literal, wordy translations.
+        - Keep proper names unchanged and adapt kinship terms and honorifics naturally (ex: 'hyung/senpai' -> contexto natural ou nome, 'irmão', 'chefe', etc.).
+        - Dialogue length constraint: Keep translated text length as close as possible to the visual weight of the source. If a phrase is too long, rephrase into a shorter, punchier Brazilian equivalent that fits inside the bubble.
         """.trimIndent()
     } else {
         ""

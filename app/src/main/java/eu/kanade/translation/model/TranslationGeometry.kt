@@ -38,9 +38,8 @@ fun TranslationBlock.defaultCleanupRegion(
     pageWidth: Float = Float.MAX_VALUE,
     pageHeight: Float = Float.MAX_VALUE,
 ): TranslationRegion {
-    // Meio-termo seguro: 20% (antes era 16%). Limpa os resquícios sem morder a borda do balão pequeno.
-    val horizontalPadding = max(symWidth * 3.6f, width * 0.20f)
-    val verticalPadding = max(symHeight * 2.4f, height * 0.20f)
+    val horizontalPadding = max(symWidth * 4.0f, width * 0.24f)
+    val verticalPadding = max(symHeight * 3.0f, height * 0.24f)
     return sourceRegion().expanded(horizontalPadding, verticalPadding, pageWidth, pageHeight)
 }
 

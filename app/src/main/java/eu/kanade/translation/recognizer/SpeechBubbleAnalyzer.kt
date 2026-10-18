@@ -80,7 +80,26 @@ class SpeechBubbleAnalyzer(
         for (source in block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }) {
             for (margin in 1..2) sampleRing(nearby, source, margin, margin)
         }
-        return dominantBackground(nearby)?.takeIf { it.confidence >= MIN_BACKGROUND_RATIO } ?: outer
+        val sampledNearby = dominantBackground(nearby)?.takeIf { it.confidence >= MIN_BACKGROUND_RATIO } ?: outer
+        if (sampledNearby != null) return sampledNearby
+
+        // Fallback for shout/jagged balloons where outer ring hits dark contour spikes:
+        // Sample non-text interior pixels between glyphs inside the bounding box.
+        val interior = mutableListOf<Int>()
+        val left = toBitmapX(block.x)
+        val right = toBitmapX(block.x + block.width)
+        val top = toBitmapY(block.y)
+        val bottom = toBitmapY(block.y + block.height)
+        if (right > left && bottom > top) {
+            val stepX = maxOf(1, (right - left) / 10)
+            val stepY = maxOf(1, (bottom - top) / 10)
+            for (y in top..bottom step stepY) {
+                for (x in left..right step stepX) {
+                    addPixel(interior, x, y)
+                }
+            }
+        }
+        return dominantBackground(interior)?.takeIf { it.confidence >= 0.50f }
     }
 
     private fun hasColorSupport(samples: List<Int>, color: Int): Boolean =

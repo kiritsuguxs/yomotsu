@@ -36,8 +36,8 @@ fun TranslationBlock.resolvedCleanupPatches(pageWidth: Float, pageHeight: Float)
         }).clamped(pageWidth, pageHeight)
         val horizontalPadding = minOf(source.x - region.x, region.x + region.width - source.x - source.width).coerceAtLeast(0f)
         val verticalPadding = minOf(source.y - region.y, region.y + region.height - source.y - source.height).coerceAtLeast(0f)
-        // Largest round-corner radius whose arc still covers every source corner.
+        // Keep round-corner radius small so it does not expose glyph corners or punctuation.
         val coveringRadius = horizontalPadding + verticalPadding + sqrt(2f * horizontalPadding * verticalPadding)
-        TranslationCleanupPatch(region, minOf(minOf(region.width, region.height) * 0.32f, coveringRadius))
+        TranslationCleanupPatch(region, minOf(minOf(region.width, region.height) * 0.15f, coveringRadius))
     }
 }
