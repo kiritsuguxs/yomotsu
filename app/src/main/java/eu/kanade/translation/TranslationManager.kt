@@ -627,6 +627,7 @@ class TranslationManager(
         val raw = file.openInputStream()
             .bufferedReader(Charsets.UTF_8)
             .use { it.readText() }
+        if (raw.isBlank()) return emptyMap()
         return runCatching {
             Json.decodeFromString<Map<String, PageTranslation>>(raw)
         }.recoverCatching { originalError ->
