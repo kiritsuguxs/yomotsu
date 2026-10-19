@@ -115,12 +115,12 @@ fun TranslationBlockEditorDialog(
         val hScale = heightScalePercent / 100f
 
         editor.updateBlockCustomization(
-            blockIndex = blockIndex,
-            translation = cleanTranslation,
-            backgroundColor = newBgColor,
-            foregroundColor = newFgColor,
-            widthScale = wScale,
-            heightScale = hScale,
+            blockIndex,
+            cleanTranslation,
+            newBgColor,
+            newFgColor,
+            wScale,
+            hScale,
         ) { result ->
             isWorking = false
             result.onSuccess { storedTranslation ->

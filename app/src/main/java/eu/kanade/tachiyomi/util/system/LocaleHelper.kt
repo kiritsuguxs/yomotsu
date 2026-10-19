@@ -31,7 +31,9 @@ object LocaleHelper {
     fun mapNovelLangToCode(rawLang: String): String {
         val clean = rawLang.trim().removePrefix("\u200e").removePrefix("\u200f").lowercase()
         return when {
-            clean.contains("portugu") || clean.startsWith("pt") -> "pt-BR"
+            clean.contains("brasil") || clean.contains("brazil") || clean == "pt-br" || clean == "pt_br" -> "pt-BR"
+            clean.contains("portugal") || clean == "pt-pt" || clean == "pt_pt" || clean == "pt" -> "pt"
+            clean.contains("portugu") -> "pt-BR"
             clean.contains("english") || clean == "en" -> "en"
             clean.contains("español") || clean.contains("espanol") || clean.contains("spanish") || clean == "es" -> "es"
             clean.contains("franç") || clean.contains("franc") || clean.contains("french") || clean == "fr" -> "fr"
@@ -124,6 +126,7 @@ object LocaleHelper {
             "" -> LocaleListCompat.getAdjustedDefault()[0]
             "zh-CN", "zh" -> Locale.forLanguageTag("zh-Hans")
             "zh-TW" -> Locale.forLanguageTag("zh-Hant")
+            "pt" -> Locale.forLanguageTag("pt-PT")
             else -> Locale.forLanguageTag(normalized)
         }
         val name = locale?.getDisplayName(locale)?.replaceFirstChar { it.uppercase(locale) }.orEmpty()
