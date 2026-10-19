@@ -45,112 +45,9 @@ class GeminiTranslator(
         if (modelName.isBlank()) throw TranslationProviderFailureMapper.missingModel(TranslationProviderId.GEMINI)
         try {
             continuity.enter(context)
-            val blocks = pages.values.flatMap { it.blocks }
-            if (blocks.isEmpty()) return
-            val normalizedTexts = blocks.map { normalizeOcrText(it.text) }
-            val preparedTexts = normalizedTexts.map { TranslationGlossary.prepare(it, context) }
-            val cached = normalizedTexts.map { TranslationCache.get(context, fromLang, toLang, it) }
-
-            if (cached.all { it != null }) {
-                blocks.forEachIndexed { index, block ->
-                    block.translation = TranslationGlossary.apply(block.text, cached[index].orEmpty(), context)
-                    continuity.remember(block.text, block.translation)
-                }
-                pages.values.forEach { page ->
-                    page.blocks = page.blocks.filterNot {
-                        it.translation.isBlank() ||
-                        it.translation.contains("RTMTH", ignoreCase = true) ||
-                        TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
-                        TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
-                    }.toMutableList()
-                }
-                return
-            }
-
-            val preparedIterator = preparedTexts.iterator()
-            val inputJson = buildComicInputJson(pages) {
-                preparedIterator.next().textForTranslation
-            }
-            val requestText = continuity.promptPrefix() + buildComicTranslationRequest(context, inputJson)
-            val requestBody = buildGeminiRestRequestBody(
-                systemInstruction = buildComicTranslationPrompt(fromLang, toLang),
-                requestText = requestText,
-                maxOutputTokens = maxOutputToken,
-            )
-            val request = Request.Builder()
-                .url(buildGeminiRestUrl(modelName))
-                .header("x-goog-api-key", apiKey)
-                .header("Content-Type", "application/json")
-                .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
-                .build()
-
-            val response = okHttpClient.newCall(request).await()
-            val responseBody = response.use {
-                val rawBody = it.body.string()
-                if (!it.isSuccessful) {
-                    throw TranslationProviderException(
-                        TranslationProviderId.GEMINI,
-                        TranslationFailureCategory.UNKNOWN,
-                        it.code == 429 || it.code >= 500,
-                        buildGeminiHttpDiagnostic(it.code, rawBody, apiKey),
-                    )
-                }
-                rawBody
-            }
-            val responseJson = JSONObject(responseBody)
-            val parts = responseJson.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
-            val responseText = buildString {
-                if (parts != null) for (index in 0 until parts.length()) append(parts.optJSONObject(index)?.optString("text").orEmpty())
-            }
-            
-            if (responseText.isBlank()) {
-                val finishReason = responseJson.optJSONArray("candidates")?.optJSONObject(0)?.optString("finishReason") ?: "UNKNOWN"
-                throw TranslationProviderException(
-                    TranslationProviderId.GEMINI,
-                    TranslationFailureCategory.UNKNOWN,
-                    false,
-                    "Gemini blocked the translation. Reason: $finishReason"
-                )
-            }
-
-
-            
-            val resJson = try {
-                parseComicTranslationResponse(responseText)
-            } catch (e: Exception) {
-                val snippet = responseText.take(50).replace("\n", " ")
-                throw TranslationProviderException(
-                    TranslationProviderId.GEMINI,
-                    TranslationFailureCategory.UNKNOWN,
-                    false,
-                    "Gemini JSON error: $snippet"
-                )
-            }
-
-            var globalIndex = 0
-            for ((k, v) in pages) {
-                v.blocks.forEachIndexed { i, b ->
-                    val res = resJson.optJSONArray(k)?.optString(i, "NULL")
-                    val raw = if (res == null || res == "NULL" || res.isBlank()) "" else res
-                    val postEdited = if (raw.isNotBlank()) postEditMachineTranslation(b.text, raw, toLang) else ""
-                    val finalTranslation = if (postEdited.isNotBlank()) {
-                        TranslationGlossary.resolve(preparedTexts[globalIndex], postEdited, context)
-                    } else ""
-                    b.translation = finalTranslation
-                    if (finalTranslation.isNotBlank() && cached.getOrNull(globalIndex) == null) {
-                        TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], finalTranslation)
-                    }
-                    if (finalTranslation.isNotBlank()) {
-                        continuity.remember(b.text, finalTranslation)
-                    }
-                    globalIndex++
-                }
-                v.blocks = v.blocks.filterNot {
-                    it.translation.isBlank() ||
-                    it.translation.contains("RTMTH", ignoreCase = true) ||
-                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
-                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
-                }.toMutableList()
+            val chunks = chunkPages(pages, maxPages = 8, maxBlocks = 30)
+            for (chunk in chunks) {
+                translateChunk(chunk, context)
             }
         } catch (error: CancellationException) {
             throw error
@@ -167,6 +64,122 @@ class GeminiTranslator(
                 throw TranslationProviderException(TranslationProviderId.GEMINI, TranslationFailureCategory.UNKNOWN, false, buildGeminiUnknownDiagnostic(error, apiKey), error)
             }
             throw mapped
+        }
+    }
+
+    private suspend fun translateChunk(
+        chunkPages: Map<String, PageTranslation>,
+        context: ComicTranslationContext,
+    ) {
+        val blocks = chunkPages.values.flatMap { it.blocks }
+        if (blocks.isEmpty()) return
+        val normalizedTexts = blocks.map { normalizeOcrText(it.text) }
+        val preparedTexts = normalizedTexts.map { TranslationGlossary.prepare(it, context) }
+        val cached = normalizedTexts.map { TranslationCache.get(context, fromLang, toLang, it) }
+
+        if (cached.all { it != null }) {
+            blocks.forEachIndexed { index, block ->
+                val cachedTranslation = cached[index].orEmpty()
+                if (cachedTranslation.contains("RTMTH", ignoreCase = true) ||
+                    TranslationRecoveryPolicy.isWatermarkOrCredit(block.text) ||
+                    TranslationRecoveryPolicy.isWatermarkOrCredit(cachedTranslation)
+                ) {
+                    block.translation = ""
+                } else {
+                    block.translation = TranslationGlossary.apply(block.text, cachedTranslation, context)
+                }
+                if (block.translation.isNotBlank()) {
+                    continuity.remember(block.text, block.translation)
+                }
+            }
+            return
+        }
+
+        val preparedIterator = preparedTexts.iterator()
+        val inputJson = buildComicInputJson(chunkPages) {
+            preparedIterator.next().textForTranslation
+        }
+        val requestText = continuity.promptPrefix() + buildComicTranslationRequest(context, inputJson)
+        val requestBody = buildGeminiRestRequestBody(
+            systemInstruction = buildComicTranslationPrompt(fromLang, toLang),
+            requestText = requestText,
+            maxOutputTokens = maxOutputToken,
+        )
+        val request = Request.Builder()
+            .url(buildGeminiRestUrl(modelName))
+            .header("x-goog-api-key", apiKey)
+            .header("Content-Type", "application/json")
+            .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+
+        val response = okHttpClient.newCall(request).await()
+        val responseBody = response.use {
+            val rawBody = it.body.string()
+            if (!it.isSuccessful) {
+                throw TranslationProviderException(
+                    TranslationProviderId.GEMINI,
+                    TranslationFailureCategory.UNKNOWN,
+                    it.code == 429 || it.code >= 500,
+                    buildGeminiHttpDiagnostic(it.code, rawBody, apiKey),
+                )
+            }
+            rawBody
+        }
+        val responseJson = JSONObject(responseBody)
+        val parts = responseJson.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
+        val responseText = buildString {
+            if (parts != null) for (index in 0 until parts.length()) append(parts.optJSONObject(index)?.optString("text").orEmpty())
+        }
+        
+        if (responseText.isBlank()) {
+            val finishReason = responseJson.optJSONArray("candidates")?.optJSONObject(0)?.optString("finishReason") ?: "UNKNOWN"
+            throw TranslationProviderException(
+                TranslationProviderId.GEMINI,
+                TranslationFailureCategory.UNKNOWN,
+                false,
+                "Gemini blocked the translation. Reason: $finishReason"
+            )
+        }
+
+        val resJson = try {
+            parseComicTranslationResponse(responseText)
+        } catch (e: Exception) {
+            val snippet = responseText.take(50).replace("\n", " ")
+            throw TranslationProviderException(
+                TranslationProviderId.GEMINI,
+                TranslationFailureCategory.UNKNOWN,
+                false,
+                "Gemini JSON error: $snippet"
+            )
+        }
+
+        var globalIndex = 0
+        for ((k, v) in chunkPages) {
+            v.blocks.forEachIndexed { i, b ->
+                val res = resJson.optJSONArray(k)?.optString(i, "NULL")
+                val raw = if (res == null || res == "NULL" || res.isBlank()) "" else res
+                val postEdited = if (raw.isNotBlank()) postEditMachineTranslation(b.text, raw, toLang) else ""
+                val finalTranslation = if (postEdited.isNotBlank()) {
+                    TranslationGlossary.resolve(preparedTexts[globalIndex], postEdited, context)
+                } else ""
+
+                if (finalTranslation.contains("RTMTH", ignoreCase = true) ||
+                    TranslationRecoveryPolicy.isWatermarkOrCredit(b.text) ||
+                    TranslationRecoveryPolicy.isWatermarkOrCredit(finalTranslation)
+                ) {
+                    b.translation = ""
+                } else {
+                    b.translation = finalTranslation
+                }
+
+                if (b.translation.isNotBlank() && cached.getOrNull(globalIndex) == null) {
+                    TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], b.translation)
+                }
+                if (b.translation.isNotBlank()) {
+                    continuity.remember(b.text, b.translation)
+                }
+                globalIndex++
+            }
         }
     }
 

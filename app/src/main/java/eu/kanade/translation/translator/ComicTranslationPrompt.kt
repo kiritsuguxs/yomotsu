@@ -31,6 +31,32 @@ internal fun buildComicInputJson(
     }.toString()
 }
 
+internal fun chunkPages(
+    pages: Map<String, PageTranslation>,
+    maxPages: Int = 8,
+    maxBlocks: Int = 30,
+): List<Map<String, PageTranslation>> {
+    val chunks = mutableListOf<Map<String, PageTranslation>>()
+    var currentChunk = mutableMapOf<String, PageTranslation>()
+    var currentBlocks = 0
+
+    for ((key, page) in pages) {
+        val pageBlocks = page.blocks.size
+        if (currentChunk.isNotEmpty() && (currentChunk.size >= maxPages || currentBlocks + pageBlocks > maxBlocks)) {
+            chunks.add(currentChunk)
+            currentChunk = mutableMapOf()
+            currentBlocks = 0
+        }
+        currentChunk[key] = page
+        currentBlocks += pageBlocks
+    }
+    if (currentChunk.isNotEmpty()) {
+        chunks.add(currentChunk)
+    }
+    return chunks
+}
+
+
 internal fun buildComicTranslationPrompt(
     fromLang: TextRecognizerLanguage,
     toLang: TextTranslatorLanguage,

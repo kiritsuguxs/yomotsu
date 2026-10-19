@@ -1,5 +1,6 @@
 package eu.kanade.translation.translator
 
+import eu.kanade.translation.model.TranslationRecoveryPolicy
 import eu.kanade.translation.recognizer.TextRecognizerLanguage
 
 /**
@@ -21,6 +22,7 @@ object TranslationQualityGuard {
         val target = normalize(translatedText)
 
         if (source.isEmpty()) return false
+        if (TranslationRecoveryPolicy.isWatermarkOrCredit(sourceText)) return false
         if (target.isEmpty()) return true
         if (fromLang.code.equals(toLang.code, ignoreCase = true)) return false
         if (source.equals(target, ignoreCase = true)) return true

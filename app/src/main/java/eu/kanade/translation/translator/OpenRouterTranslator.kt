@@ -52,14 +52,14 @@ class OpenRouterTranslator(
         pages: MutableMap<String, PageTranslation>,
         context: ComicTranslationContext,
     ) {
-        val chunkedPages = pages.toList().chunked(10).map { it.toMap().toMutableMap() }
+        val chunkedPages = chunkPages(pages, maxPages = 8, maxBlocks = 30)
         for (chunk in chunkedPages) {
             translateChunkInternal(chunk, context)
         }
     }
 
     private suspend fun translateChunkInternal(
-        pages: MutableMap<String, PageTranslation>,
+        pages: Map<String, PageTranslation>,
         context: ComicTranslationContext,
     ) {
         try {
@@ -72,16 +72,18 @@ class OpenRouterTranslator(
 
             if (cached.all { it != null }) {
                 blocks.forEachIndexed { index, block ->
-                    block.translation = TranslationGlossary.apply(block.text, cached[index].orEmpty(), context)
-                    continuity.remember(block.text, block.translation)
-                }
-                pages.values.forEach { page ->
-                    page.blocks = page.blocks.filterNot {
-                        it.translation.isBlank() ||
-                        it.translation.contains("RTMTH", ignoreCase = true) ||
-                        TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
-                        TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
-                    }.toMutableList()
+                    val cachedTranslation = cached[index].orEmpty()
+                    if (cachedTranslation.contains("RTMTH", ignoreCase = true) ||
+                        TranslationRecoveryPolicy.isWatermarkOrCredit(block.text) ||
+                        TranslationRecoveryPolicy.isWatermarkOrCredit(cachedTranslation)
+                    ) {
+                        block.translation = ""
+                    } else {
+                        block.translation = TranslationGlossary.apply(block.text, cachedTranslation, context)
+                    }
+                    if (block.translation.isNotBlank()) {
+                        continuity.remember(block.text, block.translation)
+                    }
                 }
                 return
             }
@@ -156,21 +158,24 @@ class OpenRouterTranslator(
                             context = context,
                         )
                     } else ""
-                    block.translation = finalTranslation
-                    if (finalTranslation.isNotBlank() && cached.getOrNull(globalIndex) == null) {
-                        TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], finalTranslation)
+
+                    if (finalTranslation.contains("RTMTH", ignoreCase = true) ||
+                        TranslationRecoveryPolicy.isWatermarkOrCredit(block.text) ||
+                        TranslationRecoveryPolicy.isWatermarkOrCredit(finalTranslation)
+                    ) {
+                        block.translation = ""
+                    } else {
+                        block.translation = finalTranslation
                     }
-                    if (finalTranslation.isNotBlank()) {
-                        continuity.remember(block.text, finalTranslation)
+
+                    if (block.translation.isNotBlank() && cached.getOrNull(globalIndex) == null) {
+                        TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], block.translation)
+                    }
+                    if (block.translation.isNotBlank()) {
+                        continuity.remember(block.text, block.translation)
                     }
                     globalIndex++
                 }
-                page.blocks = page.blocks.filterNot {
-                    it.translation.isBlank() ||
-                    it.translation.contains("RTMTH", ignoreCase = true) ||
-                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
-                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
-                }.toMutableList()
             }
         } catch (error: CancellationException) {
             throw error
