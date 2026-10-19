@@ -15,12 +15,15 @@ import eu.kanade.translation.model.PageTranslation
 import eu.kanade.translation.model.Translation
 import eu.kanade.translation.model.TranslationBlock
 import eu.kanade.translation.model.TranslationPageEditor
+import eu.kanade.translation.model.TranslationRegion
 import eu.kanade.translation.model.defaultCleanupRegion
 import eu.kanade.translation.model.defaultLayoutRegion
+import eu.kanade.translation.model.sourceRegion
 import eu.kanade.translation.recognizer.TextRecognizerLanguage
 import eu.kanade.translation.translator.ComicTranslationContext
 import eu.kanade.translation.translator.TextTranslatorLanguage
 import eu.kanade.translation.translator.TextTranslators
+import tachiyomi.domain.translation.TranslationLlmProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -208,6 +211,33 @@ class TranslationManager(
                 position = position,
                 sourceText = sourceText,
                 translation = translation,
+                onResult = onResult,
+            )
+        },
+        deleteTranslation = { blockIndex, onResult ->
+            deleteBlockTranslation(
+                chapterName = chapterName,
+                scanlator = scanlator,
+                mangaTitle = mangaTitle,
+                source = source,
+                pageKey = pageKey,
+                blockIndex = blockIndex,
+                onResult = onResult,
+            )
+        },
+        updateBlockCustomization = { blockIndex, translation, backgroundColor, foregroundColor, widthScale, heightScale, onResult ->
+            updateBlockCustomization(
+                chapterName = chapterName,
+                scanlator = scanlator,
+                mangaTitle = mangaTitle,
+                source = source,
+                pageKey = pageKey,
+                blockIndex = blockIndex,
+                translation = translation,
+                backgroundColor = backgroundColor,
+                foregroundColor = foregroundColor,
+                widthScale = widthScale,
+                heightScale = heightScale,
                 onResult = onResult,
             )
         },
@@ -401,8 +431,17 @@ class TranslationManager(
 
                 val singlePage = PageTranslation(blocks = mutableListOf(sourceBlock))
                 val pages = mutableMapOf(pageKey to singlePage)
-                val textTranslator = TextTranslators.fromPref(translationPreferences.translationEngine())
-                    .build(translationPreferences, fromLang, toLang)
+                val textTranslator = if (translationPreferences.translationEngine().get() == TextTranslators.OCR_ONLY.ordinal) {
+                    val geminiKey = translationPreferences.llmApiKey(TranslationLlmProvider.GEMINI).get()
+                    if (geminiKey.isNotBlank()) {
+                        TextTranslators.GEMINI.build(translationPreferences, fromLang, toLang)
+                    } else {
+                        TextTranslators.GOOGLE.build(translationPreferences, fromLang, toLang)
+                    }
+                } else {
+                    TextTranslators.fromPref(translationPreferences.translationEngine())
+                        .build(translationPreferences, fromLang, toLang)
+                }
                 try {
                     textTranslator.translate(pages, comicContext)
                 } finally {
@@ -424,6 +463,94 @@ class TranslationManager(
                     }
                 }
                 translatedText
+            }
+            withContext(Dispatchers.Main.immediate) { onResult(result) }
+        }
+    }
+
+    private fun deleteBlockTranslation(
+        chapterName: String,
+        scanlator: String?,
+        mangaTitle: String,
+        source: Source,
+        pageKey: String,
+        blockIndex: Int,
+        onResult: (Result<Unit>) -> Unit,
+    ) {
+        editorScope.launch {
+            val result = runCatching {
+                translationFileMutex.withLock {
+                    val file = provider.findTranslationFile(chapterName, scanlator, mangaTitle, source)
+                        ?: error("O arquivo de tradução deste capítulo não foi encontrado.")
+                    val pages = readStoredPages(file).toMutableMap()
+                    val page = pages[pageKey] ?: error("A página traduzida não foi encontrada.")
+                    if (blockIndex in page.blocks.indices) {
+                        val removed = page.blocks.removeAt(blockIndex)
+                        if (removed.text.isNotBlank()) {
+                            val comicContext = ComicTranslationContext(mangaTitle, chapterName)
+                            TranslationMemory.forgetCorrection(comicContext, removed.text)
+                        }
+                    }
+                    writeStoredPages(file, pages)
+                }
+            }
+            withContext(Dispatchers.Main.immediate) { onResult(result) }
+        }
+    }
+
+    private fun updateBlockCustomization(
+        chapterName: String,
+        scanlator: String?,
+        mangaTitle: String,
+        source: Source,
+        pageKey: String,
+        blockIndex: Int,
+        translation: String,
+        backgroundColor: Int?,
+        foregroundColor: Int?,
+        widthScale: Float,
+        heightScale: Float,
+        onResult: (Result<String>) -> Unit,
+    ) {
+        editorScope.launch {
+            val result = runCatching {
+                val cleanTranslation = translation.trim()
+                require(cleanTranslation.isNotEmpty()) { "A tradução não pode ficar vazia." }
+                val sourceText = translationFileMutex.withLock {
+                    updateStoredBlock(
+                        chapterName = chapterName,
+                        scanlator = scanlator,
+                        mangaTitle = mangaTitle,
+                        source = source,
+                        pageKey = pageKey,
+                        blockIndex = blockIndex,
+                    ) { block ->
+                        block.translation = cleanTranslation
+                        block.backgroundColor = backgroundColor
+                        block.foregroundColor = foregroundColor
+                        if (widthScale != 1.0f || heightScale != 1.0f) {
+                            val currentLayout = block.layoutRegion ?: block.sourceRegion()
+                            val newWidth = (currentLayout.width * widthScale).coerceAtLeast(10f)
+                            val newHeight = (currentLayout.height * heightScale).coerceAtLeast(10f)
+                            val diffX = (newWidth - currentLayout.width) / 2f
+                            val diffY = (newHeight - currentLayout.height) / 2f
+                            val newX = (currentLayout.x - diffX).coerceAtLeast(0f)
+                            val newY = (currentLayout.y - diffY).coerceAtLeast(0f)
+                            val newRegion = TranslationRegion(newX, newY, newWidth, newHeight)
+                            block.layoutRegion = newRegion
+                            block.cleanupRegion = newRegion
+                            block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
+                        }
+                        block.text
+                    }
+                }
+                rememberEditedTranslation(
+                    mangaTitle = mangaTitle,
+                    chapterName = chapterName,
+                    sourceText = sourceText,
+                    translation = cleanTranslation,
+                )
+                cleanTranslation
             }
             withContext(Dispatchers.Main.immediate) { onResult(result) }
         }

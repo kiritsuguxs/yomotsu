@@ -26,6 +26,7 @@
     <string name="translator_google">Traductor de Google</string>
     <string name="translator_gemini">Gemini AI [API KEY]</string>
     <string name="translator_openrouter">OpenRouter [API KEY]</string>
+    <string name="translator_ocr_only">Solo OCR (Detectar Bocadillos)</string>
     <string name="pref_group_ocr">OCR</string>
     <string name="pref_ocr_engine">Motor OCR</string>
     <string name="ocr_mlkit">ML Kit (en el dispositivo)</string>
@@ -40,8 +41,18 @@
     <string name="translation_editor_original">Original: %1$s</string>
     <string name="translation_editor_field">Traducción</string>
     <string name="translation_editor_retranslate">Volver a traducir</string>
+    <string name="translation_editor_translate">Traducir con IA</string>
     <string name="translation_editor_retranslating">Traduciendo de nuevo…</string>
     <string name="translation_editor_error">No se pudo actualizar este bocadillo.</string>
+    <string name="translation_editor_delete">Eliminar globo</string>
+    <string name="translation_editor_background">Fondo</string>
+    <string name="translation_editor_text_color">Texto</string>
+    <string name="translation_editor_color_white">Blanco</string>
+    <string name="translation_editor_color_black">Negro</string>
+    <string name="translation_editor_color_transparent">Transparente</string>
+    <string name="translation_editor_size">Tamaño</string>
+    <string name="translation_editor_width">Ancho: %1$d%%</string>
+    <string name="translation_editor_height">Alto: %1$d%%</string>
     <string name="translation_manual_action">Añadir traducción manual</string>
     <string name="translation_manual_title">Añadir traducción manual</string>
     <string name="translation_manual_hint">La traducción se colocará alrededor del punto que mantuviste pulsado.</string>

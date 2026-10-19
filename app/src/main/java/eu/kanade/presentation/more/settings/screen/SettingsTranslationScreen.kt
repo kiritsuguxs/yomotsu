@@ -37,6 +37,7 @@ internal fun translationEngineSettings(engine: TextTranslators): List<Translatio
         TextTranslators.DEEPL -> listOf(TranslationEngineSetting.DEEPL_API_KEY)
         TextTranslators.MLKIT,
         TextTranslators.GOOGLE,
+        TextTranslators.OCR_ONLY,
         -> emptyList()
     }
 }
@@ -237,6 +238,7 @@ object SettingsTranslationScreen : SearchableSettings {
             TextTranslators.GEMINI -> stringResource(ATMR.strings.translator_gemini)
             TextTranslators.OPENROUTER -> stringResource(ATMR.strings.translator_openrouter)
             TextTranslators.DEEPL -> "DeepL"
+            TextTranslators.OCR_ONLY -> stringResource(ATMR.strings.translator_ocr_only)
         }
     }
 

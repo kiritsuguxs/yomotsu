@@ -101,6 +101,13 @@ class WebtoonTranslationsView : AbstractComposeView {
                         block.translation = translatedText
                         contentRevision++
                     },
+                    onBlockDeleted = {
+                        if (blockIndex in translation.blocks.indices) {
+                            translation.blocks.removeAt(blockIndex)
+                        }
+                        contentRevision++
+                        editingBlockIndex = null
+                    },
                     onDismissRequest = { editingBlockIndex = null },
                 )
             }

@@ -65,7 +65,7 @@ fun SmartTranslationBlock(
                 transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
             }
                     .combinedClickable(
-                        onClick = {},
+                        onClick = onLongClick,
                         onLongClick = onLongClick,
                     ),
             )

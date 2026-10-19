@@ -26,6 +26,7 @@
     <string name="translator_google">Google Translate</string>
     <string name="translator_gemini">Gemini AI [CHAVE DE API]</string>
     <string name="translator_openrouter">OpenRouter [CHAVE DE API]</string>
+    <string name="translator_ocr_only">Apenas OCR (Detetar Balões)</string>
     <string name="pref_group_ocr">OCR</string>
     <string name="pref_ocr_engine">Mecanismo de OCR</string>
     <string name="ocr_mlkit">ML Kit (no dispositivo)</string>
@@ -40,8 +41,18 @@
     <string name="translation_editor_original">Original: %1$s</string>
     <string name="translation_editor_field">Tradução</string>
     <string name="translation_editor_retranslate">Retraduzir</string>
+    <string name="translation_editor_translate">Traduzir com IA</string>
     <string name="translation_editor_retranslating">Retraduzindo…</string>
     <string name="translation_editor_error">Não foi possível atualizar este balão.</string>
+    <string name="translation_editor_delete">Eliminar balão</string>
+    <string name="translation_editor_background">Fundo</string>
+    <string name="translation_editor_text_color">Texto</string>
+    <string name="translation_editor_color_white">Branco</string>
+    <string name="translation_editor_color_black">Preto</string>
+    <string name="translation_editor_color_transparent">Transparente</string>
+    <string name="translation_editor_size">Tamanho</string>
+    <string name="translation_editor_width">Largura: %1$d%%</string>
+    <string name="translation_editor_height">Altura: %1$d%%</string>
     <string name="translation_manual_action">Adicionar tradução manual</string>
     <string name="translation_manual_title">Adicionar tradução manual</string>
     <string name="translation_manual_hint">A tradução será posicionada ao redor do ponto que você segurou.</string>

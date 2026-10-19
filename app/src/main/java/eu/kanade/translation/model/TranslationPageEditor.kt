@@ -15,6 +15,16 @@ class TranslationPageEditor(
         translation: String,
         onResult: (Result<AddedManualTranslation>) -> Unit,
     ) -> Unit,
+    val deleteTranslation: (blockIndex: Int, onResult: (Result<Unit>) -> Unit) -> Unit = { _, onResult -> onResult(Result.success(Unit)) },
+    val updateBlockCustomization: (
+        blockIndex: Int,
+        translation: String,
+        backgroundColor: Int?,
+        foregroundColor: Int?,
+        widthScale: Float,
+        heightScale: Float,
+        onResult: (Result<String>) -> Unit,
+    ) -> Unit = { _, translation, _, _, _, _, onResult -> onResult(Result.success(translation)) },
 )
 
 /**

@@ -26,6 +26,7 @@
     <string name="translator_google">Google Translate</string>
     <string name="translator_gemini">Gemini AI [API KEY]</string>
     <string name="translator_openrouter">OpenRouter [API KEY]</string>
+    <string name="translator_ocr_only">OCR Only (Detect Balloons)</string>
     <string name="pref_group_ocr">OCR</string>
     <string name="pref_ocr_engine">OCR Engine</string>
     <string name="ocr_mlkit">ML Kit (On Device)</string>
@@ -40,8 +41,18 @@
     <string name="translation_editor_original">Original: %1$s</string>
     <string name="translation_editor_field">Translation</string>
     <string name="translation_editor_retranslate">Retranslate</string>
+    <string name="translation_editor_translate">Translate with AI</string>
     <string name="translation_editor_retranslating">Retranslating…</string>
     <string name="translation_editor_error">Could not update this speech balloon.</string>
+    <string name="translation_editor_delete">Delete balloon</string>
+    <string name="translation_editor_background">Background</string>
+    <string name="translation_editor_text_color">Text</string>
+    <string name="translation_editor_color_white">White</string>
+    <string name="translation_editor_color_black">Black</string>
+    <string name="translation_editor_color_transparent">Transparent</string>
+    <string name="translation_editor_size">Size</string>
+    <string name="translation_editor_width">Width: %1$d%%</string>
+    <string name="translation_editor_height">Height: %1$d%%</string>
     <string name="translation_manual_action">Add manual translation</string>
     <string name="translation_manual_title">Add manual translation</string>
     <string name="translation_manual_hint">The translation will be placed around the point you held.</string>
