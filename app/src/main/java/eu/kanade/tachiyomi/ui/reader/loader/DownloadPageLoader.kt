@@ -51,12 +51,7 @@ internal class DownloadPageLoader(
             manga.title,
             source,
         )
-        val canEditTranslations = translationManager.isChapterTranslated(
-            chapterName = chapter.chapter.name,
-            chapterScanlator = chapter.chapter.scanlator,
-            mangaTitle = manga.title,
-            sourceId = source.id,
-        )
+        val canEditTranslations = true
         return if (chapterPath?.isFile == true) {
             getPagesFromArchive(chapterPath, translations, canEditTranslations)
         } else {

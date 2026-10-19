@@ -18,8 +18,10 @@ import kotlin.math.roundToInt
 class WebtoonStripImageView(context: Context) : View(context) {
 
     private var strips: List<Bitmap> = emptyList()
-    private var imageWidth = 0
-    private var imageHeight = 0
+    var imageWidth = 0
+        private set
+    var imageHeight = 0
+        private set
 
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val clipRect = Rect()

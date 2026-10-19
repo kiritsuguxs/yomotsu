@@ -261,7 +261,8 @@ class TranslationManager(
                 require(cleanTranslation.isNotEmpty()) { "A tradução não pode ficar vazia." }
                 val added = translationFileMutex.withLock {
                     val file = provider.findTranslationFile(chapterName, scanlator, mangaTitle, source)
-                        ?: error("O arquivo de tradução deste capítulo não foi encontrado.")
+                        ?: provider.getMangaDir(mangaTitle, source).createFile(provider.getTranslationFileName(chapterName, scanlator))
+                        ?: error("Não foi possível criar o arquivo de tradução deste capítulo.")
                     val pages = readStoredPages(file).toMutableMap()
                     val page = pages.getOrPut(pageKey) {
                         PageTranslation(

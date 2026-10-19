@@ -55,15 +55,12 @@ fun SmartTranslationBlock(
     val baseTextStyle = LocalTextStyle.current
     if (cleanText.isEmpty()) {
         if (onLongClick != null) {
+            val targetWidth = (region.width * scaleFactor).pxToDp()
+            val targetHeight = (region.height * scaleFactor).pxToDp()
             Box(
                 modifier = modifier
                     .offset(xPx.pxToDp(), yPx.pxToDp())
-                    .requiredSize(width, height)
-            .graphicsLayer {
-                scaleX = scaleFactor
-                scaleY = scaleFactor
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
-            }
+                    .requiredSize(targetWidth, targetHeight)
                     .combinedClickable(
                         onClick = onLongClick,
                         onLongClick = onLongClick,

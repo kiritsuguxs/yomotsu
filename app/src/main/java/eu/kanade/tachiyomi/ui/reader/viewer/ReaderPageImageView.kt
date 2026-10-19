@@ -199,6 +199,47 @@ open class ReaderPageImageView @JvmOverloads constructor(
      * or fitted reader coordinates.
      */
     fun manualTranslationPosition(viewX: Float, viewY: Float): ManualTranslationPosition? {
+        val stripView = pageView as? WebtoonStripImageView
+        if (stripView != null) {
+            val imgWidth = stripView.imageWidth
+            val imgHeight = stripView.imageHeight
+            val viewWidth = stripView.width
+            val viewHeight = stripView.height
+            if (imgWidth <= 0 || imgHeight <= 0 || viewWidth <= 0 || viewHeight <= 0) return null
+            val relX = viewX - stripView.left
+            val relY = viewY - stripView.top
+            if (relX !in 0f..viewWidth.toFloat() || relY !in 0f..viewHeight.toFloat()) return null
+            val sourceX = (relX / viewWidth.toFloat()) * imgWidth.toFloat()
+            val sourceY = (relY / viewHeight.toFloat()) * imgHeight.toFloat()
+            return ManualTranslationPosition(
+                x = sourceX,
+                y = sourceY,
+                pageWidth = imgWidth.toFloat(),
+                pageHeight = imgHeight.toFloat(),
+            )
+        }
+
+        val appCompatView = pageView as? AppCompatImageView
+        if (appCompatView != null) {
+            val d = appCompatView.drawable ?: return null
+            val imgWidth = d.intrinsicWidth
+            val imgHeight = d.intrinsicHeight
+            val viewWidth = appCompatView.width
+            val viewHeight = appCompatView.height
+            if (imgWidth <= 0 || imgHeight <= 0 || viewWidth <= 0 || viewHeight <= 0) return null
+            val relX = viewX - appCompatView.left
+            val relY = viewY - appCompatView.top
+            if (relX !in 0f..viewWidth.toFloat() || relY !in 0f..viewHeight.toFloat()) return null
+            val sourceX = (relX / viewWidth.toFloat()) * imgWidth.toFloat()
+            val sourceY = (relY / viewHeight.toFloat()) * imgHeight.toFloat()
+            return ManualTranslationPosition(
+                x = sourceX,
+                y = sourceY,
+                pageWidth = imgWidth.toFloat(),
+                pageHeight = imgHeight.toFloat(),
+            )
+        }
+
         val imageView = pageView as? SubsamplingScaleImageView ?: return null
         if (!imageView.isReady || imageView.sWidth <= 0 || imageView.sHeight <= 0) return null
 
