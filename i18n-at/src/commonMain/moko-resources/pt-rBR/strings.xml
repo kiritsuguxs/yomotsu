@@ -26,7 +26,6 @@
     <string name="translator_google">Google Translate</string>
     <string name="translator_gemini">Gemini AI [CHAVE DE API]</string>
     <string name="translator_openrouter">OpenRouter [CHAVE DE API]</string>
-    <string name="translator_ocr_only">Apenas OCR (Detectar Balões)</string>
     <string name="pref_group_ocr">OCR</string>
     <string name="pref_ocr_engine">Mecanismo de OCR</string>
     <string name="ocr_mlkit">ML Kit (no dispositivo)</string>

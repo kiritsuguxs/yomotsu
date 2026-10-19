@@ -432,17 +432,8 @@ class TranslationManager(
 
                 val singlePage = PageTranslation(blocks = mutableListOf(sourceBlock))
                 val pages = mutableMapOf(pageKey to singlePage)
-                val textTranslator = if (translationPreferences.translationEngine().get() == TextTranslators.OCR_ONLY.ordinal) {
-                    val geminiKey = translationPreferences.llmApiKey(TranslationLlmProvider.GEMINI).get()
-                    if (geminiKey.isNotBlank()) {
-                        TextTranslators.GEMINI.build(translationPreferences, fromLang, toLang)
-                    } else {
-                        TextTranslators.GOOGLE.build(translationPreferences, fromLang, toLang)
-                    }
-                } else {
-                    TextTranslators.fromPref(translationPreferences.translationEngine())
-                        .build(translationPreferences, fromLang, toLang)
-                }
+                val textTranslator = TextTranslators.fromPref(translationPreferences.translationEngine())
+                    .build(translationPreferences, fromLang, toLang)
                 try {
                     textTranslator.translate(pages, comicContext)
                 } finally {

@@ -35,8 +35,7 @@ enum class TextTranslators(
     GOOGLE("Google Translate"),
     GEMINI("Gemini AI [API KEY]", TranslationLlmProvider.GEMINI),
     OPENROUTER("OpenRouter [API KEY]", TranslationLlmProvider.OPENROUTER),
-    DEEPL("DeepL [API KEY]"),
-    OCR_ONLY("Apenas OCR (Detectar Balões)");
+    DEEPL("DeepL [API KEY]");
 
     fun build(
         pref: TranslationPreferences = Injekt.get(),
@@ -44,7 +43,6 @@ enum class TextTranslators(
         toLang: TextTranslatorLanguage = TextTranslatorLanguage.fromPref(pref.translateToLanguage()),
     ): TextTranslator {
         val delegate = buildRaw(pref, fromLang, toLang)
-        if (this == OCR_ONLY) return delegate
         val fallback = TranslationFallbackEngine
             .fromValue(pref.translationFallbackEngine().get())
             .resolve(
@@ -78,7 +76,6 @@ enum class TextTranslators(
             GEMINI -> GeminiTranslator(fromLang, toLang, apiKey, modelName, maxOutputTokens, temperature)
             OPENROUTER -> OpenRouterTranslator(fromLang, toLang, apiKey, modelName, maxOutputTokens, temperature)
             DEEPL -> DeepLTranslator(fromLang, toLang, pref.deepLApiKey().get())
-            OCR_ONLY -> OcrOnlyTranslator(fromLang, toLang)
         }
     }
 
@@ -92,19 +89,5 @@ enum class TextTranslators(
             return translator
         }
     }
-}
-
-class OcrOnlyTranslator(
-    override val fromLang: TextRecognizerLanguage,
-    override val toLang: TextTranslatorLanguage,
-) : TextTranslator {
-    override suspend fun translate(
-        pages: MutableMap<String, PageTranslation>,
-        context: ComicTranslationContext,
-    ) {
-        // Intentionally no-op: keeps detected OCR text blocks intact without machine translation
-    }
-
-    override fun close() {}
 }
 

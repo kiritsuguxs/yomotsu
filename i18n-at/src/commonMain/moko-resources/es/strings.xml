@@ -26,7 +26,6 @@
     <string name="translator_google">Traductor de Google</string>
     <string name="translator_gemini">Gemini AI [API KEY]</string>
     <string name="translator_openrouter">OpenRouter [API KEY]</string>
-    <string name="translator_ocr_only">Solo OCR (Detectar Bocadillos)</string>
     <string name="pref_group_ocr">OCR</string>
     <string name="pref_ocr_engine">Motor OCR</string>
     <string name="ocr_mlkit">ML Kit (en el dispositivo)</string>

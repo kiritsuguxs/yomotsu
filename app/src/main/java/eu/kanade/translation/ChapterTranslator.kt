@@ -333,13 +333,12 @@ class ChapterTranslator(
                     }.awaitAll()
                 }
 
-                val isOcrOnly = TextTranslators.fromPref(translationPreferences.translationEngine()) == TextTranslators.OCR_ONLY
                 pages.forEach { (pageKey, page) ->
                     val manualCandidates = manualCandidatesByPage[pageKey].orEmpty()
                         .filterNot { TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) }
                     val translatedBlocks = automaticPages[pageKey]?.blocks.orEmpty()
                         .filterNot {
-                            (!isOcrOnly && it.translation.isBlank()) ||
+                            it.translation.isBlank() ||
                             it.translation.contains("RTMTH", ignoreCase = true) ||
                             TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
                             TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)

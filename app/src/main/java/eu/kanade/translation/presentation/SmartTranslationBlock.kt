@@ -83,7 +83,7 @@ fun SmartTranslationBlock(
             .then(
                 if (onLongClick != null) {
                     Modifier.combinedClickable(
-                        onClick = {},
+                        onClick = onLongClick,
                         onLongClick = onLongClick,
                     )
                 } else {

@@ -26,7 +26,6 @@
     <string name="translator_google">Google Translate</string>
     <string name="translator_gemini">Gemini AI [API KEY]</string>
     <string name="translator_openrouter">OpenRouter [API KEY]</string>
-    <string name="translator_ocr_only">OCR Only (Detect Balloons)</string>
     <string name="pref_group_ocr">OCR</string>
     <string name="pref_ocr_engine">OCR Engine</string>
     <string name="ocr_mlkit">ML Kit (On Device)</string>
