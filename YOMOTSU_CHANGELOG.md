@@ -2,6 +2,31 @@
 
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
+## 0.21.0-Y3
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Novo Editor Manual de Balões & Toque Direto:** Toque simples sobre qualquer balão traduzido no leitor para abrir o editor e ajustar o texto na hora.
+- **Redimensionamento Fino do Balão:** Adicionados controles de `+` e `-` para expandir ou encolher a largura e altura do balão, garantindo encaixe perfeito do texto.
+- **Cor de Fundo Personalizável:** Escolha entre fundo Branco, Preto ou Transparente para cobrir 100% o texto original em qualquer cena.
+- **Exclusão Rápida de Balões:** Botão de lixeira no editor para remover facilmente qualquer detecção desnecessária.
+- **Visualização do Texto Original:** Exibição do texto original em inglês detectado pelo OCR no topo do diálogo para referência durante a edição.
+- **Suporte Aprimorado para Webtoon/Manhwa:** Coordenadas de toque perfeitamente calibradas para leitura contínua vertical e modo página.
+- **Prevenção de Cortes por Limite de Tokens:** O envio de páginas para a IA agora é fatiado em lotes otimizados, evitando que capítulos longos fiquem cortados pela metade ou com balões sem traduzir.
+- **Filtro de Idiomas das Extensões:** Corrigida a duplicidade na lista de idiomas, separando claramente Português (Brasil) de Português (Portugal).
+- **Armazenamento Seguro de Traduções:** Corrigido erro de parsing JSON ao salvar balões manuais em capítulos recém-baixados.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Complete Manual Balloon Editor & Tap-to-Edit:** Tap directly on any translated speech bubble in the reader to open the editor dialog immediately.
+- **Fine-Grained Balloon Resizing:** Added `+` and `-` controls to adjust balloon width and height for a perfect text fit.
+- **Custom Background Colors:** Select between White, Black, or Transparent backgrounds to cleanly mask original text in any scene.
+- **Delete Unwanted Balloons:** Dedicated trash bin action in the editor to quickly remove misplaced detections.
+- **Original Text Preview:** Displays OCR-detected original text at the top of the editor dialog for quick reference.
+- **Full Webtoon/Manhwa Viewer Support:** Touch coordinates and hitboxes are now precisely mapped across both vertical strip and paged reader modes.
+- **Token Truncation Prevention:** Comic pages are now processed in optimized batches to prevent long chapters from hitting LLM token limits and cutting off translations.
+- **Language Filter Localization:** Fixed duplicate language entries in extension filters, correctly distinguishing Portuguese (Brazil) from Portuguese (Portugal).
+- **Translation Storage Fix:** Resolved JSON parsing error when saving manual translations on newly downloaded chapters.
+
+
 ## 0.21.0-Y2
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
