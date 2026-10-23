@@ -115,10 +115,44 @@ import uy.kohesive.injekt.api.get
 import tachiyomi.domain.history.interactor.UpsertHistory
 import tachiyomi.domain.history.model.HistoryUpdate
 import eu.kanade.domain.track.interactor.TrackChapter
+import android.view.KeyEvent
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Switch
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
+import coil3.compose.AsyncImage
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.receiveAsFlow
+import org.jsoup.Jsoup
+import java.net.URI
 import java.util.Date
 import android.app.Application
 
 class NovelReaderActivity : ComponentActivity() {
+
+    private val volumeScrollChannel = Channel<Int>(Channel.BUFFERED)
+    private var volumeKeysScrollEnabled: Boolean = false
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (volumeKeysScrollEnabled) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_VOLUME_UP -> {
+                    volumeScrollChannel.trySend(-1)
+                    return true
+                }
+                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    volumeScrollChannel.trySend(1)
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
 
     companion object {
         fun newIntent(context: Context, mangaId: Long, chapterId: Long): Intent {
@@ -153,9 +187,36 @@ class NovelReaderActivity : ComponentActivity() {
         AMOLED("Preto Puro", Color(0xFF000000), Color(0xFFDCDCDC)),
     }
 
-    private fun formatNovelText(raw: String): String {
+    enum class NovelFontFamily(val label: String, val family: FontFamily) {
+        SANS("Sem Serifa", FontFamily.SansSerif),
+        SERIF("Literária (Serifa)", FontFamily.Serif),
+        MONO("Monoespaçada", FontFamily.Monospace),
+    }
+
+    private fun formatNovelText(raw: String, baseUrl: String? = null): String {
         if (raw.isBlank()) return ""
-        val withoutBreaks = raw
+        val withImageTokens = runCatching {
+            val doc = if (baseUrl != null) Jsoup.parse(raw, baseUrl) else Jsoup.parse(raw)
+            doc.select("img").forEach { img ->
+                val rawSrc = img.attr("abs:src").ifBlank {
+                    img.attr("src").ifBlank {
+                        img.attr("data-src").ifBlank { img.attr("data-original") }
+                    }
+                }.trim()
+                if (rawSrc.isNotBlank()) {
+                    val resolved = if (baseUrl != null && !rawSrc.startsWith("http")) {
+                        runCatching { URI(baseUrl).resolve(rawSrc).toString() }.getOrDefault(rawSrc)
+                    } else {
+                        rawSrc
+                    }
+                    img.before("\n\n[[IMG:$resolved]]\n\n")
+                }
+                img.remove()
+            }
+            doc.body().html()
+        }.getOrDefault(raw)
+
+        val withoutBreaks = withImageTokens
             .replace(Regex("(?i)<br\\s*/?>"), "\n")
             .replace(Regex("(?i)</p>"), "\n\n")
             .replace(Regex("(?i)</div>"), "\n\n")
@@ -186,6 +247,13 @@ class NovelReaderActivity : ComponentActivity() {
             .joinToString("\n\n")
             .replace(Regex("\\n{3,}"), "\n\n")
             .trim()
+    }
+
+    private fun stripImageTokensForTts(text: String): String {
+        return text
+            .lineSequence()
+            .filterNot { it.trim().startsWith("[[IMG:") }
+            .joinToString("\n")
     }
 
     private var audioPlayer: NovelAudioPlayer? = null
@@ -235,19 +303,32 @@ class NovelReaderActivity : ComponentActivity() {
             var speechSpeed by remember {
                 mutableFloatStateOf(prefs.getFloat("novel_tts_speed", 1.0f))
             }
-
-            DisposableEffect(audioPlayer) {
-                audioPlayer?.onStateChanged = { playing ->
-                    isTtsPlaying = playing
-                }
-                onDispose {
-                    audioPlayer?.onStateChanged = null
-                }
+            var autoAdvanceTts by remember {
+                mutableStateOf(prefs.getBoolean("novel_tts_auto_advance", true))
+            }
+            var sleepTimerMinutes by remember {
+                mutableIntStateOf(0)
+            }
+            var activeTtsSnippet by remember {
+                mutableStateOf("")
             }
 
             var menuVisible by remember { mutableStateOf(false) }
 
             var fontSize by remember { mutableFloatStateOf(prefs.getFloat("font_size", 17f)) }
+            var lineHeightMultiplier by remember { mutableFloatStateOf(prefs.getFloat("line_height_mult", 1.6f)) }
+            var paragraphSpacingDp by remember { mutableFloatStateOf(prefs.getFloat("paragraph_spacing", 14f)) }
+            var horizontalMarginDp by remember { mutableFloatStateOf(prefs.getFloat("horizontal_margin", 20f)) }
+            var justifyText by remember { mutableStateOf(prefs.getBoolean("justify_text", false)) }
+            var fontFamilyChoice by remember {
+                val savedFont = prefs.getString("font_family", NovelFontFamily.SANS.name)
+                mutableStateOf(runCatching { NovelFontFamily.valueOf(savedFont ?: "") }.getOrDefault(NovelFontFamily.SANS))
+            }
+            var volumeScrollPref by remember {
+                val enabled = prefs.getBoolean("volume_keys_scroll", false)
+                volumeKeysScrollEnabled = enabled
+                mutableStateOf(enabled)
+            }
             val savedThemeName = prefs.getString("theme_name", null)
             var readerTheme by remember {
                 mutableStateOf(
@@ -264,38 +345,71 @@ class NovelReaderActivity : ComponentActivity() {
 
             val lazyListState = rememberLazyListState()
 
+            LaunchedEffect(Unit) {
+                volumeScrollChannel.receiveAsFlow().collect { direction ->
+                    val viewportHeight = lazyListState.layoutInfo.viewportSize.height.takeIf { it > 0 } ?: 800
+                    val delta = (viewportHeight * 0.75f).toInt() * direction
+                    lazyListState.scrollBy(delta.toFloat())
+                }
+            }
+
             // Immersive system bars handling
             val insetsController = remember(this) {
                 WindowCompat.getInsetsController(window, window.decorView)
             }
 
             // Function to load a specific chapter's text
-            fun loadChapterContent(state: ChapterItemState) {
+            fun loadChapterContent(state: ChapterItemState, autoPlayTtsWhenReady: Boolean = false) {
                 scope.launch(Dispatchers.IO) {
                     try {
+                        val m = manga ?: getManga.await(mangaId)
+                        val novelSource = m?.let { sourceManager.get(it.source) as? NovelSourceWrapper }
                         val localText = NovelDownloadManager.getDownloadedChapterText(mangaId, state.chapter.id)
                         val rawText = if (localText != null) {
                             localText
                         } else {
-                            val m = manga ?: getManga.await(mangaId) ?: throw Exception("Obra não encontrada")
-                            val source = sourceManager.get(m.source) as? NovelSourceWrapper
-                                ?: throw Exception("Fonte não é um plugin de novel")
-                            source.getChapterText(m.url, state.chapter.url)
+                            if (m == null || novelSource == null) {
+                                throw Exception("Fonte não é um plugin de novel")
+                            }
+                            novelSource.getChapterText(m.url, state.chapter.url)
                         }
 
-                        val cleanText = formatNovelText(rawText)
+                        val cleanText = formatNovelText(rawText, novelSource?.baseUrl)
                         state.originalText = cleanText
                         state.isLoading = false
 
                         // Check cached translation or auto-translate
                         val cached = NovelTranslator.getCached(state.chapter.id)
                         if (cached != null) {
-                            state.translatedText = formatNovelText(cached)
+                            state.translatedText = formatNovelText(cached, novelSource?.baseUrl)
                         } else if (isTranslated) {
                             state.isTranslating = true
-                            val translated = NovelTranslator.translate(state.chapter.id, cleanText)
-                            state.translatedText = formatNovelText(translated)
+                            val translated = NovelTranslator.translate(
+                                chapterId = state.chapter.id,
+                                text = cleanText,
+                                seriesTitle = m?.title.orEmpty(),
+                            )
+                            state.translatedText = formatNovelText(translated, novelSource?.baseUrl)
                             state.isTranslating = false
+                        }
+
+                        if (autoPlayTtsWhenReady) {
+                            withContext(Dispatchers.Main) {
+                                val textToSpeak = if (isTranslated && !state.translatedText.isNullOrBlank()) {
+                                    state.translatedText
+                                } else {
+                                    state.originalText
+                                }
+                                if (!textToSpeak.isNullOrBlank()) {
+                                    audioPlayer?.play(
+                                        text = stripImageTokensForTts(textToSpeak),
+                                        voice = selectedVoice,
+                                        speed = speechSpeed,
+                                        isPortuguese = isTranslated,
+                                        startChunkIndex = 0,
+                                    )
+                                }
+                            }
                         }
                     } catch (e: Exception) {
                         state.error = e.message ?: "Erro ao carregar texto"
@@ -304,15 +418,33 @@ class NovelReaderActivity : ComponentActivity() {
                 }
             }
 
-            fun navigateToChapter(targetChapter: Chapter) {
+            fun navigateToChapter(targetChapter: Chapter, autoStartTts: Boolean = false) {
+                audioPlayer?.stop(resetProgress = true)
                 val existingIndex = loadedChapters.indexOfFirst { it.chapter.id == targetChapter.id }
                 if (existingIndex != -1) {
                     scope.launch { lazyListState.animateScrollToItem(existingIndex) }
+                    if (autoStartTts) {
+                        val existing = loadedChapters[existingIndex]
+                        val textToSpeak = if (isTranslated && !existing.translatedText.isNullOrBlank()) {
+                            existing.translatedText
+                        } else {
+                            existing.originalText
+                        }
+                        if (!textToSpeak.isNullOrBlank()) {
+                            audioPlayer?.play(
+                                text = stripImageTokensForTts(textToSpeak),
+                                voice = selectedVoice,
+                                speed = speechSpeed,
+                                isPortuguese = isTranslated,
+                                startChunkIndex = 0,
+                            )
+                        }
+                    }
                 } else {
                     loadedChapters.clear()
                     val newItem = ChapterItemState(chapter = targetChapter)
                     loadedChapters.add(newItem)
-                    loadChapterContent(newItem)
+                    loadChapterContent(newItem, autoPlayTtsWhenReady = autoStartTts)
                     scope.launch { lazyListState.scrollToItem(0) }
                 }
             }
@@ -320,7 +452,7 @@ class NovelReaderActivity : ComponentActivity() {
             fun toggleTtsPlayback() {
                 val player = audioPlayer ?: return
                 if (player.isPlaying) {
-                    player.stop()
+                    player.stop(resetProgress = false)
                 } else {
                     val currentIdx = lazyListState.firstVisibleItemIndex.coerceIn(0, (loadedChapters.size - 1).coerceAtLeast(0))
                     val activeChapter = loadedChapters.getOrNull(currentIdx) ?: loadedChapters.firstOrNull()
@@ -331,7 +463,7 @@ class NovelReaderActivity : ComponentActivity() {
                     }
                     if (!textToSpeak.isNullOrBlank()) {
                         player.play(
-                            text = textToSpeak,
+                            text = stripImageTokensForTts(textToSpeak),
                             voice = selectedVoice,
                             speed = speechSpeed,
                             isPortuguese = isTranslated,
@@ -339,6 +471,35 @@ class NovelReaderActivity : ComponentActivity() {
                     } else {
                         toast(ATMR.strings.novel_tts_wait_chapter)
                     }
+                }
+            }
+
+            DisposableEffect(audioPlayer, autoAdvanceTts, allChapters) {
+                audioPlayer?.onStateChanged = { playing ->
+                    isTtsPlaying = playing
+                    if (!playing) activeTtsSnippet = ""
+                }
+                audioPlayer?.onChunkChanged = { _, chunkText ->
+                    activeTtsSnippet = chunkText.take(64).trim()
+                }
+                audioPlayer?.onSleepTimerChanged = { mins ->
+                    sleepTimerMinutes = mins
+                }
+                audioPlayer?.onChapterFinished = {
+                    if (autoAdvanceTts && allChapters.isNotEmpty()) {
+                        val currentIdx = lazyListState.firstVisibleItemIndex.coerceIn(0, (loadedChapters.size - 1).coerceAtLeast(0))
+                        val activeChapter = loadedChapters.getOrNull(currentIdx)?.chapter ?: loadedChapters.lastOrNull()?.chapter
+                        val allIdx = allChapters.indexOfFirst { it.id == activeChapter?.id }
+                        if (allIdx != -1 && allIdx + 1 < allChapters.size) {
+                            navigateToChapter(allChapters[allIdx + 1], autoStartTts = true)
+                        }
+                    }
+                }
+                onDispose {
+                    audioPlayer?.onStateChanged = null
+                    audioPlayer?.onChunkChanged = null
+                    audioPlayer?.onSleepTimerChanged = null
+                    audioPlayer?.onChapterFinished = null
                 }
             }
 
@@ -356,9 +517,11 @@ class NovelReaderActivity : ComponentActivity() {
                         val firstItem = ChapterItemState(chapter = initial)
                         loadedChapters.add(firstItem)
                         loadChapterContent(firstItem)
-                        if (!initial.read) {
-                            updateChapter.await(ChapterUpdate(id = initial.id, read = true))
-                            firstItem.chapter = initial.copy(read = true)
+                        upsertHistory.await(HistoryUpdate(initial.id, Date(), 0L))
+                        if (initial.lastPageRead > 0L) {
+                            withContext(Dispatchers.Main) {
+                                lazyListState.scrollToItem(0, initial.lastPageRead.toInt().coerceAtLeast(0))
+                            }
                         }
                     }
                 }
@@ -388,27 +551,36 @@ class NovelReaderActivity : ComponentActivity() {
                 }
             }
 
-            // Automatic mark as read when user scrolls through a chapter
+            // Save scroll offset & mark read when user scrolls through a chapter
             LaunchedEffect(lazyListState) {
                 snapshotFlow {
-                    lazyListState.firstVisibleItemIndex
+                    Triple(
+                        lazyListState.firstVisibleItemIndex,
+                        lazyListState.firstVisibleItemScrollOffset,
+                        !lazyListState.canScrollForward,
+                    )
                 }
                 .distinctUntilChanged()
-                .collect { firstVisibleIndex ->
+                .debounce(350L)
+                .collectLatest { (firstVisibleIndex, scrollOffset, reachedEnd) ->
                     if (firstVisibleIndex in loadedChapters.indices) {
                         val item = loadedChapters[firstVisibleIndex]
-                        if (!item.chapter.read) {
-                            withContext(Dispatchers.IO) {
-                                updateChapter.await(ChapterUpdate(id = item.chapter.id, read = true))
-                                upsertHistory.await(HistoryUpdate(item.chapter.id, Date(), 0L))
+                        val markAsRead = item.chapter.read || reachedEnd || firstVisibleIndex > 0
+                        withContext(Dispatchers.IO) {
+                            updateChapter.await(
+                                ChapterUpdate(
+                                    id = item.chapter.id,
+                                    read = markAsRead,
+                                    lastPageRead = if (reachedEnd) 0L else scrollOffset.toLong(),
+                                ),
+                            )
+                            upsertHistory.await(HistoryUpdate(item.chapter.id, Date(), 0L))
+                            if (markAsRead && !item.chapter.read) {
                                 trackChapter.await(appContext, mangaId, item.chapter.chapterNumber.toDouble())
                             }
+                        }
+                        if (markAsRead && !item.chapter.read) {
                             item.chapter = item.chapter.copy(read = true)
-                        } else {
-                            // Even if already read, update history when user views it again
-                            withContext(Dispatchers.IO) {
-                                upsertHistory.await(HistoryUpdate(item.chapter.id, Date(), 0L))
-                            }
                         }
                     }
                 }
@@ -518,7 +690,7 @@ class NovelReaderActivity : ComponentActivity() {
                                     ) {
                                         menuVisible = !menuVisible
                                     }
-                                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                                    .padding(horizontal = horizontalMarginDp.dp, vertical = 16.dp),
                             ) {
                                 // Chapter Header Divider
                                 if (index > 0) {
@@ -532,6 +704,7 @@ class NovelReaderActivity : ComponentActivity() {
                                     text = item.chapter.name,
                                     style = MaterialTheme.typography.titleLarge.copy(
                                         fontWeight = FontWeight.Bold,
+                                        fontFamily = fontFamilyChoice.family,
                                     ),
                                     color = if (readerTheme == ReaderTheme.DEFAULT) MaterialTheme.colorScheme.primary else resolvedTextColor,
                                     modifier = Modifier
@@ -585,15 +758,51 @@ class NovelReaderActivity : ComponentActivity() {
                                             item.originalText ?: ""
                                         }
 
-                                        Text(
-                                            text = displayText,
-                                            style = MaterialTheme.typography.bodyLarge.copy(
-                                                fontSize = fontSize.sp,
-                                                lineHeight = (fontSize * 1.6f).sp,
-                                            ),
-                                            color = resolvedTextColor,
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
+                                        val blocks = remember(displayText) {
+                                            displayText.split("\n\n").map { it.trim() }.filter { it.isNotEmpty() }
+                                        }
+
+                                        blocks.forEach { blockText ->
+                                            if (blockText.startsWith("[[IMG:") && blockText.endsWith("]]")) {
+                                                val imgUrl = blockText.removePrefix("[[IMG:").removeSuffix("]]").trim()
+                                                AsyncImage(
+                                                    model = imgUrl,
+                                                    contentDescription = null,
+                                                    contentScale = ContentScale.FillWidth,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = (paragraphSpacingDp / 2f).dp)
+                                                        .clip(RoundedCornerShape(8.dp)),
+                                                )
+                                            } else {
+                                                val isTtsHighlighted = isTtsPlaying &&
+                                                    activeTtsSnippet.length >= 12 &&
+                                                    blockText.contains(activeTtsSnippet.take(28), ignoreCase = true)
+                                                Text(
+                                                    text = blockText,
+                                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                                        fontSize = fontSize.sp,
+                                                        lineHeight = (fontSize * lineHeightMultiplier).sp,
+                                                        fontFamily = fontFamilyChoice.family,
+                                                        textAlign = if (justifyText) TextAlign.Justify else TextAlign.Start,
+                                                    ),
+                                                    color = resolvedTextColor,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .then(
+                                                            if (isTtsHighlighted) {
+                                                                Modifier
+                                                                    .clip(RoundedCornerShape(6.dp))
+                                                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                                                                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                                                            } else {
+                                                                Modifier
+                                                            },
+                                                        )
+                                                        .padding(bottom = paragraphSpacingDp.dp),
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -667,11 +876,19 @@ class NovelReaderActivity : ComponentActivity() {
                                 IconButton(onClick = {
                                     isTranslated = !isTranslated
                                     if (isTranslated) {
+                                        val novelSource = manga?.let { sourceManager.get(it.source) as? NovelSourceWrapper }
                                         loadedChapters.forEach { item ->
                                             if (item.translatedText == null && item.originalText != null) {
                                                 scope.launch(Dispatchers.IO) {
                                                     item.isTranslating = true
-                                                    item.translatedText = formatNovelText(NovelTranslator.translate(item.chapter.id, item.originalText!!))
+                                                    item.translatedText = formatNovelText(
+                                                        NovelTranslator.translate(
+                                                            chapterId = item.chapter.id,
+                                                            text = item.originalText!!,
+                                                            seriesTitle = manga?.title.orEmpty(),
+                                                        ),
+                                                        novelSource?.baseUrl,
+                                                    )
                                                     item.isTranslating = false
                                                 }
                                             }
@@ -866,7 +1083,11 @@ class NovelReaderActivity : ComponentActivity() {
                         )
                     },
                     text = {
-                        Column {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                        ) {
                             // Font Size Adjustment
                             Text(
                                 text = stringResource(ATMR.strings.novel_font_size, fontSize.toInt()),
@@ -889,7 +1110,135 @@ class NovelReaderActivity : ComponentActivity() {
                                 ),
                             )
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Font Family Selection
+                            Text(
+                                text = "Tipografia / Fonte",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = uiTextColor,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                NovelFontFamily.entries.forEach { familyOption ->
+                                    FilterChip(
+                                        selected = fontFamilyChoice == familyOption,
+                                        onClick = {
+                                            fontFamilyChoice = familyOption
+                                            prefs.edit().putString("font_family", familyOption.name).apply()
+                                        },
+                                        label = { Text(familyOption.label, style = MaterialTheme.typography.labelSmall) },
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Line Height & Paragraph Spacing & Margins
+                            Text(
+                                text = "Altura da linha (${"%.1f".format(Locale.US, lineHeightMultiplier)}x)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = uiTextColor,
+                            )
+                            Slider(
+                                value = lineHeightMultiplier,
+                                onValueChange = {
+                                    lineHeightMultiplier = it
+                                    prefs.edit().putFloat("line_height_mult", it).apply()
+                                },
+                                valueRange = 1.2f..2.2f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = uiSubtextColor.copy(alpha = 0.3f),
+                                ),
+                            )
+
+                            Text(
+                                text = "Espaçamento entre parágrafos (${paragraphSpacingDp.toInt()}dp)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = uiTextColor,
+                            )
+                            Slider(
+                                value = paragraphSpacingDp,
+                                onValueChange = {
+                                    paragraphSpacingDp = it
+                                    prefs.edit().putFloat("paragraph_spacing", it).apply()
+                                },
+                                valueRange = 6f..28f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = uiSubtextColor.copy(alpha = 0.3f),
+                                ),
+                            )
+
+                            Text(
+                                text = "Margens laterais (${horizontalMarginDp.toInt()}dp)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = uiTextColor,
+                            )
+                            Slider(
+                                value = horizontalMarginDp,
+                                onValueChange = {
+                                    horizontalMarginDp = it
+                                    prefs.edit().putFloat("horizontal_margin", it).apply()
+                                },
+                                valueRange = 10f..40f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = uiSubtextColor.copy(alpha = 0.3f),
+                                ),
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "Texto Justificado",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = uiTextColor,
+                                )
+                                Switch(
+                                    checked = justifyText,
+                                    onCheckedChange = {
+                                        justifyText = it
+                                        prefs.edit().putBoolean("justify_text", it).apply()
+                                    },
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "Rolar com botões de volume",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = uiTextColor,
+                                )
+                                Switch(
+                                    checked = volumeScrollPref,
+                                    onCheckedChange = {
+                                        volumeScrollPref = it
+                                        volumeKeysScrollEnabled = it
+                                        prefs.edit().putBoolean("volume_keys_scroll", it).apply()
+                                    },
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
 
                             // Theme Selection
                             Text(
@@ -1019,7 +1368,7 @@ class NovelReaderActivity : ComponentActivity() {
                                             selectedVoice = voice
                                             prefs.edit().putString("novel_tts_voice", voice.id).apply()
                                             if (isTtsPlaying) {
-                                                toggleTtsPlayback()
+                                                audioPlayer?.updateVoiceOrSpeed(voice, speechSpeed, isTranslated)
                                             }
                                         }
                                         .padding(vertical = 4.dp, horizontal = 2.dp),
@@ -1031,7 +1380,7 @@ class NovelReaderActivity : ComponentActivity() {
                                             selectedVoice = voice
                                             prefs.edit().putString("novel_tts_voice", voice.id).apply()
                                             if (isTtsPlaying) {
-                                                toggleTtsPlayback()
+                                                audioPlayer?.updateVoiceOrSpeed(voice, speechSpeed, isTranslated)
                                             }
                                         },
                                     )
@@ -1081,7 +1430,7 @@ class NovelReaderActivity : ComponentActivity() {
                                                 speechSpeed = speedOption
                                                 prefs.edit().putFloat("novel_tts_speed", speedOption).apply()
                                                 if (isTtsPlaying) {
-                                                    toggleTtsPlayback()
+                                                    audioPlayer?.updateVoiceOrSpeed(selectedVoice, speedOption, isTranslated)
                                                 }
                                             }
                                             .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -1092,6 +1441,67 @@ class NovelReaderActivity : ComponentActivity() {
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = if (isSpeedSelected) FontWeight.Bold else FontWeight.Normal,
                                             color = if (isSpeedSelected) MaterialTheme.colorScheme.onPrimary else uiTextColor,
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(color = uiSubtextColor.copy(alpha = 0.2f))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "Avançar cap. automaticamente",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = uiTextColor,
+                                )
+                                Switch(
+                                    checked = autoAdvanceTts,
+                                    onCheckedChange = {
+                                        autoAdvanceTts = it
+                                        prefs.edit().putBoolean("novel_tts_auto_advance", it).apply()
+                                    },
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = if (sleepTimerMinutes > 0) "Sleep Timer (${sleepTimerMinutes} min restantes)" else "Sleep Timer (Desligar narração)",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                listOf(0, 15, 30, 45, 60).forEach { mins ->
+                                    val isTimerSelected = sleepTimerMinutes == mins
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (isTimerSelected) MaterialTheme.colorScheme.primary
+                                                else uiSubtextColor.copy(alpha = 0.12f),
+                                            )
+                                            .clickable {
+                                                sleepTimerMinutes = mins
+                                                audioPlayer?.setSleepTimer(mins)
+                                            }
+                                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            text = if (mins == 0) "Off" else "${mins}m",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = if (isTimerSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isTimerSelected) MaterialTheme.colorScheme.onPrimary else uiTextColor,
                                         )
                                     }
                                 }

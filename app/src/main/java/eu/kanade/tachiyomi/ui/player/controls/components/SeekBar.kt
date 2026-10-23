@@ -17,11 +17,14 @@
 
 package eu.kanade.tachiyomi.ui.player.controls.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -35,7 +38,9 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -89,14 +94,61 @@ fun SeekbarWithTimers(
             },
             modifier = Modifier.width(92.dp),
         )
-        Slider(
-            value = position.coerceIn(0f, duration),
-            valueRange = 0f..duration,
-            onValueChange = onValueChange,
-            onValueChangeFinished = onValueChangeFinished,
+        val safeDuration = duration.coerceAtLeast(1f)
+        Box(
             modifier = Modifier.weight(1f),
-            
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            val primaryColor = MaterialTheme.colorScheme.primary
+            val tertiaryColor = MaterialTheme.colorScheme.tertiary
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp),
+            ) {
+                val trackY = size.height / 2f
+                val bufferEndFraction = (readAheadValue / safeDuration).coerceIn(0f, 1f)
+                val posFraction = (position / safeDuration).coerceIn(0f, 1f)
+                if (bufferEndFraction > posFraction) {
+                    drawLine(
+                        color = primaryColor.copy(alpha = 0.38f),
+                        start = Offset(size.width * posFraction, trackY),
+                        end = Offset(size.width * bufferEndFraction, trackY),
+                        strokeWidth = 4.dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                }
+                chapters.forEachIndexed { index, segment ->
+                    if (segment.start > 0f && segment.start < safeDuration) {
+                        val x = size.width * (segment.start / safeDuration).coerceIn(0f, 1f)
+                        val nextStart = chapters.getOrNull(index + 1)?.start ?: safeDuration
+                        if (segment.color != Color.Unspecified && nextStart > segment.start) {
+                            val endX = size.width * (nextStart / safeDuration).coerceIn(0f, 1f)
+                            drawLine(
+                                color = segment.color.copy(alpha = 0.65f),
+                                start = Offset(x, trackY),
+                                end = Offset(endX, trackY),
+                                strokeWidth = 5.dp.toPx(),
+                                cap = StrokeCap.Butt,
+                            )
+                        }
+                        drawLine(
+                            color = if (segment.color != Color.Unspecified) segment.color else tertiaryColor,
+                            start = Offset(x, 0f),
+                            end = Offset(x, size.height),
+                            strokeWidth = 2.dp.toPx(),
+                        )
+                    }
+                }
+            }
+            Slider(
+                value = position.coerceIn(0f, safeDuration),
+                valueRange = 0f..safeDuration,
+                onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         VideoTimer(
             value = if (timersInverted.second) -remaining else duration,
             isInverted = timersInverted.second,

@@ -1,6 +1,7 @@
 package eu.kanade.presentation.manga.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -18,6 +19,7 @@ import eu.kanade.tachiyomi.R
 enum class MangaCover(val ratio: Float) {
     Square(1f / 1f),
     Book(2f / 3f),
+    Panorama(16f / 9f),
     ;
 
     @Composable
@@ -27,6 +29,7 @@ enum class MangaCover(val ratio: Float) {
         contentDescription: String = "",
         shape: Shape = MaterialTheme.shapes.extraSmall,
         onClick: (() -> Unit)? = null,
+        onLongClick: (() -> Unit)? = null,
     ) {
         AsyncImage(
             model = data,
@@ -37,10 +40,11 @@ enum class MangaCover(val ratio: Float) {
                 .aspectRatio(ratio)
                 .clip(shape)
                 .then(
-                    if (onClick != null) {
-                        Modifier.clickable(
+                    if (onClick != null || onLongClick != null) {
+                        Modifier.combinedClickable(
                             role = Role.Button,
-                            onClick = onClick,
+                            onClick = { onClick?.invoke() },
+                            onLongClick = onLongClick,
                         )
                     } else {
                         Modifier

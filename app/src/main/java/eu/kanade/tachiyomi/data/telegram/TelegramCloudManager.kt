@@ -1576,6 +1576,25 @@ class TelegramCloudManager(
             val chatIdString = preferences.chatId.get()
             val targetChatId = chatIdString.toLongOrNull() ?: return@withContext false
 
+            // 1. Tenta localizar instantaneamente via índice local em cache
+            val indexedChapter = getCloudIndex()
+                .firstOrNull { it.title.equals(mangaTitle, ignoreCase = true) }
+                ?.chapters
+                ?.firstOrNull { it.name.equals(chapterName, ignoreCase = true) }
+
+            if (indexedChapter != null && (indexedChapter.fileId != 0 || indexedChapter.remoteFileId.isNotBlank())) {
+                val indexedPath = downloadFileFromTelegram(indexedChapter.fileId, indexedChapter.remoteFileId)
+                if (indexedPath != null) {
+                    val sFile = File(indexedPath)
+                    if (sFile.exists()) {
+                        sFile.copyTo(localTargetFile, overwrite = true)
+                        sFile.delete()
+                        return@withContext true
+                    }
+                }
+            }
+
+            // 2. Fallback: escaneia histórico recente do canal se não estiver no índice
             var fromMessageId = 0L
             var iterations = 0
             var foundMsg: TdApi.Message? = null
@@ -1607,6 +1626,7 @@ class TelegramCloudManager(
             val sFile = File(downloadedPath)
             if (sFile.exists()) {
                 sFile.copyTo(localTargetFile, overwrite = true)
+                sFile.delete()
                 return@withContext true
             }
             false

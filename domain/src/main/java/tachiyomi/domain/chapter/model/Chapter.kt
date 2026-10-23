@@ -26,9 +26,12 @@ data class Chapter(
     val lastSecondSeen: Long get() = lastPageRead
     val totalSeconds: Long
         get() = memo["total_seconds"]?.toString()?.trim('"')?.toLongOrNull() ?: 0L
-    val fillermark: Boolean get() = false
-    val summary: String? get() = null
-    val previewUrl: String? get() = null
+    val fillermark: Boolean
+        get() = memo["fillermark"]?.toString()?.trim('"')?.toBooleanStrictOrNull() ?: false
+    val summary: String?
+        get() = memo["summary"]?.toString()?.trim('"')?.takeIf { it.isNotBlank() }
+    val previewUrl: String?
+        get() = memo["preview_url"]?.toString()?.trim('"')?.takeIf { it.isNotBlank() }
 
     val isRecognizedNumber: Boolean
         get() = chapterNumber >= 0f

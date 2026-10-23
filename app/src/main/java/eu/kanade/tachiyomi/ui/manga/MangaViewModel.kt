@@ -856,7 +856,12 @@ class MangaViewModel(
             }
             ChapterDownloadAction.START_NOW -> {
                 val chapter = items.singleOrNull()?.chapter ?: return
-                startDownload(listOf(chapter), true)
+                val state = successState ?: return
+                if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
+                    updateSuccessState { it.copy(dialog = Dialog.ShowQualities(chapter, state.manga, state.source)) }
+                } else {
+                    startDownload(listOf(chapter), true)
+                }
             }
             ChapterDownloadAction.CANCEL -> {
                 val chapterId = items.singleOrNull()?.id ?: return
@@ -955,7 +960,9 @@ class MangaViewModel(
 
     private fun cancelDownload(chapterId: Long) {
         val state = successState ?: return
-        if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
+        if (state.source is eu.kanade.tachiyomi.source.INovelSource) {
+            NovelDownloadManager.cancelDownload(chapterId)
+        } else if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
             val activeDownload = animeDownloadManager.getQueuedDownloadOrNull(chapterId) ?: return
             animeDownloadManager.cancelQueuedDownloads(listOf(activeDownload))
             updateAnimeDownloadState(activeDownload.apply { status = eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.NOT_DOWNLOADED })
@@ -1047,7 +1054,9 @@ class MangaViewModel(
      */
     private fun downloadChapters(chapters: List<Chapter>) {
         val manga = successState?.manga ?: return
-        if (successState?.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
+        if (successState?.source is eu.kanade.tachiyomi.source.INovelSource) {
+            NovelDownloadManager.downloadChapters(manga, chapters)
+        } else if (successState?.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
             animeDownloadManager.downloadChapters(manga, chapters)
         } else {
             downloadManager.downloadChapters(manga, chapters)
@@ -1334,6 +1343,11 @@ class MangaViewModel(
         data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class Migrate(val target: Manga, val current: Manga) : Dialog
         data class SetFetchInterval(val manga: Manga) : Dialog
+        data class ShowQualities(
+            val episode: Chapter,
+            val anime: Manga,
+            val source: Source,
+        ) : Dialog
         data object RemoveFromLibrary : Dialog
         data object SettingsSheet : Dialog
         data object TrackSheet : Dialog

@@ -37,6 +37,8 @@ class UiPreferences(
 
     val imagesInDescription: Preference<Boolean> = preferenceStore.getBoolean("pref_render_images_description", true)
 
+    val panoramaCover: Preference<Boolean> = preferenceStore.getBoolean("pref_panorama_cover", false)
+
     val lastUsedLibraryMedia: Preference<String> = preferenceStore.getString("last_used_library_media", "Manga")
 
     val lastUsedBrowseMedia: Preference<String> = preferenceStore.getString("last_used_browse_media", "Manga")

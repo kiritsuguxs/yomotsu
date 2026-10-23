@@ -64,7 +64,8 @@ fun EpisodeListDialog(
     onDismissRequest: () -> Unit,
 ) {
     val context = LocalContext.current
-    val itemScrollIndex = (episodeList.size - currentEpisodeIndex) - 1
+    val safeCurrentIndex = currentEpisodeIndex.coerceIn(0, (episodeList.size - 1).coerceAtLeast(0))
+    val itemScrollIndex = ((episodeList.size - safeCurrentIndex) - 1).coerceAtLeast(0)
     val episodeListState = rememberLazyListState(initialFirstVisibleItemIndex = itemScrollIndex)
     val dateFormatter = remember(dateFormat) { UiPreferences.dateFormat(dateFormat) }
 
@@ -86,7 +87,7 @@ fun EpisodeListDialog(
                     contentType = { "episode" },
                 ) { episode ->
 
-                    val isCurrentEpisode = episode.id == episodeList[currentEpisodeIndex].id
+                    val isCurrentEpisode = episodeList.getOrNull(safeCurrentIndex)?.id == episode.id
 
                     val title = if (displayMode == Anime.EPISODE_DISPLAY_NUMBER) {
                         stringResource(
@@ -133,15 +134,22 @@ private fun EpisodeListItem(
     onEpisodeClicked: (Long?) -> Unit,
 ) {
     var isBookmarked by remember { mutableStateOf(episode.bookmark) }
+    var isFillermarked by remember {
+        mutableStateOf(
+            episode.memo["fillermark"]?.toString()?.trim('"')?.toBooleanStrictOrNull() ?: false,
+        )
+    }
     var textHeight by remember { mutableIntStateOf(0) }
 
     val defaultColor = MaterialTheme.colorScheme.onSurface
     val bookmarkAlpha = if (isBookmarked) 1f else DISABLED_ALPHA
     val bookmarkColor = if (isBookmarked) MaterialTheme.colorScheme.primary else defaultColor
-    val episodeColor = if (isBookmarked) {
-        bookmarkColor
-    } else {
-        defaultColor
+    val fillermarkAlpha = if (isFillermarked) 1f else DISABLED_ALPHA
+    val fillermarkColor = if (isFillermarked) MaterialTheme.colorScheme.tertiary else defaultColor
+    val episodeColor = when {
+        isBookmarked -> bookmarkColor
+        isFillermarked -> fillermarkColor
+        else -> defaultColor
     }
     val textAlpha = if (episode.read) DISABLED_ALPHA else 1f
     val textWeight = if (isCurrentEpisode) FontWeight.Bold else FontWeight.Normal
@@ -151,6 +159,10 @@ private fun EpisodeListItem(
         episode.bookmark = bookmarked
         isBookmarked = bookmarked
         onBookmarkClicked(episode.id, bookmarked)
+    }
+    val clickFillermark: (Boolean) -> Unit = { fillermarked ->
+        isFillermarked = fillermarked
+        onFillermarkClicked(episode.id, fillermarked)
     }
 
 
@@ -168,6 +180,16 @@ private fun EpisodeListItem(
                 modifier = Modifier
                     .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp })
                     .alpha(bookmarkAlpha),
+            )
+        }
+        IconButton(onClick = { clickFillermark(!isFillermarked) }) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Label,
+                contentDescription = null,
+                tint = fillermarkColor,
+                modifier = Modifier
+                    .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp })
+                    .alpha(fillermarkAlpha),
             )
         }
 

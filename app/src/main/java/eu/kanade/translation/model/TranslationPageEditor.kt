@@ -23,8 +23,10 @@ class TranslationPageEditor(
         foregroundColor: Int?,
         widthScale: Float,
         heightScale: Float,
+        offsetX: Float,
+        offsetY: Float,
         onResult: (Result<String>) -> Unit,
-    ) -> Unit = { _, translation, _, _, _, _, onResult -> onResult(Result.success(translation)) },
+    ) -> Unit = { _, translation, _, _, _, _, _, _, onResult -> onResult(Result.success(translation)) },
 )
 
 /**

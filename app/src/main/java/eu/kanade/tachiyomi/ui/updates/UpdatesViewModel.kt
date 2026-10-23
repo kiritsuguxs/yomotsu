@@ -161,25 +161,67 @@ class UpdatesViewModel(
 
     private fun List<UpdatesWithRelations>.toUpdateItems(): List<UpdatesItem> {
         val queuedDownloads = downloadManager.getQueuedDownloadsByChapterId()
+        val animeDownloadManager = Injekt.get<eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager>()
+        val novelDownloaded = eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadedChapters.value
+        val novelDownloading = eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadingChapters.value
         return this
             .map { update ->
-                val activeDownload = queuedDownloads[update.chapterId]
-                val downloaded = downloadManager.isChapterDownloaded(
-                    update.chapterName,
-                    update.scanlator,
-                    update.chapterUrl,
-                    update.mangaTitle,
-                    update.sourceId,
-                )
-                val downloadState = when {
-                    activeDownload != null -> activeDownload.status
-                    downloaded -> Download.State.DOWNLOADED
-                    else -> Download.State.NOT_DOWNLOADED
+                val source = sourceManager.get(update.sourceId)
+                val (downloadState, downloadProgress) = when (source) {
+                    is eu.kanade.tachiyomi.source.INovelSource -> {
+                        val state = when {
+                            update.chapterId in novelDownloading -> Download.State.DOWNLOADING
+                            update.chapterId in novelDownloaded ||
+                                eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.isChapterDownloaded(
+                                    update.mangaId,
+                                    update.chapterId,
+                                ) -> Download.State.DOWNLOADED
+                            else -> Download.State.NOT_DOWNLOADED
+                        }
+                        state to 0
+                    }
+                    is eu.kanade.tachiyomi.animesource.AnimeSource -> {
+                        val activeAnime = animeDownloadManager.getQueuedDownloadOrNull(update.chapterId)
+                        val downloadedAnime = animeDownloadManager.isChapterDownloaded(
+                            update.chapterName,
+                            update.scanlator,
+                            update.mangaTitle,
+                            update.sourceId,
+                        )
+                        val state = when {
+                            activeAnime != null -> when (activeAnime.status) {
+                                eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.NOT_DOWNLOADED -> Download.State.NOT_DOWNLOADED
+                                eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.QUEUE -> Download.State.QUEUE
+                                eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.DOWNLOADING -> Download.State.DOWNLOADING
+                                eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.DOWNLOADED -> Download.State.DOWNLOADED
+                                eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.ERROR -> Download.State.ERROR
+                            }
+                            downloadedAnime -> Download.State.DOWNLOADED
+                            else -> Download.State.NOT_DOWNLOADED
+                        }
+                        state to (activeAnime?.progress ?: 0)
+                    }
+                    else -> {
+                        val activeDownload = queuedDownloads[update.chapterId]
+                        val downloaded = downloadManager.isChapterDownloaded(
+                            update.chapterName,
+                            update.scanlator,
+                            update.chapterUrl,
+                            update.mangaTitle,
+                            update.sourceId,
+                        )
+                        val state = when {
+                            activeDownload != null -> activeDownload.status
+                            downloaded -> Download.State.DOWNLOADED
+                            else -> Download.State.NOT_DOWNLOADED
+                        }
+                        state to (activeDownload?.progress ?: 0)
+                    }
                 }
                 UpdatesItem(
                     update = update,
                     downloadStateProvider = { downloadState },
-                    downloadProgressProvider = { activeDownload?.progress ?: 0 },
+                    downloadProgressProvider = { downloadProgress },
                     selected = update.chapterId in selectedChapterIds,
                 )
             }
@@ -241,13 +283,39 @@ class UpdatesViewModel(
     }
 
     private fun startDownloadingNow(chapterId: Long) {
-        downloadManager.startDownloadNow(chapterId)
+        val item = state.value.items.firstOrNull { it.update.chapterId == chapterId }
+        val source = item?.let { sourceManager.get(it.update.sourceId) }
+        when (source) {
+            is eu.kanade.tachiyomi.source.INovelSource -> {
+                if (item != null) downloadChapters(listOf(item))
+            }
+            is eu.kanade.tachiyomi.animesource.AnimeSource -> {
+                Injekt.get<eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager>().startDownloadNow(chapterId)
+            }
+            else -> {
+                downloadManager.startDownloadNow(chapterId)
+            }
+        }
     }
 
     private fun cancelDownload(chapterId: Long) {
-        val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return
-        downloadManager.cancelQueuedDownloads(listOf(activeDownload))
-        updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
+        val item = state.value.items.firstOrNull { it.update.chapterId == chapterId }
+        val source = item?.let { sourceManager.get(it.update.sourceId) }
+        when (source) {
+            is eu.kanade.tachiyomi.source.INovelSource -> {
+                eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.cancelDownload(chapterId)
+            }
+            is eu.kanade.tachiyomi.animesource.AnimeSource -> {
+                val animeDownloadManager = Injekt.get<eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager>()
+                val activeDownload = animeDownloadManager.getQueuedDownloadOrNull(chapterId) ?: return
+                animeDownloadManager.cancelQueuedDownloads(listOf(activeDownload))
+            }
+            else -> {
+                val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return
+                downloadManager.cancelQueuedDownloads(listOf(activeDownload))
+                updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
+            }
+        }
     }
 
     /**
@@ -287,14 +355,22 @@ class UpdatesViewModel(
      */
     private fun downloadChapters(updatesItem: List<UpdatesItem>) {
         viewModelScope.launchNonCancellable {
+            val animeDownloadManager = Injekt.get<eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager>()
             val groupedUpdates = updatesItem.groupBy { it.update.mangaId }.values
             for (updates in groupedUpdates) {
                 val mangaId = updates.first().update.mangaId
                 val manga = getManga.await(mangaId) ?: continue
                 // Don't download if source isn't available
-                sourceManager.get(manga.source) ?: continue
+                val source = sourceManager.get(manga.source) ?: continue
                 val chapters = updates.mapNotNull { getChapter.await(it.update.chapterId) }
-                downloadManager.downloadChapters(manga, chapters)
+                when (source) {
+                    is eu.kanade.tachiyomi.source.INovelSource ->
+                        eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadChapters(manga, chapters)
+                    is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                        animeDownloadManager.downloadChapters(manga, chapters)
+                    else ->
+                        downloadManager.downloadChapters(manga, chapters)
+                }
             }
         }
     }
@@ -306,6 +382,7 @@ class UpdatesViewModel(
      */
     fun deleteChapters(updatesItem: List<UpdatesItem>) {
         viewModelScope.launchNonCancellable {
+            val animeDownloadManager = Injekt.get<eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager>()
             updatesItem
                 .groupBy { it.update.mangaId }
                 .entries
@@ -313,7 +390,14 @@ class UpdatesViewModel(
                     val manga = getManga.await(mangaId) ?: return@forEach
                     val source = sourceManager.get(manga.source) ?: return@forEach
                     val chapters = updates.mapNotNull { getChapter.await(it.update.chapterId) }
-                    downloadManager.deleteChapters(chapters, manga, source)
+                    when (source) {
+                        is eu.kanade.tachiyomi.source.INovelSource ->
+                            chapters.forEach { eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.deleteChapter(manga.id, it.id) }
+                        is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                            animeDownloadManager.deleteChapters(chapters, manga, source)
+                        else ->
+                            downloadManager.deleteChapters(chapters, manga, source)
+                    }
                 }
         }
         toggleAllSelection(false)

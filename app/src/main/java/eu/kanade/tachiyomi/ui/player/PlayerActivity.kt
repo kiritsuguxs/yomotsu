@@ -717,7 +717,9 @@ class PlayerActivity : BaseActivity() {
     internal fun onObserverEvent(property: String, value: Double) {
         if (player.isExiting) return
         when (property) {
-            "video-params/aspect" -> if (isPipSupportedAndEnabled) createPipParams()
+            "video-params/aspect" -> if (isPipSupportedAndEnabled && isInPictureInPictureMode) {
+                setPictureInPictureParams(createPipParams())
+            }
         }
     }
 
@@ -785,9 +787,12 @@ class PlayerActivity : BaseActivity() {
         )
         builder.setSourceRectHint(pipRect)
         mpv.getPropertyInt("video-params/h")?.let { height ->
-            val width = height * player.getVideoOutAspect()!!
-            val rational = Rational(height, width.toInt()).toFloat()
-            if (rational in 0.42..2.38) builder.setAspectRatio(Rational(width.toInt(), height))
+            val aspect = player.getVideoOutAspect() ?: return@let
+            val width = height * aspect
+            if (width > 0 && height > 0) {
+                val rational = Rational(height, width.toInt()).toFloat()
+                if (rational in 0.42..2.38) builder.setAspectRatio(Rational(width.toInt(), height))
+            }
         }
         return builder.build()
     }
@@ -843,7 +848,7 @@ class PlayerActivity : BaseActivity() {
             PlayerOrientation.ReversePortrait -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
             PlayerOrientation.SensorPortrait -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
             PlayerOrientation.Landscape -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            PlayerOrientation.ReverseLandscape -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+            PlayerOrientation.ReverseLandscape -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
             PlayerOrientation.SensorLandscape -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
     }

@@ -122,6 +122,9 @@ fun MangaInfoBox(
     doSearch: (query: String, global: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val uiPreferences = remember { Injekt.get<UiPreferences>() }
+    var panoramaCover by remember { mutableStateOf(uiPreferences.panoramaCover.get()) }
+
     Box(modifier = modifier) {
         // Backdrop
         val backdropGradientColors = listOf(
@@ -143,19 +146,23 @@ fun MangaInfoBox(
                         brush = Brush.verticalGradient(colors = backdropGradientColors),
                     )
                 }
-                .blur(4.dp)
-                .alpha(0.2f),
+                .blur(if (panoramaCover) 2.dp else 4.dp)
+                .alpha(if (panoramaCover) 0.35f else 0.2f),
         )
 
         // Manga & source info
         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-            if (!isTabletUi) {
+            if (!isTabletUi && !panoramaCover) {
                 MangaAndSourceTitlesSmall(
                     appBarPadding = appBarPadding,
                     manga = manga,
                     sourceName = sourceName,
                     isStubSource = isStubSource,
                     onCoverClick = onCoverClick,
+                    onCoverLongClick = {
+                        panoramaCover = !panoramaCover
+                        uiPreferences.panoramaCover.set(panoramaCover)
+                    },
                     doSearch = doSearch,
                 )
             } else {
@@ -164,7 +171,12 @@ fun MangaInfoBox(
                     manga = manga,
                     sourceName = sourceName,
                     isStubSource = isStubSource,
+                    isPanorama = panoramaCover,
                     onCoverClick = onCoverClick,
+                    onCoverLongClick = {
+                        panoramaCover = !panoramaCover
+                        uiPreferences.panoramaCover.set(panoramaCover)
+                    },
                     doSearch = doSearch,
                 )
             }
@@ -348,7 +360,9 @@ private fun MangaAndSourceTitlesLarge(
     manga: Manga,
     sourceName: String,
     isStubSource: Boolean,
+    isPanorama: Boolean = false,
     onCoverClick: () -> Unit,
+    onCoverLongClick: (() -> Unit)? = null,
     doSearch: (query: String, global: Boolean) -> Unit,
 ) {
     Column(
@@ -357,14 +371,17 @@ private fun MangaAndSourceTitlesLarge(
             .padding(start = 16.dp, top = appBarPadding + 16.dp, end = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        MangaCover.Book(
-            modifier = Modifier.fillMaxWidth(0.65f),
+        val coverType = if (isPanorama) MangaCover.Panorama else MangaCover.Book
+        coverType(
+            modifier = Modifier.fillMaxWidth(if (isPanorama) 0.96f else 0.65f),
             data = ImageRequest.Builder(LocalContext.current)
                 .data(manga)
                 .crossfade(true)
                 .build(),
             contentDescription = stringResource(MR.strings.manga_cover),
+            shape = if (isPanorama) MaterialTheme.shapes.medium else MaterialTheme.shapes.extraSmall,
             onClick = onCoverClick,
+            onLongClick = onCoverLongClick,
         )
         Spacer(modifier = Modifier.height(16.dp))
         MangaContentInfo(
@@ -387,6 +404,7 @@ private fun MangaAndSourceTitlesSmall(
     sourceName: String,
     isStubSource: Boolean,
     onCoverClick: () -> Unit,
+    onCoverLongClick: (() -> Unit)? = null,
     doSearch: (query: String, global: Boolean) -> Unit,
 ) {
     Row(
@@ -406,6 +424,7 @@ private fun MangaAndSourceTitlesSmall(
                 .build(),
             contentDescription = stringResource(MR.strings.manga_cover),
             onClick = onCoverClick,
+            onLongClick = onCoverLongClick,
         )
         Column(
             verticalArrangement = Arrangement.spacedBy(2.dp),

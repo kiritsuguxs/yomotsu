@@ -496,7 +496,7 @@ class AnimeDownloader(
                     if (preferences.useExternalDownloader.get() == download.changeDownloader) {
                         progressJob = scope.launch {
                             while (download.status == AnimeDownload.State.DOWNLOADING) {
-                                delay(50)
+                                delay(500)
                                 notifier.onProgressChange(download)
                             }
                         }

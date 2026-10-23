@@ -148,16 +148,19 @@ class OpenRouterTranslator(
             var globalIndex = 0
             for ((pageKey, page) in pages) {
                 page.blocks.forEachIndexed { index, block ->
+                    val cachedTranslation = cached.getOrNull(globalIndex)
                     val res = resJson.optJSONArray(pageKey)?.optString(index, "NULL")
                     val raw = if (res == null || res == "NULL" || res.isBlank()) "" else res
                     val postEdited = if (raw.isNotBlank()) postEditMachineTranslation(block.text, raw, toLang) else ""
-                    val finalTranslation = if (postEdited.isNotBlank()) {
-                        TranslationGlossary.resolve(
+                    val finalTranslation = when {
+                        !cachedTranslation.isNullOrBlank() -> TranslationGlossary.apply(block.text, cachedTranslation, context)
+                        postEdited.isNotBlank() -> TranslationGlossary.resolve(
                             prepared = preparedTexts[globalIndex],
                             translatedText = postEdited,
                             context = context,
                         )
-                    } else ""
+                        else -> ""
+                    }
 
                     if (finalTranslation.contains("RTMTH", ignoreCase = true) ||
                         TranslationRecoveryPolicy.isWatermarkOrCredit(block.text) ||
@@ -168,7 +171,7 @@ class OpenRouterTranslator(
                         block.translation = finalTranslation
                     }
 
-                    if (block.translation.isNotBlank() && cached.getOrNull(globalIndex) == null) {
+                    if (block.translation.isNotBlank() && cachedTranslation == null) {
                         TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], block.translation)
                     }
                     if (block.translation.isNotBlank()) {

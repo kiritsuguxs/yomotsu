@@ -77,6 +77,9 @@ object SettingsTranslationScreen : SearchableSettings {
                         title = stringResource(ATMR.strings.pref_translator_engine),
                         entries = mapOf(
                             TextTranslators.GOOGLE.ordinal to getTranslatorLabel(TextTranslators.GOOGLE),
+                            TextTranslators.GEMINI.ordinal to getTranslatorLabel(TextTranslators.GEMINI),
+                            TextTranslators.OPENROUTER.ordinal to getTranslatorLabel(TextTranslators.OPENROUTER),
+                            TextTranslators.DEEPL.ordinal to getTranslatorLabel(TextTranslators.DEEPL),
                         ).toImmutableMap(),
                     ),
                 ),

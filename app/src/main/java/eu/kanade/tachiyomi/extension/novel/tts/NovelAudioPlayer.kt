@@ -11,6 +11,8 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
@@ -30,17 +32,53 @@ class NovelAudioPlayer(
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var playbackJob: Job? = null
+    private var sleepTimerJob: Job? = null
 
     var isPlaying: Boolean = false
         private set
 
+    var currentChunkIndex: Int = 0
+        private set
+
+    var currentChunkText: String? = null
+        private set
+
+    private var lastRawText: String = ""
+    private var currentChunks: List<String> = emptyList()
+
+    var sleepTimerRemainingMinutes: Int = 0
+        private set
+
     var onStateChanged: ((Boolean) -> Unit)? = null
+    var onChunkChanged: ((Int, String) -> Unit)? = null
+    var onChapterFinished: (() -> Unit)? = null
+    var onSleepTimerChanged: ((Int) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
 
     init {
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         wakeLock = powerManager?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Yomotsu:NovelAudioPlayerWakeLock")
         initNativeTts()
+    }
+
+    fun setSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        sleepTimerRemainingMinutes = minutes.coerceAtLeast(0)
+        onSleepTimerChanged?.invoke(sleepTimerRemainingMinutes)
+        if (minutes <= 0) return
+
+        sleepTimerJob = scope.launch(Dispatchers.Main) {
+            var remaining = minutes
+            while (remaining > 0 && isActive) {
+                delay(60_000L)
+                remaining--
+                sleepTimerRemainingMinutes = remaining
+                onSleepTimerChanged?.invoke(remaining)
+            }
+            if (remaining <= 0 && isPlaying) {
+                stop()
+            }
+        }
     }
 
     private fun acquireWakeLock() {
@@ -70,11 +108,25 @@ class NovelAudioPlayer(
             if (status == TextToSpeech.SUCCESS) {
                 isTtsInitialized = true
                 textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {}
+                    override fun onStart(utteranceId: String?) {
+                        val idx = utteranceId
+                            ?.removePrefix("novel_p_")
+                            ?.removeSuffix("_last")
+                            ?.toIntOrNull()
+                        if (idx != null) {
+                            scope.launch(Dispatchers.Main) {
+                                currentChunkIndex = idx
+                                val chunkStr = currentChunks.getOrNull(idx).orEmpty()
+                                currentChunkText = chunkStr
+                                onChunkChanged?.invoke(idx, chunkStr)
+                            }
+                        }
+                    }
                     override fun onDone(utteranceId: String?) {
                         if (utteranceId?.endsWith("_last") == true) {
                             scope.launch(Dispatchers.Main) {
-                                stop()
+                                stop(resetProgress = true)
+                                onChapterFinished?.invoke()
                             }
                         }
                     }
@@ -148,26 +200,54 @@ class NovelAudioPlayer(
         voice: NovelTtsVoice,
         speed: Float,
         isPortuguese: Boolean,
+        startChunkIndex: Int? = null,
     ) {
-        stop()
+        val resumeIndex = startChunkIndex ?: if (text == lastRawText && currentChunkIndex > 0) currentChunkIndex else 0
+        stop(resetProgress = false)
+        lastRawText = text
         val sanitized = NovelSpeechSanitizer.sanitize(text)
         if (sanitized.isBlank()) {
             onError?.invoke("Texto vazio para narração.")
             return
         }
 
+        val chunks = splitIntoChunks(sanitized)
+        currentChunks = chunks
+        if (chunks.isEmpty()) {
+            onError?.invoke("Texto vazio para narração.")
+            return
+        }
+        val safeStartIndex = resumeIndex.coerceIn(0, chunks.lastIndex)
+        currentChunkIndex = safeStartIndex
+
         isPlaying = true
         onStateChanged?.invoke(true)
         acquireWakeLock()
 
         if (voice.isOnline) {
-            playWithEdgeTts(sanitized, voice, speed, isPortuguese)
+            playWithEdgeTts(chunks, safeStartIndex, voice, speed, isPortuguese)
         } else {
-            playWithNativeTts(sanitized, speed, isPortuguese)
+            playWithNativeTts(chunks, safeStartIndex, speed, isPortuguese)
         }
     }
 
-    private fun playWithNativeTts(text: String, speed: Float, isPortuguese: Boolean) {
+    fun updateVoiceOrSpeed(
+        voice: NovelTtsVoice,
+        speed: Float,
+        isPortuguese: Boolean,
+    ) {
+        if (isPlaying && lastRawText.isNotBlank()) {
+            play(
+                text = lastRawText,
+                voice = voice,
+                speed = speed,
+                isPortuguese = isPortuguese,
+                startChunkIndex = currentChunkIndex,
+            )
+        }
+    }
+
+    private fun playWithNativeTts(chunks: List<String>, startIndex: Int, speed: Float, isPortuguese: Boolean) {
         initNativeTts {
             val tts = textToSpeech ?: return@initNativeTts
             val targetLocale = if (isPortuguese) Locale("pt", "BR") else Locale.getDefault()
@@ -184,9 +264,9 @@ class NovelAudioPlayer(
             configureNativeVoice(tts, effectiveLocale, speed)
             tts.stop()
 
-            val chunks = splitIntoChunks(text)
-            chunks.forEachIndexed { index, chunk ->
-                val queueMode = if (index == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+            for (index in startIndex until chunks.size) {
+                val chunk = chunks[index]
+                val queueMode = if (index == startIndex) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
                 val isLast = index == chunks.lastIndex
                 val utteranceId = if (isLast) "novel_p_${index}_last" else "novel_p_$index"
                 tts.speak(chunk, queueMode, null, utteranceId)
@@ -195,16 +275,16 @@ class NovelAudioPlayer(
     }
 
     private fun playWithEdgeTts(
-        text: String,
+        chunks: List<String>,
+        startIndex: Int,
         voice: NovelTtsVoice,
         speed: Float,
         isPortuguese: Boolean,
     ) {
         playbackJob?.cancel()
         playbackJob = scope.launch(Dispatchers.IO) {
-            val chunks = splitIntoChunks(text)
             if (chunks.isEmpty()) {
-                withContext(Dispatchers.Main) { stop() }
+                withContext(Dispatchers.Main) { stop(resetProgress = true) }
                 return@launch
             }
 
@@ -220,16 +300,27 @@ class NovelAudioPlayer(
                 }
             }
 
-            // Immediately launch synthesis for chunk 0 and prefetch chunk 1 in parallel
-            getChunkDeferred(0)
-            if (chunks.size > 1) {
-                getChunkDeferred(1)
+            // Immediately launch synthesis for startIndex and prefetch startIndex + 1 in parallel
+            getChunkDeferred(startIndex)
+            if (startIndex + 1 < chunks.size) {
+                getChunkDeferred(startIndex + 1)
             }
 
             suspend fun playChunk(chunkIdx: Int) {
-                if (!isPlaying || chunkIdx >= chunks.size) {
-                    withContext(Dispatchers.Main) { stop() }
+                if (!isPlaying) return
+                if (chunkIdx >= chunks.size) {
+                    withContext(Dispatchers.Main) {
+                        stop(resetProgress = true)
+                        onChapterFinished?.invoke()
+                    }
                     return
+                }
+
+                withContext(Dispatchers.Main) {
+                    currentChunkIndex = chunkIdx
+                    val chunkStr = chunks[chunkIdx]
+                    currentChunkText = chunkStr
+                    onChunkChanged?.invoke(chunkIdx, chunkStr)
                 }
 
                 // Prefetch the next chunks in background while current chunk is playing
@@ -244,9 +335,8 @@ class NovelAudioPlayer(
 
                 if (audioBytes == null || audioBytes.isEmpty()) {
                     logcat(LogPriority.INFO) { "Edge TTS unavailable, falling back to Native TTS for remaining chunks from $chunkIdx" }
-                    val remainingText = chunks.subList(chunkIdx, chunks.size).joinToString("\n\n")
                     withContext(Dispatchers.Main) {
-                        playWithNativeTts(remainingText, speed, isPortuguese)
+                        playWithNativeTts(chunks, chunkIdx, speed, isPortuguese)
                     }
                     return
                 }
@@ -256,9 +346,8 @@ class NovelAudioPlayer(
                     FileOutputStream(tempFile).use { it.write(audioBytes) }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Failed to write TTS audio cache" }
-                    val remainingText = chunks.subList(chunkIdx, chunks.size).joinToString("\n\n")
                     withContext(Dispatchers.Main) {
-                        playWithNativeTts(remainingText, speed, isPortuguese)
+                        playWithNativeTts(chunks, chunkIdx, speed, isPortuguese)
                     }
                     return
                 }
@@ -289,11 +378,11 @@ class NovelAudioPlayer(
                 }
             }
 
-            playChunk(0)
+            playChunk(startIndex)
         }
     }
 
-    fun stop() {
+    fun stop(resetProgress: Boolean = false) {
         playbackJob?.cancel()
         playbackJob = null
         try {
@@ -308,6 +397,12 @@ class NovelAudioPlayer(
 
         releaseWakeLock()
 
+        if (resetProgress) {
+            currentChunkIndex = 0
+            currentChunkText = null
+            onChunkChanged?.invoke(-1, "")
+        }
+
         if (isPlaying) {
             isPlaying = false
             onStateChanged?.invoke(false)
@@ -315,7 +410,8 @@ class NovelAudioPlayer(
     }
 
     fun release() {
-        stop()
+        sleepTimerJob?.cancel()
+        stop(resetProgress = true)
         try {
             textToSpeech?.shutdown()
         } catch (_: Throwable) {}

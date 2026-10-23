@@ -77,11 +77,14 @@ data object UpdatesTab : Tab {
             onUpdateSelected = viewModel::toggleSelection,
             onOpenChapter = {
                 val manga = kotlinx.coroutines.runBlocking { Injekt.get<GetManga>().await(it.update.mangaId) }
-                val isAnime = manga?.let { m -> Injekt.get<SourceManager>().get(m.source) is eu.kanade.tachiyomi.animesource.AnimeSource } ?: false
-                val intent = if (isAnime) {
-                    eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
-                } else {
-                    ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                val source = manga?.let { m -> Injekt.get<SourceManager>().get(m.source) }
+                val intent = when (source) {
+                    is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                        eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                    is eu.kanade.tachiyomi.source.INovelSource ->
+                        eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                    else ->
+                        ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
                 }
                 context.startActivity(intent)
             },

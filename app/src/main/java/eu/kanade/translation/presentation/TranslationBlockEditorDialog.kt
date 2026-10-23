@@ -78,9 +78,13 @@ fun TranslationBlockEditorDialog(
     }
     var selectedBg by remember(blockIndex) { mutableStateOf(initialBg) }
     var selectedFg by remember(blockIndex) { mutableStateOf(initialFg) }
+    var bgTouched by remember(blockIndex) { mutableStateOf(false) }
+    var fgTouched by remember(blockIndex) { mutableStateOf(false) }
 
     var widthScalePercent by remember(blockIndex) { mutableIntStateOf(100) }
     var heightScalePercent by remember(blockIndex) { mutableIntStateOf(100) }
+    var offsetXPercent by remember(blockIndex) { mutableIntStateOf(0) }
+    var offsetYPercent by remember(blockIndex) { mutableIntStateOf(0) }
 
     fun handleDelete() {
         isWorking = true
@@ -102,17 +106,27 @@ fun TranslationBlockEditorDialog(
         isWorking = true
         errorMessage = null
 
-        val newBgColor = when (selectedBg) {
-            BalloonBgColor.WHITE -> Color.White.toArgb()
-            BalloonBgColor.BLACK -> Color.Black.toArgb()
-            BalloonBgColor.TRANSPARENT -> Color.Transparent.toArgb()
+        val newBgColor = if (bgTouched) {
+            when (selectedBg) {
+                BalloonBgColor.WHITE -> Color.White.toArgb()
+                BalloonBgColor.BLACK -> Color.Black.toArgb()
+                BalloonBgColor.TRANSPARENT -> Color.Transparent.toArgb()
+            }
+        } else {
+            block.backgroundColor
         }
-        val newFgColor = when (selectedFg) {
-            BalloonFgColor.BLACK -> Color.Black.toArgb()
-            BalloonFgColor.WHITE -> Color.White.toArgb()
+        val newFgColor = if (fgTouched || bgTouched) {
+            when (selectedFg) {
+                BalloonFgColor.BLACK -> Color.Black.toArgb()
+                BalloonFgColor.WHITE -> Color.White.toArgb()
+            }
+        } else {
+            block.foregroundColor
         }
         val wScale = widthScalePercent / 100f
         val hScale = heightScalePercent / 100f
+        val offX = offsetXPercent / 100f
+        val offY = offsetYPercent / 100f
 
         editor.updateBlockCustomization(
             blockIndex,
@@ -121,21 +135,27 @@ fun TranslationBlockEditorDialog(
             newFgColor,
             wScale,
             hScale,
+            offX,
+            offY,
         ) { result ->
             isWorking = false
             result.onSuccess { storedTranslation ->
                 block.translation = storedTranslation
                 block.backgroundColor = newBgColor
                 block.foregroundColor = newFgColor
-                if (wScale != 1.0f || hScale != 1.0f) {
+                if (wScale != 1.0f || hScale != 1.0f || offX != 0f || offY != 0f) {
                     val currentLayout = block.layoutRegion ?: block.sourceRegion()
                     val newWidth = (currentLayout.width * wScale).coerceAtLeast(10f)
                     val newHeight = (currentLayout.height * hScale).coerceAtLeast(10f)
                     val diffX = (newWidth - currentLayout.width) / 2f
                     val diffY = (newHeight - currentLayout.height) / 2f
-                    val newX = (currentLayout.x - diffX).coerceAtLeast(0f)
-                    val newY = (currentLayout.y - diffY).coerceAtLeast(0f)
+                    val deltaX = currentLayout.width * offX
+                    val deltaY = currentLayout.height * offY
+                    val newX = (currentLayout.x - diffX + deltaX).coerceAtLeast(0f)
+                    val newY = (currentLayout.y - diffY + deltaY).coerceAtLeast(0f)
                     val newRegion = TranslationRegion(newX, newY, newWidth, newHeight)
+                    block.x = (block.x + deltaX).coerceAtLeast(0f)
+                    block.y = (block.y + deltaY).coerceAtLeast(0f)
                     block.layoutRegion = newRegion
                     block.cleanupRegion = newRegion
                     block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
@@ -239,6 +259,7 @@ fun TranslationBlockEditorDialog(
                     FilterChip(
                         selected = selectedBg == BalloonBgColor.WHITE,
                         onClick = {
+                            bgTouched = true
                             selectedBg = BalloonBgColor.WHITE
                             selectedFg = BalloonFgColor.BLACK
                         },
@@ -247,6 +268,7 @@ fun TranslationBlockEditorDialog(
                     FilterChip(
                         selected = selectedBg == BalloonBgColor.BLACK,
                         onClick = {
+                            bgTouched = true
                             selectedBg = BalloonBgColor.BLACK
                             selectedFg = BalloonFgColor.WHITE
                         },
@@ -255,6 +277,7 @@ fun TranslationBlockEditorDialog(
                     FilterChip(
                         selected = selectedBg == BalloonBgColor.TRANSPARENT,
                         onClick = {
+                            bgTouched = true
                             selectedBg = BalloonBgColor.TRANSPARENT
                         },
                         label = { Text(stringResource(ATMR.strings.translation_editor_color_transparent)) },
@@ -275,12 +298,18 @@ fun TranslationBlockEditorDialog(
                     ) {
                         FilterChip(
                             selected = selectedFg == BalloonFgColor.BLACK,
-                            onClick = { selectedFg = BalloonFgColor.BLACK },
+                            onClick = {
+                                fgTouched = true
+                                selectedFg = BalloonFgColor.BLACK
+                            },
                             label = { Text(stringResource(ATMR.strings.translation_editor_color_black)) },
                         )
                         FilterChip(
                             selected = selectedFg == BalloonFgColor.WHITE,
-                            onClick = { selectedFg = BalloonFgColor.WHITE },
+                            onClick = {
+                                fgTouched = true
+                                selectedFg = BalloonFgColor.WHITE
+                            },
                             label = { Text(stringResource(ATMR.strings.translation_editor_color_white)) },
                         )
                     }
@@ -341,14 +370,64 @@ fun TranslationBlockEditorDialog(
                         }
                     }
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "Posição X: ${if (offsetXPercent > 0) "+$offsetXPercent" else "$offsetXPercent"}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { if (offsetXPercent > -100) offsetXPercent -= 10 },
+                            enabled = !isWorking && offsetXPercent > -100,
+                        ) {
+                            Icon(Icons.Outlined.Remove, contentDescription = "-")
+                        }
+                        IconButton(
+                            onClick = { if (offsetXPercent < 100) offsetXPercent += 10 },
+                            enabled = !isWorking && offsetXPercent < 100,
+                        ) {
+                            Icon(Icons.Outlined.Add, contentDescription = "+")
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "Posição Y: ${if (offsetYPercent > 0) "+$offsetYPercent" else "$offsetYPercent"}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { if (offsetYPercent > -100) offsetYPercent -= 10 },
+                            enabled = !isWorking && offsetYPercent > -100,
+                        ) {
+                            Icon(Icons.Outlined.Remove, contentDescription = "-")
+                        }
+                        IconButton(
+                            onClick = { if (offsetYPercent < 100) offsetYPercent += 10 },
+                            enabled = !isWorking && offsetYPercent < 100,
+                        ) {
+                            Icon(Icons.Outlined.Add, contentDescription = "+")
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             val hasChanges = translation.trim() != block.translation.trim() ||
-                selectedBg != initialBg ||
-                selectedFg != initialFg ||
+                bgTouched ||
+                fgTouched ||
                 widthScalePercent != 100 ||
-                heightScalePercent != 100
+                heightScalePercent != 100 ||
+                offsetXPercent != 0 ||
+                offsetYPercent != 0
             TextButton(
                 enabled = !isWorking && translation.isNotBlank() && hasChanges,
                 onClick = ::handleSave,

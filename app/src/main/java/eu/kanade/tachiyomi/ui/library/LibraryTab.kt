@@ -197,11 +197,14 @@ data object LibraryTab : Tab {
                             scope.launchIO {
                                 val chapter = viewModel.getNextUnreadChapter(it.manga)
                                 if (chapter != null) {
-                                    val isAnime = Injekt.get<SourceManager>().get(it.manga.source) is eu.kanade.tachiyomi.animesource.AnimeSource
-                                    val intent = if (isAnime) {
-                                        eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id)
-                                    } else {
-                                        ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+                                    val source = Injekt.get<SourceManager>().get(it.manga.source)
+                                    val intent = when (source) {
+                                        is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                                            eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id)
+                                        is eu.kanade.tachiyomi.source.INovelSource ->
+                                            eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+                                        else ->
+                                            ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
                                     }
                                     context.startActivity(intent)
                                 } else {

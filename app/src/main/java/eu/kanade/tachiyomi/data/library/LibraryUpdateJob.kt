@@ -331,10 +331,13 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         // We don't want to start downloading while the library is updating, because websites
         // may don't like it and they could ban the user.
         val source = sourceManager.getOrStub(manga.source)
-        if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
-            animeDownloadManager.downloadChapters(manga, chapters, false)
-        } else {
-            downloadManager.downloadChapters(manga, chapters, false)
+        when {
+            source is eu.kanade.tachiyomi.source.INovelSource ->
+                eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadChapters(manga, chapters)
+            source is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                animeDownloadManager.downloadChapters(manga, chapters, false)
+            else ->
+                downloadManager.downloadChapters(manga, chapters, false)
         }
     }
 

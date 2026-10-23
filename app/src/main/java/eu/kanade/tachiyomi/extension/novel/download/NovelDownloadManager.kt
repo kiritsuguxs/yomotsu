@@ -5,7 +5,10 @@ import eu.kanade.tachiyomi.extension.novel.NovelSourceWrapper
 import eu.kanade.tachiyomi.extension.novel.translation.NovelTranslator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +23,7 @@ import tachiyomi.domain.translation.TranslationPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 object NovelDownloadManager {
 
@@ -29,6 +33,7 @@ object NovelDownloadManager {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val baseDir by lazy { File(app.filesDir, "novel_downloads").apply { mkdirs() } }
+    private val activeJobs = ConcurrentHashMap<Long, Job>()
 
     private val _downloadedChapters = MutableStateFlow<Set<Long>>(emptySet())
     val downloadedChapters: StateFlow<Set<Long>> = _downloadedChapters.asStateFlow()
@@ -44,6 +49,12 @@ object NovelDownloadManager {
 
     private fun getMangaDir(mangaId: Long): File = File(baseDir, mangaId.toString()).apply { mkdirs() }
     private fun getChapterFile(mangaId: Long, chapterId: Long): File = File(getMangaDir(mangaId), "$chapterId.txt")
+
+    fun getDownloadCount(mangaId: Long): Int {
+        val dir = File(baseDir, mangaId.toString())
+        if (!dir.exists() || !dir.isDirectory) return 0
+        return dir.listFiles()?.count { it.extension == "txt" && it.length() > 0 } ?: 0
+    }
 
     fun refreshDownloadedCache() {
         scope.launch {
@@ -62,15 +73,17 @@ object NovelDownloadManager {
     }
 
     fun isChapterDownloaded(mangaId: Long, chapterId: Long): Boolean {
-        return getChapterFile(mangaId, chapterId).exists()
+        val file = getChapterFile(mangaId, chapterId)
+        return file.exists() && file.length() > 0
     }
 
     fun getDownloadedChapterText(mangaId: Long, chapterId: Long): String? {
         val file = getChapterFile(mangaId, chapterId)
-        return if (file.exists()) file.readText() else null
+        return if (file.exists() && file.length() > 0) file.readText() else null
     }
 
     suspend fun downloadChapter(manga: Manga, chapter: Chapter): Boolean = withContext(Dispatchers.IO) {
+        currentCoroutineContext()[Job]?.let { activeJobs[chapter.id] = it }
         _downloadingChapters.value = _downloadingChapters.value + chapter.id
         try {
             val source = sourceManager.get(manga.source) as? NovelSourceWrapper
@@ -82,9 +95,12 @@ object NovelDownloadManager {
             val telegramCloudManager = Injekt.get<eu.kanade.tachiyomi.data.telegram.TelegramCloudManager>()
             val restored = telegramCloudManager.restoreNovelChapter(manga.title, chapter.name, file)
             
+            currentCoroutineContext().ensureActive()
+
             if (!restored) {
                 // Se não tá no Telegram, baixa da internet
                 val raw = source.getChapterText(manga.url, chapter.url)
+                currentCoroutineContext().ensureActive()
                 if (raw.isBlank()) return@withContext false
                 file.writeText(raw)
                 
@@ -97,23 +113,33 @@ object NovelDownloadManager {
             _downloadedChapters.value = current
 
             true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Failed to download novel chapter ${chapter.name}" }
             false
         } finally {
+            activeJobs.remove(chapter.id)
             _downloadingChapters.value = _downloadingChapters.value - chapter.id
         }
     }
 
     fun downloadChapters(manga: Manga, chapters: List<Chapter>) {
-        scope.launch {
-            chapters.forEach { chapter ->
+        chapters.forEach { chapter ->
+            val job = scope.launch {
                 downloadChapter(manga, chapter)
             }
+            activeJobs[chapter.id] = job
         }
     }
 
+    fun cancelDownload(chapterId: Long) {
+        activeJobs.remove(chapterId)?.cancel()
+        _downloadingChapters.value = _downloadingChapters.value - chapterId
+    }
+
     fun deleteChapter(mangaId: Long, chapterId: Long) {
+        cancelDownload(chapterId)
         val file = getChapterFile(mangaId, chapterId)
         if (file.exists()) {
             file.delete()
@@ -121,5 +147,21 @@ object NovelDownloadManager {
         val current = _downloadedChapters.value.toMutableSet()
         current.remove(chapterId)
         _downloadedChapters.value = current
+    }
+
+    fun deleteManga(mangaId: Long) {
+        val dir = File(baseDir, mangaId.toString())
+        if (dir.exists()) {
+            val deletedIds = dir.listFiles()
+                ?.mapNotNull { it.nameWithoutExtension.toLongOrNull() }
+                ?.toSet()
+                .orEmpty()
+            deletedIds.forEach { activeJobs.remove(it)?.cancel() }
+            dir.deleteRecursively()
+            if (deletedIds.isNotEmpty()) {
+                _downloadingChapters.value = _downloadingChapters.value - deletedIds
+                _downloadedChapters.value = _downloadedChapters.value - deletedIds
+            }
+        }
     }
 }

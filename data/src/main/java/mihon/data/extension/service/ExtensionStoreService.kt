@@ -32,6 +32,7 @@ class ExtensionStoreService(
             if (!indexUrl.endsWith(".json", ignoreCase = true) && !indexUrl.endsWith(".pb", ignoreCase = true)) {
                 add("$trimmed/plugins.min.json")
                 add("$trimmed/index.min.json")
+                add("$trimmed/anime_index.min.json")
                 add("$trimmed/repo.json")
             }
         }
@@ -64,12 +65,26 @@ class ExtensionStoreService(
                                 extensionListUrl = updatedIndexUrl,
                             )
                         }
-                        if (!indexUrl.endsWith("/index.min.json")) {
+                        if (!indexUrl.endsWith("/index.min.json") && !indexUrl.endsWith("/anime_index.min.json")) {
                             throw IllegalArgumentException("Provided legacy store url is not valid")
                         }
-                        updatedIndexUrl = indexUrl.replace("/index.min.json", "/repo.json")
-                        network.client.newCall(GET(updatedIndexUrl)).awaitSuccess().body.source().use {
-                            json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(it)
+                        updatedIndexUrl = indexUrl
+                            .replace("/anime_index.min.json", "/repo.json")
+                            .replace("/index.min.json", "/repo.json")
+                        runCatching {
+                            network.client.newCall(GET(updatedIndexUrl)).awaitSuccess().body.source().use {
+                                json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(it)
+                            }
+                        }.getOrElse {
+                            updatedIndexUrl = indexUrl
+                            NetworkExtensionStore(
+                                name = if (indexUrl.endsWith("/anime_index.min.json")) "Anime Extensions" else "Manga Extensions",
+                                badgeLabel = if (indexUrl.endsWith("/anime_index.min.json")) "Anime" else "Manga",
+                                signingKey = "LEGACY_REPO_${indexUrl.hashCode()}",
+                                contact = NetworkExtensionStore.Contact(website = indexUrl.substringBeforeLast("/"), discord = null),
+                                extensionList = null,
+                                extensionListUrl = indexUrl,
+                            )
                         }
                     }
                     // "{..."
@@ -104,16 +119,24 @@ class ExtensionStoreService(
         }
         return try {
             val extensions = if (store.extensionListUrl != null) {
-                val response = network.client.newCall(GET(store.extensionListUrl!!)).awaitSuccess()
+                val listUrl = store.extensionListUrl!!
+                val response = network.client.newCall(GET(listUrl)).awaitSuccess()
                 response.body.source().decompressIfGzipped().use { source ->
                     when (source.peek().readByte()) {
+                        // "[..."
+                        0x5B.toByte() -> {
+                            val storeBaseUrl = listUrl.substringBeforeLast("/")
+                            json.decodeFromBufferedSource<List<NetworkLegacyExtension>>(source)
+                                .map { it.toAvailableExtension(store, storeBaseUrl) }
+                        }
                         // "{..."
                         0x7B.toByte() -> json.decodeFromBufferedSource<NetworkExtensionStore.ExtensionList>(source)
+                            .toAvailableExtensions(store)
                         else -> protoBuf.decodeFromByteArray<NetworkExtensionStore.ExtensionList>(
                             source.readByteArray(),
                         )
+                            .toAvailableExtensions(store)
                     }
-                        .toAvailableExtensions(store)
                 }
             } else if (!store.isLegacy) {
                 val response = network.client.newCall(GET(store.indexUrl)).awaitSuccess()

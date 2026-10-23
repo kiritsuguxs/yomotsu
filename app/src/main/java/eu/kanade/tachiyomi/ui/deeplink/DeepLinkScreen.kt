@@ -63,11 +63,28 @@ class DeepLinkScreen(
                         )
                     } else {
                         navigator.pop()
-                        ReaderActivity.newIntent(
-                            context,
-                            resultState.manga.id,
-                            resultState.chapterId,
-                        ).also(context::startActivity)
+                        val source = uy.kohesive.injekt.Injekt.get<tachiyomi.domain.source.service.SourceManager>().get(resultState.manga.source)
+                        val intent = when (source) {
+                            is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                                eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(
+                                    context,
+                                    resultState.manga.id,
+                                    resultState.chapterId,
+                                )
+                            is eu.kanade.tachiyomi.source.INovelSource ->
+                                eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(
+                                    context,
+                                    resultState.manga.id,
+                                    resultState.chapterId,
+                                )
+                            else ->
+                                ReaderActivity.newIntent(
+                                    context,
+                                    resultState.manga.id,
+                                    resultState.chapterId,
+                                )
+                        }
+                        context.startActivity(intent)
                     }
                 }
             }

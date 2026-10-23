@@ -311,6 +311,22 @@ class MangaScreen(
                         .takeIf { viewModel.isUpdateIntervalEnabled },
                 )
             }
+            is MangaViewModel.Dialog.ShowQualities -> {
+                eu.kanade.presentation.manga.EpisodeOptionsDialogScreen.onDismissDialog = onDismissRequest
+                val useExternalDownloader = remember {
+                    uy.kohesive.injekt.Injekt.get<tachiyomi.domain.download.service.DownloadPreferences>().useExternalDownloader.get()
+                }
+                NavigatorAdaptiveSheet(
+                    screen = eu.kanade.presentation.manga.EpisodeOptionsDialogScreen(
+                        useExternalDownloader = useExternalDownloader,
+                        episodeTitle = dialog.episode.name,
+                        episodeId = dialog.episode.id,
+                        animeId = dialog.anime.id,
+                        sourceId = dialog.source.id,
+                    ),
+                    onDismissRequest = onDismissRequest,
+                )
+            }
         }
 
         if (showScanlatorsDialog) {

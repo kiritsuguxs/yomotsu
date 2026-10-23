@@ -44,6 +44,7 @@ class NotificationReceiver : BroadcastReceiver() {
     private val getChapter: GetChapter by injectLazy()
     private val updateChapter: UpdateChapter by injectLazy()
     private val downloadManager: DownloadManager by injectLazy()
+    private val animeDownloadManager: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager by injectLazy()
     private val sourceManager: SourceManager by injectLazy()
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -56,6 +57,10 @@ class NotificationReceiver : BroadcastReceiver() {
             ACTION_PAUSE_DOWNLOADS -> downloadManager.pauseDownloads()
             // Clear the download queue
             ACTION_CLEAR_DOWNLOADS -> downloadManager.clearQueue()
+            // Anime downloads
+            ACTION_RESUME_ANIME_DOWNLOADS -> animeDownloadManager.startDownloads()
+            ACTION_PAUSE_ANIME_DOWNLOADS -> animeDownloadManager.pauseDownloads()
+            ACTION_CLEAR_ANIME_DOWNLOADS -> animeDownloadManager.clearQueue()
             // Launch share activity and dismiss notification
             ACTION_SHARE_IMAGE ->
                 shareImage(
@@ -147,11 +152,14 @@ class NotificationReceiver : BroadcastReceiver() {
         val manga = runBlocking { getManga.await(mangaId) }
         val chapter = runBlocking { getChapter.await(chapterId) }
         if (manga != null && chapter != null) {
-            val isAnime = sourceManager.get(manga.source) is eu.kanade.tachiyomi.animesource.AnimeSource
-            val intent = if (isAnime) {
-                eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, manga.id, chapter.id)
-            } else {
-                ReaderActivity.newIntent(context, manga.id, chapter.id)
+            val source = sourceManager.get(manga.source)
+            val intent = when (source) {
+                is eu.kanade.tachiyomi.source.INovelSource ->
+                    eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(context, manga.id, chapter.id)
+                is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                    eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, manga.id, chapter.id)
+                else ->
+                    ReaderActivity.newIntent(context, manga.id, chapter.id)
             }.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
@@ -243,6 +251,10 @@ class NotificationReceiver : BroadcastReceiver() {
         private const val ACTION_PAUSE_DOWNLOADS = "$ID.$NAME.ACTION_PAUSE_DOWNLOADS"
         private const val ACTION_CLEAR_DOWNLOADS = "$ID.$NAME.ACTION_CLEAR_DOWNLOADS"
 
+        private const val ACTION_RESUME_ANIME_DOWNLOADS = "$ID.$NAME.ACTION_RESUME_ANIME_DOWNLOADS"
+        private const val ACTION_PAUSE_ANIME_DOWNLOADS = "$ID.$NAME.ACTION_PAUSE_ANIME_DOWNLOADS"
+        private const val ACTION_CLEAR_ANIME_DOWNLOADS = "$ID.$NAME.ACTION_CLEAR_ANIME_DOWNLOADS"
+
         private const val ACTION_DISMISS_NOTIFICATION = "$ID.$NAME.ACTION_DISMISS_NOTIFICATION"
 
         private const val EXTRA_URI = "$ID.$NAME.URI"
@@ -297,6 +309,42 @@ class NotificationReceiver : BroadcastReceiver() {
         internal fun clearDownloadsPendingBroadcast(context: Context): PendingIntent {
             val intent = Intent(context, NotificationReceiver::class.java).apply {
                 action = ACTION_CLEAR_DOWNLOADS
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        internal fun resumeAnimeDownloadsPendingBroadcast(context: Context): PendingIntent {
+            val intent = Intent(context, NotificationReceiver::class.java).apply {
+                action = ACTION_RESUME_ANIME_DOWNLOADS
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        internal fun pauseAnimeDownloadsPendingBroadcast(context: Context): PendingIntent {
+            val intent = Intent(context, NotificationReceiver::class.java).apply {
+                action = ACTION_PAUSE_ANIME_DOWNLOADS
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        internal fun clearAnimeDownloadsPendingBroadcast(context: Context): PendingIntent {
+            val intent = Intent(context, NotificationReceiver::class.java).apply {
+                action = ACTION_CLEAR_ANIME_DOWNLOADS
             }
             return PendingIntent.getBroadcast(
                 context,
@@ -392,11 +440,13 @@ class NotificationReceiver : BroadcastReceiver() {
          */
         internal fun openChapterPendingActivity(context: Context, manga: Manga, chapter: Chapter): PendingIntent {
             val source = Injekt.get<SourceManager>().get(manga.source)
-            val isAnime = source is eu.kanade.tachiyomi.animesource.AnimeSource
-            val newIntent = if (isAnime) {
-                eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, manga.id, chapter.id)
-            } else {
-                ReaderActivity.newIntent(context, manga.id, chapter.id)
+            val newIntent = when (source) {
+                is eu.kanade.tachiyomi.source.INovelSource ->
+                    eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(context, manga.id, chapter.id)
+                is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                    eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, manga.id, chapter.id)
+                else ->
+                    ReaderActivity.newIntent(context, manga.id, chapter.id)
             }
             return PendingIntent.getActivity(
                 context,

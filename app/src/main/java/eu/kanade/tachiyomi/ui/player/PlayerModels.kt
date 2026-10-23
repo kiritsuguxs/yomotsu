@@ -30,6 +30,11 @@ data class ChapterNode(
     fun toSegment(): Segment = Segment(
         name = title.substringBeforeLast(ChapterUtils.ANIYOMI_CHAPTER_IDENTIFIER),
         start = time,
+        color = if (chapterType == ChapterType.Other) {
+            androidx.compose.ui.graphics.Color.Unspecified
+        } else {
+            androidx.compose.ui.graphics.Color(0xFFD8BBDF)
+        },
     )
 }
 

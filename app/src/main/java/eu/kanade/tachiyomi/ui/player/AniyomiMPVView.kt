@@ -134,7 +134,7 @@ class AniyomiMPVView(context: Context, attributes: AttributeSet?) : BaseMPVView(
     fun postInitOptions() {
         when (decoderPreferences.debanding().get()) {
             Debanding.None -> {}
-            Debanding.CPU -> mpv?.setOptionString("vf", "gradfun=radius=12")
+            Debanding.CPU -> mpv?.command("vf", "add", "@deband:gradfun=radius=12")
             Debanding.GPU -> mpv?.setOptionString("deband", "yes")
         }
 
@@ -212,6 +212,9 @@ class AniyomiMPVView(context: Context, attributes: AttributeSet?) : BaseMPVView(
         mpv?.setOptionString("audio-delay", (audioPreferences.audioDelay().get() / 1000.0).toString())
         mpv?.setOptionString("audio-pitch-correction", audioPreferences.enablePitchCorrection().get().toString())
         mpv?.setOptionString("volume-max", (audioPreferences.volumeBoostCap().get() + 100).toString())
+        audioPreferences.audioChannels().get().let {
+            mpv?.setOptionString(it.property, it.value)
+        }
     }
 
     private fun setupSubtitlesOptions() {

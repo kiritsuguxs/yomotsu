@@ -818,10 +818,15 @@ class PlayerViewModel @JvmOverloads constructor(
 
         val node = MPVNode.ArrayNode(
             merged.map { c ->
+                val title = if (c.chapterType != ChapterType.Other && !c.name.contains(ChapterUtils.ANIYOMI_CHAPTER_IDENTIFIER)) {
+                    c.name + ChapterUtils.ANIYOMI_CHAPTER_IDENTIFIER + c.chapterType.ordinal
+                } else {
+                    c.name
+                }
                 MPVNode.MapNode(
                     value = mapOf(
                         "time" to MPVNode.DoubleNode(c.start.toDouble()),
-                        "title" to MPVNode.StringNode(c.name),
+                        "title" to MPVNode.StringNode(title),
                     ),
                 )
             }.toTypedArray(),
@@ -2200,11 +2205,19 @@ class PlayerViewModel @JvmOverloads constructor(
      * Fillermarks the currently active episode.
      */
     fun fillermarkEpisode(episodeId: Long?, fillermarked: Boolean) {
+        val id = episodeId ?: return
+        val episode = currentPlaylist.value.firstOrNull { it.id == id }
+        val updatedMemo = (episode?.memo?.toMutableMap() ?: mutableMapOf()).apply {
+            put("fillermark", kotlinx.serialization.json.JsonPrimitive(fillermarked))
+        }
+        val jsonMemo = kotlinx.serialization.json.JsonObject(updatedMemo)
+        episode?.memo = jsonMemo
         viewModelScope.launchNonCancellable {
             updateEpisode.await(
                 EpisodeUpdate(
-                    id = episodeId!!,
-                                    ),
+                    id = id,
+                    memo = jsonMemo,
+                ),
             )
         }
     }
@@ -2370,13 +2383,25 @@ class PlayerViewModel @JvmOverloads constructor(
      * Returns the skipIntroLength used by this anime or the default one.
      */
     private fun getAnimeSkipIntroLength(): Int {
-        return gesturePreferences.defaultIntroLength().get()
+        val defaultIntroLength = gesturePreferences.defaultIntroLength().get()
+        val anime = anime ?: return defaultIntroLength
+        return when {
+            anime.skipIntroDisable -> 0
+            anime.skipIntroLength == 0 -> defaultIntroLength
+            else -> anime.skipIntroLength
+        }
     }
 
     /**
      * Updates the skipIntroLength for the open anime.
      */
     fun setAnimeSkipIntroLength(skipIntroLength: Long) {
+        val anime = anime ?: return
+        if (skipIntroLength == getAnimeSkipIntroLength().toLong()) return
+        viewModelScope.launchIO {
+            setAnimeViewerFlags.awaitSetSkipIntroLength(anime.id, skipIntroLength)
+            _currentAnime.update { _ -> getAnime.await(anime.id) }
+        }
     }
 
     /**
@@ -2409,16 +2434,20 @@ class PlayerViewModel @JvmOverloads constructor(
             return null
         }
 
-        getTracks.await(animeId).forEach { track ->
+        val duration = playerDuration ?: return null
+        val api = AniSkipApi()
+        for (track in getTracks.await(animeId)) {
             val tracker = trackerManager.get(track.trackerId)
             malId = when (tracker) {
                 is MyAnimeList -> track.remoteId
-                is Anilist -> AniSkipApi().getMalIdFromAL(track.remoteId)
+                is Anilist -> api.getMalIdFromAL(track.remoteId).takeIf { it > 0 }
                 else -> null
             }
-            val duration = playerDuration ?: return null
-            return malId?.let {
-                AniSkipApi().getResult(it.toInt(), episodeNumber, duration.toLong())
+            val result = malId?.let {
+                api.getResult(it.toInt(), episodeNumber, duration.toLong())
+            }
+            if (!result.isNullOrEmpty()) {
+                return result
             }
         }
         return null

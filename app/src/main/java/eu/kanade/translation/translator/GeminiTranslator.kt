@@ -156,12 +156,15 @@ class GeminiTranslator(
         var globalIndex = 0
         for ((k, v) in chunkPages) {
             v.blocks.forEachIndexed { i, b ->
+                val cachedTranslation = cached.getOrNull(globalIndex)
                 val res = resJson.optJSONArray(k)?.optString(i, "NULL")
                 val raw = if (res == null || res == "NULL" || res.isBlank()) "" else res
                 val postEdited = if (raw.isNotBlank()) postEditMachineTranslation(b.text, raw, toLang) else ""
-                val finalTranslation = if (postEdited.isNotBlank()) {
-                    TranslationGlossary.resolve(preparedTexts[globalIndex], postEdited, context)
-                } else ""
+                val finalTranslation = when {
+                    !cachedTranslation.isNullOrBlank() -> TranslationGlossary.apply(b.text, cachedTranslation, context)
+                    postEdited.isNotBlank() -> TranslationGlossary.resolve(preparedTexts[globalIndex], postEdited, context)
+                    else -> ""
+                }
 
                 if (finalTranslation.contains("RTMTH", ignoreCase = true) ||
                     TranslationRecoveryPolicy.isWatermarkOrCredit(b.text) ||
@@ -172,7 +175,7 @@ class GeminiTranslator(
                     b.translation = finalTranslation
                 }
 
-                if (b.translation.isNotBlank() && cached.getOrNull(globalIndex) == null) {
+                if (b.translation.isNotBlank() && cachedTranslation == null) {
                     TranslationCache.put(context, fromLang, toLang, normalizedTexts[globalIndex], b.translation)
                 }
                 if (b.translation.isNotBlank()) {

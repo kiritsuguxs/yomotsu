@@ -94,7 +94,7 @@ internal class AnimeDownloadNotifier(private val context: Context) {
                 addAction(
                     R.drawable.ic_pause_24dp,
                     context.stringResource(AYMR.strings.action_stop),
-                    NotificationReceiver.pauseDownloadsPendingBroadcast(context),
+                    NotificationReceiver.pauseAnimeDownloadsPendingBroadcast(context),
                 )
                 addAction(
                     R.drawable.ic_book_24dp,
@@ -150,13 +150,13 @@ internal class AnimeDownloadNotifier(private val context: Context) {
             addAction(
                 R.drawable.ic_play_arrow_24dp,
                 context.stringResource(MR.strings.action_resume),
-                NotificationReceiver.resumeDownloadsPendingBroadcast(context),
+                NotificationReceiver.resumeAnimeDownloadsPendingBroadcast(context),
             )
             // Clear action
             addAction(
                 R.drawable.ic_close_24dp,
                 context.stringResource(MR.strings.action_cancel_all),
-                NotificationReceiver.clearDownloadsPendingBroadcast(context),
+                NotificationReceiver.clearAnimeDownloadsPendingBroadcast(context),
             )
 
             // KMK -->

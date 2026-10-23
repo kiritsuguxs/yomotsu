@@ -256,7 +256,9 @@ class ExtensionManager(
      * @param extension The extension to be updated.
      */
     fun updateExtension(extension: Extension.Installed): Flow<InstallStep> {
-        val availableExt = availableExtensionMapFlow.value[extension.pkgName] ?: return emptyFlow()
+        val availableExt = availableExtensionMapFlow.value[extension.pkgName]
+            ?: availableExtensionMapFlow.value[extension.pkgName.substringBeforeLast("-")]
+            ?: return emptyFlow()
         val isUpdateForPrivatelyInstalled = !extension.isShared
         return installer.downloadAndInstall(availableExt.apkUrl, availableExt, isUpdateForPrivatelyInstalled)
     }
@@ -389,7 +391,7 @@ class ExtensionManager(
 
     private fun updatePendingUpdatesCount() {
         val pendingUpdateCount = installedExtensionMapFlow.value.values.count {
-            it.hasUpdate && !it.isAnime && !it.pkgName.contains("animeextension") && !it.pkgName.startsWith("eu.kanade.tachiyomi.animeextension")
+            it.hasUpdate
         }
         preferences.extensionUpdatesCount.set(pendingUpdateCount)
         if (pendingUpdateCount == 0) {

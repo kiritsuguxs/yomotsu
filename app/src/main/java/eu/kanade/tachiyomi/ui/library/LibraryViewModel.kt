@@ -415,23 +415,37 @@ class LibraryViewModel(
         }
     }
 
+    private fun getMediaDownloadCount(manga: Manga): Int {
+        val source = sourceManager.getOrStub(manga.source)
+        return when {
+            source is eu.kanade.tachiyomi.source.INovelSource ->
+                eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.getDownloadCount(manga.id)
+            source is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                animeDownloadManager.getDownloadCount(manga)
+            else ->
+                downloadManager.getDownloadCount(manga)
+        }
+    }
+
     private fun getFavoritesFlow(): Flow<List<LibraryItem>> {
         return combine(
             getLibraryManga.subscribe(),
             getLibraryItemPreferencesFlow(),
             downloadCache.changes,
-        ) { libraryManga, preferences, _ ->
+            eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadedChapters,
+        ) { libraryManga, preferences, _, _ ->
             libraryManga.map { manga ->
+                val dlCount = getMediaDownloadCount(manga.manga)
                 LibraryItem(
                     libraryManga = manga,
-                    downloadCount = downloadManager.getDownloadCount(manga.manga),
+                    downloadCount = dlCount,
                     unreadCount = manga.unreadCount,
                     isLocal = manga.manga.isLocal(),
                     sourceName = sourceManager.getOrStub(manga.manga.source).name.lowercase(),
                     sourceLanguage = sourceManager.getOrStub(manga.manga.source).lang,
                     badges = LibraryItem.Badges(
                         downloadCount = if (preferences.downloadBadge) {
-                            downloadManager.getDownloadCount(manga.manga)
+                            dlCount
                         } else {
                             0
                         },
@@ -525,7 +539,7 @@ class LibraryViewModel(
                     .filterNotQueuedOrDownloaded(manga)
                     .let { if (amount != null) it.take(amount) else it }
 
-                downloadManager.downloadChapters(manga, chapters)
+                enqueueDownloadsForMedia(manga, chapters)
             }
         }
     }
@@ -536,15 +550,46 @@ class LibraryViewModel(
             mangas.forEach { manga ->
                 val chapters = getBookmarkedChaptersByMangaId.await(manga.id)
                     .filterNotQueuedOrDownloaded(manga)
-                downloadManager.downloadChapters(manga, chapters)
+                enqueueDownloadsForMedia(manga, chapters)
             }
         }
     }
 
+    private fun enqueueDownloadsForMedia(manga: Manga, chapters: List<Chapter>) {
+        if (chapters.isEmpty()) return
+        val source = sourceManager.getOrStub(manga.source)
+        when {
+            source is eu.kanade.tachiyomi.source.INovelSource ->
+                eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadChapters(manga, chapters)
+            source is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                animeDownloadManager.downloadChapters(manga, chapters)
+            else ->
+                downloadManager.downloadChapters(manga, chapters)
+        }
+    }
+
     private fun List<Chapter>.filterNotQueuedOrDownloaded(manga: Manga): List<Chapter> {
-        val queuedDownloads = downloadManager.getQueuedDownloadsByChapterId()
-        val downloadedChapterIds = downloadManager.getDownloadedChapterIds(this, manga)
-        return fastFilterNot { it.id in queuedDownloads || it.id in downloadedChapterIds }
+        val source = sourceManager.getOrStub(manga.source)
+        return when {
+            source is eu.kanade.tachiyomi.source.INovelSource -> {
+                val downloading = eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadingChapters.value
+                fastFilterNot {
+                    it.id in downloading ||
+                        eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.isChapterDownloaded(manga.id, it.id)
+                }
+            }
+            source is eu.kanade.tachiyomi.animesource.AnimeSource -> {
+                fastFilterNot {
+                    animeDownloadManager.getQueuedDownloadOrNull(it.id) != null ||
+                        animeDownloadManager.isChapterDownloaded(it.name, it.scanlator, manga.title, manga.source)
+                }
+            }
+            else -> {
+                val queuedDownloads = downloadManager.getQueuedDownloadsByChapterId()
+                val downloadedChapterIds = downloadManager.getDownloadedChapterIds(this, manga)
+                fastFilterNot { it.id in queuedDownloads || it.id in downloadedChapterIds }
+            }
+        }
     }
 
     /**
@@ -585,12 +630,17 @@ class LibraryViewModel(
 
             if (deleteChapters) {
                 mangas.forEach { manga ->
-                    val source = sourceManager.get(manga.source) as? HttpSource
-                    if (source != null) {
-                        if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
-                            animeDownloadManager.deleteManga(manga, source)
-                        } else {
-                            downloadManager.deleteManga(manga, source)
+                    val rawSource = sourceManager.get(manga.source)
+                    if (rawSource is eu.kanade.tachiyomi.source.INovelSource) {
+                        eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.deleteManga(manga.id)
+                    } else {
+                        val source = rawSource as? HttpSource
+                        if (source != null) {
+                            if (source is eu.kanade.tachiyomi.animesource.AnimeSource) {
+                                animeDownloadManager.deleteManga(manga, source)
+                            } else {
+                                downloadManager.deleteManga(manga, source)
+                            }
                         }
                     }
                 }
