@@ -2,6 +2,30 @@
 
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
+## 0.21.0-Y4
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Exportador de Light Novels para EPUB (.epub):** Exporte qualquer Light Novel baixada diretamente para um arquivo `.epub` padronizado e já traduzido em Português (compatível com ReadEra, Google Play Livros, Kindle e Moon+ Reader) pelo menu da obra ou dentro das configurações do leitor.
+- **Downloads de Novels na Pasta Oficial do Yomotsu:** Os capítulos baixados e os livros `.epub` exportados de Novels agora são salvos diretamente dentro da pasta oficial `downloads/` do Yomotsu (organizados por Fonte > Obra > Capítulo), mantendo apenas a versão traduzida de forma limpa e compacta.
+- **Motores e Modelos de Tradução Independentes (Mangá vs. Novel):** Adicionada configuração de modelo de IA (`Gemini` / `OpenRouter`) exclusiva para Novels, permitindo usar modelos diferentes no Mangá e na Novel sem que um altere o outro, além de suporte ao motor **DeepL** e aplicação automática do **Glossário da Obra** nas traduções de Novels.
+- **Tipografia Avançada e Novos Controles no Leitor de Novels:** Adicionados controles de família de fonte (Sem Serifa, Serifa e Monoespaçada), espaçamento de linha, margens laterais, texto justificado, rolagem pelos botões de volume, renderização de ilustrações inline nos capítulos, Timer de Sono e avanço automático de capítulos na narração.
+- **Compatibilidade Expandida de Plugins de Novel (LNReader):** Motor QuickJS aprimorado com suporte completo a seletores DOM (`cheerio`), criptografia `CryptoJS` AES-GCM/CBC, `urlencode` e cookies de WebView/Cloudflare.
+- **Player de Anime Turbinado (AniSkip, Segurar para 2x e Capítulos):** Integração nativa com **AniSkip** (botões para pular Abertura/Encerramento), gesto de segurar na tela para velocidade **2x**, barra de progresso com capítulos do vídeo e indicador de buffer, botão de **Pular Introdução (+85s)**, lista rápida de episódios dentro do player e seletor de qualidade ao baixar ou assistir.
+- **Miniaturas, Sinopses e Selo Filler nos Episódios de Anime:** A lista de episódios agora exibe a miniatura (thumbnail 16:9), o selo **FILLER** e a sinopse expansível de cada episódio quando fornecidos pela extensão.
+- **Capa Panorâmica na Tela da Obra:** Toque e segure sobre a capa da obra (ou ative nas configurações de Aparência) para alternar para o modo **Capa Panorâmica**, que preenche todo o quadro superior de ponta a ponta sem cortar a arte.
+- **Melhorias no Leitor e Tradutor de Mangás:** Divisão automática de páginas duplas largas (Double-Page Split), toque duplo com zoom focado no ponto tocado, pré-carregamento inteligente de páginas no modo Pager e limpeza das bordas do Inpainter para eliminar linhas brancas em fundos escuros.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Light Novel EPUB Exporter (.epub):** Export any downloaded Light Novel directly into a standardized, translated `.epub` book (compatible with ReadEra, Google Play Books, Kindle, and Moon+ Reader) from the series toolbar or reader settings.
+- **Novel Downloads in Official Yomotsu Folder:** Downloaded novel chapters and exported `.epub` books are now saved directly inside Yomotsu's official `downloads/` directory (`Source > Series > Chapter`), keeping only the translated version in a clean, compact structure.
+- **Independent Translation Engines & AI Models (Manga vs. Novel):** Added a dedicated LLM model setting (`Gemini` / `OpenRouter`) specifically for Novels so Manga and Novel models never overwrite each other, alongside **DeepL** engine support and automatic **Series Glossary** enforcement in Novel translations.
+- **Advanced Typography & Controls in Novel Reader:** Added custom font family selection (Sans-Serif, Serif, Monospace), line height, side margins, text justification, volume-button scrolling, inline chapter illustrations, Sleep Timer, and automatic chapter advance during narration.
+- **Expanded Novel Plugin Compatibility (LNReader):** Upgraded QuickJS runtime with full DOM traversal (`cheerio`), `CryptoJS` AES-GCM/CBC decryption, `urlencode`, and WebView/Cloudflare cookie synchronization.
+- **Upgraded Anime Player (AniSkip, Hold-for-2x & Video Chapters):** Native **AniSkip** integration (Skip OP/ED buttons), long-press gesture for **2x speed** boost, seekbar with video chapter markers and buffer progress, **+85s Intro Skip**, in-player episode switcher dialog, and stream quality selector for both streaming and downloads.
+- **Anime Episode Thumbnails, Summaries & Filler Badges:** Episode lists now render 16:9 episode preview thumbnails, **FILLER** badges, and expandable episode summaries when provided by the source.
+- **Panorama Cover Mode:** Long-press the series cover in the details screen (or toggle in Appearance settings) to switch to **Panorama Cover** mode, stretching edge-to-edge without cropping top or bottom artwork.
+- **Manga Reader & Translator Enhancements:** Added automatic double-page split for wide scans, focal-point double-tap zoom, smart 3-page preloading in Pager mode, and Inpainter edge clamping to eliminate white border artifacts on dark pages.
+
 ## 0.21.0-Y3
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
