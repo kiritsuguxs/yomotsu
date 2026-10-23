@@ -242,31 +242,19 @@ $spineItems
                 writeTextEntry(zos, "OEBPS/content.opf", contentOpf)
             }
 
-            val htmlContent = buildStandaloneHtmlBook(bookTitle, bookAuthor, availableChapters)
-            val txtContent = buildStandaloneTxtBook(manga.title, availableChapters)
-
-            // Save .epub, .html (for native phone viewer/browser), and .txt (with UTF-8 BOM) into Yomotsu downloads folder
+            // Save ONLY the compact translated .epub into the Yomotsu downloads folder
             runCatching {
                 val source = sourceManager.get(manga.source)
                 if (source != null) {
                     val mangaDir = downloadProvider.getMangaDir(manga.title, source).getOrNull()
                     if (mangaDir != null) {
+                        mangaDir.findFile("$safeTitle.html")?.delete()
+                        mangaDir.findFile("$safeTitle.txt")?.delete()
+
                         val epubName = "$safeTitle.epub"
                         mangaDir.findFile(epubName)?.delete()
                         mangaDir.createFile(epubName)?.openOutputStream()?.use { output ->
                             epubFile.inputStream().use { input -> input.copyTo(output) }
-                        }
-
-                        val htmlName = "$safeTitle.html"
-                        mangaDir.findFile(htmlName)?.delete()
-                        mangaDir.createFile(htmlName)?.openOutputStream()?.use { output ->
-                            output.write(htmlContent.toByteArray(Charsets.UTF_8))
-                        }
-
-                        val txtName = "$safeTitle.txt"
-                        mangaDir.findFile(txtName)?.delete()
-                        mangaDir.createFile(txtName)?.openOutputStream()?.use { output ->
-                            output.write(txtContent.toByteArray(Charsets.UTF_8))
                         }
                     }
                 }

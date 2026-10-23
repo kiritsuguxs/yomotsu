@@ -135,7 +135,6 @@ object NovelDownloadManager {
         source: NovelSourceWrapper,
         manga: Manga,
         chapter: Chapter,
-        rawHtml: String,
         cleanText: String,
         translatedText: String? = null,
     ) {
@@ -150,34 +149,14 @@ object NovelDownloadManager {
                 ?: mangaDir.createDirectory(chapterDirName)
                 ?: return
 
-            val utf8Bom = "\uFEFF"
+            // Remove legacy duplicate files if present to keep folder compact
+            chapterDir.findFile("chapter.html")?.delete()
+            chapterDir.findFile("chapter_traduzido.txt")?.delete()
+
+            val finalContent = "\uFEFF" + (translatedText?.takeIf { it.isNotBlank() } ?: cleanText)
             val txtFile = chapterDir.findFile("chapter.txt") ?: chapterDir.createFile("chapter.txt")
             txtFile?.openOutputStream()?.use { out ->
-                out.write((utf8Bom + cleanText).toByteArray(Charsets.UTF_8))
-            }
-
-            val htmlWrapped = buildString {
-                append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">")
-                append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">")
-                append("<title>${chapter.name}</title>")
-                append("<style>body{font-family:serif;line-height:1.7;padding:16px;background:#121212;color:#e0e0e0;max-width:720px;margin:auto;}p{margin:0.8em 0;text-align:justify;}</style>")
-                append("</head><body><h2>${chapter.name}</h2>")
-                cleanText.lines().filter { it.isNotBlank() }.forEach { line ->
-                    append("<p>$line</p>")
-                }
-                append("</body></html>")
-            }
-            val htmlFile = chapterDir.findFile("chapter.html") ?: chapterDir.createFile("chapter.html")
-            htmlFile?.openOutputStream()?.use { out ->
-                out.write(htmlWrapped.toByteArray(Charsets.UTF_8))
-            }
-
-            if (!translatedText.isNullOrBlank()) {
-                val ptFile = chapterDir.findFile("chapter_traduzido.txt")
-                    ?: chapterDir.createFile("chapter_traduzido.txt")
-                ptFile?.openOutputStream()?.use { out ->
-                    out.write((utf8Bom + translatedText).toByteArray(Charsets.UTF_8))
-                }
+                out.write(finalContent.toByteArray(Charsets.UTF_8))
             }
         }.onFailure { e ->
             logcat(LogPriority.WARN, e) { "Failed to mirror novel chapter into Yomotsu downloads folder" }
@@ -229,7 +208,6 @@ object NovelDownloadManager {
                 source = source,
                 manga = manga,
                 chapter = chapter,
-                rawHtml = rawContent,
                 cleanText = cleanText,
                 translatedText = translatedText,
             )
