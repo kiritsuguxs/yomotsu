@@ -185,22 +185,26 @@ class MangaScreen(
             }.takeIf { successState.manga.favorite },
             onEditNotesClicked = { navigator.push(MangaNotesScreen(manga = successState.manga)) },
             onToggleAutomaticTranslation = viewModel::toggleAutomaticTranslation.takeIf { !isNovel && !isAnime },
-            onExportEpubClicked = {
-                context.toast("Gerando EPUB...")
-                scope.launch {
-                    val result = eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.exportNovelToEpub(
-                        context = context,
-                        manga = successState.manga,
-                        chapters = successState.chapters.map { it.chapter },
-                        preferTranslated = true,
-                    )
-                    result.onSuccess { epubFile ->
-                        eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareEpub(context, epubFile)
-                    }.onFailure { err ->
-                        context.toast(err.message ?: "Erro ao exportar EPUB")
+            onExportEpubClicked = if (isNovel) {
+                {
+                    context.toast("Gerando EPUB...")
+                    scope.launch {
+                        val result = eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.exportNovelToEpub(
+                            context = context,
+                            manga = successState.manga,
+                            chapters = successState.chapters.map { it.chapter },
+                            preferTranslated = true,
+                        )
+                        result.onSuccess { epubFile ->
+                            eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareEpub(context, epubFile)
+                        }.onFailure { err ->
+                            context.toast(err.message ?: "Erro ao exportar EPUB")
+                        }
                     }
                 }
-            }.takeIf { isNovel },
+            } else {
+                null
+            },
             onMultiBookmarkClicked = viewModel::bookmarkChapters,
             onMultiMarkAsReadClicked = viewModel::markChaptersRead,
             onMarkPreviousAsReadClicked = viewModel::markPreviousChapterRead,
