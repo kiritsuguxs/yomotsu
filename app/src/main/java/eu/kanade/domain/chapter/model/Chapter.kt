@@ -18,13 +18,28 @@ fun Chapter.toSChapter(): SChapter {
 }
 
 fun Chapter.copyFromSChapter(sChapter: SChapter): Chapter {
+    val mergedMemo = if (sChapter is eu.kanade.tachiyomi.animesource.model.SEpisode) {
+        val map = sChapter.memo.toMutableMap()
+        if (sChapter.fillermark) {
+            map["fillermark"] = kotlinx.serialization.json.JsonPrimitive(true)
+        }
+        sChapter.summary?.takeIf { it.isNotBlank() }?.let {
+            map["summary"] = kotlinx.serialization.json.JsonPrimitive(it)
+        }
+        sChapter.preview_url?.takeIf { it.isNotBlank() }?.let {
+            map["preview_url"] = kotlinx.serialization.json.JsonPrimitive(it)
+        }
+        kotlinx.serialization.json.JsonObject(map)
+    } else {
+        sChapter.memo
+    }
     return this.copy(
         name = sChapter.name,
         url = sChapter.url,
         dateUpload = sChapter.date_upload,
         chapterNumber = sChapter.chapter_number.toDouble(),
         scanlator = sChapter.scanlator?.ifBlank { null }?.trim(),
-        memo = sChapter.memo,
+        memo = mergedMemo,
     )
 }
 

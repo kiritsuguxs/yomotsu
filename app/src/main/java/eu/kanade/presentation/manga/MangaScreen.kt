@@ -120,6 +120,7 @@ fun MangaScreen(
     onMigrateClicked: (() -> Unit)?,
     onEditNotesClicked: () -> Unit,
     onToggleAutomaticTranslation: (() -> Unit)? = null,
+    onExportEpubClicked: (() -> Unit)? = null,
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
@@ -171,6 +172,7 @@ fun MangaScreen(
             onMigrateClicked = onMigrateClicked,
             onEditNotesClicked = onEditNotesClicked,
             onToggleAutomaticTranslation = onToggleAutomaticTranslation,
+            onExportEpubClicked = onExportEpubClicked,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
             onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
@@ -210,6 +212,7 @@ fun MangaScreen(
             onMigrateClicked = onMigrateClicked,
             onEditNotesClicked = onEditNotesClicked,
             onToggleAutomaticTranslation = onToggleAutomaticTranslation,
+            onExportEpubClicked = onExportEpubClicked,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
             onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
@@ -261,6 +264,7 @@ private fun MangaScreenSmallImpl(
     onMigrateClicked: (() -> Unit)?,
     onEditNotesClicked: () -> Unit,
     onToggleAutomaticTranslation: (() -> Unit)? = null,
+    onExportEpubClicked: (() -> Unit)? = null,
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
@@ -323,6 +327,7 @@ private fun MangaScreenSmallImpl(
                 onClickEditNotes = onEditNotesClicked,
                 automaticTranslationEnabled = state.autoTranslateEnabled,
                 onClickToggleAutomaticTranslation = onToggleAutomaticTranslation,
+                onClickExportEpub = onExportEpubClicked,
                 isAnime = state.isAnime,
                 actionModeCounter = selectedChapterCount,
                 onCancelActionMode = { onAllChapterSelected(false) },
@@ -519,6 +524,7 @@ fun MangaScreenLargeImpl(
     onMigrateClicked: (() -> Unit)?,
     onEditNotesClicked: () -> Unit,
     onToggleAutomaticTranslation: (() -> Unit)? = null,
+    onExportEpubClicked: (() -> Unit)? = null,
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
@@ -574,6 +580,7 @@ fun MangaScreenLargeImpl(
                 onClickEditNotes = onEditNotesClicked,
                 automaticTranslationEnabled = state.autoTranslateEnabled,
                 onClickToggleAutomaticTranslation = onToggleAutomaticTranslation,
+                onClickExportEpub = onExportEpubClicked,
                 isAnime = state.isAnime,
                 onCancelActionMode = { onAllChapterSelected(false) },
                 actionModeCounter = selectedChapterCount,
@@ -898,6 +905,9 @@ private fun LazyListScope.sharedChapterItems(
                     onChapterSwipe = {
                         onChapterSwipe(item, it)
                     },
+                    fillermark = isAnime && item.chapter.fillermark,
+                    previewUrl = item.chapter.previewUrl.takeIf { isAnime },
+                    summary = item.chapter.summary.takeIf { isAnime },
                 )
             }
         }

@@ -128,12 +128,13 @@ class SyncChaptersWithSource(
                         downloadManager.renameChapter(source, manga, dbChapter, chapter)
                     }
 
+                    val mergedMemo = kotlinx.serialization.json.JsonObject(dbChapter.memo + chapter.memo)
                     var toChangeChapter = dbChapter.copy(
                         name = chapter.name,
                         chapterNumber = chapter.chapterNumber,
                         scanlator = chapter.scanlator,
                         sourceOrder = chapter.sourceOrder,
-                        memo = chapter.memo,
+                        memo = mergedMemo,
                     )
 
                     if (chapter.dateUpload != 0L) {

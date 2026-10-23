@@ -10,5 +10,9 @@ fun Episode.toSEpisode(): eu.kanade.tachiyomi.animesource.model.SEpisode = eu.ka
     it.date_upload = this.dateUpload
     it.episode_number = this.chapterNumber.toFloat()
     it.scanlator = this.scanlator
+    it.fillermark = this.fillermark
+    it.summary = this.summary
+    it.preview_url = this.previewUrl
+    it.memo = this.memo
 }
 fun Episode.toDbEpisode() = toDbChapter()

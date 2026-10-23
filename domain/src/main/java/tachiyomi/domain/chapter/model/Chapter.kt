@@ -25,13 +25,19 @@ data class Chapter(
     val seen: Boolean get() = read
     val lastSecondSeen: Long get() = lastPageRead
     val totalSeconds: Long
-        get() = memo["total_seconds"]?.toString()?.trim('"')?.toLongOrNull() ?: 0L
+        get() = (memo["total_seconds"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull()
+            ?: memo["total_seconds"]?.toString()?.trim('"')?.toLongOrNull()
+            ?: 0L
     val fillermark: Boolean
-        get() = memo["fillermark"]?.toString()?.trim('"')?.toBooleanStrictOrNull() ?: false
+        get() = (memo["fillermark"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toBooleanStrictOrNull()
+            ?: memo["fillermark"]?.toString()?.trim('"')?.toBooleanStrictOrNull()
+            ?: false
     val summary: String?
-        get() = memo["summary"]?.toString()?.trim('"')?.takeIf { it.isNotBlank() }
+        get() = ((memo["summary"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: memo["summary"]?.toString()?.trim('"'))
+            ?.takeIf { it.isNotBlank() }
     val previewUrl: String?
-        get() = memo["preview_url"]?.toString()?.trim('"')?.takeIf { it.isNotBlank() }
+        get() = ((memo["preview_url"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: memo["preview_url"]?.toString()?.trim('"'))
+            ?.takeIf { it.isNotBlank() }
 
     val isRecognizedNumber: Boolean
         get() = chapterNumber >= 0f

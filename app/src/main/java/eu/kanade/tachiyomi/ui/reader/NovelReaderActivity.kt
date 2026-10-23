@@ -1320,6 +1320,30 @@ class NovelReaderActivity : ComponentActivity() {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(stringResource(ATMR.strings.novel_configure_voice, selectedVoice.title.substringBefore(" "), speechSpeed))
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = {
+                                    val currentManga = manga ?: return@OutlinedButton
+                                    showSettingsDialog = false
+                                    toast("Gerando EPUB...")
+                                    scope.launch {
+                                        val result = eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.exportNovelToEpub(
+                                            context = this@NovelReaderActivity,
+                                            manga = currentManga,
+                                            chapters = allChapters,
+                                            preferTranslated = isTranslated,
+                                        )
+                                        result.onSuccess { epubFile ->
+                                            eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareEpub(this@NovelReaderActivity, epubFile)
+                                        }.onFailure { err ->
+                                            toast(err.message ?: "Erro ao exportar EPUB")
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Exportar capítulos baixados (.EPUB)")
+                            }
                         }
                     },
                     confirmButton = {
