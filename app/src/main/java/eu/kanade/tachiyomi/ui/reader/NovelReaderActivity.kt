@@ -1326,14 +1326,24 @@ class NovelReaderActivity : ComponentActivity() {
                                     val currentManga = manga ?: return@OutlinedButton
                                     showSettingsDialog = false
                                     toast("Gerando EPUB...")
+                                    val fallbackMap = loadedChapters.mapNotNull { item ->
+                                        val content = if (isTranslated && !item.translatedText.isNullOrBlank()) {
+                                            item.translatedText
+                                        } else {
+                                            item.originalText
+                                        }
+                                        if (!content.isNullOrBlank()) item.chapter.id to content else null
+                                    }.toMap()
                                     scope.launch {
                                         val result = eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.exportNovelToEpub(
                                             context = this@NovelReaderActivity,
                                             manga = currentManga,
                                             chapters = allChapters,
                                             preferTranslated = isTranslated,
+                                            fallbackChaptersContent = fallbackMap,
                                         )
                                         result.onSuccess { epubFile ->
+                                            toast("EPUB salvo na pasta downloads do Yomotsu!")
                                             eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareEpub(this@NovelReaderActivity, epubFile)
                                         }.onFailure { err ->
                                             toast(err.message ?: "Erro ao exportar EPUB")

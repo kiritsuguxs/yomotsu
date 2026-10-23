@@ -196,6 +196,7 @@ class MangaScreen(
                             preferTranslated = true,
                         )
                         result.onSuccess { epubFile ->
+                            context.toast("EPUB salvo na pasta downloads do Yomotsu!")
                             eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareEpub(context, epubFile)
                         }.onFailure { err ->
                             context.toast(err.message ?: "Erro ao exportar EPUB")

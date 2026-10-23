@@ -36,6 +36,10 @@ object NovelTranslator {
         val file = File(cacheDir, "$chapterId.txt")
         if (file.exists()) {
             val text = file.readText()
+            if (text.contains("<script", ignoreCase = true) || text.contains("<style", ignoreCase = true)) {
+                file.delete()
+                return null
+            }
             translationCache[chapterId] = text
             return text
         }

@@ -2,15 +2,16 @@ package eu.kanade.tachiyomi.extension.novel.epub
 
 import android.content.Context
 import android.content.Intent
+import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager
 import eu.kanade.tachiyomi.extension.novel.translation.NovelTranslator
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.translation.TranslationPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -24,53 +25,65 @@ import java.util.zip.ZipOutputStream
 object NovelEpubExporter {
 
     private val translationPreferences: TranslationPreferences by lazy { Injekt.get() }
+    private val downloadProvider: DownloadProvider by lazy { Injekt.get() }
+    private val sourceManager: SourceManager by lazy { Injekt.get() }
 
     /**
-     * Generates a standard EPUB 2/3 file from all downloaded (and optionally translated) chapters of a Light Novel.
-     *
-     * - Uses cached translations from [NovelTranslator] (`novel_translations/<chapterId>.txt`) if available.
-     * - If [preferTranslated] is true and a downloaded chapter is not yet in the translation cache,
-     *   translates it automatically via [NovelTranslator.translate] (applying the series glossary) and caches it.
+     * Generates a standard EPUB file from all downloaded (and/or reader-loaded) chapters of a Light Novel,
+     * saves a copy into the Yomotsu downloads folder (`downloads/<Source>/<Novel>/<Novel>.epub`),
+     * and returns the generated [File].
      */
     suspend fun exportNovelToEpub(
         context: Context,
         manga: Manga,
         chapters: List<Chapter>,
         preferTranslated: Boolean = translationPreferences.autoTranslateNovels().get(),
+        fallbackChaptersContent: Map<Long, String> = emptyMap(),
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             val sortedChapters = chapters.sortedBy {
                 if (it.chapterNumber >= 0) it.chapterNumber else it.sourceOrder.toDouble()
             }
 
-            val availableChapters = mutableListOf<Pair<Chapter, String>>()
+            val availableChapters = mutableListOf<Pair<Chapter, List<String>>>()
             for (chapter in sortedChapters) {
                 val cachedTranslation = if (preferTranslated) NovelTranslator.getCached(chapter.id) else null
                 if (!cachedTranslation.isNullOrBlank()) {
-                    availableChapters.add(chapter to cachedTranslation)
-                    continue
+                    val cleanParagraphs = cleanTextToParagraphs(cachedTranslation)
+                    if (cleanParagraphs.isNotEmpty()) {
+                        availableChapters.add(chapter to cleanParagraphs)
+                        continue
+                    }
                 }
 
                 val rawDownloaded = NovelDownloadManager.getDownloadedChapterText(manga.id, chapter.id)
+                    ?: fallbackChaptersContent[chapter.id]
+
                 if (!rawDownloaded.isNullOrBlank()) {
-                    val content = if (preferTranslated) {
-                        val plainForTranslation = htmlToPlainParagraphs(rawDownloaded)
+                    val cleanPlain = NovelDownloadManager.cleanHtmlToPlainText(rawDownloaded)
+                    if (cleanPlain.isBlank()) continue
+
+                    val finalText = if (preferTranslated) {
                         runCatching {
                             NovelTranslator.translate(
                                 chapterId = chapter.id,
-                                text = plainForTranslation,
+                                text = cleanPlain,
                                 seriesTitle = manga.title,
                             )
-                        }.getOrDefault(rawDownloaded)
+                        }.getOrDefault(cleanPlain)
                     } else {
-                        rawDownloaded
+                        cleanPlain
                     }
-                    availableChapters.add(chapter to content)
+
+                    val paragraphs = cleanTextToParagraphs(finalText)
+                    if (paragraphs.isNotEmpty()) {
+                        availableChapters.add(chapter to paragraphs)
+                    }
                 }
             }
 
             if (availableChapters.isEmpty()) {
-                throw IllegalStateException("Nenhum capítulo baixado encontrado para exportar em EPUB.")
+                throw IllegalStateException("Nenhum capítulo baixado ou carregado para exportar em EPUB.")
             }
 
             val safeTitle = manga.title
@@ -83,18 +96,19 @@ object NovelEpubExporter {
             if (epubFile.exists()) epubFile.delete()
 
             val bookUuid = UUID.nameUUIDFromBytes("yomotsu-novel-${manga.id}".toByteArray()).toString()
-            val bookTitle = escapeXml(manga.title)
+            val bookTitle = escapeXml(manga.title.ifBlank { "Novel" })
             val bookAuthor = escapeXml(manga.author ?: "Desconhecido")
             val bookDesc = escapeXml(manga.description ?: "")
 
             ZipOutputStream(FileOutputStream(epubFile)).use { zos ->
-                // 1. mimetype (must be first and uncompressed per EPUB spec)
+                // 1. mimetype (must be first, uncompressed, and without extra fields per EPUB spec)
                 val mimeBytes = "application/epub+zip".toByteArray(Charsets.US_ASCII)
                 val mimeEntry = ZipEntry("mimetype").apply {
                     method = ZipEntry.STORED
                     size = mimeBytes.size.toLong()
                     compressedSize = mimeBytes.size.toLong()
                     crc = CRC32().apply { update(mimeBytes) }.value
+                    extra = null
                 }
                 zos.putNextEntry(mimeEntry)
                 zos.write(mimeBytes)
@@ -117,7 +131,7 @@ object NovelEpubExporter {
                     zos,
                     "OEBPS/style.css",
                     """body {
-  font-family: Georgia, serif;
+  font-family: serif;
   line-height: 1.65;
   margin: 5%;
   text-align: justify;
@@ -131,23 +145,18 @@ p {
   text-indent: 1.5em;
   margin-top: 0.4em;
   margin-bottom: 0.4em;
-}
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 1em auto;
 }""",
                 )
 
-                // 4. Write each chapter XHTML
-                availableChapters.forEachIndexed { index, (chapter, rawContent) ->
+                // 4. Write each chapter XHTML (without external DTD so offline XML parsers never fail)
+                availableChapters.forEachIndexed { index, (chapter, paragraphs) ->
                     val chapterFileName = "chapter_${index + 1}.xhtml"
-                    val chapterTitle = escapeXml(chapter.name)
-                    val bodyHtml = formatChapterBodyToXhtml(rawContent)
+                    val chapterTitle = escapeXml(chapter.name.ifBlank { "Capítulo ${index + 1}" })
+                    val bodyHtml = paragraphs.joinToString("\n") { line ->
+                        "  <p>${escapeXml(line)}</p>"
+                    }
 
-                    val xhtml = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+                    val xhtml = """<?xml version="1.0" encoding="utf-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pt">
 <head>
   <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
@@ -165,7 +174,7 @@ $bodyHtml
                 // 5. OEBPS/toc.ncx
                 val navPoints = availableChapters.mapIndexed { index, (chapter, _) ->
                     val num = index + 1
-                    val title = escapeXml(chapter.name)
+                    val title = escapeXml(chapter.name.ifBlank { "Capítulo $num" })
                     """    <navPoint id="navPoint-$num" playOrder="$num">
       <navLabel><text>$title</text></navLabel>
       <content src="chapter_$num.xhtml"/>
@@ -218,6 +227,24 @@ $spineItems
                 writeTextEntry(zos, "OEBPS/content.opf", contentOpf)
             }
 
+            // Mirror the generated EPUB directly into the Yomotsu downloads directory
+            runCatching {
+                val source = sourceManager.get(manga.source)
+                if (source != null) {
+                    val mangaDir = downloadProvider.getMangaDir(manga.title, source).getOrNull()
+                    if (mangaDir != null) {
+                        val fileName = "$safeTitle.epub"
+                        mangaDir.findFile(fileName)?.delete()
+                        val targetUniFile = mangaDir.createFile(fileName)
+                        targetUniFile?.openOutputStream()?.use { output ->
+                            epubFile.inputStream().use { input ->
+                                input.copyTo(output)
+                            }
+                        }
+                    }
+                }
+            }
+
             epubFile
         }
     }
@@ -243,35 +270,16 @@ $spineItems
         zos.closeEntry()
     }
 
-    private fun htmlToPlainParagraphs(rawContent: String): String {
-        val looksLikeHtml = rawContent.contains("<p", ignoreCase = true) ||
-            rawContent.contains("<div", ignoreCase = true) ||
-            rawContent.contains("<br", ignoreCase = true)
-
-        return if (looksLikeHtml) {
-            val doc = Jsoup.parseBodyFragment(rawContent)
-            doc.select("script, style, iframe, nav, header, footer").remove()
-            doc.select("br").append("\\n")
-            doc.select("p, div, h1, h2, h3, h4, li, blockquote").append("\\n\\n")
-            doc.text().replace("\\n", "\n")
-                .lines()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .joinToString("\n\n")
-        } else {
-            rawContent
-        }
-    }
-
-    private fun formatChapterBodyToXhtml(rawContent: String): String {
-        val paragraphs = htmlToPlainParagraphs(rawContent)
-            .lines()
-            .map { it.trim() }
-            .filter { it.isNotEmpty() && !it.startsWith("[[IMG:") }
-
-        return paragraphs.joinToString("\n") { line ->
-            "  <p>${escapeXml(line)}</p>"
-        }
+    private fun cleanTextToParagraphs(rawContent: String): List<String> {
+        val cleaned = NovelDownloadManager.cleanHtmlToPlainText(rawContent)
+        return cleaned.lines()
+            .map { line ->
+                line.trim()
+                    .replace(Regex("\\[\\[IMG:[^]]*]]"), "")
+                    .replace(Regex("\\[\\[YOMOTSU_TERM_\\d+]]"), "")
+                    .trim()
+            }
+            .filter { it.isNotEmpty() }
     }
 
     private fun escapeXml(input: String): String {
@@ -283,7 +291,7 @@ $spineItems
                     '>' -> append("&gt;")
                     '"' -> append("&quot;")
                     '\'' -> append("&apos;")
-                    else -> if (ch.code >= 0x20 || ch == '\n' || ch == '\r' || ch == '\t') {
+                    else -> if (ch.code >= 0x20) {
                         append(ch)
                     }
                 }
