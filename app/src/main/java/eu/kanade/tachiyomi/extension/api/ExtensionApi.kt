@@ -35,11 +35,9 @@ internal class ExtensionApi {
                 pkgName.contains("animeextension") ||
                 pkgName.startsWith("eu.kanade.tachiyomi.animeextension")
 
-            if (isAnime) continue
-
             val availableExt = extensions.find { it.pkgName == pkgName } ?: continue
             val hasUpdatedVer = availableExt.versionCode > installedExt.versionCode
-            val hasUpdatedLib = availableExt.libVersion > installedExt.libVersion
+            val hasUpdatedLib = !isAnime && availableExt.libVersion > installedExt.libVersion
             val hasUpdate = hasUpdatedVer || hasUpdatedLib
             if (hasUpdate) {
                 extensionsWithUpdate.add(installedExt)

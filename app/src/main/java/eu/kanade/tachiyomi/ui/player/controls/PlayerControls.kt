@@ -323,7 +323,7 @@ fun PlayerControls(
                     },
                 ) {
                     when (currentPlayerUpdate) {
-                        // is PlayerUpdates.DoubleSpeed -> DoubleSpeedPlayerUpdate()
+                        is PlayerUpdates.DoubleSpeed -> TextPlayerUpdate("2x ⏩")
                         is PlayerUpdates.AspectRatio -> TextPlayerUpdate(stringResource(aspectRatio.titleRes))
                         is PlayerUpdates.ShowText -> TextPlayerUpdate(
                             (currentPlayerUpdate as PlayerUpdates.ShowText).value,
@@ -569,7 +569,12 @@ fun PlayerControls(
                             viewModel.mpv.setPropertyFloat("speed", it)
                             playerPreferences.playerSpeed().set(it)
                         },
-                        onOpenSheet = viewModel::showSheet,
+                        onOpenSheet = { sheet ->
+                            if (sheet == Sheets.Screenshot) {
+                                viewModel.pause()
+                            }
+                            viewModel.showSheet(sheet)
+                        },
                     )
                 }
             }

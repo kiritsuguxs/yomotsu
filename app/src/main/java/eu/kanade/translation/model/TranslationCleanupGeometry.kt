@@ -15,6 +15,9 @@ fun TranslationBlock.resolveCleanup(
     pageHeight: Float,
     experimentalPageValid: Boolean = true,
 ): ResolvedTranslationCleanup {
+    if (layoutRegion != null && cleanupRegion == layoutRegion) {
+        return LegacyCleanup(resolvedCleanupPatches(pageWidth, pageHeight))
+    }
     val mask = dbnetCleanupMask ?: return LegacyCleanup(resolvedCleanupPatches(pageWidth, pageHeight))
     if (translation.isBlank() || !experimentalPageValid) return NoCleanup
     val width = DbnetCleanupMask.exactDimension(pageWidth) ?: return NoCleanup

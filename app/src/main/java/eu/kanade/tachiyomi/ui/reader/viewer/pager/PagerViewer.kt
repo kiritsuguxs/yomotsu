@@ -101,7 +101,18 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
         pager.id = R.id.reader_pager
         pager.adapter = adapter
         pager.addOnPageChangeListener(pagerListener)
-        pager.tapListener = { event ->
+        pager.tapListener = tap@{ event ->
+            val item = adapter.items.getOrNull(pager.currentItem)
+            if (item is ReaderPage) {
+                val holder = (0 until pager.childCount)
+                    .asSequence()
+                    .map(pager::getChildAt)
+                    .filterIsInstance<PagerPageHolder>()
+                    .firstOrNull { it.page === item }
+                if (holder?.isTouchOnTranslationBlock(event.x - holder.left, event.y - holder.top) == true) {
+                    return@tap
+                }
+            }
             val viewPosition = IntArray(2)
             pager.getLocationOnScreen(viewPosition)
             val viewPositionRelativeToWindow = IntArray(2)
@@ -127,6 +138,9 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
                         .map(pager::getChildAt)
                         .filterIsInstance<PagerPageHolder>()
                         .firstOrNull { it.page === item }
+                    if (holder?.isTouchOnTranslationBlock(event.x - holder.left, event.y - holder.top) == true) {
+                        return@f false
+                    }
                     val position = holder?.let {
                         it.manualTranslationPosition(
                             viewX = event.x - it.left,

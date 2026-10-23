@@ -537,12 +537,32 @@ private fun VideoList(
                     },
                     onExtPlayerClicked = {
                         scope.launch {
-                            val intent = eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(
-                                context,
-                                anime.id,
-                                episode.id,
-                            )
-                            context.startActivity(intent)
+                            val extIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                val videoUri = currentVideo.videoUrl.toUri()
+                                setDataAndType(videoUri, "video/*")
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                putExtra("title", "${anime.title} - ${episode.name}")
+                                val headers = currentVideo.headers
+                                if (headers != null && headers.size > 0) {
+                                    val headersArray = Array(headers.size * 2) { i ->
+                                        if (i % 2 == 0) headers.name(i / 2) else headers.value(i / 2)
+                                    }
+                                    putExtra("headers", headersArray)
+                                }
+                            }
+                            val pkgName = playerPreferences.externalPlayerPreference().get()
+                            if (pkgName.isNotBlank()) {
+                                extIntent.setPackage(pkgName)
+                            }
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent.createChooser(extIntent, episode.name).apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    },
+                                )
+                            }.onFailure {
+                                context.toast(it.message ?: "No external player found")
+                            }
                         }
                     },
                     onIntPlayerClicked = {

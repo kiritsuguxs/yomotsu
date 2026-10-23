@@ -287,7 +287,7 @@ class PagerPageHolder(
         super.onImageLoaded()
         progressIndicator?.hide()
         //TachiyomiAT
-        updateTranslationCoords(pageView as SubsamplingScaleImageView)
+        (pageView as? SubsamplingScaleImageView)?.let(::updateTranslationCoords)
         //TachiyomiAT
         translationsView?.show()
     }
@@ -309,13 +309,25 @@ class PagerPageHolder(
         super.onScaleChanged(newScale)
         viewer.activity.hideMenu()
         //TachiyomiAT
-        updateTranslationCoords(pageView as SubsamplingScaleImageView)
+        (pageView as? SubsamplingScaleImageView)?.let(::updateTranslationCoords)
     }
 
     //TachiyomiAT
     override fun onCenterChanged(newCenter: PointF?) {
         super.onCenterChanged(newCenter)
-        updateTranslationCoords(pageView as SubsamplingScaleImageView)
+        (pageView as? SubsamplingScaleImageView)?.let(::updateTranslationCoords)
+    }
+
+    fun isTouchOnTranslationBlock(viewX: Float, viewY: Float): Boolean {
+        if (!showTranslations || page.translationEditor == null) return false
+        val translation = page.translation ?: return false
+        val pos = manualTranslationPosition(viewX, viewY) ?: return false
+        val pageWidth = translation.imgWidth.takeIf { it > 0f } ?: pos.pageWidth
+        val pageHeight = translation.imgHeight.takeIf { it > 0f } ?: pos.pageHeight
+        return translation.blocks.any { block ->
+            val r = block.layoutRegion ?: eu.kanade.translation.model.TranslationRegion(block.x, block.y, block.width, block.height)
+            pos.x in r.x..(r.x + r.width) && pos.y in r.y..(r.y + r.height)
+        }
     }
 
     //TachiyomiAT

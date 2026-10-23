@@ -86,6 +86,7 @@ class ExtensionStoreRepositoryImpl(
                 }
                     .awaitAll()
                     .flatMap { it.getOrDefault(emptyList()) }
+                    .distinctBy { it.pkgName to it.versionCode }
             }
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)

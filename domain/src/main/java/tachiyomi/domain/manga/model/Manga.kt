@@ -85,6 +85,12 @@ data class Manga(
         return chapterFlags and CHAPTER_SORT_DIR_MASK == CHAPTER_SORT_DESC
     }
 
+    val skipIntroLength: Int
+        get() = (viewerFlags and ANIME_INTRO_MASK).toInt()
+
+    val skipIntroDisable: Boolean
+        get() = viewerFlags and ANIME_INTRO_DISABLE_MASK == ANIME_INTRO_DISABLE_MASK
+
     companion object {
 
         const val EPISODE_SORT_DESC = 0x00000000L

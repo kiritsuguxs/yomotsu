@@ -6,7 +6,7 @@ import kotlin.math.abs
 internal object TranslationRecoveryPolicy {
 
     private val watermarkRegex = Regex(
-        pattern = """(?i)\b(rtmth|scans?|scanlation|realm\s*scans?|flame\s*scans?|asura|void-scans|reaper\s*scans?|discord(?:\.gg)?/[a-z0-9_]+|www\.\S+\.(?:com|net|org|io|me|gg)|https?://\S+)\b""",
+        pattern = """(?i)\b(rtmth|scanlations?|(?:realm|flame|asura|void|reaper|luminous|leviatans?|reset|drake|immortal)\s*[-_]?\s*scans?|discord(?:\.gg)?/[a-z0-9_]+|www\.\S+\.(?:com|net|org|io|me|gg)|https?://\S+)\b""",
     )
 
     fun isWatermarkOrCredit(text: String): Boolean {
@@ -24,16 +24,20 @@ internal object TranslationRecoveryPolicy {
         val letters = compact.count(Char::isLetter)
         val words = block.text.lowercase().split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
 
-        if (words.size == 1 && words[0] in soundEffects) return false
+        if (words.isEmpty() || words.all { it in soundEffects } ||
+            words.any { word -> word.length >= 4 && word.toSet().size <= 2 }
+        ) {
+            return false
+        }
 
         if (widthToHeight >= 0.38f) {
             if (block.balloonDetected) {
-                return letters >= 2 && words.isNotEmpty() && words.none { it in soundEffects }
+                return letters >= 2
             }
             if (block.backgroundColor != null) {
-                return (letters >= 4 || words.size >= 2) && words.none { it in soundEffects }
+                return letters >= 4 || words.size >= 2
             }
-            return letters >= 2 && words.isNotEmpty() && words.none { it in soundEffects }
+            return letters >= 2
         }
         return hasStrongNarrowDialogueEvidence(block, layout)
     }
@@ -46,9 +50,6 @@ internal object TranslationRecoveryPolicy {
         if (letters < 3 || words.isEmpty()) return false
         if (words.all { it in soundEffects } || words.any { word -> word.length >= 4 && word.toSet().size <= 2 }) {
             return false
-        }
-        if (block.balloonDetected && block.backgroundColor != null && block.width > 0f && block.height > 0f) {
-            return true
         }
         if (!block.balloonDetected || block.backgroundColor == null ||
             block.geometryVersion < CURRENT_TRANSLATION_GEOMETRY_VERSION ||

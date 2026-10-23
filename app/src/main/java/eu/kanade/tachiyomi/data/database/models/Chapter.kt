@@ -70,8 +70,12 @@ var Chapter.seen: Boolean
     set(value) { read = value }
 
 var Chapter.fillermark: Boolean
-    get() = false
-    set(value) { }
+    get() = memo["fillermark"]?.toString()?.trim('"')?.toBooleanStrictOrNull() ?: false
+    set(value) {
+        val current = memo.toMutableMap()
+        current["fillermark"] = JsonPrimitive(value)
+        memo = JsonObject(current)
+    }
 
 var Chapter.episode_number: Float
     get() = chapter_number

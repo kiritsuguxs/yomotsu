@@ -54,6 +54,16 @@ class NovelSourceWrapper(
         return "$cleanBase/$cleanPath"
     }
 
+    private fun escapeJsString(input: String): String {
+        return input
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\u2028", "\\u2028")
+            .replace("\u2029", "\\u2029")
+    }
+
     private fun evaluateAsyncMethod(runtime: NovelJsRuntime, methodCall: String): String {
         val script = """
             var __result = null;
@@ -71,9 +81,14 @@ class NovelSourceWrapper(
                         __error = stack ? (msg + "\n" + stack) : msg;
                         __done = true;
                     });
-                    // Spin event loop manually
-                    while(!__done) {
+                    // Spin event loop manually with safety ceiling
+                    var __loops = 0;
+                    while(!__done && __loops < 200000) {
                         __drainJobs(100);
+                        __loops++;
+                    }
+                    if (!__done && !__error) {
+                        __error = "Promise timed out waiting for resolution";
                     }
                 } else {
                     __result = promise;
@@ -170,7 +185,7 @@ class NovelSourceWrapper(
     }
 
     override suspend fun getSearchManga(page: Int, query: String, filters: eu.kanade.tachiyomi.source.model.FilterList): MangasPage = runInJs { runtime ->
-        val escapedQuery = query.replace("\\", "\\\\").replace("'", "\\'")
+        val escapedQuery = escapeJsString(query)
         val script = """
             (function() {
                 var p = module.exports.default || module.exports;
@@ -201,7 +216,7 @@ class NovelSourceWrapper(
 
         if (fetchDetails || fetchChapters) {
             runInJs { runtime ->
-                val escapedUrl = manga.url.replace("\\", "\\\\").replace("'", "\\'")
+                val escapedUrl = escapeJsString(manga.url)
                 val script = """
                     (function() {
                         var p = module.exports.default || module.exports;
@@ -249,8 +264,8 @@ class NovelSourceWrapper(
     }
 
     suspend fun getChapterText(mangaUrl: String, chapterUrl: String): String = runInJs { runtime ->
-        val escapedChapter = chapterUrl.replace("\\", "\\\\").replace("'", "\\'")
-        val escapedManga = mangaUrl.replace("\\", "\\\\").replace("'", "\\'")
+        val escapedChapter = escapeJsString(chapterUrl)
+        val escapedManga = escapeJsString(mangaUrl)
         val script = """
             (function() {
                 var p = module.exports.default || module.exports;

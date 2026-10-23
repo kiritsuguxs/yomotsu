@@ -158,11 +158,14 @@ data object HistoryTab : Tab {
     private suspend fun openChapter(context: Context, chapter: Chapter?) {
         if (chapter != null) {
             val manga = Injekt.get<GetManga>().await(chapter.mangaId)
-            val isAnime = manga?.let { m -> Injekt.get<SourceManager>().get(m.source) is eu.kanade.tachiyomi.animesource.AnimeSource } ?: false
-            val intent = if (isAnime) {
-                eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id)
-            } else {
-                ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+            val source = manga?.let { m -> Injekt.get<SourceManager>().get(m.source) }
+            val intent = when (source) {
+                is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                    eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, chapter.mangaId, chapter.id)
+                is eu.kanade.tachiyomi.source.INovelSource ->
+                    eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
+                else ->
+                    ReaderActivity.newIntent(context, chapter.mangaId, chapter.id)
             }
             context.startActivity(intent)
         } else {

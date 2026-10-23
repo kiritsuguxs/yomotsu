@@ -225,7 +225,7 @@ class TranslationManager(
                 onResult = onResult,
             )
         },
-        updateBlockCustomization = { blockIndex, translation, backgroundColor, foregroundColor, widthScale, heightScale, onResult ->
+        updateBlockCustomization = { blockIndex, translation, backgroundColor, foregroundColor, widthScale, heightScale, offsetX, offsetY, onResult ->
             updateBlockCustomization(
                 chapterName = chapterName,
                 scanlator = scanlator,
@@ -238,6 +238,8 @@ class TranslationManager(
                 foregroundColor = foregroundColor,
                 widthScale = widthScale,
                 heightScale = heightScale,
+                offsetX = offsetX,
+                offsetY = offsetY,
                 onResult = onResult,
             )
         },
@@ -502,6 +504,8 @@ class TranslationManager(
         foregroundColor: Int?,
         widthScale: Float,
         heightScale: Float,
+        offsetX: Float = 0f,
+        offsetY: Float = 0f,
         onResult: (Result<String>) -> Unit,
     ) {
         editorScope.launch {
@@ -520,15 +524,19 @@ class TranslationManager(
                         block.translation = cleanTranslation
                         block.backgroundColor = backgroundColor
                         block.foregroundColor = foregroundColor
-                        if (widthScale != 1.0f || heightScale != 1.0f) {
+                        if (widthScale != 1.0f || heightScale != 1.0f || offsetX != 0f || offsetY != 0f) {
                             val currentLayout = block.layoutRegion ?: block.sourceRegion()
                             val newWidth = (currentLayout.width * widthScale).coerceAtLeast(10f)
                             val newHeight = (currentLayout.height * heightScale).coerceAtLeast(10f)
                             val diffX = (newWidth - currentLayout.width) / 2f
                             val diffY = (newHeight - currentLayout.height) / 2f
-                            val newX = (currentLayout.x - diffX).coerceAtLeast(0f)
-                            val newY = (currentLayout.y - diffY).coerceAtLeast(0f)
+                            val deltaX = currentLayout.width * offsetX
+                            val deltaY = currentLayout.height * offsetY
+                            val newX = (currentLayout.x - diffX + deltaX).coerceAtLeast(0f)
+                            val newY = (currentLayout.y - diffY + deltaY).coerceAtLeast(0f)
                             val newRegion = TranslationRegion(newX, newY, newWidth, newHeight)
+                            block.x = (block.x + deltaX).coerceAtLeast(0f)
+                            block.y = (block.y + deltaY).coerceAtLeast(0f)
                             block.layoutRegion = newRegion
                             block.cleanupRegion = newRegion
                             block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION

@@ -67,6 +67,8 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.presentation.core.screens.LoadingScreen
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 class MangaScreen(
     private val mangaId: Long,
@@ -183,6 +185,27 @@ class MangaScreen(
             }.takeIf { successState.manga.favorite },
             onEditNotesClicked = { navigator.push(MangaNotesScreen(manga = successState.manga)) },
             onToggleAutomaticTranslation = viewModel::toggleAutomaticTranslation.takeIf { !isNovel && !isAnime },
+            onExportEpubClicked = if (isNovel) {
+                {
+                    context.toast("Gerando EPUB...")
+                    scope.launch {
+                        val result = eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.exportNovelToEpub(
+                            context = context,
+                            manga = successState.manga,
+                            chapters = successState.chapters.map { it.chapter },
+                            preferTranslated = true,
+                        )
+                        result.onSuccess { epubFile ->
+                            context.toast("EPUB salvo na pasta downloads do Yomotsu!")
+                            eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareEpub(context, epubFile)
+                        }.onFailure { err ->
+                            context.toast(err.message ?: "Erro ao exportar EPUB")
+                        }
+                    }
+                }
+            } else {
+                null
+            },
             onMultiBookmarkClicked = viewModel::bookmarkChapters,
             onMultiMarkAsReadClicked = viewModel::markChaptersRead,
             onMarkPreviousAsReadClicked = viewModel::markPreviousChapterRead,
@@ -309,6 +332,22 @@ class MangaScreen(
                     onDismissRequest = onDismissRequest,
                     onValueChanged = { interval: Int -> viewModel.setFetchInterval(dialog.manga, interval) }
                         .takeIf { viewModel.isUpdateIntervalEnabled },
+                )
+            }
+            is MangaViewModel.Dialog.ShowQualities -> {
+                eu.kanade.presentation.manga.EpisodeOptionsDialogScreen.onDismissDialog = onDismissRequest
+                val useExternalDownloader = remember {
+                    uy.kohesive.injekt.Injekt.get<tachiyomi.domain.download.service.DownloadPreferences>().useExternalDownloader.get()
+                }
+                NavigatorAdaptiveSheet(
+                    screen = eu.kanade.presentation.manga.EpisodeOptionsDialogScreen(
+                        useExternalDownloader = useExternalDownloader,
+                        episodeTitle = dialog.episode.name,
+                        episodeId = dialog.episode.id,
+                        animeId = dialog.anime.id,
+                        sourceId = dialog.source.id,
+                    ),
+                    onDismissRequest = onDismissRequest,
                 )
             }
         }

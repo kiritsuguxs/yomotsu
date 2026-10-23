@@ -31,12 +31,18 @@ fun TranslationCleanupBlock(
     when (val cleanup = block.resolveCleanup(pageWidth, pageHeight, experimentalMaskPageValid)) {
         is LegacyCleanup -> {
             val color = block.backgroundColor?.let { Color(it) } ?: Color.White
+            if (color.alpha == 0f) return
 
-            // When a speech balloon is detected, clean its safe inner layout region to erase
-            // any un-OCR'd lines or line gaps completely, preventing English text from leaking behind the translation.
-            if (block.balloonDetected && block.layoutRegion != null) {
-                val layout = block.layoutRegion!!.clamped(pageWidth, pageHeight)
-                val safeCornerRadius = minOf(layout.width, layout.height) * 0.35f
+            val customSizedRegion = block.layoutRegion?.takeIf {
+                block.cleanupRegion == it
+            }
+
+            // When a speech balloon is detected or manually customized/resized, clean its safe inner
+            // layout region to erase any un-OCR'd lines or line gaps completely.
+            if ((block.balloonDetected && block.layoutRegion != null) || customSizedRegion != null) {
+                val layout = (customSizedRegion ?: block.layoutRegion!!).clamped(pageWidth, pageHeight)
+                val cornerRatio = if (block.balloonDetected) 0.35f else 0.15f
+                val safeCornerRadius = minOf(layout.width, layout.height) * cornerRatio
                 val shape = RoundedCornerShape((safeCornerRadius * scaleFactor).pxToDp())
                 Box(
                     modifier = Modifier

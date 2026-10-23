@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.runtime.Composable
 import eu.kanade.tachiyomi.ui.player.Segment
@@ -57,6 +58,10 @@ fun BottomLeftPlayerControls(
         ControlsButton(
             icon = Icons.Default.ScreenRotation,
             onClick = onCycleRotation,
+        )
+        ControlsButton(
+            icon = Icons.Default.PhotoCamera,
+            onClick = { onOpenSheet(Sheets.Screenshot) },
         )
         ControlsButton(
             text = stringResource(AYMR.strings.player_speed, playbackSpeed),

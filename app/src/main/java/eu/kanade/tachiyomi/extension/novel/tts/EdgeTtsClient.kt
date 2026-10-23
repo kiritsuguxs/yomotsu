@@ -100,12 +100,13 @@ object EdgeTtsClient {
                     val rateStr = if (ratePercent >= 0) "+$ratePercent%" else "$ratePercent%"
                     val escaped = escapeXml(cleanText)
                     val reqId = UUID.randomUUID().toString().replace("-", "")
+                    val voiceLang = voice.split("-").take(2).joinToString("-").ifBlank { "pt-BR" }
 
                     val ssmlMsg = "X-RequestId:$reqId\r\n" +
                         "Content-Type:application/ssml+xml\r\n" +
                         "X-Timestamp:${timestamp}Z\r\n" +
                         "Path:ssml\r\n\r\n" +
-                        "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'>" +
+                        "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='$voiceLang'>" +
                         "<voice name='$voice'>" +
                         "<prosody pitch='+0Hz' rate='$rateStr' volume='+0%'>" +
                         escaped +
@@ -143,7 +144,7 @@ object EdgeTtsClient {
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                     if (!deferred.isCompleted) {
-                        deferred.complete(if (audioStream.size() > 0) audioStream.toByteArray() else null)
+                        deferred.complete(if (code == 1000 && audioStream.size() > 0) audioStream.toByteArray() else null)
                     }
                 }
             })

@@ -53,6 +53,7 @@ fun MangaToolbar(
     onClickEditNotes: () -> Unit,
     automaticTranslationEnabled: Boolean,
     onClickToggleAutomaticTranslation: (() -> Unit)? = null,
+    onClickExportEpub: (() -> Unit)? = null,
     isAnime: Boolean = false,
 
     // For action mode
@@ -197,6 +198,14 @@ fun MangaToolbar(
                             onClick = onClickEditNotes,
                         ),
                     )
+                    if (onClickExportEpub != null) {
+                        add(
+                            AppBar.OverflowAction(
+                                title = "Exportar EPUB",
+                                onClick = onClickExportEpub,
+                            ),
+                        )
+                    }
                     if (!isAnime && telegramPrefs.enableTelegramCloud.get()) {
                         add(
                             AppBar.OverflowAction(
