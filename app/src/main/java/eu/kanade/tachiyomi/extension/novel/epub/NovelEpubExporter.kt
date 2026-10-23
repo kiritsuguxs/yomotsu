@@ -2,8 +2,8 @@ package eu.kanade.tachiyomi.extension.novel.epub
 
 import android.content.Context
 import android.content.Intent
-import eu.kanade.tachiyomi.data.download.novel.NovelDownloadManager
-import eu.kanade.tachiyomi.extension.novel.translate.NovelTranslator
+import eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager
+import eu.kanade.tachiyomi.extension.novel.translation.NovelTranslator
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.Dispatchers
@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.translation.TranslationPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
@@ -22,30 +23,49 @@ import java.util.zip.ZipOutputStream
 
 object NovelEpubExporter {
 
-    private val downloadManager: NovelDownloadManager by lazy { Injekt.get() }
-    private val translator: NovelTranslator by lazy { Injekt.get() }
+    private val translationPreferences: TranslationPreferences by lazy { Injekt.get() }
 
     /**
      * Generates a standard EPUB 2/3 file from all downloaded (and optionally translated) chapters of a Light Novel.
+     *
+     * - Uses cached translations from [NovelTranslator] (`novel_translations/<chapterId>.txt`) if available.
+     * - If [preferTranslated] is true and a downloaded chapter is not yet in the translation cache,
+     *   translates it automatically via [NovelTranslator.translate] (applying the series glossary) and caches it.
      */
     suspend fun exportNovelToEpub(
         context: Context,
         manga: Manga,
         chapters: List<Chapter>,
-        preferTranslated: Boolean = true,
+        preferTranslated: Boolean = translationPreferences.autoTranslateNovels().get(),
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             val sortedChapters = chapters.sortedBy {
                 if (it.chapterNumber >= 0) it.chapterNumber else it.sourceOrder.toDouble()
             }
 
-            val availableChapters = sortedChapters.mapNotNull { chapter ->
-                val translated = if (preferTranslated) translator.getCached(chapter.id) else null
-                val raw = translated ?: downloadManager.getDownloadedChapterText(manga.id, chapter.id)
-                if (!raw.isNullOrBlank()) {
-                    chapter to raw
-                } else {
-                    null
+            val availableChapters = mutableListOf<Pair<Chapter, String>>()
+            for (chapter in sortedChapters) {
+                val cachedTranslation = if (preferTranslated) NovelTranslator.getCached(chapter.id) else null
+                if (!cachedTranslation.isNullOrBlank()) {
+                    availableChapters.add(chapter to cachedTranslation)
+                    continue
+                }
+
+                val rawDownloaded = NovelDownloadManager.getDownloadedChapterText(manga.id, chapter.id)
+                if (!rawDownloaded.isNullOrBlank()) {
+                    val content = if (preferTranslated) {
+                        val plainForTranslation = htmlToPlainParagraphs(rawDownloaded)
+                        runCatching {
+                            NovelTranslator.translate(
+                                chapterId = chapter.id,
+                                text = plainForTranslation,
+                                seriesTitle = manga.title,
+                            )
+                        }.getOrDefault(rawDownloaded)
+                    } else {
+                        rawDownloaded
+                    }
+                    availableChapters.add(chapter to content)
                 }
             }
 
@@ -223,12 +243,12 @@ $spineItems
         zos.closeEntry()
     }
 
-    private fun formatChapterBodyToXhtml(rawContent: String): String {
+    private fun htmlToPlainParagraphs(rawContent: String): String {
         val looksLikeHtml = rawContent.contains("<p", ignoreCase = true) ||
             rawContent.contains("<div", ignoreCase = true) ||
             rawContent.contains("<br", ignoreCase = true)
 
-        val paragraphs = if (looksLikeHtml) {
+        return if (looksLikeHtml) {
             val doc = Jsoup.parseBodyFragment(rawContent)
             doc.select("script, style, iframe, nav, header, footer").remove()
             doc.select("br").append("\\n")
@@ -237,11 +257,17 @@ $spineItems
                 .lines()
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
+                .joinToString("\n\n")
         } else {
-            rawContent.lines()
-                .map { it.trim().removePrefix("[IMAGE]").removeSuffix("[/IMAGE]") }
-                .filter { it.isNotEmpty() }
+            rawContent
         }
+    }
+
+    private fun formatChapterBodyToXhtml(rawContent: String): String {
+        val paragraphs = htmlToPlainParagraphs(rawContent)
+            .lines()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("[[IMG:") }
 
         return paragraphs.joinToString("\n") { line ->
             "  <p>${escapeXml(line)}</p>"

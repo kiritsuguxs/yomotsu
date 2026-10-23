@@ -108,6 +108,19 @@ object NovelDownloadManager {
                 telegramCloudManager.uploadNovelChapter(manga, chapter, file)
             }
 
+            if (translationPreferences.autoTranslateNovels().get() && NovelTranslator.getCached(chapter.id) == null) {
+                runCatching {
+                    val text = file.readText()
+                    if (text.isNotBlank()) {
+                        NovelTranslator.translate(
+                            chapterId = chapter.id,
+                            text = text,
+                            seriesTitle = manga.title,
+                        )
+                    }
+                }
+            }
+
             val current = _downloadedChapters.value.toMutableSet()
             current.add(chapter.id)
             _downloadedChapters.value = current
