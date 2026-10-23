@@ -20,6 +20,9 @@ class TranslationPreferences(
     private val llmModels = TranslationLlmProvider.entries.associateWith { provider ->
         preferenceStore.getString("translation_${provider.preferenceKey}_model", provider.defaultModel)
     }
+    private val novelLlmModels = TranslationLlmProvider.entries.associateWith { provider ->
+        preferenceStore.getString("novel_translation_${provider.preferenceKey}_model", provider.defaultModel)
+    }
 
     fun autoTranslateAfterDownload() = preferenceStore.getBoolean("auto_translate_after_download", false)
     fun autoTranslateNovels() = preferenceStore.getBoolean("auto_translate_novels", true)
@@ -52,6 +55,8 @@ class TranslationPreferences(
     fun llmApiKey(provider: TranslationLlmProvider) = llmApiKeys.getValue(provider)
 
     fun llmModel(provider: TranslationLlmProvider) = llmModels.getValue(provider)
+
+    fun novelLlmModel(provider: TranslationLlmProvider) = novelLlmModels.getValue(provider)
 
     fun migrateLegacyLlmSettings(provider: TranslationLlmProvider) {
         val providerApiKey = llmApiKeys.getValue(provider)

@@ -183,7 +183,9 @@ object NovelTranslator {
             val apiKey = translationPreferences.llmApiKey(TranslationLlmProvider.GEMINI).get().trim()
             if (apiKey.isBlank()) return null
 
-            val modelName = translationPreferences.llmModel(TranslationLlmProvider.GEMINI).get().ifBlank { "gemini-1.5-flash" }
+            val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.GEMINI).get()
+                .ifBlank { translationPreferences.llmModel(TranslationLlmProvider.GEMINI).get() }
+                .ifBlank { "gemini-1.5-flash" }
             val normalizedModel = modelName.trim().removePrefix("models/")
             val url = "https://generativelanguage.googleapis.com/v1beta/models/$normalizedModel:generateContent?key=$apiKey"
 
@@ -234,7 +236,8 @@ object NovelTranslator {
         return try {
             translationPreferences.migrateLegacyLlmSettings(TranslationLlmProvider.OPENROUTER)
             val apiKey = translationPreferences.llmApiKey(TranslationLlmProvider.OPENROUTER).get().trim()
-            val modelName = translationPreferences.llmModel(TranslationLlmProvider.OPENROUTER).get().trim()
+            val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.OPENROUTER).get().trim()
+                .ifBlank { translationPreferences.llmModel(TranslationLlmProvider.OPENROUTER).get().trim() }
             if (apiKey.isBlank() || modelName.isBlank()) return null
 
             val targetLanguageName = targetLanguagePromptName(tl)

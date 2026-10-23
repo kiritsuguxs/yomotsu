@@ -64,28 +64,75 @@ object SettingsTranslationScreen : SearchableSettings {
             ),
             getTranslationLangGroup(translationPreferences),
             getTranslatioEngineGroup(translationPreferences),
-            Preference.PreferenceGroup(
-                title = stringResource(ATMR.strings.novels),
-                preferenceItems = persistentListOf(
-                    Preference.PreferenceItem.SwitchPreference(
-                        preference = translationPreferences.autoTranslateNovels(),
-                        title = stringResource(ATMR.strings.pref_auto_translate_novels),
-                        subtitle = stringResource(ATMR.strings.pref_auto_translate_novels_summary),
-                    ),
-                    Preference.PreferenceItem.ListPreference(
-                        preference = translationPreferences.novelTranslationEngine(),
-                        title = stringResource(ATMR.strings.pref_translator_engine),
-                        entries = mapOf(
-                            TextTranslators.GOOGLE.ordinal to getTranslatorLabel(TextTranslators.GOOGLE),
-                            TextTranslators.GEMINI.ordinal to getTranslatorLabel(TextTranslators.GEMINI),
-                            TextTranslators.OPENROUTER.ordinal to getTranslatorLabel(TextTranslators.OPENROUTER),
-                            TextTranslators.DEEPL.ordinal to getTranslatorLabel(TextTranslators.DEEPL),
-                        ).toImmutableMap(),
-                    ),
-                ),
-            ),
+            getNovelTranslationGroup(translationPreferences),
             getOcrEngineGroup(translationPreferences),
             getTranslatioAdvancedGroup(translationPreferences),
+        )
+    }
+
+    @Composable
+    private fun getNovelTranslationGroup(
+        translationPreferences: TranslationPreferences,
+    ): Preference.PreferenceGroup {
+        val engines = TextTranslators.entries
+        val novelEnginePref = translationPreferences.novelTranslationEngine()
+        val selectedNovelEngineValue by novelEnginePref.collectAsState()
+        val selectedNovelEngine = engines.getOrNull(selectedNovelEngineValue) ?: TextTranslators.GOOGLE
+        val engineSettings = translationEngineSettings(selectedNovelEngine)
+        val llmProvider = selectedNovelEngine.llmProvider
+        llmProvider?.let(translationPreferences::migrateLegacyLlmSettings)
+
+        val items = buildList<Preference.PreferenceItem<out Any, out Any>> {
+            add(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = translationPreferences.autoTranslateNovels(),
+                    title = stringResource(ATMR.strings.pref_auto_translate_novels),
+                    subtitle = stringResource(ATMR.strings.pref_auto_translate_novels_summary),
+                ),
+            )
+            add(
+                Preference.PreferenceItem.ListPreference(
+                    preference = novelEnginePref,
+                    title = stringResource(ATMR.strings.pref_translator_engine),
+                    entries = mapOf(
+                        TextTranslators.GOOGLE.ordinal to getTranslatorLabel(TextTranslators.GOOGLE),
+                        TextTranslators.GEMINI.ordinal to getTranslatorLabel(TextTranslators.GEMINI),
+                        TextTranslators.OPENROUTER.ordinal to getTranslatorLabel(TextTranslators.OPENROUTER),
+                        TextTranslators.DEEPL.ordinal to getTranslatorLabel(TextTranslators.DEEPL),
+                    ).toImmutableMap(),
+                ),
+            )
+            if (TranslationEngineSetting.LLM_API_KEY in engineSettings) {
+                add(
+                    Preference.PreferenceItem.EditTextPreference(
+                        preference = translationPreferences.llmApiKey(requireNotNull(llmProvider)),
+                        subtitle = stringResource(ATMR.strings.pref_sub_engine_api_key),
+                        title = stringResource(ATMR.strings.pref_engine_api_key),
+                    ),
+                )
+            }
+            if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
+                add(
+                    Preference.PreferenceItem.EditTextPreference(
+                        preference = translationPreferences.novelLlmModel(requireNotNull(llmProvider)),
+                        title = "${stringResource(ATMR.strings.pref_engine_model)} (Novel)",
+                    ),
+                )
+            }
+            if (TranslationEngineSetting.DEEPL_API_KEY in engineSettings) {
+                add(
+                    Preference.PreferenceItem.EditTextPreference(
+                        preference = translationPreferences.deepLApiKey(),
+                        subtitle = stringResource(ATMR.strings.pref_sub_deepl_api_key),
+                        title = stringResource(ATMR.strings.pref_deepl_api_key),
+                    ),
+                )
+            }
+        }
+
+        return Preference.PreferenceGroup(
+            title = stringResource(ATMR.strings.novels),
+            preferenceItems = items,
         )
     }
 
