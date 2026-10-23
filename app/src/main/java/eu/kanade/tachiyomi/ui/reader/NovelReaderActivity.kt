@@ -1352,7 +1352,48 @@ class NovelReaderActivity : ComponentActivity() {
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Exportar capítulos baixados (.EPUB)")
+                                Text("Exportar para ReadEra / E-Reader (.EPUB)")
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = {
+                                    val currentManga = manga ?: return@OutlinedButton
+                                    showSettingsDialog = false
+                                    toast("Gerando Livro HTML para o celular...")
+                                    val fallbackMap = loadedChapters.mapNotNull { item ->
+                                        val content = if (isTranslated && !item.translatedText.isNullOrBlank()) {
+                                            item.translatedText
+                                        } else {
+                                            item.originalText
+                                        }
+                                        if (!content.isNullOrBlank()) item.chapter.id to content else null
+                                    }.toMap()
+                                    scope.launch {
+                                        eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.exportNovelToEpub(
+                                            context = this@NovelReaderActivity,
+                                            manga = currentManga,
+                                            chapters = allChapters,
+                                            preferTranslated = isTranslated,
+                                            fallbackChaptersContent = fallbackMap,
+                                        )
+                                        val htmlRes = eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.exportNovelToHtml(
+                                            context = this@NovelReaderActivity,
+                                            manga = currentManga,
+                                            chapters = allChapters,
+                                            preferTranslated = isTranslated,
+                                            fallbackChaptersContent = fallbackMap,
+                                        )
+                                        htmlRes.onSuccess { htmlFile ->
+                                            toast("Salvo (.epub, .html e .txt) na pasta do Yomotsu!")
+                                            eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareHtml(this@NovelReaderActivity, htmlFile)
+                                        }.onFailure { err ->
+                                            toast(err.message ?: "Erro ao exportar HTML")
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Abrir Livro Direto no Celular (.HTML)")
                             }
                         }
                     },

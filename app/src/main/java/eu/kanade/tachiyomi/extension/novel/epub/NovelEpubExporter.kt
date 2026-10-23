@@ -28,10 +28,59 @@ object NovelEpubExporter {
     private val downloadProvider: DownloadProvider by lazy { Injekt.get() }
     private val sourceManager: SourceManager by lazy { Injekt.get() }
 
+    private suspend fun collectAvailableChapters(
+        manga: Manga,
+        chapters: List<Chapter>,
+        preferTranslated: Boolean,
+        fallbackChaptersContent: Map<Long, String>,
+    ): List<Pair<Chapter, List<String>>> {
+        val sortedChapters = chapters.sortedBy {
+            if (it.chapterNumber >= 0) it.chapterNumber else it.sourceOrder.toDouble()
+        }
+
+        val availableChapters = mutableListOf<Pair<Chapter, List<String>>>()
+        for (chapter in sortedChapters) {
+            val cachedTranslation = if (preferTranslated) NovelTranslator.getCached(chapter.id) else null
+            if (!cachedTranslation.isNullOrBlank()) {
+                val cleanParagraphs = cleanTextToParagraphs(cachedTranslation)
+                if (cleanParagraphs.isNotEmpty()) {
+                    availableChapters.add(chapter to cleanParagraphs)
+                    continue
+                }
+            }
+
+            val rawDownloaded = NovelDownloadManager.getDownloadedChapterText(manga.id, chapter.id)
+                ?: fallbackChaptersContent[chapter.id]
+
+            if (!rawDownloaded.isNullOrBlank()) {
+                val cleanPlain = NovelDownloadManager.cleanHtmlToPlainText(rawDownloaded)
+                if (cleanPlain.isBlank()) continue
+
+                val finalText = if (preferTranslated) {
+                    runCatching {
+                        NovelTranslator.translate(
+                            chapterId = chapter.id,
+                            text = cleanPlain,
+                            seriesTitle = manga.title,
+                        )
+                    }.getOrDefault(cleanPlain)
+                } else {
+                    cleanPlain
+                }
+
+                val paragraphs = cleanTextToParagraphs(finalText)
+                if (paragraphs.isNotEmpty()) {
+                    availableChapters.add(chapter to paragraphs)
+                }
+            }
+        }
+        return availableChapters
+    }
+
     /**
      * Generates a standard EPUB file from all downloaded (and/or reader-loaded) chapters of a Light Novel,
-     * saves a copy into the Yomotsu downloads folder (`downloads/<Source>/<Novel>/<Novel>.epub`),
-     * and returns the generated [File].
+     * and also saves `.epub`, `.html` (direct phone browser/viewer format), and `.txt` (with UTF-8 BOM)
+     * into the Yomotsu downloads folder (`downloads/<Source>/<Novel>/`).
      */
     suspend fun exportNovelToEpub(
         context: Context,
@@ -41,46 +90,12 @@ object NovelEpubExporter {
         fallbackChaptersContent: Map<Long, String> = emptyMap(),
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
-            val sortedChapters = chapters.sortedBy {
-                if (it.chapterNumber >= 0) it.chapterNumber else it.sourceOrder.toDouble()
-            }
-
-            val availableChapters = mutableListOf<Pair<Chapter, List<String>>>()
-            for (chapter in sortedChapters) {
-                val cachedTranslation = if (preferTranslated) NovelTranslator.getCached(chapter.id) else null
-                if (!cachedTranslation.isNullOrBlank()) {
-                    val cleanParagraphs = cleanTextToParagraphs(cachedTranslation)
-                    if (cleanParagraphs.isNotEmpty()) {
-                        availableChapters.add(chapter to cleanParagraphs)
-                        continue
-                    }
-                }
-
-                val rawDownloaded = NovelDownloadManager.getDownloadedChapterText(manga.id, chapter.id)
-                    ?: fallbackChaptersContent[chapter.id]
-
-                if (!rawDownloaded.isNullOrBlank()) {
-                    val cleanPlain = NovelDownloadManager.cleanHtmlToPlainText(rawDownloaded)
-                    if (cleanPlain.isBlank()) continue
-
-                    val finalText = if (preferTranslated) {
-                        runCatching {
-                            NovelTranslator.translate(
-                                chapterId = chapter.id,
-                                text = cleanPlain,
-                                seriesTitle = manga.title,
-                            )
-                        }.getOrDefault(cleanPlain)
-                    } else {
-                        cleanPlain
-                    }
-
-                    val paragraphs = cleanTextToParagraphs(finalText)
-                    if (paragraphs.isNotEmpty()) {
-                        availableChapters.add(chapter to paragraphs)
-                    }
-                }
-            }
+            val availableChapters = collectAvailableChapters(
+                manga = manga,
+                chapters = chapters,
+                preferTranslated = preferTranslated,
+                fallbackChaptersContent = fallbackChaptersContent,
+            )
 
             if (availableChapters.isEmpty()) {
                 throw IllegalStateException("Nenhum capítulo baixado ou carregado para exportar em EPUB.")
@@ -148,7 +163,7 @@ p {
 }""",
                 )
 
-                // 4. Write each chapter XHTML (without external DTD so offline XML parsers never fail)
+                // 4. Write each chapter XHTML
                 availableChapters.forEachIndexed { index, (chapter, paragraphs) ->
                     val chapterFileName = "chapter_${index + 1}.xhtml"
                     val chapterTitle = escapeXml(chapter.name.ifBlank { "Capítulo ${index + 1}" })
@@ -227,19 +242,31 @@ $spineItems
                 writeTextEntry(zos, "OEBPS/content.opf", contentOpf)
             }
 
-            // Mirror the generated EPUB directly into the Yomotsu downloads directory
+            val htmlContent = buildStandaloneHtmlBook(bookTitle, bookAuthor, availableChapters)
+            val txtContent = buildStandaloneTxtBook(manga.title, availableChapters)
+
+            // Save .epub, .html (for native phone viewer/browser), and .txt (with UTF-8 BOM) into Yomotsu downloads folder
             runCatching {
                 val source = sourceManager.get(manga.source)
                 if (source != null) {
                     val mangaDir = downloadProvider.getMangaDir(manga.title, source).getOrNull()
                     if (mangaDir != null) {
-                        val fileName = "$safeTitle.epub"
-                        mangaDir.findFile(fileName)?.delete()
-                        val targetUniFile = mangaDir.createFile(fileName)
-                        targetUniFile?.openOutputStream()?.use { output ->
-                            epubFile.inputStream().use { input ->
-                                input.copyTo(output)
-                            }
+                        val epubName = "$safeTitle.epub"
+                        mangaDir.findFile(epubName)?.delete()
+                        mangaDir.createFile(epubName)?.openOutputStream()?.use { output ->
+                            epubFile.inputStream().use { input -> input.copyTo(output) }
+                        }
+
+                        val htmlName = "$safeTitle.html"
+                        mangaDir.findFile(htmlName)?.delete()
+                        mangaDir.createFile(htmlName)?.openOutputStream()?.use { output ->
+                            output.write(htmlContent.toByteArray(Charsets.UTF_8))
+                        }
+
+                        val txtName = "$safeTitle.txt"
+                        mangaDir.findFile(txtName)?.delete()
+                        mangaDir.createFile(txtName)?.openOutputStream()?.use { output ->
+                            output.write(txtContent.toByteArray(Charsets.UTF_8))
                         }
                     }
                 }
@@ -249,17 +276,134 @@ $spineItems
         }
     }
 
+    /**
+     * Generates a single self-contained `.html` E-Book that opens cleanly in any phone's built-in
+     * HTML Viewer or Browser without requiring ReadEra or an external EPUB reader.
+     */
+    suspend fun exportNovelToHtml(
+        context: Context,
+        manga: Manga,
+        chapters: List<Chapter>,
+        preferTranslated: Boolean = translationPreferences.autoTranslateNovels().get(),
+        fallbackChaptersContent: Map<Long, String> = emptyMap(),
+    ): Result<File> = withContext(Dispatchers.IO) {
+        runCatching {
+            val availableChapters = collectAvailableChapters(
+                manga = manga,
+                chapters = chapters,
+                preferTranslated = preferTranslated,
+                fallbackChaptersContent = fallbackChaptersContent,
+            )
+
+            if (availableChapters.isEmpty()) {
+                throw IllegalStateException("Nenhum capítulo baixado ou carregado para exportar.")
+            }
+
+            val safeTitle = manga.title
+                .replace(Regex("[^a-zA-Z0-9À-ÿ _.-]"), "")
+                .trim()
+                .ifBlank { "novel_${manga.id}" }
+
+            val exportDir = File(context.cacheDir, "epub_exports").apply { mkdirs() }
+            val htmlFile = File(exportDir, "$safeTitle.html")
+            val bookTitle = escapeXml(manga.title.ifBlank { "Novel" })
+            val bookAuthor = escapeXml(manga.author ?: "Desconhecido")
+            val htmlContent = buildStandaloneHtmlBook(bookTitle, bookAuthor, availableChapters)
+            htmlFile.writeText(htmlContent, Charsets.UTF_8)
+            htmlFile
+        }
+    }
+
+    private fun buildStandaloneHtmlBook(
+        bookTitle: String,
+        bookAuthor: String,
+        availableChapters: List<Pair<Chapter, List<String>>>,
+    ): String {
+        val tocLinks = availableChapters.mapIndexed { idx, (chap, _) ->
+            val num = idx + 1
+            "<li><a href=\"#chap-$num\">${escapeXml(chap.name.ifBlank { "Capítulo $num" })}</a></li>"
+        }.joinToString("\n")
+
+        val chaptersHtml = availableChapters.mapIndexed { idx, (chap, paragraphs) ->
+            val num = idx + 1
+            val pTags = paragraphs.joinToString("\n") { "<p>${escapeXml(it)}</p>" }
+            """<section id="chap-$num">
+<h2>${escapeXml(chap.name.ifBlank { "Capítulo $num" })}</h2>
+$pTags
+</section><hr/>"""
+        }.joinToString("\n")
+
+        return """<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$bookTitle</title>
+<style>
+  body { font-family: Georgia, serif; line-height: 1.75; margin: 0; padding: 20px; background: #141414; color: #e6e6e6; max-width: 760px; margin-left: auto; margin-right: auto; }
+  h1, h2 { text-align: center; color: #ffffff; }
+  p { text-indent: 1.4em; margin: 0.6em 0; text-align: justify; }
+  a { color: #90caf9; text-decoration: none; }
+  hr { border: 0; border-top: 1px solid #333; margin: 2em 0; }
+  ul { line-height: 1.9; }
+</style>
+</head>
+<body>
+<h1>$bookTitle</h1>
+<p style="text-align:center;text-indent:0;opacity:0.75;">$bookAuthor</p>
+<hr/>
+<h2>Sumário</h2>
+<ul>
+$tocLinks
+</ul>
+<hr/>
+$chaptersHtml
+</body>
+</html>"""
+    }
+
+    private fun buildStandaloneTxtBook(
+        title: String,
+        availableChapters: List<Pair<Chapter, List<String>>>,
+    ): String {
+        return buildString {
+            append("\uFEFF") // UTF-8 BOM so built-in Android/Xiaomi text viewers never misdetect encoding
+            appendLine(title)
+            appendLine("=".repeat(title.length.coerceAtLeast(10)))
+            appendLine()
+            availableChapters.forEachIndexed { idx, (chap, paragraphs) ->
+                appendLine("## ${chap.name.ifBlank { "Capítulo ${idx + 1}" }}")
+                appendLine()
+                paragraphs.forEach { p ->
+                    appendLine(p)
+                    appendLine()
+                }
+                appendLine("----------------------------------------")
+                appendLine()
+            }
+        }
+    }
+
     fun shareEpub(context: Context, epubFile: File) {
+        shareFile(context, epubFile, "application/epub+zip")
+    }
+
+    fun shareHtml(context: Context, htmlFile: File) {
+        shareFile(context, htmlFile, "text/html")
+    }
+
+    private fun shareFile(context: Context, file: File, mimeType: String) {
         try {
-            val uri = epubFile.getUriCompat(context)
+            val uri = file.getUriCompat(context)
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/epub+zip"
+                type = mimeType
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(shareIntent, epubFile.name))
+            context.startActivity(Intent.createChooser(shareIntent, file.name))
         } catch (e: Exception) {
-            context.toast(e.message ?: "Erro ao compartilhar EPUB")
+            context.toast(e.message ?: "Erro ao compartilhar arquivo")
         }
     }
 
