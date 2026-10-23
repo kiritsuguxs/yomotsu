@@ -69,7 +69,9 @@ object NovelTranslator {
         val resolvedTargetLang = targetLang.ifBlank { resolveTargetLanguageCode("pt") }
         val engineIndex = runCatching { translationPreferences.novelTranslationEngine().get() }.getOrDefault(TextTranslators.GOOGLE.ordinal)
         val selectedEngine = TextTranslators.entries.getOrNull(engineIndex) ?: TextTranslators.GOOGLE
-        val glossaryContext = seriesTitle.takeIf { it.isNotBlank() }?.let { ComicTranslationContext(seriesTitle = it) }
+        val glossaryContext = seriesTitle.takeIf { it.isNotBlank() }?.let {
+            ComicTranslationContext(mangaTitle = it, chapterName = "")
+        }
 
         val maxChunkLen = when (selectedEngine) {
             TextTranslators.GEMINI, TextTranslators.OPENROUTER -> 8000
