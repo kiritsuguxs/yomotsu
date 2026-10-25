@@ -397,6 +397,12 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             throw Exception(LOGIN_REQUIRED_MESSAGE)
         }
 
+        if (firstAttempt.httpCode == 429) {
+            throw Exception(
+                "Muitas requisições (HTTP 429): o site ativou proteção temporária de taxa. Aguarde 1 a 2 minutos para liberar e tente novamente.",
+            )
+        }
+
         if (firstAttempt.httpCode == 403) {
             throw Exception(
                 "HTTP 403: Acesso bloqueado. Abra a WebView (ícone 🌐 no topo), faça login ou conclua a checagem.",
@@ -703,18 +709,33 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
     }
 
     private fun hasSessionCookie(): Boolean {
-        val cookies = runCatching { network.client.cookieJar.loadForRequest(baseHttpUrl) }.getOrDefault(emptyList())
-        return cookies.any { it.name == "blackout-comics-session" && it.value.isNotBlank() }
+        val webViewCookies = runCatching {
+            android.webkit.CookieManager.getInstance().getCookie("$baseUrl/")
+        }.getOrNull().orEmpty()
+        if (webViewCookies.contains("blackout-comics-session")) return true
+
+        val okHttpCookies = runCatching {
+            network.client.cookieJar.loadForRequest(baseHttpUrl)
+        }.getOrDefault(emptyList())
+        return okHttpCookies.any { it.name == "blackout-comics-session" && it.value.isNotBlank() }
     }
 
+    @Volatile
+    private var lastLoginAttemptTime = 0L
+
     private fun tryAutoLoginSilently() {
-        if (!hasConfiguredCredentials() || loginVerifiedInMemory) return
+        if (!hasConfiguredCredentials() || loginVerifiedInMemory || hasSessionCookie()) return
+        val now = System.currentTimeMillis()
+        if (now - lastLoginAttemptTime < 300_000L) return
         runCatching { performCredentialsLogin(force = false) }
     }
 
     @Synchronized
     private fun performCredentialsLogin(force: Boolean) {
         if (!force && loginVerifiedInMemory) return
+        val now = System.currentTimeMillis()
+        if (!force && (now - lastLoginAttemptTime < 300_000L)) return
+        lastLoginAttemptTime = now
 
         val prefs = preferences ?: return
         val email = prefs.getString(PREF_EMAIL_KEY, "")?.trim().orEmpty()
