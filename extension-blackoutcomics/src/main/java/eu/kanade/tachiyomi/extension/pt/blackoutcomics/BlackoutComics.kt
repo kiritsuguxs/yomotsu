@@ -1,9 +1,13 @@
 package eu.kanade.tachiyomi.extension.pt.blackoutcomics
 
+import android.content.Context
 import android.content.SharedPreferences
+import android.os.SystemClock
 import android.text.InputType
+import android.util.Base64
 import android.widget.Toast
 import androidx.preference.EditTextPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
@@ -32,6 +36,7 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import rx.Observable
 import java.text.SimpleDateFormat
+import java.util.ArrayDeque
 import java.util.Locale
 
 class BlackoutComics : HttpSource(), ConfigurableSource {
@@ -71,6 +76,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     override val client: OkHttpClient by lazy {
         network.client.newBuilder()
+            .addInterceptor(RateLimitInterceptor(permits = 2, periodMs = 1000L))
             .addInterceptor(::ageGateAndCookiesInterceptor)
             .addInterceptor(::anti403RetryInterceptor)
             .build()
@@ -335,9 +341,10 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     override fun pageListRequest(chapter: SChapter): Request {
         val chapterFullUrl = resolveAbsoluteUrl(chapter.url)
-        val parentComicReferer = extractParentComicUrl(chapter.url) ?: "$baseUrl/"
+        val mangaPath = chapter.url.substringBefore("/ler")
+        val mangaUrl = if (mangaPath.startsWith("http")) mangaPath else "$baseUrl$mangaPath"
         val reqHeaders = headersBuilder()
-            .set("Referer", parentComicReferer)
+            .set("Referer", mangaUrl)
             .build()
         return GET(chapterFullUrl, reqHeaders)
     }
@@ -364,20 +371,22 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     private fun loadChapterPagesWithAuth(chapter: SChapter): List<Page> {
         if (hasConfiguredCredentials() && !loginVerifiedInMemory && !hasSessionCookie()) {
-            performCredentialsLogin(force = false)
+            runCatching { performCredentialsLogin(force = false) }
         }
 
-        val firstAttempt = executeChapterCall(chapter.url)
-        if (firstAttempt.pages.isNotEmpty()) {
-            return firstAttempt.pages
+        var outcome = executeChapterCall(chapter.url)
+        if (outcome.pages.isNotEmpty()) {
+            return outcome.pages
         }
 
-        // Se a sessão expirou ou redirecionou para login e o usuário configurou E-mail/Senha, renova o login e tenta novamente
-        if (firstAttempt.loginRequired && hasConfiguredCredentials()) {
-            performCredentialsLogin(force = true)
-            val retryAfterLogin = executeChapterCall(chapter.url)
-            if (retryAfterLogin.pages.isNotEmpty()) {
-                return retryAfterLogin.pages
+        // Se o #reader-payload não veio e há credenciais salvas, autentica e tenta novamente
+        if (hasConfiguredCredentials()) {
+            val logged = runCatching { performCredentialsLogin(force = true) }.isSuccess
+            if (logged) {
+                outcome = executeChapterCall(chapter.url)
+                if (outcome.pages.isNotEmpty()) {
+                    return outcome.pages
+                }
             }
         }
 
@@ -388,32 +397,29 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             if (altAttempt.pages.isNotEmpty()) {
                 return altAttempt.pages
             }
-            if (altAttempt.loginRequired) {
-                throw Exception(LOGIN_REQUIRED_MESSAGE)
-            }
         }
 
-        if (firstAttempt.loginRequired) {
-            throw Exception(LOGIN_REQUIRED_MESSAGE)
-        }
-
-        if (firstAttempt.httpCode == 429) {
+        if (outcome.httpCode == 429) {
             throw Exception(
-                "Muitas requisições (HTTP 429): o site ativou proteção temporária de taxa. Aguarde 1 a 2 minutos para liberar e tente novamente.",
+                "Muitas requisições (HTTP 429): aguarde 1 minuto para o site liberar os acessos e tente novamente.",
             )
         }
 
-        if (firstAttempt.httpCode == 403) {
+        if (outcome.httpCode == 403) {
             throw Exception(
                 "HTTP 403: Acesso bloqueado. Abra a WebView (ícone 🌐 no topo), faça login ou conclua a checagem.",
             )
         }
 
-        val diag = firstAttempt.diagnostic.trim()
+        if (outcome.loginRequired) {
+            throw Exception(LOGIN_REQUIRED_MESSAGE)
+        }
+
+        val diag = outcome.diagnostic.trim()
         val errorMsg = if (diag.isNotEmpty()) {
-            "Sem páginas (HTTP ${firstAttempt.httpCode}): $diag. Abra na WebView (🌐)."
+            "Sem páginas (HTTP ${outcome.httpCode}): $diag. Abra na WebView (🌐)."
         } else {
-            "Sem páginas (HTTP ${firstAttempt.httpCode}) em ${firstAttempt.finalPath}. Abra na WebView (🌐)."
+            "Sem páginas (HTTP ${outcome.httpCode}) em ${outcome.finalPath}. Abra na WebView (🌐)."
         }
         throw Exception(errorMsg)
     }
@@ -446,10 +452,25 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         urls.distinct().mapIndexed { index, imgUrl -> Page(index, chapterUrl, imgUrl) }
 
     private fun extractPagesFromDocument(doc: Document, chapterUrl: String): List<Page> {
+        // Estratégia 1 (Padrão Moderno Blackout Comics):
+        // As imagens são servidas codificadas em Base64 no atributo data-payload de <div id="reader-payload">
+        val payload = doc.selectFirst("#reader-payload")?.attr("data-payload")?.trim().orEmpty()
+        if (payload.isNotEmpty()) {
+            val decodedJson = runCatching {
+                Base64.decode(payload, Base64.DEFAULT).toString(Charsets.UTF_8)
+            }.getOrNull()
+            if (!decodedJson.isNullOrEmpty()) {
+                val urls = extractUrlsFromDecodedJson(decodedJson)
+                if (urls.isNotEmpty()) {
+                    return toPages(urls, chapterUrl)
+                }
+            }
+        }
+
         val scriptElements = doc.select("script:not([src])")
         val scripts = scriptElements.flatMap { listOf(it.data(), it.html()) }.filter { it.isNotBlank() }
 
-        // Estratégia 1: Array JS atribuído a variável (ex.: var S = [...]; window.S = [...]; pages = [...]; "pages": [...])
+        // Estratégia 2: Array JS atribuído a variável (ex.: var S = [...]; window.S = [...]; pages = [...]; "pages": [...])
         for (content in scripts) {
             for (match in JS_ARRAY_ASSIGNMENT_REGEX.findAll(content)) {
                 val arrayContent = match.groupValues[1]
@@ -460,7 +481,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             }
         }
 
-        // Estratégia 2: busca por qualquer array `[...]` que contenha múltiplas URLs de imagens
+        // Estratégia 3: busca por qualquer array `[...]` que contenha múltiplas URLs de imagens
         for (content in scripts) {
             for (match in GENERIC_BRACKETED_ARRAY_REGEX.findAll(content)) {
                 val arrayContent = match.groupValues[1]
@@ -471,7 +492,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             }
         }
 
-        // Estratégia 3: qualquer URL de imagem de capítulo entre aspas nos scripts inline
+        // Estratégia 4: qualquer URL de imagem de capítulo entre aspas nos scripts inline
         for (content in scripts) {
             val urls = extractAllQuotedImageUrls(content)
             if (urls.isNotEmpty()) {
@@ -479,7 +500,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             }
         }
 
-        // Estratégia 4: tags <img> já renderizadas no HTML do leitor (src ou lazy-load)
+        // Estratégia 5: tags <img> já renderizadas no HTML do leitor (src ou lazy-load)
         val domImages = doc.select("#pages img, img.slice, .viewer-body img.slice, #viewer-img img, #viewer-img-container img")
             .mapNotNull { extractReaderImage(it) }
             .filter { isLikelyChapterImage(it) }
@@ -488,6 +509,28 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         }
 
         return emptyList()
+    }
+
+    private fun extractUrlsFromDecodedJson(jsonString: String): List<String> {
+        val urls = ArrayList<String>()
+        val arr = runCatching { JSONArray(jsonString) }.getOrNull()
+        if (arr != null) {
+            for (i in 0 until arr.length()) {
+                val item = arr.optString(i, "").trim()
+                if (item.isNotEmpty()) {
+                    urls.add(resolveAbsoluteUrl(item))
+                }
+            }
+        }
+        if (urls.isEmpty()) {
+            for (m in QUOTED_STRING_REGEX.findAll(jsonString)) {
+                val item = unescapeJsString(m.groupValues[1])
+                if (item.isNotEmpty() && (item.startsWith("http") || item.startsWith("/") || IMAGE_EXT_REGEX.containsMatchIn(item))) {
+                    urls.add(resolveAbsoluteUrl(item))
+                }
+            }
+        }
+        return urls.distinct()
     }
 
     private fun extractUrlsFromJsBlock(rawBlock: String): List<String> {
@@ -593,24 +636,19 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     override fun imageRequest(page: Page): Request {
         val imgUrl = page.imageUrl ?: throw Exception("URL da imagem ausente")
-        val targetHttpUrl = imgUrl.toHttpUrlOrNull()
-        val sameOrigin = targetHttpUrl?.host == baseHttpUrl.host
         val chapterReferer = page.url.takeIf { it.startsWith("http") } ?: "$baseUrl/"
 
-        val imgHeaders = headersBuilder()
+        val imageHeaders = headersBuilder()
+            .set("Accept", "image/*")
+            .set("Sec-Fetch-Dest", "empty")
+            .set("Sec-Fetch-Mode", "cors")
+            .set("Sec-Fetch-Site", "same-origin")
             .removeAll("Referer")
             .removeAll("Upgrade-Insecure-Requests")
-            .removeAll("Sec-Fetch-Dest")
-            .removeAll("Sec-Fetch-Mode")
-            .removeAll("Sec-Fetch-Site")
-            .set("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
-            .set("Sec-Fetch-Dest", "image")
-            .set("Sec-Fetch-Mode", "no-cors")
-            .set("Sec-Fetch-Site", if (sameOrigin) "same-origin" else "cross-site")
             .set(INTERNAL_CHAPTER_REF_HEADER, chapterReferer)
             .build()
 
-        return GET(imgUrl, imgHeaders)
+        return GET(imgUrl, imageHeaders)
     }
 
     override fun imageUrlParse(response: Response): String =
@@ -633,14 +671,14 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         }.getOrNull() ?: screen.context
         val prefs = preferences
 
-        val savedEmail = prefs?.getString(PREF_EMAIL_KEY, "")?.trim().orEmpty()
+        val savedEmail = getSavedEmail()
         val emailPref = EditTextPreference(screen.context).apply {
             key = PREF_EMAIL_KEY
             title = "E-mail da conta Blackout Comics"
             dialogTitle = "E-mail de Login"
             setDefaultValue("")
             summary = if (savedEmail.isEmpty()) {
-                "Opcional se você já fez login pela WebView (🌐). Preencha para login automático."
+                "Opcional se já fez login pela WebView (🌐). Preencha para login automático."
             } else {
                 "Conectado como: $savedEmail"
             }
@@ -652,10 +690,14 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
                 loginVerifiedInMemory = false
                 val updated = (newValue as? String)?.trim().orEmpty()
                 pref.summary = if (updated.isEmpty()) {
-                    "Opcional se você já fez login pela WebView (🌐). Preencha para login automático."
+                    "Opcional se já fez login pela WebView (🌐). Preencha para login automático."
                 } else {
                     "Conectado como: $updated"
                 }
+                prefs?.edit()
+                    ?.putString(PREF_EMAIL_KEY, updated)
+                    ?.putString(AWERKORI_PREF_EMAIL, updated)
+                    ?.apply()
                 Toast.makeText(
                     screen.context,
                     "E-mail salvo! O login será atualizado ao abrir um capítulo.",
@@ -665,14 +707,14 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             }
         }
 
-        val savedPass = prefs?.getString(PREF_PASSWORD_KEY, "").orEmpty()
+        val savedPass = getSavedPassword()
         val passPref = EditTextPreference(screen.context).apply {
             key = PREF_PASSWORD_KEY
             title = "Senha da conta"
             dialogTitle = "Senha"
             setDefaultValue("")
             summary = if (savedPass.isEmpty()) {
-                "Preencha sua senha (ou deixe em branco para usar apenas o login via WebView)."
+                "Preencha sua senha (ou deixe em branco se usar login via WebView)."
             } else {
                 "•••••••• (senha salva)"
             }
@@ -684,10 +726,14 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
                 loginVerifiedInMemory = false
                 val updated = (newValue as? String).orEmpty()
                 pref.summary = if (updated.isEmpty()) {
-                    "Preencha sua senha (ou deixe em branco para usar apenas o login via WebView)."
+                    "Preencha sua senha (ou deixe em branco se usar login via WebView)."
                 } else {
                     "•••••••• (senha salva)"
                 }
+                prefs?.edit()
+                    ?.putString(PREF_PASSWORD_KEY, updated)
+                    ?.putString(AWERKORI_PREF_PASSWORD, updated)
+                    ?.apply()
                 Toast.makeText(
                     screen.context,
                     "Senha salva!",
@@ -697,16 +743,57 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             }
         }
 
+        val clearSessionPref = createPreference(screen.context).apply {
+            key = PREF_CLEAR_SESSION_KEY
+            title = "Limpar sessão"
+            summary = "Remove os cookies salvos da Blackout Comics."
+            setOnPreferenceClickListener {
+                loginVerifiedInMemory = false
+                val url = baseHttpUrl
+                runCatching {
+                    network.client.cookieJar.saveFromResponse(
+                        url,
+                        listOf(SESSION_COOKIE, XSRF_COOKIE).map { name ->
+                            Cookie.Builder().name(name).value("").domain(url.host).path("/").expiresAt(0L).build()
+                        },
+                    )
+                }
+                runCatching {
+                    val cookieManager = android.webkit.CookieManager.getInstance()
+                    cookieManager.setCookie(baseUrl, "$SESSION_COOKIE=; Max-Age=0")
+                    cookieManager.setCookie(baseUrl, "$XSRF_COOKIE=; Max-Age=0")
+                    cookieManager.flush()
+                }
+                Toast.makeText(screen.context, "Sessão limpa!", Toast.LENGTH_SHORT).show()
+                true
+            }
+        }
+
         screen.addPreference(emailPref)
         screen.addPreference(passPref)
+        screen.addPreference(clearSessionPref)
     }
 
-    private fun hasConfiguredCredentials(): Boolean {
-        val prefs = preferences ?: return false
-        val email = prefs.getString(PREF_EMAIL_KEY, "")?.trim().orEmpty()
-        val password = prefs.getString(PREF_PASSWORD_KEY, "").orEmpty()
-        return email.isNotEmpty() && password.isNotEmpty()
+    private fun createPreference(context: Context): Preference = runCatching {
+        Preference::class.java.getConstructor(Context::class.java).newInstance(context)
+    }.getOrElse { Preference(context) }
+
+    private fun getSavedEmail(): String {
+        val prefs = preferences ?: return ""
+        val p1 = prefs.getString(PREF_EMAIL_KEY, "")?.trim().orEmpty()
+        if (p1.isNotEmpty()) return p1
+        return prefs.getString(AWERKORI_PREF_EMAIL, "")?.trim().orEmpty()
     }
+
+    private fun getSavedPassword(): String {
+        val prefs = preferences ?: return ""
+        val p1 = prefs.getString(PREF_PASSWORD_KEY, "").orEmpty()
+        if (p1.isNotEmpty()) return p1
+        return prefs.getString(AWERKORI_PREF_PASSWORD, "").orEmpty()
+    }
+
+    private fun hasConfiguredCredentials(): Boolean =
+        getSavedEmail().isNotEmpty() && getSavedPassword().isNotEmpty()
 
     private fun hasSessionCookie(): Boolean {
         val webViewCookies = runCatching {
@@ -726,7 +813,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
     private fun tryAutoLoginSilently() {
         if (!hasConfiguredCredentials() || loginVerifiedInMemory || hasSessionCookie()) return
         val now = System.currentTimeMillis()
-        if (now - lastLoginAttemptTime < 300_000L) return
+        if (now - lastLoginAttemptTime < 60_000L) return
         runCatching { performCredentialsLogin(force = false) }
     }
 
@@ -734,12 +821,11 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
     private fun performCredentialsLogin(force: Boolean) {
         if (!force && loginVerifiedInMemory) return
         val now = System.currentTimeMillis()
-        if (!force && (now - lastLoginAttemptTime < 300_000L)) return
+        if (!force && (now - lastLoginAttemptTime < 60_000L)) return
         lastLoginAttemptTime = now
 
-        val prefs = preferences ?: return
-        val email = prefs.getString(PREF_EMAIL_KEY, "")?.trim().orEmpty()
-        val password = prefs.getString(PREF_PASSWORD_KEY, "").orEmpty()
+        val email = getSavedEmail()
+        val password = getSavedPassword()
         if (email.isEmpty() || password.isEmpty()) return
 
         val csrfToken = ensureCsrfToken(forceRefresh = true)
@@ -754,26 +840,24 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             .build()
 
         val loginHeaders = headersBuilder()
-            .set("Accept", "application/json, text/javascript, */*; q=0.01")
+            .set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
             .set("Origin", baseUrl)
             .set("Referer", "$baseUrl/")
             .set("X-CSRF-TOKEN", csrfToken)
             .set("X-Requested-With", "XMLHttpRequest")
-            .removeAll("Upgrade-Insecure-Requests")
-            .set("Sec-Fetch-Dest", "empty")
-            .set("Sec-Fetch-Mode", "cors")
-            .set("Sec-Fetch-Site", "same-origin")
             .build()
 
         client.newCall(POST("$baseUrl/entrar", loginHeaders, formBody)).execute().use { res ->
+            if (!res.isSuccessful && res.code == 429) {
+                throw Exception("Muitas requisições ao entrar (HTTP 429). Aguarde 1 minuto.")
+            }
             val rawBody = res.body?.string().orEmpty()
             val json = runCatching { JSONObject(rawBody) }.getOrNull()
 
             if (json != null) {
                 if (json.optBoolean("two_factor_required", false)) {
                     throw Exception(
-                        "Sua conta usa verificação em 2 etapas (2FA). " +
-                            "Abra a WebView (ícone 🌐 no topo) e faça o login por lá.",
+                        "Sua conta usa verificação em 2 etapas (2FA). Abra a WebView (ícone 🌐 no topo) e faça o login por lá.",
                     )
                 }
                 if (json.optBoolean("email_verification_required", false)) {
@@ -784,8 +868,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
                 }
                 if (json.optBoolean("security_update_required", false)) {
                     throw Exception(
-                        "O site solicitou atualização de segurança na conta. " +
-                            "Abra a WebView (ícone 🌐 no topo) para concluir.",
+                        "O site solicitou atualização de segurança na conta. Abra a WebView (ícone 🌐 no topo) para concluir.",
                     )
                 }
                 if (!res.isSuccessful) {
@@ -796,8 +879,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
                 }
             } else if (!res.isSuccessful) {
                 throw Exception(
-                    "Falha no login automático (HTTP ${res.code}). " +
-                        "Verifique seu e-mail/senha ou faça login pela WebView (🌐).",
+                    "Falha no login automático (HTTP ${res.code}). Verifique seu e-mail/senha ou faça login pela WebView (🌐).",
                 )
             }
 
@@ -822,6 +904,10 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         val url = request.url
 
         if (url.host == baseHttpUrl.host || url.host.endsWith(".${baseHttpUrl.host}")) {
+            val now = System.currentTimeMillis()
+            val expires = now + 6 * 24 * 60 * 60 * 1000L
+            val ageConsentValue = "%7B%22consentAt%22%3A$now%2C%22expiresAt%22%3A$expires%7D"
+
             val cookieJar = network.client.cookieJar
             val existing = runCatching { cookieJar.loadForRequest(url) }.getOrDefault(emptyList())
             val toSave = mutableListOf<Cookie>()
@@ -830,7 +916,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
                 toSave.add(
                     Cookie.Builder()
                         .name("age_gate_consent")
-                        .value("""{"consentAt":1790812800000,"expiresAt":2145916800000}""")
+                        .value(ageConsentValue)
                         .domain(baseHttpUrl.host)
                         .path("/")
                         .build(),
@@ -857,7 +943,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             val currentCookieHeader = request.header("Cookie").orEmpty()
             val extraCookies = mutableListOf<String>()
             if (!currentCookieHeader.contains("age_gate_consent=")) {
-                extraCookies.add("""age_gate_consent={"consentAt":1790812800000,"expiresAt":2145916800000}""")
+                extraCookies.add("age_gate_consent=$ageConsentValue")
             }
             if (!currentCookieHeader.contains("_popprepop=")) {
                 extraCookies.add("_popprepop=1")
@@ -887,14 +973,17 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             original
         }
 
-        val isImage = cleanRequest.header("Sec-Fetch-Dest") == "image" || chapterRef != null
+        val isImage = cleanRequest.header("Sec-Fetch-Dest") == "image" ||
+            cleanRequest.header("Sec-Fetch-Dest") == "empty" ||
+            chapterRef != null
+
         val firstResponse = chain.proceed(cleanRequest)
 
         if (firstResponse.code != 403 && firstResponse.code != 401) {
             return firstResponse
         }
 
-        // Retentativa automática inteligente contra HTTP 403 em imagens (Hotlink com ou sem Referer)
+        // Retentativa automática contra HTTP 403 em imagens com Referer do capítulo
         if (isImage) {
             firstResponse.close()
             val retryWithReferer = cleanRequest.newBuilder()
@@ -916,7 +1005,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             return chain.proceed(retryFallbackUa)
         }
 
-        // Retentativa automática para páginas HTML caso o User-Agent customizado do app seja barrado pelo WAF
+        // Retentativa automática para páginas HTML caso o User-Agent customizado do app seja barrado
         if (cleanRequest.method == "GET" && cleanRequest.header("User-Agent") != FALLBACK_USER_AGENT) {
             firstResponse.close()
             val retryHtml = cleanRequest.newBuilder()
@@ -1017,16 +1106,6 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         }
     }
 
-    private fun extractParentComicUrl(chapterUrl: String): String? {
-        val cleanPath = chapterUrl.substringBefore('?').trim('/')
-        val segments = cleanPath.split('/')
-        return if (segments.size >= 2 && segments[0] == "comics") {
-            "$baseUrl/comics/${segments[1]}"
-        } else {
-            null
-        }
-    }
-
     private fun stripLeadingZeroInChapterPath(path: String): String? {
         val replaced = LEADING_ZERO_CHAPTER_REGEX.replace(path) { match ->
             "/ler/capitulo-${match.groupValues[1]}"
@@ -1066,13 +1145,19 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
         private const val PREF_EMAIL_KEY = "pref_email"
         private const val PREF_PASSWORD_KEY = "pref_password"
+        private const val AWERKORI_PREF_EMAIL = "blackout_email"
+        private const val AWERKORI_PREF_PASSWORD = "blackout_password"
+        private const val PREF_CLEAR_SESSION_KEY = "blackout_clear_session"
+
+        private const val SESSION_COOKIE = "blackout-comics-session"
+        private const val XSRF_COOKIE = "XSRF-TOKEN"
         private const val INTERNAL_CHAPTER_REF_HEADER = "X-Blackout-Chapter-Ref"
 
         private const val FALLBACK_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
 
         private const val LOGIN_REQUIRED_MESSAGE =
-            "Login necessário: abra na WebView (ícone 🌐 no topo) para entrar na sua conta."
+            "Login necessário: preencha e-mail e senha nas configurações da extensão ou faça login na WebView (🌐)."
 
         private val IMAGE_EXT_REGEX = Regex("""\.(?:webp|jpe?g|png|avif|gif|bmp)(?:\?|$)""", RegexOption.IGNORE_CASE)
         private val QUOTED_STRING_REGEX = Regex("""["'`]([^"'`\\]*(?:\\.[^"'`\\]*)*)["'`]""")
@@ -1086,5 +1171,38 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         )
         private val NON_DIGITS_REGEX = Regex("""[^0-9]""")
         private val LEADING_ZERO_CHAPTER_REGEX = Regex("""/ler/capitulo-0+(\d+(?:[.,-]\d+)?)""")
+    }
+}
+
+private class RateLimitInterceptor(
+    private val permits: Int = 2,
+    private val periodMs: Long = 1000L,
+) : Interceptor {
+    private val requestTimes = ArrayDeque<Long>()
+
+    @Synchronized
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val now = SystemClock.elapsedRealtime()
+        while (!requestTimes.isEmpty()) {
+            val earliest = requestTimes.peekFirst() ?: break
+            if (now - earliest > periodMs) {
+                requestTimes.pollFirst()
+            } else {
+                break
+            }
+        }
+        if (requestTimes.size >= permits) {
+            val earliest = requestTimes.peekFirst()
+            if (earliest != null) {
+                val waitMs = periodMs - (now - earliest)
+                if (waitMs > 0) {
+                    try {
+                        Thread.sleep(waitMs)
+                    } catch (_: InterruptedException) { }
+                }
+            }
+        }
+        requestTimes.addLast(SystemClock.elapsedRealtime())
+        return chain.proceed(chain.request())
     }
 }
