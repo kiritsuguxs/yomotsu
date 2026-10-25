@@ -74,7 +74,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     override val client: OkHttpClient by lazy {
         network.client.newBuilder()
-            .addInterceptor(RateLimitInterceptor(permits = 2, periodMs = 1200L))
+            .addInterceptor(RateLimitInterceptor(permits = 1, periodMs = 1100L))
             .addInterceptor(::ageGateAndCookiesInterceptor)
             .build()
     }
@@ -92,11 +92,11 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     // ============================== Popular ===============================
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/comics", headers)
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/ranking", headers)
 
     override fun popularMangaParse(response: Response): MangasPage {
         val doc = response.asJsoupDoc().captureCsrf()
-        val mangas = parseCatalogCards(doc, sortByViews = true)
+        val mangas = parseRankingCards(doc)
         return MangasPage(mangas, false)
     }
 
@@ -728,8 +728,15 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         }
     }
 
+    @Volatile
+    private var lastLoginAttemptTime = 0L
+
     @Synchronized
     private fun performLogin(email: String, password: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastLoginAttemptTime < 60_000L) return
+        lastLoginAttemptTime = now
+
         val csrfToken = ensureCsrfToken(forceRefresh = true)
         if (csrfToken.isEmpty()) return
 
@@ -841,9 +848,9 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         }
 
         return if (sortByViews) {
-            parsed.sortedByDescending { it.second }.map { it.first }
+            parsed.sortedByDescending { it.second }.map { it.first }.take(24)
         } else {
-            parsed.map { it.first }
+            parsed.map { it.first }.take(24)
         }
     }
 
