@@ -11,3 +11,5 @@
 -dontwarn eu.kanade.tachiyomi.**
 -dontwarn android.**
 -dontwarn java.lang.invoke.**
+
+# CI build trigger
