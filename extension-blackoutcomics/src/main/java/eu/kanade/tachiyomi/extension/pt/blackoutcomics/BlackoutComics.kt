@@ -402,13 +402,19 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             )
         }
 
-        throw Exception("Nenhuma página encontrada neste capítulo (HTTP ${firstAttempt.httpCode}).")
+        throw Exception(
+            "Nenhuma página encontrada (HTTP ${firstAttempt.httpCode}). Se você está logado, a conta pode " +
+                "precisar validar/vincular o Discord no site para liberar a leitura (abra a WebView 🌐 e conclua). " +
+                "Detalhes: ${firstAttempt.diagnostic}",
+        )
     }
 
     private data class ChapterFetchOutcome(
         val pages: List<Page>,
         val loginRequired: Boolean,
         val httpCode: Int,
+        val finalPath: String,
+        val diagnostic: String,
     )
 
     private fun executeChapterCall(chapterPath: String): ChapterFetchOutcome {
@@ -416,48 +422,104 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         val req = pageListRequest(tempChapter)
         client.newCall(req).execute().use { response ->
             val code = response.code
+            val finalPath = response.request.url.encodedPath
             val doc = response.asJsoupDoc().captureCsrf()
             val pages = extractPagesFromDocument(doc, req.url.toString())
             if (pages.isNotEmpty()) {
-                return ChapterFetchOutcome(pages, false, code)
+                return ChapterFetchOutcome(pages, false, code, finalPath, "")
             }
             val loginNeeded = isLoginRequiredDocument(doc, response)
-            return ChapterFetchOutcome(emptyList(), loginNeeded, code)
+            return ChapterFetchOutcome(emptyList(), loginNeeded, code, finalPath, describeDocument(doc, response))
         }
     }
 
+    private fun toPages(urls: List<String>, chapterUrl: String): List<Page> =
+        urls.distinct().mapIndexed { index, imgUrl -> Page(index, chapterUrl, imgUrl) }
+
     private fun extractPagesFromDocument(doc: Document, chapterUrl: String): List<Page> {
-        // Estratégia 1: Array JS inline `S = [...]` no leitor da Blackout
-        for (script in doc.select("script:not([src])")) {
-            val scriptContent = script.data().ifEmpty { script.html() }
-            val match = PAGE_LIST_REGEX.find(scriptContent) ?: continue
-            val rawArray = runCatching { JSONArray(match.groupValues[1]) }.getOrNull() ?: continue
-            val urls = ArrayList<String>(rawArray.length())
-            for (i in 0 until rawArray.length()) {
-                val item = rawArray.optString(i, "").trim()
-                if (item.isNotEmpty()) {
-                    urls.add(resolveAbsoluteUrl(item))
+        val scripts = doc.select("script:not([src])").map { it.data().ifEmpty { it.html() } }
+
+        // Estratégia 1: array JS inline `S = [...]` (formato usado pelo leitor da Blackout)
+        var weakCandidate: List<String> = emptyList()
+        for (content in scripts) {
+            for (match in PAGE_LIST_REGEX.findAll(content)) {
+                val arr = runCatching { JSONArray(match.groupValues[1]) }.getOrNull() ?: continue
+                val parsed = parsePageArray(arr)
+                if (parsed.isEmpty()) continue
+                if (parsed.any { IMAGE_EXT_REGEX.containsMatchIn(it) || it.contains("/projects/") }) {
+                    return toPages(parsed, chapterUrl)
                 }
-            }
-            if (urls.isNotEmpty()) {
-                return urls.mapIndexed { index, imgUrl ->
-                    Page(index, chapterUrl, imgUrl)
-                }
+                if (weakCandidate.isEmpty()) weakCandidate = parsed
             }
         }
 
-        // Estratégia 2: Fallback direto nas tags <img> do container #pages / #viewer-img
-        val domImages = doc.select("#pages img.slice, #pages img, #viewer-img img")
-            .mapNotNull { extractImageUrl(it) }
-            .filter { it.isNotBlank() }
-
+        // Estratégia 2: tags <img> já renderizadas no HTML do leitor (src ou lazy-load)
+        val domImages = doc.select("#pages img, img.slice, .viewer-body img.slice, #viewer-img img")
+            .mapNotNull { extractReaderImage(it) }
         if (domImages.isNotEmpty()) {
-            return domImages.mapIndexed { index, imgUrl ->
-                Page(index, chapterUrl, imgUrl)
+            return toPages(domImages, chapterUrl)
+        }
+
+        // Estratégia 3: qualquer URL de imagem de capítulo (/projects/...) dentro dos scripts inline
+        val scriptImages = ArrayList<String>()
+        for (content in scripts) {
+            for (m in PROJECT_IMAGE_REGEX.findAll(content)) {
+                val cleaned = m.groupValues[1].replace("\\/", "/").replace("\\u002F", "/", ignoreCase = true)
+                if (cleaned.contains("/info/") || cleaned.contains("/previews/") ||
+                    cleaned.contains("favicon") || cleaned.contains("logo")
+                ) {
+                    continue
+                }
+                scriptImages.add(resolveAbsoluteUrl(cleaned))
             }
+        }
+        if (scriptImages.isNotEmpty()) {
+            return toPages(scriptImages, chapterUrl)
+        }
+
+        if (weakCandidate.isNotEmpty()) {
+            return toPages(weakCandidate, chapterUrl)
         }
 
         return emptyList()
+    }
+
+    private fun parsePageArray(arr: JSONArray): List<String> {
+        val out = ArrayList<String>(arr.length())
+        for (i in 0 until arr.length()) {
+            val item = when (val raw = arr.opt(i)) {
+                is String -> raw
+                is JSONObject -> listOf("url", "src", "img", "image", "link", "path")
+                    .firstNotNullOfOrNull { key -> raw.optString(key, "").takeIf { it.isNotBlank() } }
+                    .orEmpty()
+                else -> ""
+            }.trim()
+            if (item.isNotEmpty()) out.add(resolveAbsoluteUrl(item))
+        }
+        return out
+    }
+
+    private fun extractReaderImage(img: Element): String? {
+        for (attr in listOf("data-src", "data-lazy-src", "data-original", "src")) {
+            val value = img.attr(attr).trim()
+            if (value.isNotEmpty() && !value.startsWith("data:")) {
+                return resolveAbsoluteUrl(value)
+            }
+        }
+        return null
+    }
+
+    private fun describeDocument(doc: Document, response: Response): String {
+        val title = doc.title().trim().take(60)
+        val notice = doc.select(".alert, .notif-modal, #errors, .viewer-error, .error, h1, h2")
+            .map { it.text().trim() }
+            .firstOrNull { it.isNotEmpty() }
+            ?.take(140)
+            .orEmpty()
+        val discord = DISCORD_GATE_REGEX.containsMatchIn(doc.text())
+        return "URL final: ${response.request.url.encodedPath.ifEmpty { "/" }}; título: \"$title\"; " +
+            "aviso: \"$notice\"; scripts: ${doc.select("script:not([src])").size}; " +
+            "menção a Discord: ${if (discord) "sim" else "não"}"
     }
 
     private fun isLoginRequiredDocument(doc: Document, response: Response): Boolean {
@@ -920,6 +982,15 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
                 "ou preencha seu E-mail e Senha nas Configurações da extensão (⚙️)."
 
         private val PAGE_LIST_REGEX = Regex("""\bS\s*=\s*(\[[\s\S]*?])""")
+        private val IMAGE_EXT_REGEX = Regex("""\.(?:webp|jpe?g|png|avif|gif|bmp)(?:\?|$)""", RegexOption.IGNORE_CASE)
+        private val PROJECT_IMAGE_REGEX = Regex(
+            """["']([^"'\s]*projects\\?/[^"'\s]+?\.(?:webp|jpe?g|png|avif|gif)[^"'\s]*)["']""",
+            RegexOption.IGNORE_CASE,
+        )
+        private val DISCORD_GATE_REGEX = Regex(
+            """(?:vincul|valid)\w*.{0,60}discord|discord.{0,60}(?:vincul|valid)""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+        )
         private val NON_DIGITS_REGEX = Regex("""[^0-9]""")
         private val LEADING_ZERO_CHAPTER_REGEX = Regex("""/ler/capitulo-0+(\d+(?:[.,-]\d+)?)""")
     }
