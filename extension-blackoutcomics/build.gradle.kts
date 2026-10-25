@@ -3,7 +3,7 @@ plugins {
     kotlin("android") version "1.9.22"
 }
 
-val extVersionCode = 5
+val extVersionCode = 13
 val libVersion = "1.6"
 
 val calculatedVersionCode = libVersion.split(".")
