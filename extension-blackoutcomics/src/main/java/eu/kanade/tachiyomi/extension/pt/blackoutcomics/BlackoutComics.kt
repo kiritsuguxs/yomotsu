@@ -776,7 +776,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     private fun createPreference(context: Context): Preference = runCatching {
         Preference::class.java.getConstructor(Context::class.java).newInstance(context)
-    }.getOrElse { Preference(context) }
+    }.getOrElse { Preference() }
 
     private fun getSavedEmail(): String {
         val prefs = preferences ?: return ""
