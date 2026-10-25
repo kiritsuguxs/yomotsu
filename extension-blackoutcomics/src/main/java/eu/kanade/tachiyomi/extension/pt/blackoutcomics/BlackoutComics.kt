@@ -1,7 +1,5 @@
 package eu.kanade.tachiyomi.extension.pt.blackoutcomics
 
-import android.app.Application
-import android.content.Context
 import android.content.SharedPreferences
 import android.text.InputType
 import android.widget.Toast
@@ -48,18 +46,22 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     private val baseHttpUrl by lazy { baseUrl.toHttpUrl() }
 
+    // O stub de Context do extensions-lib 1.4.4 não expõe getSharedPreferences/applicationContext,
+    // então o acesso é feito por reflexão (o app hospedeiro fornece a implementação real em runtime).
     @Volatile
-    private var cachedAppContext: Context? = null
+    private var cachedAppContext: Any? = null
 
     private val preferences: SharedPreferences?
-        get() {
-            val ctx = cachedAppContext ?: runCatching {
-                val activityThread = Class.forName("android.app.ActivityThread")
-                val app = activityThread.getMethod("currentApplication").invoke(null) as? Application
-                app?.applicationContext?.also { cachedAppContext = it }
-            }.getOrNull()
-            return ctx?.getSharedPreferences("source_$id", Context.MODE_PRIVATE)
-        }
+        get() = runCatching {
+            val ctx = cachedAppContext ?: Class.forName("android.app.ActivityThread")
+                .getMethod("currentApplication")
+                .invoke(null)
+                ?.also { cachedAppContext = it }
+                ?: return null
+            ctx.javaClass
+                .getMethod("getSharedPreferences", String::class.java, Int::class.javaPrimitiveType)
+                .invoke(ctx, "source_$id", 0) as? SharedPreferences
+        }.getOrNull()
 
     @Volatile
     private var loginVerifiedInMemory = false
@@ -509,7 +511,9 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
     // ========================== Login & Settings ==========================
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
-        cachedAppContext = screen.context.applicationContext
+        cachedAppContext = runCatching {
+            screen.context.javaClass.getMethod("getApplicationContext").invoke(screen.context)
+        }.getOrNull() ?: screen.context
         val prefs = preferences
 
         val savedEmail = prefs?.getString(PREF_EMAIL_KEY, "")?.trim().orEmpty()
