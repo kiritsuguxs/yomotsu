@@ -266,7 +266,9 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         val doc = response.asJsoupDoc().captureCsrf()
         return SManga.create().apply {
             setUrlWithoutDomain(doc.location().ifBlank { response.request.url.toString() })
-            title = doc.selectFirst(".project-title, h1")?.text()?.trim().orEmpty()
+            title = doc.selectFirst("h1.project-title, .project-title")?.text()?.trim().orEmpty()
+                .ifEmpty { doc.selectFirst("h1:not(#ageGateTitle)")?.text()?.trim().orEmpty() }
+                .ifEmpty { doc.title().substringBefore(" - Blackout Comics").substringBefore(" | Blackout Comics").trim() }
             thumbnail_url = extractImageUrl(doc.selectFirst(".project-cover"))
             author = doc.selectFirst(".quick-info-item:has(.fa-pen-nib) strong")?.text()?.trim()
             artist = doc.selectFirst(".quick-info-item:has(.fa-palette) strong")?.text()?.trim()
@@ -397,16 +399,17 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
         if (firstAttempt.httpCode == 403) {
             throw Exception(
-                "Acesso bloqueado (HTTP 403). Abra a WebView (ícone 🌐 no topo), " +
-                    "aguarde carregar o site/faça login na sua conta e tente novamente.",
+                "HTTP 403: Acesso bloqueado. Abra a WebView (ícone 🌐 no topo), faça login ou conclua a checagem.",
             )
         }
 
-        throw Exception(
-            "Nenhuma página encontrada (HTTP ${firstAttempt.httpCode}). Se você está logado, a conta pode " +
-                "precisar validar/vincular o Discord no site para liberar a leitura (abra a WebView 🌐 e conclua). " +
-                "Detalhes: ${firstAttempt.diagnostic}",
-        )
+        val diag = firstAttempt.diagnostic.trim()
+        val errorMsg = if (diag.isNotEmpty()) {
+            "Sem páginas (HTTP ${firstAttempt.httpCode}): $diag. Abra na WebView (🌐)."
+        } else {
+            "Sem páginas (HTTP ${firstAttempt.httpCode}) em ${firstAttempt.finalPath}. Abra na WebView (🌐)."
+        }
+        throw Exception(errorMsg)
     }
 
     private data class ChapterFetchOutcome(
@@ -437,66 +440,100 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         urls.distinct().mapIndexed { index, imgUrl -> Page(index, chapterUrl, imgUrl) }
 
     private fun extractPagesFromDocument(doc: Document, chapterUrl: String): List<Page> {
-        val scripts = doc.select("script:not([src])").map { it.data().ifEmpty { it.html() } }
+        val scriptElements = doc.select("script:not([src])")
+        val scripts = scriptElements.flatMap { listOf(it.data(), it.html()) }.filter { it.isNotBlank() }
 
-        // Estratégia 1: array JS inline `S = [...]` (formato usado pelo leitor da Blackout)
-        var weakCandidate: List<String> = emptyList()
+        // Estratégia 1: Array JS atribuído a variável (ex.: var S = [...]; window.S = [...]; pages = [...]; "pages": [...])
         for (content in scripts) {
-            for (match in PAGE_LIST_REGEX.findAll(content)) {
-                val arr = runCatching { JSONArray(match.groupValues[1]) }.getOrNull() ?: continue
-                val parsed = parsePageArray(arr)
-                if (parsed.isEmpty()) continue
-                if (parsed.any { IMAGE_EXT_REGEX.containsMatchIn(it) || it.contains("/projects/") }) {
-                    return toPages(parsed, chapterUrl)
+            for (match in JS_ARRAY_ASSIGNMENT_REGEX.findAll(content)) {
+                val arrayContent = match.groupValues[1]
+                val urls = extractUrlsFromJsBlock(arrayContent)
+                if (urls.isNotEmpty() && urls.any { isLikelyChapterImage(it) }) {
+                    return toPages(urls, chapterUrl)
                 }
-                if (weakCandidate.isEmpty()) weakCandidate = parsed
             }
         }
 
-        // Estratégia 2: tags <img> já renderizadas no HTML do leitor (src ou lazy-load)
-        val domImages = doc.select("#pages img, img.slice, .viewer-body img.slice, #viewer-img img")
+        // Estratégia 2: busca por qualquer array `[...]` que contenha múltiplas URLs de imagens
+        for (content in scripts) {
+            for (match in GENERIC_BRACKETED_ARRAY_REGEX.findAll(content)) {
+                val arrayContent = match.groupValues[1]
+                val urls = extractUrlsFromJsBlock(arrayContent)
+                if (urls.isNotEmpty() && urls.any { isLikelyChapterImage(it) }) {
+                    return toPages(urls, chapterUrl)
+                }
+            }
+        }
+
+        // Estratégia 3: qualquer URL de imagem de capítulo entre aspas nos scripts inline
+        for (content in scripts) {
+            val urls = extractAllQuotedImageUrls(content)
+            if (urls.isNotEmpty()) {
+                return toPages(urls, chapterUrl)
+            }
+        }
+
+        // Estratégia 4: tags <img> já renderizadas no HTML do leitor (src ou lazy-load)
+        val domImages = doc.select("#pages img, img.slice, .viewer-body img.slice, #viewer-img img, #viewer-img-container img")
             .mapNotNull { extractReaderImage(it) }
+            .filter { isLikelyChapterImage(it) }
         if (domImages.isNotEmpty()) {
             return toPages(domImages, chapterUrl)
-        }
-
-        // Estratégia 3: qualquer URL de imagem de capítulo (/projects/...) dentro dos scripts inline
-        val scriptImages = ArrayList<String>()
-        for (content in scripts) {
-            for (m in PROJECT_IMAGE_REGEX.findAll(content)) {
-                val cleaned = m.groupValues[1].replace("\\/", "/").replace("\\u002F", "/", ignoreCase = true)
-                if (cleaned.contains("/info/") || cleaned.contains("/previews/") ||
-                    cleaned.contains("favicon") || cleaned.contains("logo")
-                ) {
-                    continue
-                }
-                scriptImages.add(resolveAbsoluteUrl(cleaned))
-            }
-        }
-        if (scriptImages.isNotEmpty()) {
-            return toPages(scriptImages, chapterUrl)
-        }
-
-        if (weakCandidate.isNotEmpty()) {
-            return toPages(weakCandidate, chapterUrl)
         }
 
         return emptyList()
     }
 
-    private fun parsePageArray(arr: JSONArray): List<String> {
-        val out = ArrayList<String>(arr.length())
-        for (i in 0 until arr.length()) {
-            val item = when (val raw = arr.opt(i)) {
-                is String -> raw
-                is JSONObject -> listOf("url", "src", "img", "image", "link", "path")
-                    .firstNotNullOfOrNull { key -> raw.optString(key, "").takeIf { it.isNotBlank() } }
-                    .orEmpty()
-                else -> ""
-            }.trim()
-            if (item.isNotEmpty()) out.add(resolveAbsoluteUrl(item))
+    private fun extractUrlsFromJsBlock(rawBlock: String): List<String> {
+        val urls = ArrayList<String>()
+        for (m in QUOTED_STRING_REGEX.findAll(rawBlock)) {
+            val unescaped = unescapeJsString(m.groupValues[1])
+            if (unescaped.isBlank() || isNonContentImage(unescaped)) continue
+            if (unescaped.startsWith("http://") || unescaped.startsWith("https://") ||
+                unescaped.startsWith("//") || unescaped.startsWith("/") ||
+                IMAGE_EXT_REGEX.containsMatchIn(unescaped)
+            ) {
+                urls.add(resolveAbsoluteUrl(unescaped))
+            }
         }
-        return out
+        return urls.distinct()
+    }
+
+    private fun extractAllQuotedImageUrls(scriptContent: String): List<String> {
+        val urls = ArrayList<String>()
+        for (m in QUOTED_STRING_REGEX.findAll(scriptContent)) {
+            val unescaped = unescapeJsString(m.groupValues[1])
+            if (unescaped.isBlank() || isNonContentImage(unescaped)) continue
+            if (isLikelyChapterImage(unescaped)) {
+                urls.add(resolveAbsoluteUrl(unescaped))
+            }
+        }
+        return urls.distinct()
+    }
+
+    private fun unescapeJsString(s: String): String =
+        s.replace("\\/", "/")
+            .replace("\\u002F", "/", ignoreCase = true)
+            .replace("\\\"", "\"")
+            .replace("\\'", "'")
+            .replace("\\\\", "\\")
+            .trim()
+
+    private fun isLikelyChapterImage(url: String): Boolean {
+        if (isNonContentImage(url)) return false
+        val lower = url.lowercase(Locale.ROOT)
+        return lower.contains("/projects/") || lower.contains("/chapters/") ||
+            lower.contains("/capitulos/") || lower.contains("/storage/") ||
+            lower.contains("/uploads/") || IMAGE_EXT_REGEX.containsMatchIn(lower)
+    }
+
+    private fun isNonContentImage(url: String): Boolean {
+        val lower = url.lowercase(Locale.ROOT)
+        return lower.contains("/info/") || lower.contains("/previews/") ||
+            lower.contains("favicon") || lower.contains("logo") ||
+            lower.contains("avatar") || lower.contains("banner") ||
+            lower.contains("/media/") || lower.contains("/themes/") ||
+            lower.contains("placeholder") || lower.contains("adblock")
     }
 
     private fun extractReaderImage(img: Element): String? {
@@ -510,16 +547,28 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
     }
 
     private fun describeDocument(doc: Document, response: Response): String {
-        val title = doc.title().trim().take(60)
-        val notice = doc.select(".alert, .notif-modal, #errors, .viewer-error, .error, h1, h2")
+        val notice = doc.select(".alert, .notif-modal, #errors, .viewer-error, .error, #humanCheckOverlay, .adblock-wall, .modal-title, .modal-body")
             .map { it.text().trim() }
-            .firstOrNull { it.isNotEmpty() }
-            ?.take(140)
+            .firstOrNull { it.isNotEmpty() && !it.contains("Blackout Comics") }
+            ?.take(70)
             .orEmpty()
-        val discord = DISCORD_GATE_REGEX.containsMatchIn(doc.text())
-        return "URL final: ${response.request.url.encodedPath.ifEmpty { "/" }}; título: \"$title\"; " +
-            "aviso: \"$notice\"; scripts: ${doc.select("script:not([src])").size}; " +
-            "menção a Discord: ${if (discord) "sim" else "não"}"
+        val discordMention = DISCORD_GATE_REGEX.containsMatchIn(doc.text())
+        val scriptCount = doc.select("script:not([src])").size
+
+        val parts = mutableListOf<String>()
+        if (notice.isNotEmpty()) {
+            parts.add("aviso: \"$notice\"")
+        }
+        if (discordMention) {
+            parts.add("requer Discord")
+        }
+        parts.add("path: ${response.request.url.encodedPath}")
+        val title = doc.title().trim().take(35)
+        if (title.isNotEmpty()) {
+            parts.add("título: \"$title\"")
+        }
+        parts.add("scripts: $scriptCount")
+        return parts.joinToString("; ")
     }
 
     private fun isLoginRequiredDocument(doc: Document, response: Response): Boolean {
@@ -777,7 +826,31 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
                 )
             }
             if (toSave.isNotEmpty()) {
-                runCatching { cookieJar.saveFromResponse(baseHttpUrl, toSave) }
+                runCatching {
+                    cookieJar.saveFromResponse(baseHttpUrl, toSave)
+                    android.webkit.CookieManager.getInstance().flush()
+                }
+            }
+
+            // Injetar também os cookies essenciais no header Cookie da requisição
+            val currentCookieHeader = request.header("Cookie").orEmpty()
+            val extraCookies = mutableListOf<String>()
+            if (!currentCookieHeader.contains("age_gate_consent=")) {
+                extraCookies.add("""age_gate_consent={"consentAt":1790812800000,"expiresAt":2145916800000}""")
+            }
+            if (!currentCookieHeader.contains("_popprepop=")) {
+                extraCookies.add("_popprepop=1")
+            }
+            if (extraCookies.isNotEmpty()) {
+                val newCookieHeader = if (currentCookieHeader.isBlank()) {
+                    extraCookies.joinToString("; ")
+                } else {
+                    "$currentCookieHeader; " + extraCookies.joinToString("; ")
+                }
+                val newReq = request.newBuilder()
+                    .header("Cookie", newCookieHeader)
+                    .build()
+                return chain.proceed(newReq)
             }
         }
 
@@ -978,15 +1051,14 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
 
         private const val LOGIN_REQUIRED_MESSAGE =
-            "Login necessário para ler capítulos: abra a WebView (ícone 🌐 no topo) para entrar na sua conta, " +
-                "ou preencha seu E-mail e Senha nas Configurações da extensão (⚙️)."
+            "Login necessário: abra na WebView (ícone 🌐 no topo) para entrar na sua conta."
 
-        private val PAGE_LIST_REGEX = Regex("""\bS\s*=\s*(\[[\s\S]*?])""")
         private val IMAGE_EXT_REGEX = Regex("""\.(?:webp|jpe?g|png|avif|gif|bmp)(?:\?|$)""", RegexOption.IGNORE_CASE)
-        private val PROJECT_IMAGE_REGEX = Regex(
-            """["']([^"'\s]*projects\\?/[^"'\s]+?\.(?:webp|jpe?g|png|avif|gif)[^"'\s]*)["']""",
-            RegexOption.IGNORE_CASE,
+        private val QUOTED_STRING_REGEX = Regex("""["'`]([^"'`\\]*(?:\\.[^"'`\\]*)*)["'`]""")
+        private val JS_ARRAY_ASSIGNMENT_REGEX = Regex(
+            """(?:[a-zA-Z0-9_$]+(?:\.[a-zA-Z0-9_$]+)*\s*=\s*|:\s*)\[([\s\S]*?)\]""",
         )
+        private val GENERIC_BRACKETED_ARRAY_REGEX = Regex("""\[([\s\S]*?)\]""")
         private val DISCORD_GATE_REGEX = Regex(
             """(?:vincul|valid)\w*.{0,60}discord|discord.{0,60}(?:vincul|valid)""",
             setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
