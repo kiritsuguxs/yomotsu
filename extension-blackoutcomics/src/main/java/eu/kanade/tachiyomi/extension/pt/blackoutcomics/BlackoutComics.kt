@@ -72,9 +72,12 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
     @Volatile
     private var cachedCsrfToken: String? = null
 
+    @Volatile
+    private var lastLoginAttemptTime = 0L
+
     override val client: OkHttpClient by lazy {
         network.client.newBuilder()
-            .addInterceptor(RateLimitInterceptor(permits = 1, periodMs = 1100L))
+            .addInterceptor(RateLimitInterceptor(permits = 2, periodMs = 1200L))
             .addInterceptor(::ageGateAndCookiesInterceptor)
             .build()
     }
@@ -92,12 +95,17 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     // ============================== Popular ===============================
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/ranking", headers)
+    override fun popularMangaRequest(page: Int): Request =
+        GET("$baseUrl/comics?page=$page", headers)
 
     override fun popularMangaParse(response: Response): MangasPage {
         val doc = response.asJsoupDoc().captureCsrf()
-        val mangas = parseRankingCards(doc)
-        return MangasPage(mangas, false)
+        val currentPage = response.request.url.queryParameter("page")?.toIntOrNull() ?: 1
+        val mangas = parseCatalogCards(doc, sortByViews = true)
+        val hasNext = doc.selectFirst(
+            ".pagerx__link[rel=next], a.pagerx__link[href*=\"page=${currentPage + 1}\"]",
+        ) != null
+        return MangasPage(mangas, hasNext)
     }
 
     // =============================== Latest ===============================
@@ -281,7 +289,6 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
 
     override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> =
         Observable.fromCallable {
-            ensureLoginSilently()
             client.newCall(chapterListRequest(manga)).execute().use { response ->
                 chapterListParse(response)
             }
@@ -348,8 +355,6 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
     }
 
     private fun loadChapterPagesWithAuth(chapter: SChapter): List<Page> {
-        ensureLoginSilently()
-
         val mangaPath = chapter.url.substringBefore("/ler")
         val mangaUrl = if (mangaPath.startsWith("http")) mangaPath else "$baseUrl$mangaPath"
         val chapterUrl = resolveAbsoluteUrl(chapter.url)
@@ -361,17 +366,6 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         var pages = fetchPagesFromUrl(chapterUrl, chapterHeaders)
         if (pages.isNotEmpty()) return pages
 
-        // Se o #reader-payload não veio e há credenciais salvas, autentica e tenta novamente
-        val email = getSavedEmail()
-        val password = getSavedPassword()
-        if (email.isNotEmpty() && password.isNotEmpty()) {
-            val logged = runCatching { performLogin(email, password) }.isSuccess
-            if (logged) {
-                pages = fetchPagesFromUrl(chapterUrl, chapterHeaders)
-                if (pages.isNotEmpty()) return pages
-            }
-        }
-
         // Fallback caso o capítulo tenha zero à esquerda (ex.: capitulo-01 -> capitulo-1)
         val altPath = stripLeadingZeroInChapterPath(chapter.url)
         if (altPath != null && altPath != chapter.url) {
@@ -380,20 +374,29 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             if (pages.isNotEmpty()) return pages
         }
 
-        if (email.isEmpty()) {
-            throw Exception("Capítulo protegido: configure e-mail e senha nas opções da extensão ou faça login na WebView (🌐).")
+        // Se tem credenciais salvas e ainda não há sessão de login, tenta autenticar
+        val email = getSavedEmail()
+        val password = getSavedPassword()
+        if (email.isNotEmpty() && password.isNotEmpty() && !hasSessionCookie()) {
+            performLoginSilently(email, password)
+            pages = fetchPagesFromUrl(chapterUrl, chapterHeaders)
+            if (pages.isNotEmpty()) return pages
         }
 
-        throw Exception("Nenhuma página encontrada. Abra na WebView (🌐) para verificar o acesso.")
+        if (!hasSessionCookie()) {
+            throw Exception("Capítulo protegido ou com verificação: abra a WebView (ícone 🌐 no topo) para fazer login ou concluir a checagem.")
+        }
+
+        throw Exception("Nenhuma página encontrada. Abra na WebView (🌐) para verificar o capítulo.")
     }
 
     private fun fetchPagesFromUrl(url: String, chapterHeaders: Headers): List<Page> {
         return client.newCall(GET(url, chapterHeaders)).execute().use { response ->
             if (response.code == 429) {
-                throw Exception("Muitas requisições (HTTP 429): aguarde 1 minuto para o site liberar e tente novamente.")
+                throw Exception("Muitas requisições (HTTP 429): o site ativou proteção temporária. Aguarde 1 minuto ou abra na WebView (🌐).")
             }
             if (response.code == 403) {
-                throw Exception("HTTP 403: Acesso bloqueado. Abra a WebView (ícone 🌐 no topo) e conclua a verificação.")
+                throw Exception("HTTP 403: Acesso bloqueado por segurança. Abra a WebView (ícone 🌐 no topo) para liberar.")
             }
             if (!response.isSuccessful) {
                 return emptyList()
@@ -615,7 +618,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
                     ?.apply()
                 Toast.makeText(
                     screen.context,
-                    "E-mail salvo! O login será atualizado ao abrir um capítulo.",
+                    "E-mail salvo! Se o site pedir, faça o login pela WebView (🌐).",
                     Toast.LENGTH_SHORT,
                 ).show()
                 true
@@ -719,20 +722,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         return okHttpCookies.any { it.name == "blackout-comics-session" && it.value.isNotBlank() }
     }
 
-    private fun ensureLoginSilently() {
-        val email = getSavedEmail()
-        val password = getSavedPassword()
-        if (email.isEmpty() || password.isEmpty()) return
-        if (!loginVerifiedInMemory && !hasSessionCookie()) {
-            runCatching { performLogin(email, password) }
-        }
-    }
-
-    @Volatile
-    private var lastLoginAttemptTime = 0L
-
-    @Synchronized
-    private fun performLogin(email: String, password: String) {
+    private fun performLoginSilently(email: String, password: String) {
         val now = System.currentTimeMillis()
         if (now - lastLoginAttemptTime < 60_000L) return
         lastLoginAttemptTime = now
@@ -754,11 +744,12 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             .set("X-Requested-With", "XMLHttpRequest")
             .build()
 
-        client.newCall(POST("$baseUrl/entrar", loginHeaders, formBody)).execute().use { res ->
-            if (res.code == 429) {
-                throw Exception("Muitas requisições ao entrar (HTTP 429). Aguarde 1 minuto.")
+        runCatching {
+            client.newCall(POST("$baseUrl/entrar", loginHeaders, formBody)).execute().use { res ->
+                if (res.isSuccessful) {
+                    loginVerifiedInMemory = true
+                }
             }
-            loginVerifiedInMemory = true
         }
     }
 
@@ -817,7 +808,6 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
             }
         }
 
-        // Deixa o CookieJar fornecer os cookies completos (cf_clearance, sessão, idade) sem sobrescrever o header
         return chain.proceed(request)
     }
 
@@ -827,13 +817,13 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         val seenUrls = HashSet<String>()
         val parsed = mutableListOf<Pair<SManga, Long>>()
 
-        for (el in doc.select("a.webtoon-card, .webtoon-grid a[href*=\"/comics/\"]")) {
+        for (el in doc.select("a.webtoon-card, .webtoon-grid a[href*=\"/comics/\"], a.ranking-featured-card, div.ranking-grid a.ranking-item, a.ranking-item")) {
             val href = el.attr("abs:href").ifBlank { el.attr("href") }
             if (href.isBlank()) continue
 
             val manga = SManga.create().apply {
                 setUrlWithoutDomain(resolveAbsoluteUrl(href))
-                title = el.selectFirst(".card-title span, .card-title, h2, h3")
+                title = el.selectFirst(".ranking-featured-info h2, .card-title span, .card-title, h2, h3")
                     ?.text()
                     ?.trim()
                     .orEmpty()
@@ -848,9 +838,9 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         }
 
         return if (sortByViews) {
-            parsed.sortedByDescending { it.second }.map { it.first }.take(24)
+            parsed.sortedByDescending { it.second }.map { it.first }
         } else {
-            parsed.map { it.first }.take(24)
+            parsed.map { it.first }
         }
     }
 
@@ -858,7 +848,7 @@ class BlackoutComics : HttpSource(), ConfigurableSource {
         val seenUrls = HashSet<String>()
         val mangas = mutableListOf<SManga>()
 
-        for (el in doc.select("a.ranking-featured-card, .ranking-grid a.webtoon-card")) {
+        for (el in doc.select("a.ranking-featured-card, div.ranking-grid a.ranking-item, a.ranking-item, .ranking-grid a.webtoon-card")) {
             val href = el.attr("abs:href").ifBlank { el.attr("href") }
             if (href.isBlank()) continue
 
