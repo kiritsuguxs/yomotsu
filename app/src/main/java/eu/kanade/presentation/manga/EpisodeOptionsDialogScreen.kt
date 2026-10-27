@@ -568,14 +568,15 @@ private fun VideoList(
                             val pkgName = playerPreferences.externalPlayerPreference().get().trim()
                             if (pkgName.isNotBlank()) {
                                 extIntent.setPackage(pkgName)
-                                if (pkgName.contains("vlc", ignoreCase = true)) {
-                                    extIntent.component = android.content.ComponentName(pkgName, "$pkgName.gui.video.VideoPlayerActivity")
-                                }
                             }
                             runCatching {
                                 context.startActivity(
-                                    android.content.Intent.createChooser(extIntent, episode.name).apply {
-                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    if (pkgName.isNotBlank()) {
+                                        extIntent
+                                    } else {
+                                        android.content.Intent.createChooser(extIntent, episode.name).apply {
+                                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
                                     },
                                 )
                             }.onFailure {

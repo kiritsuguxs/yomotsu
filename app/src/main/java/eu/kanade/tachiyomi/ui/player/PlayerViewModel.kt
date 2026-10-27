@@ -368,12 +368,6 @@ class PlayerViewModel @JvmOverloads constructor(
             .onEach { onSubtitleTrackSelectChange() }
             .launchIn(viewModelScope)
 
-        // ANK -->
-        mpv.propFlow<MPVNode>("aid")
-            .onEach { onAudioTrackSelectChange() }
-            .launchIn(viewModelScope)
-        // ANK <--
-
         mpv.propFlow<Long>("user-data/current-anime/intro-length")
             .filterNotNull()
             .onEach(::setAnimeSkipIntroLength)
@@ -755,18 +749,6 @@ class PlayerViewModel @JvmOverloads constructor(
             }
         }
     }
-
-    // ANK -->
-    private fun onAudioTrackSelectChange() {
-        val id = mpv.getPropertyInt("aid")
-
-        _externalAudioTracks.update { audioTracks ->
-            audioTracks.map {
-                it.copy(mainSelection = if (it.id != null && it.id == id) 0 else -1)
-            }
-        }
-    }
-    // ANK <--
 
     private fun selectSubById(id: Int) {
         val selectedSubs = Pair(mpv.getPropertyInt("sid"), mpv.getPropertyInt("secondary-sid"))
@@ -2157,22 +2139,6 @@ class PlayerViewModel @JvmOverloads constructor(
 
     fun saveCurrentEpisodeWatchingProgress() {
         currentEpisode.value?.let { saveWatchingProgress(it) }
-    }
-
-    fun updateExternalPlayerProgress(positionMs: Long, durationMs: Long) {
-        val currentEp = currentEpisode.value ?: return
-        if (!incognitoMode) {
-            val seconds = positionMs
-            val totalSeconds = if (durationMs > 0) durationMs else currentEp.total_seconds
-            currentEp.last_page_read = seconds.toInt()
-            currentEp.total_seconds = totalSeconds
-
-            val progress = playerPreferences.progressPreference().get()
-            if (totalSeconds > 0 && seconds >= (totalSeconds * progress).toLong()) {
-                updateEpisodeProgressOnComplete(currentEp)
-            }
-            saveWatchingProgress(currentEp)
-        }
     }
 
     /**
