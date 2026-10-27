@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.HosterState
 import kotlinx.coroutines.CancellationException
 import logcat.LogPriority
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.episode.model.Episode
@@ -95,27 +96,30 @@ class EpisodeLoader {
          * @param source the online source of the episode.
          */
         private suspend fun getHostersOnHttp(episode: Episode, source: AnimeHttpSource): List<Hoster> {
-            if (checkHasHosters(source)) {
-                try {
-                    val hosters = source.getHosterList(episode.toSEpisode())
-                        .let { source.run { it.sortHosters() } }
-                    if (hosters.isNotEmpty()) {
-                        return hosters
+            val hasHosters = checkHasHosters(source)
+            return withIOContext {
+                if (hasHosters) {
+                    try {
+                        val hosters = source.getHosterList(episode.toSEpisode())
+                            .let { source.run { it.sortHosters() } }
+                        if (hosters.isNotEmpty()) {
+                            return@withIOContext hosters
+                        }
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        logcat(LogPriority.WARN, e) { "getHosterList failed for ${source.name}, trying getVideoList fallback" }
                     }
+                }
+
+                try {
+                    source.getVideoList(episode.toSEpisode())
+                        .let { source.run { it.sortVideos() } }
+                        .toHosterList()
                 } catch (e: Throwable) {
                     if (e is CancellationException) throw e
-                    logcat(LogPriority.WARN, e) { "getHosterList failed for ${source.name}, trying getVideoList fallback" }
+                    logcat(LogPriority.ERROR, e) { "Failed to get videos for episode: ${episode.name} on source: ${source.name}" }
+                    emptyList()
                 }
-            }
-
-            return try {
-                source.getVideoList(episode.toSEpisode())
-                    .let { source.run { it.sortVideos() } }
-                    .toHosterList()
-            } catch (e: Throwable) {
-                if (e is CancellationException) throw e
-                logcat(LogPriority.ERROR, e) { "Failed to get videos for episode: ${episode.name} on source: ${source.name}" }
-                emptyList()
             }
         }
 
@@ -204,17 +208,19 @@ class EpisodeLoader {
          * @param hoster the hoster.
          */
         private suspend fun getVideosOnHttp(source: AnimeHttpSource, hoster: Hoster): List<Video> {
-            return source.getVideoList(hoster)
+            return withIOContext { source.getVideoList(hoster) }
                 .parseVideoUrls(source)
         }
 
         // TODO(16): Remove after ext lib bump
         private suspend fun List<Video>.parseVideoUrls(source: AnimeHttpSource): List<Video> {
-            return this.map { video ->
-                if (video.videoUrl != "null") return@map video
+            return withIOContext {
+                this@parseVideoUrls.map { video ->
+                    if (video.videoUrl != "null") return@map video
 
-                val newVideoUrl = source.getVideoUrl(video)
-                video.copy(videoUrl = newVideoUrl)
+                    val newVideoUrl = source.getVideoUrl(video)
+                    video.copy(videoUrl = newVideoUrl)
+                }
             }
         }
 

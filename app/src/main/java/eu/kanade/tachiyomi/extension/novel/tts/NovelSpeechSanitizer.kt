@@ -12,7 +12,11 @@ object NovelSpeechSanitizer {
         RegexOption.IGNORE_CASE,
     )
 
-    private val VISUAL_DIVIDERS = Regex("""(?:[-*_~=–—#]\s*){3,}""")
+    private val VISUAL_DIVIDERS = Regex("""(?:[-*_~=–—#]\s*){2,}""")
+
+    private val ISOLATED_DASH_DIVIDERS = Regex("""(?m)^\s*["'“”«»]?\s*[-–—_~*#]{1,}\s*["'“”«»]?\s*$""")
+
+    private val EMPTY_OR_STRAY_QUOTES = Regex("""(?<=^|\s)["'“”«»]{2,}(?=$|\s)""")
 
     private val REPEATED_DOTS = Regex("""\.{2,}|…+""")
 
@@ -41,7 +45,9 @@ object NovelSpeechSanitizer {
         result = TRANSLATOR_NOTE_PARENS.replace(result, "")
 
         // 2. Remove visual dividers and hr lines
+        result = ISOLATED_DASH_DIVIDERS.replace(result, "")
         result = VISUAL_DIVIDERS.replace(result, " ")
+        result = EMPTY_OR_STRAY_QUOTES.replace(result, " ")
 
         // 3. Normalize quotes and brackets to standard dialogue quotes
         result = ASIAN_OPEN_QUOTES.replace(result, "\"")

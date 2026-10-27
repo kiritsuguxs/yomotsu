@@ -18,6 +18,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import eu.kanade.tachiyomi.source.online.HttpSource
+import okhttp3.Headers
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
@@ -35,6 +36,14 @@ class NovelSourceWrapper(
     override val baseUrl: String get() = plugin.site.ifBlank { "https://google.com" }
 
     override fun getHomeUrl(): String = plugin.site.ifBlank { baseUrl }
+
+    override fun headersBuilder(): Headers.Builder {
+        val builder = super.headersBuilder()
+        if (plugin.site.isNotBlank()) {
+            builder.add("Referer", plugin.site)
+        }
+        return builder
+    }
 
     override fun getMangaUrl(manga: SManga): String {
         if (manga.url.startsWith("http://") || manga.url.startsWith("https://")) {

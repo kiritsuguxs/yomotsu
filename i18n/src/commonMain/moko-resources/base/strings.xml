@@ -766,6 +766,7 @@
     <string name="pref_download_concurrent_sources">Concurrent source downloads</string>
     <string name="pref_download_concurrent_pages">Concurrent page downloads</string>
     <string name="pref_download_concurrent_pages_summary">Pages downloaded simultaneously per source</string>
+    <string name="pref_download_ignore_broken_tracks">Skip broken external audio/subtitle tracks</string>
 
     <!-- Tracking section -->
     <string name="tracking_guide">Tracking guide</string>
