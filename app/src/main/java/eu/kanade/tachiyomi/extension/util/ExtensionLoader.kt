@@ -134,6 +134,7 @@ internal object ExtensionLoader {
         val staged = File(privateDir, "${target.name}.part")
         return try {
             file.copyAndSetReadOnlyTo(staged, overwrite = true)
+            if (target.exists()) target.delete()
             if (!staged.renameTo(target)) throw java.io.IOException("Unable to replace ${target.name}")
             if (currentExtension != null) {
                 ExtensionInstallReceiver.notifyReplaced(context, extension.packageName)

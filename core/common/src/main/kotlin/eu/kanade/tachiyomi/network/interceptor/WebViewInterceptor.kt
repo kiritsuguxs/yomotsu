@@ -101,6 +101,4 @@ private fun isRequestHeaderSafe(_name: String, _value: String): Boolean {
 }
 private val unsafeHeaderNames = listOf(
     "content-length", "host", "trailer", "te", "upgrade", "cookie2", "keep-alive", "transfer-encoding", "set-cookie",
-    // Renderer is killed if it doesn't match the request initiator
-    "origin",
 )

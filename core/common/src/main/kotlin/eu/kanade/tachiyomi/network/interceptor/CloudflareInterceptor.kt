@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.network.interceptor
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -12,16 +11,13 @@ import androidx.core.content.ContextCompat
 import eu.kanade.tachiyomi.network.AndroidCookieJar
 import eu.kanade.tachiyomi.util.system.isOutdated
 import eu.kanade.tachiyomi.util.system.toast
-import logcat.LogPriority
 import okhttp3.Cookie
-import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.Jsoup
 import tachiyomi.core.common.i18n.stringResource
-import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
@@ -84,10 +80,8 @@ class CloudflareInterceptor(
         var challengeFound = false
         var cloudflareBypassed = false
         var isWebViewOutdated = false
-        var isRenderProcessGone = false
 
         val origRequestUrl = originalRequest.url.toString()
-        val challengeUrl = if (originalRequest.method == "GET") origRequestUrl else originalRequest.url.origin()
         val headers = parseHeaders(originalRequest.headers)
 
         executor.execute {
@@ -107,7 +101,7 @@ class CloudflareInterceptor(
                             latch.countDown()
                         }
 
-                        if (url == challengeUrl && !challengeFound) {
+                        if (url == origRequestUrl && !challengeFound) {
                             // The first request didn't return the challenge, abort.
                             latch.countDown()
                         }
@@ -128,20 +122,9 @@ class CloudflareInterceptor(
                             }
                         }
                     }
-
-                    override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
-                        // Not handling it kills the app, failing the bypass is enough
-                        logcat(LogPriority.ERROR) {
-                            "WebView renderer gone during Cloudflare bypass: crashed=${detail.didCrash()}, " +
-                                "priority=${detail.rendererPriorityAtExit()}, url=$origRequestUrl"
-                        }
-                        isRenderProcessGone = true
-                        latch.countDown()
-                        return true
-                    }
                 }
 
-                webview.loadUrl(challengeUrl, headers)
+                webview.loadUrl(origRequestUrl, headers)
             } catch (e: Throwable) {
                 latch.countDown()
             }
@@ -151,14 +134,12 @@ class CloudflareInterceptor(
 
         executor.execute {
             try {
-                if (!cloudflareBypassed && !isRenderProcessGone) {
+                if (!cloudflareBypassed) {
                     isWebViewOutdated = webview?.isOutdated() == true
                 }
 
                 webview?.run {
-                    if (!isRenderProcessGone) {
-                        stopLoading()
-                    }
+                    stopLoading()
                     destroy()
                 }
             } catch (_: Throwable) {
@@ -178,12 +159,6 @@ class CloudflareInterceptor(
 }
 
 private val ERROR_CODES = listOf(403, 503)
-
-// An origin rule without a port only matches the scheme's default one
-private fun HttpUrl.origin(): String {
-    return if (port == HttpUrl.defaultPort(scheme)) "$scheme://$host" else "$scheme://$host:$port"
-}
-
 private val SERVER_CHECK = arrayOf("cloudflare-nginx", "cloudflare")
 private val COOKIE_NAMES = listOf("cf_clearance")
 
