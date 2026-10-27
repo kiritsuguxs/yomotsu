@@ -234,7 +234,7 @@ class BrowseSourceViewModel(
      */
     fun changeMangaFavorite(manga: Manga) {
         viewModelScope.launch {
-            var new = manga.copy(
+            val new = manga.copy(
                 favorite = !manga.favorite,
                 dateAdded = when (manga.favorite) {
                     true -> 0
@@ -243,7 +243,7 @@ class BrowseSourceViewModel(
             )
 
             if (!new.favorite) {
-                new = new.removeCovers(coverCache)
+                new.removeCovers(coverCache)
             } else {
                 setMangaDefaultChapterFlags.await(manga)
                 addTracks.bindEnhancedTrackers(manga, source)
