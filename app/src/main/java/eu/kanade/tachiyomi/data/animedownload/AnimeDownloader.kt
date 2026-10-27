@@ -592,7 +592,7 @@ class AnimeDownloader(
             ""
         }
 
-        val ffmpegOptions = getFFmpegOptions(video, headers, headerOptions, ffmpegFilename)
+        val ffmpegOptions = getFFmpegOptions(video, headerOptions, ffmpegFilename)
 
         var duration = 0L
         var nextLineIsDuration = false
@@ -694,9 +694,8 @@ class AnimeDownloader(
         }
     }
 
-    private suspend fun getFFmpegOptions(
+    private fun getFFmpegOptions(
         video: Video,
-        headers: Headers,
         headerOptions: String,
         ffmpegFilename: String,
     ): Array<String> {
@@ -713,15 +712,13 @@ class AnimeDownloader(
             "-metadata:s:$type:$i \"title=${track.lang}\""
         }.joinToString(" ")
 
-        val subtitleTracks = filterTracks(video.subtitleTracks, headers)
-        val subtitleInputs = formatInputs(subtitleTracks)
-        val subtitleMaps = formatMaps(subtitleTracks, "s")
-        val subtitleMetadata = formatMetadata(subtitleTracks, "s")
+        val subtitleInputs = formatInputs(video.subtitleTracks)
+        val subtitleMaps = formatMaps(video.subtitleTracks, "s")
+        val subtitleMetadata = formatMetadata(video.subtitleTracks, "s")
 
-        val audioTracks = filterTracks(video.audioTracks, headers)
-        val audioInputs = formatInputs(audioTracks)
-        val audioMaps = formatMaps(audioTracks, "a", subtitleTracks.size)
-        val audioMetadata = formatMetadata(audioTracks, "a")
+        val audioInputs = formatInputs(video.audioTracks)
+        val audioMaps = formatMaps(video.audioTracks, "a", video.subtitleTracks.size)
+        val audioMetadata = formatMetadata(video.audioTracks, "a")
 
         val sourceStreamOptions = video.ffmpegStreamArgs.joinToString(" ") { (key, value) ->
             val sanitizedKey = sanitizeFFmpegKey(key)
@@ -769,45 +766,6 @@ class AnimeDownloader(
 
         return FFmpegKitConfig.parseArguments(command)
     }
-
-    // AM -->
-    private suspend fun filterTracks(tracks: List<Track>, headers: Headers): List<Track> {
-        if (!downloadPreferences.ignoreBrokenTracks.get()) return tracks
-
-        return coroutineScope {
-            tracks.map { track ->
-                async {
-                    if (!track.url.startsWith("http")) return@async track
-
-                    try {
-                        val request = Request.Builder()
-                            .url(track.url)
-                            .headers(headers)
-                            .head()
-                            .build()
-
-                        val headCode = client.newCall(request).await().use { it.code }
-                        if (headCode != 405 && headCode != 501) {
-                            return@async if (headCode in 200..299) track else null
-                        }
-
-                        val rangedRequest = Request.Builder()
-                            .url(track.url)
-                            .headers(headers)
-                            .header("Range", "bytes=0-0")
-                            .build()
-                        return@async client.newCall(rangedRequest).await().use {
-                            if (it.isSuccessful) track else null
-                        }
-                    } catch (_: Exception) {
-                        currentCoroutineContext().ensureActive()
-                        null
-                    }
-                }
-            }.awaitAll().filterNotNull()
-        }
-    }
-    // <-- AM
 
     private suspend fun getDuration(videoUrl: String, headerOptions: String): Float? {
         return withContext(Dispatchers.IO) {

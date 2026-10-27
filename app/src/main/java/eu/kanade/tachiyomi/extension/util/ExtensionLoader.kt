@@ -131,11 +131,9 @@ internal object ExtensionLoader {
 
         val privateDir = getPrivateExtensionDir(context).apply { mkdirs() }
         val target = File(privateDir, "${extension.packageName}.$PRIVATE_EXTENSION_EXTENSION")
-        val staged = File(privateDir, "${target.name}.part")
         return try {
-            file.copyAndSetReadOnlyTo(staged, overwrite = true)
-            if (target.exists()) target.delete()
-            if (!staged.renameTo(target)) throw java.io.IOException("Unable to replace ${target.name}")
+            target.delete()
+            file.copyAndSetReadOnlyTo(target, overwrite = true)
             if (currentExtension != null) {
                 ExtensionInstallReceiver.notifyReplaced(context, extension.packageName)
             } else {
@@ -144,9 +142,8 @@ internal object ExtensionLoader {
             true
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Failed to copy extension file." }
+            target.delete()
             false
-        } finally {
-            staged.delete()
         }
     }
 

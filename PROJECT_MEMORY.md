@@ -556,3 +556,20 @@
 - **Soluções Aplicadas:**
   - `PlayerActivity.kt`, `PlayerViewModel.kt` e `EpisodeLoader.kt` foram **revertidos 100% para a base original da `main`**, restaurando a estabilidade perfeita do MPV interno.
   - Em `EpisodeOptionsDialogScreen.kt`, foi removida a definição de `component` indevida. O player externo agora recebe a intent limpa com `setPackage(pkgName)`, ação padrão `ACTION_VIEW` e headers compatíveis (`headers`, `android.media.intent.extra.HTTP_HEADERS`), permitindo que o VLC ou qualquer outro player selecionado abra e reproduza diretamente.
+
+### AO. Alinhamento Completo com a Base Oficial (Fix Final: Capas, Manhwas e Players)
+- **Problemas Resolvidos:**
+  1. **Carregamento Lento de Capas e Manhwas:**
+     - Modificações no `ExtensionLoader.kt` que criavam arquivos temporários `.part` e realizavam `renameTo` em arquivos somente leitura falhavam no Android, danificando a instalação e o carregamento das extensões de mangá e anime.
+     - `ExtensionLoader.kt` revertido 100% para a implementação oficial da `main`.
+     - `Downloader.kt`, `DownloadCache.kt` e `DownloadProvider.kt` revertidos para a base oficial estável, restaurando o suporte à divisão de páginas longas (`splitTallImageIfNeeded`) e os caminhos de armazenamento.
+     - `PagerViewerAdapter.kt` e `WebtoonRecyclerView.kt` revertidos para a linha de base original da `main`, eliminando anomalias no leitor de manhwas.
+  2. **Falha de Carregamento de Animes no MPV e VLC:**
+     - `EpisodeOptionsDialogScreen.kt` e `PlayerSettingsPlayerScreen.kt` restaurados para a versão oficial da `main`, eliminando bundles de headers incompatíveis com players externos e garantindo a chamada direta via `createChooser`.
+     - `AnimeDownloader.kt` revertido para a base oficial, removendo overhead de checagens HTTP HEAD (`filterTracks`).
+     - `NetworkHelper.kt` e `NetworkPreferences.kt` limpos de interceptores redundantes.
+  3. **Recursos Mantidos e Seguros:**
+     - Sistema de 50 Bordas de Avatar por Nível e Raridade (`UserProfileScreen.kt`, `ProfilePresets.kt`).
+     - TTS para Novels com gerenciamento de foco de áudio e higienização de texto (`NovelAudioPlayer.kt`, `NovelSpeechSanitizer.kt`).
+     - Seletor de Formato de Hora 12h/24h (`UiPreferences.kt`, `TimeFormat.kt`, `SettingsAppearanceScreen.kt`).
+

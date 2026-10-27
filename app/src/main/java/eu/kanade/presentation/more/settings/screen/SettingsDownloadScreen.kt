@@ -42,12 +42,13 @@ object SettingsDownloadScreen : SearchableSettings {
                 title = stringResource(MR.strings.connected_to_wifi),
             ),
             Preference.PreferenceItem.SwitchPreference(
-                preference = downloadPreferences.ignoreBrokenTracks,
-                title = stringResource(MR.strings.pref_download_ignore_broken_tracks),
-            ),
-            Preference.PreferenceItem.SwitchPreference(
                 preference = downloadPreferences.saveChaptersAsCBZ,
                 title = stringResource(MR.strings.save_chapter_as_cbz),
+            ),
+            Preference.PreferenceItem.SwitchPreference(
+                preference = downloadPreferences.splitTallImages,
+                title = stringResource(MR.strings.split_tall_images),
+                subtitle = stringResource(MR.strings.split_tall_images_summary),
             ),
             Preference.PreferenceItem.SliderPreference(
                 value = parallelSourceLimit,

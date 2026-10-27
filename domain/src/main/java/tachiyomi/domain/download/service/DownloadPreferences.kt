@@ -12,13 +12,6 @@ class DownloadPreferences(
         true,
     )
 
-    // AM -->
-    val ignoreBrokenTracks: Preference<Boolean> = preferenceStore.getBoolean(
-        "pref_download_ignore_broken_tracks",
-        true,
-    )
-    // <-- AM
-
     val saveChaptersAsCBZ: Preference<Boolean> = preferenceStore.getBoolean("save_chapter_as_cbz", true)
 
     val splitTallImages: Preference<Boolean> = preferenceStore.getBoolean("split_tall_images", true)
