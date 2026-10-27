@@ -7,13 +7,17 @@ import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import eu.kanade.tachiyomi.data.backup.models.BackupNovelPlugin
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
+import eu.kanade.tachiyomi.data.backup.models.BackupPrivateExtension
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import eu.kanade.tachiyomi.data.backup.restore.restorers.CategoriesRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.ExtensionStoreRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
 import eu.kanade.tachiyomi.data.download.DownloadCache
+import eu.kanade.tachiyomi.extension.novel.NovelExtensionManager
+import eu.kanade.tachiyomi.extension.util.ExtensionInstallReceiver
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
@@ -101,7 +105,9 @@ class BackupRestorer(
             restoreAmount += 1
         }
         if (options.extensionStores) {
-            restoreAmount += backup.backupExtensionStores.size
+            restoreAmount += backup.backupExtensionStores.size +
+                backup.backupPrivateExtensions.size +
+                backup.backupNovelPlugins.size
         }
         if (options.sourceSettings) {
             restoreAmount += 1
@@ -117,11 +123,13 @@ class BackupRestorer(
             if (options.sourceSettings) {
                 restoreSourcePreferences(backup.backupSourcePreferences)
             }
+            if (options.extensionStores) {
+                restorePrivateExtensions(backup.backupPrivateExtensions)
+                restoreNovelPlugins(backup.backupNovelPlugins)
+                restoreExtensionStores(backup.backupExtensionStores)
+            }
             if (options.libraryEntries) {
                 restoreManga(backup.backupManga, if (options.categories) backup.backupCategories else emptyList())
-            }
-            if (options.extensionStores) {
-                restoreExtensionStores(backup.backupExtensionStores)
             }
 
             // TODO: optionally trigger online library + tracker update
@@ -242,6 +250,51 @@ class BackupRestorer(
                     isSync,
                 )
             }
+    }
+
+    private fun CoroutineScope.restorePrivateExtensions(
+        backupPrivateExtensions: List<BackupPrivateExtension>,
+    ) = launch {
+        if (backupPrivateExtensions.isEmpty()) return@launch
+        val extsDir = File(context.filesDir, "exts").apply { mkdirs() }
+        backupPrivateExtensions.forEach { ext ->
+            ensureActive()
+            try {
+                val target = File(extsDir, ext.name)
+                target.writeBytes(ext.data)
+                target.setReadOnly()
+                ExtensionInstallReceiver.notifyAdded(context, target.nameWithoutExtension)
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to restore private extension ${ext.name}" }
+                errors.add(Date() to "Error restoring extension ${ext.name}: ${e.message}")
+            }
+            restoreProgress.incrementAndFetch()
+        }
+    }
+
+    private fun CoroutineScope.restoreNovelPlugins(
+        backupNovelPlugins: List<BackupNovelPlugin>,
+    ) = launch {
+        if (backupNovelPlugins.isEmpty()) return@launch
+        val pluginsDir = File(context.filesDir, "novel_plugins").apply { mkdirs() }
+        backupNovelPlugins.forEach { plugin ->
+            ensureActive()
+            try {
+                val jsFile = File(pluginsDir, "${plugin.id}.js")
+                val jsonFile = File(pluginsDir, "${plugin.id}.json")
+                jsFile.writeText(plugin.jsContent)
+                jsonFile.writeText(plugin.jsonMeta)
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to restore novel plugin ${plugin.id}" }
+                errors.add(Date() to "Error restoring novel plugin ${plugin.id}: ${e.message}")
+            }
+            restoreProgress.incrementAndFetch()
+        }
+        try {
+            Injekt.get<NovelExtensionManager>().loadInstalledExtensions()
+        } catch (e: Throwable) {
+            logcat(LogPriority.ERROR, e) { "Failed to reload novel extensions" }
+        }
     }
 
     private fun writeErrorLog(): File {

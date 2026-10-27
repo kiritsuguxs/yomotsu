@@ -348,8 +348,13 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
 }
 
 val externalPlayers = listOf(
-    "is.xyz.mpv",
     "org.videolan.vlc",
+    "org.videolan.vlc.debug",
+    "is.xyz.mpv",
+    "live.mehiz.mpvkt",
+    "live.mehiz.mpvkt.preview",
+    "com.brouken.player",
+    "dev.anilbeesetti.nextplayer",
     "com.mxtech.videoplayer.ad",
     "com.mxtech.videoplayer.pro",
 )

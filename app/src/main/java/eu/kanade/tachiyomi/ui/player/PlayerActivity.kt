@@ -47,6 +47,7 @@ import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -148,6 +149,34 @@ class PlayerActivity : BaseActivity() {
 
     private var audioFocusRequest: AudioFocusRequestCompat? = null
     private var restoreAudioFocus: () -> Unit = {}
+
+    private val externalPlayerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val data = result.data
+        if (data != null) {
+            val positionExtra = data.extras?.get("extra_position") ?: data.extras?.get("position")
+            val currentPos = when (positionExtra) {
+                is Int -> positionExtra.toLong()
+                is Long -> positionExtra
+                is Float -> positionExtra.toLong()
+                is Double -> positionExtra.toLong()
+                else -> null
+            }
+            val durationExtra = data.extras?.get("extra_duration") ?: data.extras?.get("duration")
+            val duration = when (durationExtra) {
+                is Int -> durationExtra.toLong()
+                is Long -> durationExtra
+                is Float -> durationExtra.toLong()
+                is Double -> durationExtra.toLong()
+                else -> null
+            }
+            if (currentPos != null) {
+                viewModel.updateExternalPlayerProgress(currentPos, duration ?: 0L)
+            }
+        }
+        finish()
+    }
 
     private var pipRect: Rect? = null
     val isPipSupportedAndEnabled by lazy {
@@ -1068,6 +1097,15 @@ class PlayerActivity : BaseActivity() {
         if (player.isExiting) return
         if (video == null) return
 
+        if (playerPreferences.alwaysUseExternalPlayer().get()) {
+            openInExternalPlayer(video, position)
+            return
+        }
+
+        loadInternalVideo(video, position)
+    }
+
+    private fun loadInternalVideo(video: Video, position: Long? = null) {
         try {
             viewModel.setIsStopped(false)
             setHttpOptions(video)
@@ -1101,6 +1139,81 @@ class PlayerActivity : BaseActivity() {
         } catch (e: Throwable) {
             logcat(LogPriority.ERROR, e) { "Failed to set video" }
             playerErrorDialogState.value = e.message ?: e.toString()
+        }
+    }
+
+    private fun openInExternalPlayer(video: Video, position: Long? = null) {
+        val parsedUrl = parseVideoUrl(video.videoUrl)
+        if (parsedUrl.isNullOrEmpty()) {
+            showToast("URL do vídeo está vazia")
+            finish()
+            return
+        }
+
+        val extIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(parsedUrl.toUri(), "video/*")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+            val animeTitle = viewModel.anime?.title.orEmpty()
+            val epName = viewModel.currentEpisode.value?.name.orEmpty()
+            val fullTitle = if (animeTitle.isNotBlank() && epName.isNotBlank()) {
+                "$animeTitle - $epName"
+            } else {
+                animeTitle.ifBlank { epName }
+            }
+            putExtra("title", fullTitle)
+
+            val headers = video.headers
+            if (headers != null && headers.size > 0) {
+                val headersArray = Array(headers.size * 2) { i ->
+                    if (i % 2 == 0) headers.name(i / 2) else headers.value(i / 2)
+                }
+                putExtra("headers", headersArray)
+
+                val headerBundle = Bundle()
+                for (i in 0 until headers.size) {
+                    headerBundle.putString(headers.name(i), headers.value(i))
+                }
+                putExtra("android.media.intent.extra.HTTP_HEADERS", headerBundle)
+                putExtra("extra_headers", headerBundle)
+            }
+
+            val subtitles = video.subtitleTracks
+            if (subtitles.isNotEmpty()) {
+                putExtra("subs", subtitles.map { it.url.toUri() }.toTypedArray())
+                putExtra("subs.name", subtitles.map { it.lang }.toTypedArray())
+                subtitles.firstOrNull()?.let {
+                    putExtra("subs.enable", arrayOf(it.url.toUri()))
+                    putExtra("subtitles_location", it.url)
+                }
+            }
+
+            val resumePos = position ?: viewModel.currentEpisode.value?.last_second_seen ?: 0L
+            if (resumePos > 0) {
+                putExtra("position", resumePos.toInt())
+                putExtra("extra_position", resumePos)
+                putExtra("return_result", true)
+            }
+        }
+
+        val pkgName = playerPreferences.externalPlayerPreference().get().trim()
+        if (pkgName.isNotBlank()) {
+            extIntent.setPackage(pkgName)
+        }
+
+        try {
+            if (pkgName.isNotBlank()) {
+                externalPlayerLauncher.launch(extIntent)
+            } else {
+                val chooser = Intent.createChooser(extIntent, "Abrir com").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                externalPlayerLauncher.launch(chooser)
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Failed to launch external player" }
+            showToast("Player externo não encontrado, abrindo no MPV...")
+            loadInternalVideo(video, position)
         }
     }
 

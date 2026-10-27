@@ -573,3 +573,14 @@
      - TTS para Novels com gerenciamento de foco de áudio e higienização de texto (`NovelAudioPlayer.kt`, `NovelSpeechSanitizer.kt`).
      - Seletor de Formato de Hora 12h/24h (`UiPreferences.kt`, `TimeFormat.kt`, `SettingsAppearanceScreen.kt`).
 
+### AP. Backup de Extensões Privadas (Anime & Novel) e Suporte Completo ao Player Externo (VLC)
+1. **Backup Automático de Extensões Privadas:**
+   - Adicionados modelos serializáveis `@ProtoNumber(107) BackupPrivateExtension` e `@ProtoNumber(108) BackupNovelPlugin` em `Backup.kt`.
+   - **Backup (`BackupCreator.kt`):** Compacta automaticamente no arquivo `.tachibk` todos os arquivos `.ext` de `files/exts/` (extensões privadas de animes/mangás) e os pares `.js`/`.json` de `files/novel_plugins/` (plugins de novels).
+   - **Restauração (`BackupRestorer.kt`):** Durante a restauração, extrai automaticamente os arquivos para os diretórios privados, aplica permissões de leitura e notifica `ExtensionInstallReceiver` e `NovelExtensionManager` para recarregá-las sem necessidade de download manual.
+2. **Ativação e Execução do Player Externo (VLC):**
+   - **Intercepção em `PlayerActivity.kt`:** Quando a preferência `alwaysUseExternalPlayer` está ativa, `setVideo` redireciona para `openInExternalPlayer`, despachando a intent de reprodução com o pacote selecionado (`setPackage(pkgName)`), título, headers (`headers` e `HTTP_HEADERS`), legendas e posição atual de visualização.
+   - **Retorno e Progresso:** `externalPlayerLauncher` captura o retorno do VLC/player externo (`position` / `extra_position`), sincroniza o progresso no banco com `updateExternalPlayerProgress` e fecha a atividade. Fallback automático para o MPV interno caso o player externo não esteja instalado ou falhe.
+   - **Lista de Players:** Expandida em `PlayerSettingsPlayerScreen.kt` incluindo `org.videolan.vlc`, `org.videolan.vlc.debug`, `is.xyz.mpv`, `live.mehiz.mpvkt`, `live.mehiz.mpvkt.preview`, `com.brouken.player` e `nextplayer`.
+
+

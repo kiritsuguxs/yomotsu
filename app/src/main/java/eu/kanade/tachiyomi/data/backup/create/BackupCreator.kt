@@ -14,9 +14,12 @@ import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import eu.kanade.tachiyomi.data.backup.models.BackupNovelPlugin
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
+import eu.kanade.tachiyomi.data.backup.models.BackupPrivateExtension
 import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
+import java.io.File
 import kotlinx.serialization.protobuf.ProtoBuf
 import logcat.LogPriority
 import okio.buffer
@@ -92,6 +95,8 @@ class BackupCreator(
                 backupPreferences = backupAppPreferences(options),
                 backupExtensionStores = backupExtensionStores(options),
                 backupSourcePreferences = backupSourcePreferences(options),
+                backupPrivateExtensions = backupPrivateExtensions(options),
+                backupNovelPlugins = backupNovelPlugins(options),
             )
 
             val byteArray = parser.encodeToByteArray(Backup.serializer(), backup)
@@ -160,6 +165,44 @@ class BackupCreator(
         if (!options.sourceSettings) return emptyList()
 
         return preferenceBackupCreator.createSource(includePrivatePreferences = options.privateSettings)
+    }
+
+    private fun backupPrivateExtensions(options: BackupOptions): List<BackupPrivateExtension> {
+        if (!options.extensionStores) return emptyList()
+        val extsDir = File(context.filesDir, "exts")
+        if (!extsDir.exists()) return emptyList()
+        return extsDir.listFiles { file -> file.isFile && file.extension == "ext" }
+            ?.mapNotNull { file ->
+                try {
+                    BackupPrivateExtension(file.name, file.readBytes())
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e) { "Failed to backup private extension ${file.name}" }
+                    null
+                }
+            } ?: emptyList()
+    }
+
+    private fun backupNovelPlugins(options: BackupOptions): List<BackupNovelPlugin> {
+        if (!options.extensionStores) return emptyList()
+        val pluginsDir = File(context.filesDir, "novel_plugins")
+        if (!pluginsDir.exists()) return emptyList()
+        val jsFiles = pluginsDir.listFiles { file -> file.isFile && file.extension == "js" } ?: return emptyList()
+        return jsFiles.mapNotNull { jsFile ->
+            val id = jsFile.nameWithoutExtension
+            val metaFile = File(pluginsDir, "$id.json")
+            if (metaFile.exists()) {
+                try {
+                    BackupNovelPlugin(
+                        id = id,
+                        jsContent = jsFile.readText(),
+                        jsonMeta = metaFile.readText(),
+                    )
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e) { "Failed to backup novel plugin $id" }
+                    null
+                }
+            } else null
+        }
     }
 
     companion object {
