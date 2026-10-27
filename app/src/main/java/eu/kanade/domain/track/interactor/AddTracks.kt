@@ -61,10 +61,7 @@ class AddTracks(
                         ?.readAt
 
                     firstReadChapterDate?.let {
-                        val startDate = firstReadChapterDate.time.convertEpochMillisZone(
-                            TimeZone.currentSystemDefault(),
-                            TimeZone.UTC,
-                        )
+                        val startDate = firstReadChapterDate.time
                         track = track.copy(
                             startDate = startDate,
                         )

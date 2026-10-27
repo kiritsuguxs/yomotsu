@@ -467,6 +467,13 @@
     <!-- "Today" instead of "2023-12-31" -->
     <string name="pref_relative_format_summary">\"%1$s\" instead of \"%2$s\"</string>
     <string name="pref_date_format">Date format</string>
+    <string name="pref_time_format">Time format</string>
+    <!-- "Follow" as in "adhere to", "align with" (the system default) -->
+    <string name="follow_system">Follow system</string>
+    <!-- "Follow" as in "adhere to", "align with" (the language default) -->
+    <string name="follow_language">Follow language</string>
+    <string name="time_24_hours">24-hour</string>
+    <string name="time_12_hours">12-hour</string>
     <string name="pref_display_images_description">Render images in manga descriptions</string>
 
     <string name="pref_manage_notifications">Manage notifications</string>
@@ -867,6 +874,8 @@
     <string name="pref_tablet_ui_mode">Tablet UI</string>
     <string name="pref_verbose_logging">Verbose logging</string>
     <string name="pref_verbose_logging_summary">Print verbose logs to system log (reduces app performance)</string>
+    <string name="pref_redact_sensitive_headers">Redact sensitive headers</string>
+    <string name="pref_redact_sensitive_headers_summary">Hide sensitive headers, such as Authorization, from logs</string>
     <string name="pref_debug_info">Debug info</string>
     <string name="pref_update_library_manga_titles">Update library manga titles to match source</string>
     <string name="pref_update_library_manga_titles_summary">Warning: if a manga is renamed, it will be removed from the download queue (if present).</string>
@@ -1202,6 +1211,8 @@
     <string name="information_webview_required">WebView is required for the app to function</string>
     <!-- Do not translate "WebView" -->
     <string name="information_webview_outdated">Please update the WebView app for better compatibility</string>
+    <!-- Do not translate "WebView" -->
+    <string name="information_webview_crashed">WebView stopped working and the page was closed</string>
     <string name="chapter_settings_updated">Updated default chapter settings</string>
 
     <!-- Download Notification -->

@@ -31,6 +31,14 @@ fun Date.toTimestampString(): String {
     return DateFormat.getTimeInstance(DateFormat.SHORT).format(this)
 }
 
+fun Date.toTimestampString(timeFormatter: DateTimeFormatter): String {
+    return timeFormatter.format(this.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime())
+}
+
+fun Instant.toTimestampString(timeFormatter: DateTimeFormatter): String {
+    return timeFormatter.format(toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime())
+}
+
 fun Long.convertEpochMillisZone(
     from: TimeZone,
     to: TimeZone,

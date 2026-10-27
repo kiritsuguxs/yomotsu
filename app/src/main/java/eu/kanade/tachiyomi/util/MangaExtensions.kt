@@ -11,13 +11,9 @@ import uy.kohesive.injekt.api.get
 import java.io.InputStream
 import kotlin.time.Clock
 
-fun Manga.removeCovers(coverCache: CoverCache = Injekt.get()): Manga {
-    if (isLocal()) return this
-    return if (coverCache.deleteFromCache(this, true) > 0) {
-        copy(coverLastModified = Clock.System.now().toEpochMilliseconds())
-    } else {
-        this
-    }
+fun Manga.removeCovers(coverCache: CoverCache = Injekt.get()) {
+    if (isLocal()) return
+    coverCache.deleteFromCache(this, true)
 }
 
 suspend fun Manga.editCover(
