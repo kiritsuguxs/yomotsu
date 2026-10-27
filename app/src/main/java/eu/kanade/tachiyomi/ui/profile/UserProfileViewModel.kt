@@ -248,7 +248,7 @@ class UserProfileViewModel(
     fun setAvatarCustom(uriString: String?) {
         viewModelScope.launchIO {
             if (uriString == null) {
-                profilePreferences.setAvatarPreset("preset_yomotsu")
+                profilePreferences.setAvatarPreset("preset_sung_jinwoo")
                 loadProfile()
                 return@launchIO
             }

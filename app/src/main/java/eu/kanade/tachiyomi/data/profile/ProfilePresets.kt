@@ -11,6 +11,8 @@ data class ProfileAvatarBorder(
     val description: String,
     val colors: List<Color>,
     val isDynamicRank: Boolean = false,
+    val unlockLevel: Int = 1,
+    val rarity: YomotsuRarity = YomotsuRarity.fromLevel(unlockLevel),
 )
 
 data class ProfilePresetAvatar(
@@ -35,15 +37,6 @@ data class ProfilePresetBanner(
 object ProfilePresets {
 
     val PRESET_AVATARS: List<ProfilePresetAvatar> = listOf(
-        ProfilePresetAvatar(
-            id = "preset_yomotsu",
-            name = "Yomotsu Original",
-            group = "Yomotsu",
-            drawableRes = R.drawable.ic_yomotsu_logo,
-            backgroundGradient = listOf(Color(0xFF1E1E1E), Color(0xFF0A0A0A)),
-            iconTint = Color.Unspecified,
-            isCharacter = false
-        ),
         ProfilePresetAvatar(
             id = "preset_sung_jinwoo",
             name = "Sung Jin-woo",
@@ -330,71 +323,223 @@ object ProfilePresets {
     )
 
     val PRESET_BORDERS: List<ProfileAvatarBorder> = listOf(
+        // === COMUM (Nível 1 - 100) ===
+        ProfileAvatarBorder(
+            id = "border_none",
+            name = "Sem Borda",
+            description = "Avatar limpo sem moldura ao redor",
+            colors = listOf(Color.Transparent, Color.Transparent),
+            unlockLevel = 1,
+            rarity = YomotsuRarity.COMMON
+        ),
+        ProfileAvatarBorder(
+            id = "border_auto",
+            name = "Rank Dinâmico",
+            description = "Evolui e reflete a cor do seu nível atual",
+            colors = emptyList(),
+            isDynamicRank = true,
+            unlockLevel = 1,
+            rarity = YomotsuRarity.COMMON
+        ),
         ProfileAvatarBorder(
             id = "border_white",
             name = "Branco Minimalista",
             description = "Borda limpa, elegante e moderna em tom branco puro",
-            colors = listOf(Color(0xFFFFFFFF), Color(0xFFEBEBEB), Color(0xFFF5F5F5), Color(0xFFFFFFFF))
+            colors = listOf(Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFFF5F5F5), Color(0xFFFFFFFF)),
+            unlockLevel = 10,
+            rarity = YomotsuRarity.COMMON
         ),
         ProfileAvatarBorder(
             id = "border_black",
             name = "Preto Obsidiana",
             description = "Minimalista escuro sofisticado em ônix e obsidiana",
-            colors = listOf(Color(0xFF2C2D30), Color(0xFF141414), Color(0xFF383A3F), Color(0xFF2C2D30))
+            colors = listOf(Color(0xFF2C2D30), Color(0xFF141414), Color(0xFF383A3F), Color(0xFF2C2D30)),
+            unlockLevel = 30,
+            rarity = YomotsuRarity.COMMON
         ),
         ProfileAvatarBorder(
-            id = "border_auto",
-            name = "Rank Dinâmico (Automático)",
-            description = "Evolui e reflete a cor do seu nível atual no Yomotsu",
-            colors = emptyList(),
-            isDynamicRank = true
+            id = "border_steel",
+            name = "Aço Forjado",
+            description = "Gradiente metálico de lâmina forjada a frio",
+            colors = listOf(Color(0xFFB0BEC5), Color(0xFF78909C), Color(0xFFCFD8DC), Color(0xFFB0BEC5)),
+            unlockLevel = 60,
+            rarity = YomotsuRarity.COMMON
         ),
         ProfileAvatarBorder(
-            id = "border_monarch",
-            name = "Monarca das Sombras",
-            description = "Aura mística púrpura e violeta neón dos soberanos",
-            colors = listOf(Color(0xFFC77DFF), Color(0xFF7209B7), Color(0xFF3A0CA3), Color(0xFFC77DFF))
+            id = "border_copper",
+            name = "Bronze Ancestral",
+            description = "Reflexos de bronze e cobre clássico envelhecido",
+            colors = listOf(Color(0xFFCD7F32), Color(0xFF8D6E63), Color(0xFFD7CCC8), Color(0xFFCD7F32)),
+            unlockLevel = 80,
+            rarity = YomotsuRarity.COMMON
         ),
-        ProfileAvatarBorder(
-            id = "border_gold",
-            name = "Aura Dourada",
-            description = "Resplendor dourado celestial lendário e supremo",
-            colors = listOf(Color(0xFFFFE082), Color(0xFFFFD700), Color(0xFFFF8F00), Color(0xFFFFE082))
-        ),
-        ProfileAvatarBorder(
-            id = "border_crimson",
-            name = "Chama Carmesim",
-            description = "Fogo escarlate vibrante e rubi apaixonado",
-            colors = listOf(Color(0xFFFF5252), Color(0xFFFF1744), Color(0xFF880E4F), Color(0xFFFF5252))
-        ),
-        ProfileAvatarBorder(
-            id = "border_cyber",
-            name = "Cyberpunk Neón",
-            description = "Gradiente futurista entre rosa choque e violeta neon",
-            colors = listOf(Color(0xFFFF007F), Color(0xFF9B51E0), Color(0xFF00F5D4), Color(0xFFFF007F))
-        ),
+
+        // === RARO (Nível 101 - 300) ===
         ProfileAvatarBorder(
             id = "border_cyan",
             name = "Pulso Elétrico",
             description = "Energia ciano e azul elétrico cintilante",
-            colors = listOf(Color(0xFF80D8FF), Color(0xFF00E5FF), Color(0xFF0091EA), Color(0xFF80D8FF))
+            colors = listOf(Color(0xFF80D8FF), Color(0xFF00E5FF), Color(0xFF0091EA), Color(0xFF80D8FF)),
+            unlockLevel = 101,
+            rarity = YomotsuRarity.RARE
         ),
         ProfileAvatarBorder(
             id = "border_emerald",
             name = "Esmeralda Ancestral",
             description = "Verde místico puro da floresta primordial",
-            colors = listOf(Color(0xFF69F0AE), Color(0xFF00E676), Color(0xFF1B5E20), Color(0xFF69F0AE))
+            colors = listOf(Color(0xFF69F0AE), Color(0xFF00E676), Color(0xFF1B5E20), Color(0xFF69F0AE)),
+            unlockLevel = 150,
+            rarity = YomotsuRarity.RARE
         ),
         ProfileAvatarBorder(
-            id = "border_none",
-            name = "Sem Borda",
-            description = "Avatar limpo sem moldura ao redor",
-            colors = listOf(Color.Transparent, Color.Transparent)
+            id = "border_amethyst",
+            name = "Ametista Noturna",
+            description = "Brilho cristalino púrpura e violeta profundo",
+            colors = listOf(Color(0xFFBA68C8), Color(0xFF7B1FA2), Color(0xFF4A148C), Color(0xFFBA68C8)),
+            unlockLevel = 200,
+            rarity = YomotsuRarity.RARE
+        ),
+        ProfileAvatarBorder(
+            id = "border_glacier",
+            name = "Gelo Eterno",
+            description = "Aura congelada de nevasca polar ártica",
+            colors = listOf(Color(0xFFE0F7FA), Color(0xFF80DEEA), Color(0xFF00ACC1), Color(0xFFE0F7FA)),
+            unlockLevel = 250,
+            rarity = YomotsuRarity.RARE
+        ),
+
+        // === ÉPICO (Nível 301 - 500) ===
+        ProfileAvatarBorder(
+            id = "border_crimson",
+            name = "Chama Carmesim",
+            description = "Fogo escarlate vibrante e rubi apaixonado",
+            colors = listOf(Color(0xFFFF5252), Color(0xFFFF1744), Color(0xFF880E4F), Color(0xFFFF5252)),
+            unlockLevel = 301,
+            rarity = YomotsuRarity.EPIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_cyber",
+            name = "Cyberpunk Neón",
+            description = "Gradiente futurista entre rosa choque, violeta e ciano neon",
+            colors = listOf(Color(0xFFFF007F), Color(0xFF9B51E0), Color(0xFF00F5D4), Color(0xFFFF007F)),
+            unlockLevel = 350,
+            rarity = YomotsuRarity.EPIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_void",
+            name = "Vazio Abissal",
+            description = "Energia cósmica sombria que distorce o espaço",
+            colors = listOf(Color(0xFF7C4DFF), Color(0xFF311B92), Color(0xFF12005E), Color(0xFF7C4DFF)),
+            unlockLevel = 400,
+            rarity = YomotsuRarity.EPIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_aurora",
+            name = "Aurora Boreal",
+            description = "Danças etéreas entre verde esmeralda e turquesa cintilante",
+            colors = listOf(Color(0xFF00FFA3), Color(0xFF00D2FF), Color(0xFF7A00FF), Color(0xFF00FFA3)),
+            unlockLevel = 450,
+            rarity = YomotsuRarity.EPIC
+        ),
+
+        // === LENDÁRIO (Nível 501 - 700) ===
+        ProfileAvatarBorder(
+            id = "border_monarch",
+            name = "Monarca das Sombras",
+            description = "Aura mística púrpura e violeta dos soberanos",
+            colors = listOf(Color(0xFFC77DFF), Color(0xFF7209B7), Color(0xFF3A0CA3), Color(0xFFC77DFF)),
+            unlockLevel = 501,
+            rarity = YomotsuRarity.LEGENDARY
+        ),
+        ProfileAvatarBorder(
+            id = "border_gold",
+            name = "Aura Dourada Suprema",
+            description = "Resplendor dourado celestial lendário dos campeões",
+            colors = listOf(Color(0xFFFFE082), Color(0xFFFFD700), Color(0xFFFF8F00), Color(0xFFFFE082)),
+            unlockLevel = 550,
+            rarity = YomotsuRarity.LEGENDARY
+        ),
+        ProfileAvatarBorder(
+            id = "border_solar",
+            name = "Inferno Solar",
+            description = "Chamas solares ardentes em fusão de plasma radiante",
+            colors = listOf(Color(0xFFFF9100), Color(0xFFFF3D00), Color(0xFFDD2C00), Color(0xFFFF9100)),
+            unlockLevel = 600,
+            rarity = YomotsuRarity.LEGENDARY
+        ),
+        ProfileAvatarBorder(
+            id = "border_supernova",
+            name = "Supernova Cósmica",
+            description = "Explosão estelar em tons de rosa cósmico e azul profundo",
+            colors = listOf(Color(0xFFFF4081), Color(0xFFE040FB), Color(0xFF536DFE), Color(0xFFFF4081)),
+            unlockLevel = 650,
+            rarity = YomotsuRarity.LEGENDARY
+        ),
+
+        // === MÍTICO (Nível 701 - 900) ===
+        ProfileAvatarBorder(
+            id = "border_dragon",
+            name = "Fúria Dracônica",
+            description = "Chamas de dragão ancestral com escamas de sangue e ouro",
+            colors = listOf(Color(0xFFFF1744), Color(0xFFFF9100), Color(0xFFFFEA00), Color(0xFFFF1744)),
+            unlockLevel = 701,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_nebula",
+            name = "Nebulosa Celestial",
+            description = "Poeira interestelar pulsando com gravidade quântica",
+            colors = listOf(Color(0xFFEA80FC), Color(0xFFB388FF), Color(0xFF8C9EFF), Color(0xFFEA80FC)),
+            unlockLevel = 750,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_celestial",
+            name = "Ruptura Dimensional",
+            description = "Fenda no espaço-tempo emitida por relâmpagos prismáticos",
+            colors = listOf(Color(0xFF00E5FF), Color(0xFFD500F9), Color(0xFF651FFF), Color(0xFF00E5FF)),
+            unlockLevel = 800,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_eclipse",
+            name = "Eclipse da Coroa",
+            description = "A sombra da lua cercada pela coroa incandescente violeta",
+            colors = listOf(Color(0xFFFF0055), Color(0xFF5A189A), Color(0xFF10002B), Color(0xFFFF0055)),
+            unlockLevel = 850,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+
+        // === DIVINO (Nível 901 - 1000) ===
+        ProfileAvatarBorder(
+            id = "border_godly",
+            name = "Ascensão Divina",
+            description = "Ouro sagrado, luz celestial perolada e brilho imortal",
+            colors = listOf(Color(0xFFFFF9C4), Color(0xFFFFD54F), Color(0xFF00E5FF), Color(0xFFFFF9C4)),
+            unlockLevel = 901,
+            rarity = YomotsuRarity.DIVINE
+        ),
+        ProfileAvatarBorder(
+            id = "border_creator",
+            name = "Divindade Primordial",
+            description = "Prisma omnipotente da gênese do universo",
+            colors = listOf(Color(0xFFFF1361), Color(0xFFFFF800), Color(0xFF00FFC2), Color(0xFFFF1361)),
+            unlockLevel = 950,
+            rarity = YomotsuRarity.DIVINE
+        ),
+        ProfileAvatarBorder(
+            id = "border_infinity",
+            name = "Soberano do Yomotsu",
+            description = "O pináculo supremo do Yomotsu: poder infinito e absoluto",
+            colors = listOf(Color(0xFFFFD700), Color(0xFF9400D3), Color(0xFF00FFFF), Color(0xFFFFD700)),
+            unlockLevel = 1000,
+            rarity = YomotsuRarity.DIVINE
         )
     )
 
     fun getPresetAvatar(id: String?): ProfilePresetAvatar {
         val mappedId = when (id) {
+            "preset_yomotsu" -> "preset_sung_jinwoo"
             "preset_monarch" -> "preset_sung_jinwoo"
             "preset_shonen" -> "preset_luffy"
             "preset_shinigami" -> "preset_ichigo"

@@ -133,7 +133,7 @@ fun UserProfileScreen(
     equippedTitle: YomotsuTitle,
     unlockedTitles: List<YomotsuTitle>,
     avatarUri: String?,
-    avatarPreset: String = "preset_yomotsu",
+    avatarPreset: String = "preset_sung_jinwoo",
     avatarType: String = "preset",
     avatarBorder: String = "border_auto",
     bannerUri: String?,
@@ -153,6 +153,9 @@ fun UserProfileScreen(
     var showNameDialog by remember { mutableStateOf(false) }
     var showAvatarDialog by remember { mutableStateOf(false) }
     var showBorderDialog by remember { mutableStateOf(false) }
+    var selectedBorderRarity by remember(avatarBorder) {
+        mutableStateOf(ProfilePresets.getPresetBorder(avatarBorder).rarity)
+    }
     var showBannerDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf(username) }
     var selectedCategory by remember { mutableStateOf<AchievementCategory?>(null) }
@@ -498,25 +501,87 @@ fun UserProfileScreen(
         )
     }
 
-    // DIÁLOGO SELETOR DE BORDA / MOLDURA
+    // DIÁLOGO SELETOR DE BORDA / MOLDURA ESTILO TÍTULOS DE NÍVEL
     if (showBorderDialog) {
+        val displayedBorders = remember(selectedBorderRarity) {
+            ProfilePresets.PRESET_BORDERS.filter { it.rarity == selectedBorderRarity }
+        }
+        val isPt = Locale.getDefault().language.startsWith("pt")
+
         AlertDialog(
             onDismissRequest = { showBorderDialog = false },
-            title = { Text(stringResource(MR.strings.profile_dialog_choose_border)) },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .heightIn(min = 380.dp, max = 480.dp),
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = stringResource(MR.strings.profile_dialog_choose_border_desc),
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        text = stringResource(MR.strings.profile_dialog_choose_border),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                     )
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(MR.strings.profile_level, currentLevel),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                ) {
+                    // Seletor de Raridade (Chips horizontais: Comum até Divino)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(YomotsuRarity.entries.toTypedArray()) { rarity ->
+                            FilterChip(
+                                selected = selectedBorderRarity == rarity,
+                                onClick = { selectedBorderRarity = rarity },
+                                label = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(rarity.color)
+                                        )
+                                        Text(rarity.getDisplayName())
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(ProfilePresets.PRESET_BORDERS) { border ->
-                            val isSelected = avatarBorder == border.id
+                        items(displayedBorders, key = { it.id }) { border ->
+                            val isUnlocked = border.unlockLevel <= currentLevel
+                            val isEquipped = avatarBorder == border.id
                             val brush = if (border.id == "border_none") {
                                 Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
                             } else if (border.isDynamicRank) {
@@ -524,29 +589,44 @@ fun UserProfileScreen(
                             } else {
                                 Brush.sweepGradient(border.colors)
                             }
-                            Card(
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isEquipped) {
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                } else if (isUnlocked) {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                                },
+                                border = if (isEquipped) {
+                                    androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+                                } else if (isUnlocked) {
+                                    androidx.compose.foundation.BorderStroke(1.dp, border.rarity.color.copy(alpha = 0.45f))
+                                } else {
+                                    androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        onAvatarBorderSelected(border.id)
-                                        showBorderDialog = false
-                                    }
-                                    .border(
-                                        width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
-                                )
+                                    .then(
+                                        if (isUnlocked) {
+                                            Modifier.clickable {
+                                                onAvatarBorderSelected(border.id)
+                                                showBorderDialog = false
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
+                                    // Visualização em círculo da moldura / borda
                                     Box(
                                         modifier = Modifier
                                             .size(42.dp)
@@ -554,31 +634,113 @@ fun UserProfileScreen(
                                             .background(Color(0xFF1E1E1E))
                                             .border(
                                                 width = if (border.id == "border_none") 1.dp else 3.5.dp,
-                                                brush = if (border.id == "border_none") Brush.linearGradient(listOf(Color.Gray.copy(alpha = 0.4f), Color.Gray.copy(alpha = 0.4f))) else brush,
+                                                brush = if (!isUnlocked) {
+                                                    Brush.linearGradient(listOf(Color.Gray.copy(alpha = 0.3f), Color.Gray.copy(alpha = 0.3f)))
+                                                } else if (border.id == "border_none") {
+                                                    Brush.linearGradient(listOf(Color.Gray.copy(alpha = 0.4f), Color.Gray.copy(alpha = 0.4f)))
+                                                } else {
+                                                    brush
+                                                },
                                                 shape = CircleShape
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
-                                            text = if (border.id == "border_none") "—" else "★",
-                                            color = Color.White.copy(alpha = 0.8f),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        if (!isUnlocked) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Lock,
+                                                contentDescription = null,
+                                                tint = Color.White.copy(alpha = 0.4f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        } else if (border.id == "border_none") {
+                                            Text(
+                                                text = "—",
+                                                color = Color.White.copy(alpha = 0.8f),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        } else {
+                                            Text(
+                                                text = "★",
+                                                color = Color.White.copy(alpha = 0.9f),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
-                                    Spacer(modifier = Modifier.width(12.dp))
+
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = border.name,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = border.description,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        if (isUnlocked) {
+                                            Text(
+                                                text = border.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = border.description,
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = stringResource(MR.strings.profile_level, border.unlockLevel),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                if (isEquipped) {
+                                                    Text(
+                                                        text = "• " + if (isPt) "Equipado" else "Equipped",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Text(
+                                                text = border.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = border.description,
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Lock,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(12.dp),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                )
+                                                Text(
+                                                    text = stringResource(MR.strings.profile_level, border.unlockLevel),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }

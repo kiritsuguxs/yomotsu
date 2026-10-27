@@ -20,7 +20,7 @@ class ProfilePreferences(
     private val equippedTitleIdPref = preferenceStore.getString("yomotsu_profile_equipped_title_id", "")
 
     private val avatarTypePref = preferenceStore.getString("yomotsu_profile_avatar_type", "preset") // "preset" or "custom"
-    private val avatarPresetPref = preferenceStore.getString("yomotsu_profile_avatar_preset", "preset_yomotsu")
+    private val avatarPresetPref = preferenceStore.getString("yomotsu_profile_avatar_preset", "preset_sung_jinwoo")
     private val avatarCustomPathPref = preferenceStore.getString("yomotsu_profile_avatar_custom_path", "")
     private val avatarCustomBase64Pref = preferenceStore.getString("yomotsu_profile_avatar_custom_base64", "")
     private val avatarBorderPref = preferenceStore.getString("yomotsu_profile_avatar_border", "border_auto")
@@ -79,7 +79,7 @@ class ProfilePreferences(
     fun setEquippedTitleId(id: String) = equippedTitleIdPref.set(id)
 
     fun getAvatarType(): String = avatarTypePref.get()
-    fun getAvatarPreset(): String = avatarPresetPref.get().ifBlank { "preset_yomotsu" }
+    fun getAvatarPreset(): String = avatarPresetPref.get().ifBlank { "preset_sung_jinwoo" }
 
     fun setAvatarPreset(presetId: String) {
         avatarTypePref.set("preset")
@@ -115,7 +115,7 @@ class ProfilePreferences(
     fun setAvatarUri(uriString: String?) {
         if (uriString == null) {
             avatarTypePref.set("preset")
-            avatarPresetPref.set("preset_yomotsu")
+            avatarPresetPref.set("preset_sung_jinwoo")
         } else {
             setAvatarCustom(uriString)
         }

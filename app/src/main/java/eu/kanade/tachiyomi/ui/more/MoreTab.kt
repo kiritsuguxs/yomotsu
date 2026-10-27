@@ -49,7 +49,7 @@ data class HunterProfileSummary(
     val level: Int = 1,
     val title: YomotsuTitle = YomotsuLevelManager.ALL_TITLES.first(),
     val avatarUri: String? = null,
-    val avatarPreset: String = "preset_yomotsu",
+    val avatarPreset: String = "preset_sung_jinwoo",
     val avatarType: String = "preset",
     val avatarBorder: String = "border_auto",
     val progress: Float = 0f,
