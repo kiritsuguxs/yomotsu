@@ -507,3 +507,52 @@
   - **Migração de Animes e Novels Independente:** Corrigido problema estrutural na tela de migração que mesclava indevidamente fontes de mangás, animes e novels, utilizando verificação rigorosa por `isAnime` e `isNovel`.
   - **Identificação de Fontes Não-Http:** Resolvido erro de compilação e carregamento (no `SourceManager` e `SourceRepositoryImpl`) que omitia fontes de animes e novels nas listas devido ao uso legado de `filterIsInstance<HttpSource>()`. Adicionado filtro direto via `LocalSource.ID` e `TelegramSource.ID` constantes.
   - **Navegação Inteligente no Explorar:** Textos dinâmicos nas abas (Explorar Animes / Mangás / Novels) internacionalizados em Português e Inglês para melhorar a navegação do usuário.
+
+
+### AK. Sincronização Upstream com Mihon v0.21.1..v0.21.3 (Branch: `temp/mihon-upstream-improvements`)
+- **Correções do Leitor e Interface:**
+  - **Páginas Duplas no Leitor:** Associação estrita de páginas divididas pelo ID do capítulo em `PagerViewerAdapter.kt` para evitar pulos ou inserções em capítulos errados.
+  - **Offset R2L:** Corrigido salto indevido de posição ao retomar leitura no modo da direita para a esquerda.
+  - **Prevenção de Crash no Webtoon:** Adicionada verificação `isAttachedToWindow` em `WebtoonRecyclerView.kt` para toques longos confirmados após fechamento do leitor.
+  - **Dígitos não-ASCII:** Corrigida formatação de números de capítulos para usar `Locale.ROOT` em `ChapterNumberFormatter.kt`.
+  - **Crash Samsung Android 9-11:** Tratamento seguro de `SecurityException` no `MainActivity.kt` (`reportFullyDrawn`).
+  - **Filtros de Extensões:** Proteção contra índices inválidos em `SourceFilterDialog.kt`.
+  - **Comick Tracker:** Arredondamento do progresso com 2 casas decimais e half-up em `ComickApi.kt`.
+  - **Data de Início nos Trackers:** Corrigido deslocamento indevido pelo fuso horário UTC em `AddTracks.kt`.
+  - **Atualização da Biblioteca:** Priorização de fontes com mais títulos salvos na fila do `LibraryUpdateJob.kt`.
+  - **Layout de Abas e Telas Grandes:** Badges de abas protegidas contra encolhimento em títulos longos (`Tabs.kt`) e alinhamento da barra inferior/FAB em tablets (`MangaScreen.kt`).
+  - **Formato de Hora 12h/24h:** Configuração global em `UiPreferences.kt`, `TimeFormat.kt` e `SettingsAppearanceScreen.kt`.
+  - **Logs Seguros:** Opção de ocultar cabeçalhos de autenticação/tokens em logs verbosos (`NetworkPreferences.kt`).
+  - **Provedor Sui:** Suporte à detecção do Sui (Shizuku) em `ContextExtensions.kt`.
+
+### AL. Revitalização do Sistema de Bordas de Avatar (50 Tiers por Raridade e Nível)
+- **Remoção de Preset Legado:**
+  - Excluído o avatar preset `preset_yomotsu` em `ProfilePresets.kt`.
+- **Nova Estrutura com 50 Bordas:**
+  - Reformulada a classe `ProfileAvatarBorder` e o diálogo `showBorderDialog` em `UserProfileScreen.kt` para espelhar a estrutura dos Títulos de Nível.
+  - **6 Abas de Raridade:** Comum, Rara, Épica, Lendária, Mítica, Divina.
+  - **50 Bordas Exclusivas:** 8 a 9 bordas por raridade, com gradientes `SweepGradient` / radiais vibrantes, desbloqueando do nível 1 ao nível 1000.
+  - **Indicador de Cadeado:** Bordas não atingidas pelo nível atual exibem ícone de cadeado (`Icons.Outlined.Lock`) e aviso do nível necessário para desbloquear.
+
+### AM. Diagnóstico e Correção do Bug de Carregamento de Capas
+- **Causas Raiz Identificadas:**
+  1. **Referer Forçado em `NovelSourceWrapper.kt`:** Foi adicionado `builder.add("Referer", plugin.site)` no `headersBuilder()`. Como `MangaCoverFetcher.kt` herda os headers da fonte, capas hospedadas em CDNs externas (Google Blogspot, Imgur, Cloudinary, Photon, WordPress, Discord) ativavam proteção anti-hotlink e respondiam **HTTP 403 Forbidden**.
+  2. **Divergência de URL no `CloudflareInterceptor.kt`:** O Mihon upstream utilizava `url.origin()` (sem barra final), enquanto o WebView do Android normalizava para barra final (`/`), fazendo `url == challengeUrl` falhar e travando o interceptor por 30 segundos em requisições de mídia.
+  3. **Carimbo de Data no Cache (`MangaExtensions.kt`):** A mudança do Mihon para `removeCovers(): Unit` impedia a atualização de `coverLastModified` no banco, gerando inconsistência nas chaves de cache do Coil.
+  4. **Substituição de Extensões em `ExtensionLoader.kt`:** No Android/Linux, `renameTo` em arquivos somente-leitura pré-existentes falhava silenciosamente.
+- **Soluções Aplicadas:**
+  - `NovelSourceWrapper.kt` restaurado sem injeção de `Referer`.
+  - `CloudflareInterceptor.kt`, `WebViewInterceptor.kt`, `WebViewUtil.kt` e `WebViewScreenContent.kt` revertidos para a base estável da `main`.
+  - `MangaExtensions.kt`, `BrowseSourceViewModel.kt` e `MangaViewModel.kt` revertidos para o comportamento padrão que atualiza `coverLastModified`.
+  - `ExtensionLoader.kt` atualizado com exclusão prévia do destino (`target.delete()`) antes do `renameTo`.
+
+### AN. Diagnóstico e Correção dos Players de Vídeo (VLC Externo e MPV Interno)
+- **Causas Raiz Identificadas:**
+  1. **Falha de Inicialização do VLC:** O código definia forçadamente `extIntent.component = ComponentName("org.videolan.vlc", "org.videolan.vlc.gui.video.VideoPlayerActivity")`. No VLC para Android, a activity `VideoPlayerActivity` é **não-exportada** (`exported="false"`), causando `SecurityException: Permission Denial` no Android e impedindo a inicialização.
+  2. **Congelamento do MPV Interno:**
+     - Em `PlayerViewModel.kt`, o flow `mpv.propFlow<MPVNode>("aid")` chamava `mpv.getPropertyInt("aid")`. No libmpv, quando uma faixa de áudio está desativada ou não existe, a propriedade é retornada como a string `"no"`. Ao tentar ler como inteiro via JNI, era gerada exceção fatal no loop do player.
+     - Em `EpisodeLoader.kt`, o embrulho de `getHostersOnHttp` e `parseVideoUrls` com `withIOContext` interferia no fluxo síncrono das extensões de vídeo.
+     - Em `PlayerActivity.kt`, o interceptor `openInExternalPlayer` chamava `finish()` ao receber o cancelamento do launcher.
+- **Soluções Aplicadas:**
+  - `PlayerActivity.kt`, `PlayerViewModel.kt` e `EpisodeLoader.kt` foram **revertidos 100% para a base original da `main`**, restaurando a estabilidade perfeita do MPV interno.
+  - Em `EpisodeOptionsDialogScreen.kt`, foi removida a definição de `component` indevida. O player externo agora recebe a intent limpa com `setPackage(pkgName)`, ação padrão `ACTION_VIEW` e headers compatíveis (`headers`, `android.media.intent.extra.HTTP_HEADERS`), permitindo que o VLC ou qualquer outro player selecionado abra e reproduza diretamente.
