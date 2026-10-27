@@ -548,11 +548,29 @@ private fun VideoList(
                                         if (i % 2 == 0) headers.name(i / 2) else headers.value(i / 2)
                                     }
                                     putExtra("headers", headersArray)
+                                    val headerBundle = android.os.Bundle()
+                                    for (i in 0 until headers.size) {
+                                        headerBundle.putString(headers.name(i), headers.value(i))
+                                    }
+                                    putExtra("android.media.intent.extra.HTTP_HEADERS", headerBundle)
+                                    putExtra("extra_headers", headerBundle)
+                                }
+                                val subtitles = currentVideo.subtitleTracks
+                                if (subtitles.isNotEmpty()) {
+                                    putExtra("subs", subtitles.map { it.url.toUri() }.toTypedArray())
+                                    putExtra("subs.name", subtitles.map { it.lang }.toTypedArray())
+                                    subtitles.firstOrNull()?.let {
+                                        putExtra("subs.enable", arrayOf(it.url.toUri()))
+                                        putExtra("subtitles_location", it.url)
+                                    }
                                 }
                             }
-                            val pkgName = playerPreferences.externalPlayerPreference().get()
+                            val pkgName = playerPreferences.externalPlayerPreference().get().trim()
                             if (pkgName.isNotBlank()) {
                                 extIntent.setPackage(pkgName)
+                                if (pkgName.contains("vlc", ignoreCase = true)) {
+                                    extIntent.component = android.content.ComponentName(pkgName, "$pkgName.gui.video.VideoPlayerActivity")
+                                }
                             }
                             runCatching {
                                 context.startActivity(

@@ -2159,6 +2159,22 @@ class PlayerViewModel @JvmOverloads constructor(
         currentEpisode.value?.let { saveWatchingProgress(it) }
     }
 
+    fun updateExternalPlayerProgress(positionMs: Long, durationMs: Long) {
+        val currentEp = currentEpisode.value ?: return
+        if (!incognitoMode) {
+            val seconds = positionMs
+            val totalSeconds = if (durationMs > 0) durationMs else currentEp.total_seconds
+            currentEp.last_page_read = seconds.toInt()
+            currentEp.total_seconds = totalSeconds
+
+            val progress = playerPreferences.progressPreference().get()
+            if (totalSeconds > 0 && seconds >= (totalSeconds * progress).toLong()) {
+                updateEpisodeProgressOnComplete(currentEp)
+            }
+            saveWatchingProgress(currentEp)
+        }
+    }
+
     /**
      * Called when episode is changed in player or when activity is paused.
      */
