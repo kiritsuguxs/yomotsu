@@ -350,11 +350,27 @@ object ProfilePresets {
             rarity = YomotsuRarity.COMMON
         ),
         ProfileAvatarBorder(
+            id = "border_copper",
+            name = "Bronze do Aprendiz",
+            description = "Tons quentes de cobre polido e bronze envelhecido",
+            colors = listOf(Color(0xFFCD7F32), Color(0xFFB87333), Color(0xFF8D6E63), Color(0xFFCD7F32)),
+            unlockLevel = 20,
+            rarity = YomotsuRarity.COMMON
+        ),
+        ProfileAvatarBorder(
             id = "border_black",
             name = "Preto Obsidiana",
             description = "Minimalista escuro sofisticado em ônix e obsidiana",
             colors = listOf(Color(0xFF2C2D30), Color(0xFF141414), Color(0xFF383A3F), Color(0xFF2C2D30)),
             unlockLevel = 30,
+            rarity = YomotsuRarity.COMMON
+        ),
+        ProfileAvatarBorder(
+            id = "border_slate",
+            name = "Ardósia Cinzenta",
+            description = "Tom neutro escuro com textura sóbria de rocha",
+            colors = listOf(Color(0xFF78909C), Color(0xFF546E7A), Color(0xFF37474F), Color(0xFF78909C)),
+            unlockLevel = 45,
             rarity = YomotsuRarity.COMMON
         ),
         ProfileAvatarBorder(
@@ -366,11 +382,19 @@ object ProfilePresets {
             rarity = YomotsuRarity.COMMON
         ),
         ProfileAvatarBorder(
-            id = "border_copper",
-            name = "Bronze Ancestral",
-            description = "Reflexos de bronze e cobre clássico envelhecido",
-            colors = listOf(Color(0xFFCD7F32), Color(0xFF8D6E63), Color(0xFFD7CCC8), Color(0xFFCD7F32)),
-            unlockLevel = 80,
+            id = "border_brass",
+            name = "Latão do Veterano",
+            description = "Reflexos dourados envelhecidos de armadura clássica",
+            colors = listOf(Color(0xFFD4AF37), Color(0xFFAA771C), Color(0xFF85580F), Color(0xFFD4AF37)),
+            unlockLevel = 75,
+            rarity = YomotsuRarity.COMMON
+        ),
+        ProfileAvatarBorder(
+            id = "border_ironclad",
+            name = "Couraça de Ferro",
+            description = "Escudo de ferro temperado pronto para ascender",
+            colors = listOf(Color(0xFF90A4AE), Color(0xFF607D8B), Color(0xFF455A64), Color(0xFF90A4AE)),
+            unlockLevel = 90,
             rarity = YomotsuRarity.COMMON
         ),
 
@@ -384,11 +408,27 @@ object ProfilePresets {
             rarity = YomotsuRarity.RARE
         ),
         ProfileAvatarBorder(
+            id = "border_sakura",
+            name = "Flor de Cerejeira",
+            description = "Pétalas suaves de sakura em rosa pastel e magenta",
+            colors = listOf(Color(0xFFFFB7B2), Color(0xFFFF8DA1), Color(0xFFFF4081), Color(0xFFFFB7B2)),
+            unlockLevel = 125,
+            rarity = YomotsuRarity.RARE
+        ),
+        ProfileAvatarBorder(
             id = "border_emerald",
             name = "Esmeralda Ancestral",
             description = "Verde místico puro da floresta primordial",
             colors = listOf(Color(0xFF69F0AE), Color(0xFF00E676), Color(0xFF1B5E20), Color(0xFF69F0AE)),
             unlockLevel = 150,
+            rarity = YomotsuRarity.RARE
+        ),
+        ProfileAvatarBorder(
+            id = "border_topaz",
+            name = "Topázio Radiante",
+            description = "Brilho âmbar alaranjado de gema lapidada ao sol",
+            colors = listOf(Color(0xFFFFB74D), Color(0xFFFFA726), Color(0xFFFF6F00), Color(0xFFFFB74D)),
+            unlockLevel = 175,
             rarity = YomotsuRarity.RARE
         ),
         ProfileAvatarBorder(
@@ -400,11 +440,27 @@ object ProfilePresets {
             rarity = YomotsuRarity.RARE
         ),
         ProfileAvatarBorder(
+            id = "border_aqua",
+            name = "Mar Profundo",
+            description = "Ondas azuis abissais de tempestade oceânica",
+            colors = listOf(Color(0xFF00B4D8), Color(0xFF0077B6), Color(0xFF03045E), Color(0xFF00B4D8)),
+            unlockLevel = 225,
+            rarity = YomotsuRarity.RARE
+        ),
+        ProfileAvatarBorder(
             id = "border_glacier",
             name = "Gelo Eterno",
             description = "Aura congelada de nevasca polar ártica",
             colors = listOf(Color(0xFFE0F7FA), Color(0xFF80DEEA), Color(0xFF00ACC1), Color(0xFFE0F7FA)),
             unlockLevel = 250,
+            rarity = YomotsuRarity.RARE
+        ),
+        ProfileAvatarBorder(
+            id = "border_sandstorm",
+            name = "Areias do Deserto",
+            description = "Vórtice dourado e terracota das dunas antigas",
+            colors = listOf(Color(0xFFEDC988), Color(0xFFD79922), Color(0xFFC56D1A), Color(0xFFEDC988)),
+            unlockLevel = 275,
             rarity = YomotsuRarity.RARE
         ),
 
@@ -418,11 +474,27 @@ object ProfilePresets {
             rarity = YomotsuRarity.EPIC
         ),
         ProfileAvatarBorder(
+            id = "border_susanoo",
+            name = "Chamas Índigo",
+            description = "Fogo espectral azul royal e índigo impenetrável",
+            colors = listOf(Color(0xFF3F51B5), Color(0xFF303F9F), Color(0xFF1A237E), Color(0xFF3F51B5)),
+            unlockLevel = 325,
+            rarity = YomotsuRarity.EPIC
+        ),
+        ProfileAvatarBorder(
             id = "border_cyber",
             name = "Cyberpunk Neón",
             description = "Gradiente futurista entre rosa choque, violeta e ciano neon",
             colors = listOf(Color(0xFFFF007F), Color(0xFF9B51E0), Color(0xFF00F5D4), Color(0xFFFF007F)),
             unlockLevel = 350,
+            rarity = YomotsuRarity.EPIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_blood_moon",
+            name = "Lua de Sangue",
+            description = "Carmesim escuro sombrio e vinho carmesim místico",
+            colors = listOf(Color(0xFF880E4F), Color(0xFF4A000E), Color(0xFFD50000), Color(0xFF880E4F)),
+            unlockLevel = 375,
             rarity = YomotsuRarity.EPIC
         ),
         ProfileAvatarBorder(
@@ -434,11 +506,27 @@ object ProfilePresets {
             rarity = YomotsuRarity.EPIC
         ),
         ProfileAvatarBorder(
+            id = "border_poison",
+            name = "Miasma Venenoso",
+            description = "Névoa tóxica verde-limão e púrpura necromântica",
+            colors = listOf(Color(0xFF76FF03), Color(0xFF64DD17), Color(0xFF4A148C), Color(0xFF76FF03)),
+            unlockLevel = 425,
+            rarity = YomotsuRarity.EPIC
+        ),
+        ProfileAvatarBorder(
             id = "border_aurora",
             name = "Aurora Boreal",
             description = "Danças etéreas entre verde esmeralda e turquesa cintilante",
             colors = listOf(Color(0xFF00FFA3), Color(0xFF00D2FF), Color(0xFF7A00FF), Color(0xFF00FFA3)),
             unlockLevel = 450,
+            rarity = YomotsuRarity.EPIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_amaterasu",
+            name = "Chamas Negras",
+            description = "Fogo negro inextinguível com borda violeta espectral",
+            colors = listOf(Color(0xFF212121), Color(0xFF4A148C), Color(0xFF000000), Color(0xFF212121)),
+            unlockLevel = 475,
             rarity = YomotsuRarity.EPIC
         ),
 
@@ -452,11 +540,27 @@ object ProfilePresets {
             rarity = YomotsuRarity.LEGENDARY
         ),
         ProfileAvatarBorder(
+            id = "border_phoenix",
+            name = "Renascimento da Fênix",
+            description = "Chamas douradas, escarlates e penas ardentes imortais",
+            colors = listOf(Color(0xFFFF3D00), Color(0xFFFF9100), Color(0xFFFFD600), Color(0xFFFF3D00)),
+            unlockLevel = 525,
+            rarity = YomotsuRarity.LEGENDARY
+        ),
+        ProfileAvatarBorder(
             id = "border_gold",
             name = "Aura Dourada Suprema",
             description = "Resplendor dourado celestial lendário dos campeões",
             colors = listOf(Color(0xFFFFE082), Color(0xFFFFD700), Color(0xFFFF8F00), Color(0xFFFFE082)),
             unlockLevel = 550,
+            rarity = YomotsuRarity.LEGENDARY
+        ),
+        ProfileAvatarBorder(
+            id = "border_domain",
+            name = "Expansão de Domínio",
+            description = "Vazio infinito cerúleo, ciano brilhante e branco puro",
+            colors = listOf(Color(0xFF00F5D4), Color(0xFF00BBF9), Color(0xFFFFFFFF), Color(0xFF00F5D4)),
+            unlockLevel = 575,
             rarity = YomotsuRarity.LEGENDARY
         ),
         ProfileAvatarBorder(
@@ -468,11 +572,27 @@ object ProfilePresets {
             rarity = YomotsuRarity.LEGENDARY
         ),
         ProfileAvatarBorder(
+            id = "border_tensa",
+            name = "Bankai Sombrio",
+            description = "Preto carvão absoluto com raios carmesins cortantes",
+            colors = listOf(Color(0xFF121212), Color(0xFFD50000), Color(0xFF000000), Color(0xFF121212)),
+            unlockLevel = 625,
+            rarity = YomotsuRarity.LEGENDARY
+        ),
+        ProfileAvatarBorder(
             id = "border_supernova",
             name = "Supernova Cósmica",
             description = "Explosão estelar em tons de rosa cósmico e azul profundo",
             colors = listOf(Color(0xFFFF4081), Color(0xFFE040FB), Color(0xFF536DFE), Color(0xFFFF4081)),
             unlockLevel = 650,
+            rarity = YomotsuRarity.LEGENDARY
+        ),
+        ProfileAvatarBorder(
+            id = "border_valkyrie",
+            name = "Asas de Valquíria",
+            description = "Prata celestial e ouro etéreo dos salões sagrados",
+            colors = listOf(Color(0xFFECEFF1), Color(0xFFFFD700), Color(0xFFCFD8DC), Color(0xFFECEFF1)),
+            unlockLevel = 675,
             rarity = YomotsuRarity.LEGENDARY
         ),
 
@@ -486,11 +606,27 @@ object ProfilePresets {
             rarity = YomotsuRarity.MYTHIC
         ),
         ProfileAvatarBorder(
+            id = "border_singularity",
+            name = "Buraco Negro",
+            description = "Horizonte gravitacional com distorção ultravioleta profunda",
+            colors = listOf(Color(0xFF7B2CBF), Color(0xFF10002B), Color(0xFF3C096C), Color(0xFF7B2CBF)),
+            unlockLevel = 725,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+        ProfileAvatarBorder(
             id = "border_nebula",
             name = "Nebulosa Celestial",
             description = "Poeira interestelar pulsando com gravidade quântica",
             colors = listOf(Color(0xFFEA80FC), Color(0xFFB388FF), Color(0xFF8C9EFF), Color(0xFFEA80FC)),
             unlockLevel = 750,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_time_warp",
+            name = "Fluxo Temporal",
+            description = "Ampulheta quântica de ouro cromado e ciano etéreo",
+            colors = listOf(Color(0xFFFFD54F), Color(0xFF00E5FF), Color(0xFFFFB300), Color(0xFFFFD54F)),
+            unlockLevel = 775,
             rarity = YomotsuRarity.MYTHIC
         ),
         ProfileAvatarBorder(
@@ -502,11 +638,35 @@ object ProfilePresets {
             rarity = YomotsuRarity.MYTHIC
         ),
         ProfileAvatarBorder(
+            id = "border_chaos",
+            name = "Caos Primordial",
+            description = "Turbilhão cósmico desestabilizado de magenta, rubi e ônix",
+            colors = listOf(Color(0xFFFF0055), Color(0xFF7928CA), Color(0xFF2A0845), Color(0xFFFF0055)),
+            unlockLevel = 825,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+        ProfileAvatarBorder(
             id = "border_eclipse",
             name = "Eclipse da Coroa",
             description = "A sombra da lua cercada pela coroa incandescente violeta",
             colors = listOf(Color(0xFFFF0055), Color(0xFF5A189A), Color(0xFF10002B), Color(0xFFFF0055)),
             unlockLevel = 850,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_hyperdrive",
+            name = "Dobra Espacial",
+            description = "Relâmpagos azuis hiper-luminares e neon estelar veloz",
+            colors = listOf(Color(0xFF00F5D4), Color(0xFF7B2CBF), Color(0xFF0077B6), Color(0xFF00F5D4)),
+            unlockLevel = 875,
+            rarity = YomotsuRarity.MYTHIC
+        ),
+        ProfileAvatarBorder(
+            id = "border_apocalypse",
+            name = "Fim dos Tempos",
+            description = "Céu rubro flamejante de fim de mundo e cinzas sombrias",
+            colors = listOf(Color(0xFFFF1744), Color(0xFFBF360C), Color(0xFF212121), Color(0xFFFF1744)),
+            unlockLevel = 900,
             rarity = YomotsuRarity.MYTHIC
         ),
 
@@ -520,11 +680,51 @@ object ProfilePresets {
             rarity = YomotsuRarity.DIVINE
         ),
         ProfileAvatarBorder(
+            id = "border_nika",
+            name = "Deus do Sol Nika",
+            description = "Branco libertador puro resplandecente com chamas douradas",
+            colors = listOf(Color(0xFFFFFFFF), Color(0xFFFFF176), Color(0xFFFFD54F), Color(0xFFFFFFFF)),
+            unlockLevel = 920,
+            rarity = YomotsuRarity.DIVINE
+        ),
+        ProfileAvatarBorder(
+            id = "border_genesis",
+            name = "Gênese Cósmica",
+            description = "O momento da criação em prisma estelar ultravioleta",
+            colors = listOf(Color(0xFFF72585), Color(0xFF7209B7), Color(0xFF4CC9F0), Color(0xFFF72585)),
+            unlockLevel = 940,
+            rarity = YomotsuRarity.DIVINE
+        ),
+        ProfileAvatarBorder(
             id = "border_creator",
             name = "Divindade Primordial",
             description = "Prisma omnipotente da gênese do universo",
             colors = listOf(Color(0xFFFF1361), Color(0xFFFFF800), Color(0xFF00FFC2), Color(0xFFFF1361)),
             unlockLevel = 950,
+            rarity = YomotsuRarity.DIVINE
+        ),
+        ProfileAvatarBorder(
+            id = "border_eternity",
+            name = "Trono da Eternidade",
+            description = "Ouro puro fundido com obsidiana estelar e diamante",
+            colors = listOf(Color(0xFFFFD700), Color(0xFF212121), Color(0xFFE0E0E0), Color(0xFFFFD700)),
+            unlockLevel = 970,
+            rarity = YomotsuRarity.DIVINE
+        ),
+        ProfileAvatarBorder(
+            id = "border_omniscient",
+            name = "Olho Onisciente",
+            description = "Íris divina de luz prismática absoluta que tudo vê",
+            colors = listOf(Color(0xFF00FFFF), Color(0xFFFF00FF), Color(0xFFFFFF00), Color(0xFF00FFFF)),
+            unlockLevel = 985,
+            rarity = YomotsuRarity.DIVINE
+        ),
+        ProfileAvatarBorder(
+            id = "border_singularity_core",
+            name = "Coração do Multiverso",
+            description = "Singularidade cósmica radiante em harmonia transcendental",
+            colors = listOf(Color(0xFFE040FB), Color(0xFF00E5FF), Color(0xFFFFEA00), Color(0xFFE040FB)),
+            unlockLevel = 995,
             rarity = YomotsuRarity.DIVINE
         ),
         ProfileAvatarBorder(
