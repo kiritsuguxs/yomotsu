@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="tachiyomi.animeextension" />
+    <uses-feature android:name="tachiyomi.extension" />
+
+    <application
+        android:label="${appName}"
+        android:icon="@mipmap/ic_launcher">
+
+        <meta-data
+            android:name="tachiyomi.animeextension.class"
+            android:value="${extClass}" />
+        <meta-data
+            android:name="tachiyomi.extension.class"
+            android:value="${extClass}" />
+        <meta-data
+            android:name="tachiyomi.animeextension.factory"
+            android:value="${extFactory}" />
+        <meta-data
+            android:name="tachiyomi.extension.factory"
+            android:value="${extFactory}" />
+        <meta-data
+            android:name="tachiyomi.animeextension.nsfw"
+            android:value="${nsfw}" />
+        <meta-data
+            android:name="tachiyomi.extension.nsfw"
+            android:value="${nsfw}" />
+        <meta-data
+            android:name="tachiyomi.animeextension.libVersion"
+            android:value="${libVersion}" />
+        <meta-data
+            android:name="tachiyomix.extensionLib"
+            android:value="${libVersion}" />
+        <meta-data
+            android:name="tachiyomix.name"
+            android:value="Saimo TV" />
+        <meta-data
+            android:name="tachiyomix.contentWarning"
+            android:value="0" />
+
+        <activity
+            android:name="eu.kanade.tachiyomi.animeextension.pt.saimotv.DeepLinkActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="saimotv.com"
+                    android:pathPattern="/filme/..*"
+                    android:scheme="https" />
+                <data
+                    android:host="saimotv.com"
+                    android:pathPattern="/serie/..*"
+                    android:scheme="https" />
+                <data
+                    android:host="saimotv.com"
+                    android:pathPattern="/animes/..*"
+                    android:scheme="https" />
+                <data
+                    android:host="saimotv.com"
+                    android:pathPattern="/doramas/..*"
+                    android:scheme="https" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
