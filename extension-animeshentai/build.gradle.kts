@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application") version "8.2.2"
-    kotlin("android") version "1.9.22"
-    kotlin("plugin.serialization") version "1.9.22"
+    kotlin("android") version "2.0.21"
+    kotlin("plugin.serialization") version "2.0.21"
 }
 
 val extVersionCode = 1
@@ -50,6 +50,10 @@ android {
 
     kotlinOptions {
         jvmTarget = "1.8"
+        freeCompilerArgs += listOf(
+            "-Xskip-metadata-version-check",
+            "-Xskip-prerelease-check",
+        )
     }
 }
 

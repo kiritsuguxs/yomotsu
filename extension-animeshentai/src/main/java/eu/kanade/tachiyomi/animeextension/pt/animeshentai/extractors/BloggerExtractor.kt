@@ -1,20 +1,20 @@
 package eu.kanade.tachiyomi.animeextension.pt.animeshentai.extractors
 
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.network.GET
-import eu.kanade.tachiyomi.network.POST
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class BloggerExtractor(private val client: OkHttpClient) {
 
     fun videosFromUrl(url: String, headers: Headers, qualityPrefix: String = ""): List<Video> {
         return try {
-            val response = client.newCall(GET(url, headers)).execute()
+            val request = Request.Builder().url(url).headers(headers).build()
+            val response = client.newCall(request).execute()
             val body = response.body?.string() ?: return emptyList()
 
             val streamVideos = getStreamVideos(body, headers, qualityPrefix)
@@ -89,7 +89,13 @@ class BloggerExtractor(private val client: OkHttpClient) {
                 "Referer", BLOGGER_BASE,
             )
 
-            val rpcResponse = client.newCall(POST(rpcUrl, headers = rpcHeaders, body = rpcBody)).execute()
+            val rpcRequest = Request.Builder()
+                .url(rpcUrl)
+                .headers(rpcHeaders)
+                .post(rpcBody)
+                .build()
+
+            val rpcResponse = client.newCall(rpcRequest).execute()
             val rpcString = rpcResponse.body?.string() ?: return emptyList()
 
             if (!rpcString.contains("https://")) return emptyList()
