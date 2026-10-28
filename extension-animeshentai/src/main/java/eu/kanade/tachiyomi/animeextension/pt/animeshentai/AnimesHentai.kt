@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.animeextension.pt.animeshentai
 
 import eu.kanade.tachiyomi.animeextension.pt.animeshentai.extractors.BloggerExtractor
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
+import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
@@ -131,6 +132,13 @@ class AnimesHentai : ParsedAnimeHttpSource() {
         }
     }
 
+    // ============================== Seasons ====================================
+    override fun seasonListSelector(): String = "div#seasons"
+
+    override fun seasonFromElement(element: Element): SAnime = popularAnimeFromElement(element)
+
+    override fun seasonListParse(response: Response): List<SAnime> = emptyList()
+
     // ============================== Episodes ===================================
     override fun episodeListSelector(): String = "div#seasons ul.episodios > li"
 
@@ -159,12 +167,12 @@ class AnimesHentai : ParsedAnimeHttpSource() {
         }
     }
 
-    // ============================== Video Links ================================
+    // ============================== Hosters & Videos ===========================
     private val bloggerExtractor by lazy { BloggerExtractor(client) }
 
-    override fun videoListParse(response: Response): List<Video> {
+    override fun hosterListParse(response: Response): List<Hoster> {
         val document = response.asJsoup()
-        val videoList = mutableListOf<Video>()
+        val hosterList = mutableListOf<Hoster>()
 
         val optionLabels = document.select("ul.sourceslist li a").associate {
             val targetId = it.attr("href").removePrefix("#")
@@ -177,16 +185,30 @@ class AnimesHentai : ParsedAnimeHttpSource() {
             val qualityPrefix = optionLabels[boxId] ?: "Player"
             val iframeSrc = box.selectFirst("iframe")?.attr("src") ?: return@forEach
 
-            when {
-                "blogger.com" in iframeSrc -> {
-                    val bloggerVideos = bloggerExtractor.videosFromUrl(iframeSrc, headers, qualityPrefix)
-                    videoList.addAll(bloggerVideos)
+            if ("blogger.com" in iframeSrc) {
+                val videos = bloggerExtractor.videosFromUrl(iframeSrc, headers, qualityPrefix)
+                if (videos.isNotEmpty()) {
+                    hosterList.add(
+                        Hoster(
+                            hosterUrl = iframeSrc,
+                            hosterName = "Blogger ($qualityPrefix)",
+                            videoList = videos,
+                            internalData = "",
+                            lazy = false,
+                        )
+                    )
                 }
             }
         }
 
-        return videoList
+        return hosterList
     }
 
-    override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException("Not used")
+    override fun videoListParse(response: Response, hoster: Hoster): List<Video> {
+        return hoster.videoList.ifEmpty {
+            bloggerExtractor.videosFromUrl(hoster.hosterUrl, headers, hoster.hosterName)
+        }
+    }
+
+    override fun videoUrlParse(response: Response): String = response.request.url.toString()
 }
