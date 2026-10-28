@@ -1,0 +1,78 @@
+plugins {
+    id("com.android.application") version "8.2.2"
+    kotlin("android") version "1.9.22"
+}
+
+val extVersionCode = 1
+val libVersion = "1.6"
+
+val calculatedVersionCode = libVersion.split(".")
+    .joinToString("") { it.padStart(2, '0') }
+    .toInt() * 1000 + extVersionCode
+
+android {
+    namespace = "eu.kanade.tachiyomi.extension.pt.baozinho"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "eu.kanade.tachiyomi.extension.pt.baozinho"
+        minSdk = 21
+        targetSdk = 34
+        versionCode = calculatedVersionCode
+        versionName = "$libVersion.$extVersionCode"
+
+        manifestPlaceholders["appName"] = "Tachiyomi: Baozinho"
+        manifestPlaceholders["extClass"] = ".Baozinho"
+        manifestPlaceholders["extVersionCode"] = extVersionCode.toString()
+        manifestPlaceholders["extFactory"] = ""
+        manifestPlaceholders["nsfw"] = "0"
+        manifestPlaceholders["sourceUrl"] = "https://baozinho.com"
+        manifestPlaceholders["isNsfw"] = "false"
+        manifestPlaceholders["libVersion"] = libVersion
+    }
+
+    val tempKeystore = file(System.getenv("RUNNER_TEMP") ?: "").resolve("signing.keystore")
+    val hasSigning = tempKeystore.exists()
+
+    if (hasSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = tempKeystore
+                storePassword = System.getenv("STOREPASSWORD")
+                keyAlias = System.getenv("KEYALIAS")
+                keyPassword = System.getenv("KEYPASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = if (hasSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+dependencies {
+    compileOnly("com.github.tachiyomiorg:extensions-lib:1.4.4")
+    compileOnly("com.squareup.okhttp3:okhttp:4.12.0")
+    compileOnly("org.jsoup:jsoup:1.17.2")
+    compileOnly("io.reactivex:rxjava:1.3.8")
+}
