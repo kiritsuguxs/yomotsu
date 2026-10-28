@@ -32,25 +32,16 @@ android {
         manifestPlaceholders["libVersion"] = libVersion
     }
 
-    val b64 = System.getenv("STOREFILEBASE64") ?: System.getenv("storeFileBase64")
-    val hasSigning = !b64.isNullOrEmpty()
+    val tempKeystore = file(System.getenv("RUNNER_TEMP") ?: "").resolve("signing.keystore")
+    val hasSigning = tempKeystore.exists()
 
     if (hasSigning) {
-        val sPass = System.getenv("STOREPASSWORD") ?: System.getenv("storePassword")
-        val kAlias = System.getenv("KEYALIAS") ?: System.getenv("keyAlias")
-        val kPass = System.getenv("KEYPASSWORD") ?: System.getenv("keyPassword")
-
-        val runnerTemp = System.getenv("RUNNER_TEMP") ?: layout.buildDirectory.asFile.get().absolutePath
-        val tempKeystore = file(runnerTemp).resolve("signing.keystore")
-        tempKeystore.parentFile?.mkdirs()
-        tempKeystore.writeBytes(java.util.Base64.getDecoder().decode(b64.trim()))
-
         signingConfigs {
             create("release") {
                 storeFile = tempKeystore
-                storePassword = sPass
-                keyAlias = kAlias
-                keyPassword = kPass
+                storePassword = System.getenv("STOREPASSWORD")
+                keyAlias = System.getenv("KEYALIAS")
+                keyPassword = System.getenv("KEYPASSWORD")
             }
         }
     }

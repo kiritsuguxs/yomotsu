@@ -27,10 +27,18 @@ jobs:
         with:
           gradle-version: '8.5'
 
+      - name: Prepare Keystore
+        env:
+          STOREFILEBASE64: ${{ secrets.STOREFILEBASE64 }}
+        run: |
+          if [ -n "$STOREFILEBASE64" ]; then
+            mkdir -p "$RUNNER_TEMP"
+            echo "$STOREFILEBASE64" | base64 -d > "$RUNNER_TEMP/signing.keystore"
+          fi
+
       - name: Build APK
         working-directory: ./extension-animeshentai
         env:
-          STOREFILEBASE64: ${{ secrets.STOREFILEBASE64 }}
           STOREPASSWORD: ${{ secrets.STOREPASSWORD }}
           KEYALIAS: ${{ secrets.KEYALIAS }}
           KEYPASSWORD: ${{ secrets.KEYPASSWORD }}
