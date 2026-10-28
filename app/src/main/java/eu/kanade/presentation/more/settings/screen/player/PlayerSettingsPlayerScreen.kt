@@ -319,16 +319,16 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
         val externalPlayerPreference = playerPreferences.externalPlayerPreference()
 
         val pm = basePreferences.context.packageManager
-        val installedPackages = pm.getInstalledPackages(0)
-        val supportedPlayers = installedPackages.filter { it.packageName in externalPlayers }
+        val detectedPackages = externalPlayers.filter { pkg ->
+            runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
+        }
 
-        val packageNames = supportedPlayers.map { it.packageName }
-        val packageNamesReadable = supportedPlayers
-            .map { pm.getApplicationLabel(it.applicationInfo!!).toString() }
-
-        val packageNamesMap: Map<String, String> =
-            packageNames.zip(packageNamesReadable)
-                .toMap()
+        val packageNamesMap: Map<String, String> = detectedPackages.associateWith { pkg ->
+            runCatching {
+                val appInfo = pm.getApplicationInfo(pkg, 0)
+                pm.getApplicationLabel(appInfo).toString()
+            }.getOrDefault(pkg)
+        }
 
         return Preference.PreferenceGroup(
             title = stringResource(AYMR.strings.pref_category_external_player),
@@ -341,6 +341,10 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
                     preference = externalPlayerPreference,
                     entries = (mapOf("" to "None") + packageNamesMap).toPersistentMap(),
                     title = stringResource(AYMR.strings.pref_external_player_preference),
+                    onValueChanged = { pkg ->
+                        alwaysUseExternalPlayer.set(pkg.isNotBlank())
+                        true
+                    },
                 ),
             ),
         )

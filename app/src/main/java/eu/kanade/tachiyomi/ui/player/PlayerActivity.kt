@@ -1097,7 +1097,9 @@ class PlayerActivity : BaseActivity() {
         if (player.isExiting) return
         if (video == null) return
 
-        if (playerPreferences.alwaysUseExternalPlayer().get()) {
+        val extPkg = playerPreferences.externalPlayerPreference().get().trim()
+        val alwaysUseExt = playerPreferences.alwaysUseExternalPlayer().get()
+        if (alwaysUseExt || extPkg.isNotBlank()) {
             openInExternalPlayer(video, position)
             return
         }
@@ -1143,16 +1145,17 @@ class PlayerActivity : BaseActivity() {
     }
 
     private fun openInExternalPlayer(video: Video, position: Long? = null) {
-        val parsedUrl = parseVideoUrl(video.videoUrl)
-        if (parsedUrl.isNullOrEmpty()) {
+        val videoUrl = video.videoUrl
+        if (videoUrl.isBlank()) {
             showToast("URL do vídeo está vazia")
             finish()
             return
         }
 
+        val videoUri = videoUrl.toUri()
         val extIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(parsedUrl.toUri(), "video/*")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            setDataAndType(videoUri, "video/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
             val animeTitle = viewModel.anime?.title.orEmpty()
             val epName = viewModel.currentEpisode.value?.name.orEmpty()
@@ -1188,7 +1191,10 @@ class PlayerActivity : BaseActivity() {
                 }
             }
 
-            val resumePos = position ?: viewModel.currentEpisode.value?.last_second_seen ?: 0L
+            val resumePos = position ?: viewModel.currentEpisode.value?.let { ep ->
+                val preservePos = playerPreferences.preserveWatchingPosition().get()
+                if (ep.seen && !preservePos) 0L else ep.last_second_seen
+            } ?: 0L
             if (resumePos > 0) {
                 putExtra("position", resumePos.toInt())
                 putExtra("extra_position", resumePos)
@@ -1197,21 +1203,29 @@ class PlayerActivity : BaseActivity() {
         }
 
         val pkgName = playerPreferences.externalPlayerPreference().get().trim()
+        var launched = false
+
         if (pkgName.isNotBlank()) {
-            extIntent.setPackage(pkgName)
+            try {
+                val targetedIntent = Intent(extIntent).setPackage(pkgName)
+                externalPlayerLauncher.launch(targetedIntent)
+                launched = true
+            } catch (e: Throwable) {
+                logcat(LogPriority.WARN, e) { "Failed to launch external player ($pkgName), falling back to chooser" }
+            }
         }
 
-        try {
-            if (pkgName.isNotBlank()) {
-                externalPlayerLauncher.launch(extIntent)
-            } else {
-                val chooser = Intent.createChooser(extIntent, "Abrir com").apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+        if (!launched) {
+            try {
+                val chooser = Intent.createChooser(extIntent, "Abrir com...")
                 externalPlayerLauncher.launch(chooser)
+                launched = true
+            } catch (e: Throwable) {
+                logcat(LogPriority.ERROR, e) { "Failed to launch external player chooser" }
             }
-        } catch (e: Exception) {
-            logcat(LogPriority.ERROR, e) { "Failed to launch external player" }
+        }
+
+        if (!launched) {
             showToast("Player externo não encontrado, abrindo no MPV...")
             loadInternalVideo(video, position)
         }
