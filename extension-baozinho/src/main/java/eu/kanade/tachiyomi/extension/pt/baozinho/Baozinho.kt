@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.pt.baozinho
 
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
@@ -11,6 +12,8 @@ import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import org.json.JSONArray
+import org.json.JSONObject
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.URLEncoder
@@ -38,21 +41,44 @@ class Baozinho : ParsedHttpSource() {
         const val PREFIX_PATH_SEARCH = "path:"
     }
 
-    // ============================== Popular Manga ==============================
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/ranking", headers)
+    private val slugToIdMap = mutableMapOf<String, Int>()
 
-    override fun popularMangaSelector(): String = "a.portrait-card"
+    private fun getObraId(slug: String): Int? {
+        slugToIdMap[slug]?.let { return it }
+        try {
+            val req = GET("https://api.baozinho.com/obras", headers)
+            val res = client.newCall(req).execute()
+            val body = res.body?.string() ?: return null
+            val json = JSONObject(body)
+            val data = json.optJSONArray("data") ?: return null
+            for (i in 0 until data.length()) {
+                val item = data.getJSONObject(i)
+                val itemSlug = item.optString("slug")
+                val itemId = item.optInt("id", -1)
+                if (itemSlug.isNotBlank() && itemId != -1) {
+                    slugToIdMap[itemSlug] = itemId
+                }
+            }
+        } catch (_: Exception) {}
+        return slugToIdMap[slug]
+    }
+
+    // ============================== Popular Manga ==============================
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/obras", headers)
+
+    override fun popularMangaSelector(): String = "a.portrait-card, a.fileira-link"
 
     override fun popularMangaFromElement(element: Element): SManga = SManga.create().apply {
         val link = element.attr("href")
         setUrlWithoutDomain(link)
 
-        val titleEl = element.selectFirst("span.portrait-card-titulo")
+        val titleEl = element.selectFirst("span.portrait-card-titulo, span.fileira-rank-titulo")
         val img = element.selectFirst("img")
 
         val rawTitle = titleEl?.text()?.ifBlank { null }
-            ?: img?.attr("alt")
-            ?: ""
+            ?: element.attr("aria-label").substringAfter("—").trim().ifBlank { null }
+            ?: img?.attr("alt")?.ifBlank { null }
+            ?: link.substringAfterLast("/").replace("-", " ")
         title = rawTitle.trim()
 
         val srcSet = img?.attr("srcSet")
@@ -61,6 +87,14 @@ class Baozinho : ParsedHttpSource() {
     }
 
     override fun popularMangaNextPageSelector(): String? = null
+
+    override fun popularMangaParse(response: Response): MangasPage {
+        val document = response.asJsoup()
+        val mangas = document.select(popularMangaSelector())
+            .distinctBy { it.attr("href") }
+            .map { popularMangaFromElement(it) }
+        return MangasPage(mangas, false)
+    }
 
     // ============================== Latest Updates =============================
     override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/atualizacoes", headers)
@@ -84,6 +118,14 @@ class Baozinho : ParsedHttpSource() {
     }
 
     override fun latestUpdatesNextPageSelector(): String? = null
+
+    override fun latestUpdatesParse(response: Response): MangasPage {
+        val document = response.asJsoup()
+        val mangas = document.select(latestUpdatesSelector())
+            .distinctBy { it.attr("href").substringBefore("/capitulo-") }
+            .map { latestUpdatesFromElement(it) }
+        return MangasPage(mangas, false)
+    }
 
     // ============================== Search Manga ===============================
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
@@ -121,6 +163,14 @@ class Baozinho : ParsedHttpSource() {
     }
 
     override fun searchMangaNextPageSelector(): String? = null
+
+    override fun searchMangaParse(response: Response): MangasPage {
+        val document = response.asJsoup()
+        val mangas = document.select(searchMangaSelector())
+            .distinctBy { it.attr("href").substringBefore("/capitulo-") }
+            .map { searchMangaFromElement(it) }
+        return MangasPage(mangas, false)
+    }
 
     override fun getFilterList(): FilterList = FilterList(
         GenreFilter(),
@@ -162,12 +212,47 @@ class Baozinho : ParsedHttpSource() {
     }
 
     // ============================== Chapter List ===============================
-    override fun chapterListSelector(): String = "a.obra-ep-link, a[href*='/capitulo-']"
+    override fun chapterListSelector(): String = "ul.obra-ep-list li.obra-ep-item a.obra-ep-link"
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
-        val chapters = mutableListOf<SChapter>()
+        val url = response.request.url.toString()
+        val slug = url.substringAfter("/obras/").substringBefore("/").substringBefore("?")
 
+        // 1. Fetch complete and ordered chapter list directly from API
+        val obraId = getObraId(slug) ?: document.selectFirst("ul[id^=lista-]")?.id()?.removePrefix("lista-")?.toIntOrNull()
+        if (obraId != null) {
+            try {
+                val apiReq = GET("https://api.baozinho.com/capitulos/obra/$obraId", headers)
+                val apiRes = client.newCall(apiReq).execute()
+                val apiBody = apiRes.body?.string()
+                if (!apiBody.isNullOrBlank() && apiBody.startsWith("[")) {
+                    val array = JSONArray(apiBody)
+                    val chapters = mutableListOf<SChapter>()
+                    for (i in 0 until array.length()) {
+                        val obj = array.getJSONObject(i)
+                        val num = obj.optInt("numero", -1)
+                        if (num < 0) continue
+                        val nameStr = obj.optString("nome").ifBlank { "Capítulo $num" }
+                        val dateStr = obj.optString("lancadoEm")
+                        chapters.add(
+                            SChapter.create().apply {
+                                this.url = "/obras/$slug/capitulo-$num"
+                                this.name = nameStr
+                                this.chapter_number = num.toFloat()
+                                this.date_upload = parseChapterDate(dateStr)
+                            }
+                        )
+                    }
+                    if (chapters.isNotEmpty()) {
+                        return chapters
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        // 2. Fallback to HTML elements sorted in descending order
+        val chapters = mutableListOf<SChapter>()
         document.select(chapterListSelector()).forEach { el ->
             val href = el.attr("href")
             if (href.contains("/capitulo-")) {
@@ -175,7 +260,7 @@ class Baozinho : ParsedHttpSource() {
             }
         }
 
-        return chapters.distinctBy { it.url }
+        return chapters.distinctBy { it.url }.sortedByDescending { it.chapter_number }
     }
 
     override fun chapterFromElement(element: Element): SChapter = SChapter.create().apply {
@@ -183,8 +268,8 @@ class Baozinho : ParsedHttpSource() {
         setUrlWithoutDomain(href)
 
         val epMatch = Regex("""capitulo-(\d+)""").find(href)
-        val epNum = epMatch?.groupValues?.get(1) ?: "1"
-        chapter_number = epNum.toFloatOrNull() ?: 1F
+        val epNum = epMatch?.groupValues?.get(1)?.toIntOrNull() ?: 1
+        chapter_number = epNum.toFloat()
 
         val epTitle = element.selectFirst("span.obra-ep-title")?.text()?.replace("<!-- -->", "")?.trim()
         name = if (!epTitle.isNullOrBlank()) {
