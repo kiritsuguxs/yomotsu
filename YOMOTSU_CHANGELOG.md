@@ -2,6 +2,29 @@
 
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
+
+## 0.21.3-Y1
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Backup e Restauração de Extensões Privadas e Plugins:** O sistema de backup (.tachibk) agora empacota e restaura automaticamente todas as extensões privadas de anime (.ext) e plugins de light novel (.js/.json), sem necessidade de reinstalação manual.
+- **Suporte Oficial e Completo a Players Externos (VLC, MPV, MX Player):** Roteamento nativo e inteligente da reprodução de vídeos para reprodutores externos com sincronização bidirecional de posição assistida, progresso e conclusão no histórico do Yomotsu.
+- **Detecção Robusta de Players no Android 11+:** Adicionadas regras explícitas de visibilidade de pacotes (<queries>) e resolução direta de aplicativos de mídia instalados, além de contingência (fallback) automática para o seletor nativo do Android.
+- **50 Molduras de Avatar por Nível de Perfil:** Sistema de customização de avatar expandido para 50 níveis progressivos de molduras (do Nível 1 ao 1000) com distinções visuais graduais por raridade.
+- **Suporte Completo a Formato de Horário (12h / 24h):** Configuração dedicada em Aparência para alternar a exibição de horários nos modos 12 horas (AM/PM), 24 horas ou alinhados ao padrão do sistema.
+- **Estabilidade no Carregamento de Capas e Manhwas:** Restauração do motor base estável de carregamento de imagens e interceptadores de rede, sanando a lentidão e travamentos na exibição de capas e páginas.
+- **Aprimoramentos no Leitor de Novels:** Estabilização do mecanismo de Leitura em Voz Alta (TTS) e otimização na troca contínua de capítulos.
+- **Fila de Downloads e Extensões:** Correção de inconsistências na fila de downloads em segundo plano e validação segura de repositórios.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Automated Backup & Restore for Private Extensions and Plugins:** The backup system (.tachibk) now natively packages and restores installed private anime extensions (.ext) and novel plugins (.js/.json), eliminating manual reinstalls.
+- **Full External Video Player Integration (VLC, MPV, MX Player):** Seamlessly route video playback to external players with full bi-directional progress and watch history synchronization.
+- **Android 11+ Media Player Discovery & Fallback:** Declared explicit package visibility queries (<queries>) to reliably detect third-party players, paired with an automatic fallback to the native system app chooser.
+- **50 Avatar Border Progression Tiers:** Expanded profile avatar customization with 50 progressive border tiers (scaling from Level 1 to 1000) reflecting user milestones.
+- **Configurable 12h / 24h Time Format:** Added appearance preference to customize timestamps in 12-hour (AM/PM), 24-hour, or system-aligned display.
+- **Cover Art & Manhwa Reader Loading Stability:** Restored the core stable baseline for image decoders and network interceptors, resolving slow cover loading and reader stuttering.
+- **Novel Reader Engine Polish:** Enhanced Text-to-Speech (TTS) lifecycle stability and seamless chapter transition performance.
+- **Download Queue & Extension Fixes:** Fixed background download queue stalling and stabilized repository synchronizations.
+
 ## 0.21.0-Y4
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
