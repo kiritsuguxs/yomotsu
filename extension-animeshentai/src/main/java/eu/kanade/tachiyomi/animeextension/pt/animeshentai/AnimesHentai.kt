@@ -205,7 +205,10 @@ class AnimesHentai : ParsedAnimeHttpSource() {
     }
 
     override fun videoListParse(response: Response, hoster: Hoster): List<Video> {
-        return hoster.videoList.ifEmpty {
+        val list = hoster.videoList
+        return if (!list.isNullOrEmpty()) {
+            list
+        } else {
             bloggerExtractor.videosFromUrl(hoster.hosterUrl, headers, hoster.hosterName)
         }
     }
