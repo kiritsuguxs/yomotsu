@@ -303,6 +303,11 @@
     <string name="no_results_found">Nenhum resultado encontrado</string>
     <string name="migration_selection_prompt">Selecione uma fonte da qual migrar</string>
     <string name="pref_date_format">Formato de data</string>
+    <string name="pref_time_format">Formato de hora</string>
+    <string name="follow_system">Seguir o sistema</string>
+    <string name="follow_language">Seguir o idioma</string>
+    <string name="time_24_hours">24 horas</string>
+    <string name="time_12_hours">12 horas</string>
     <string name="pref_category_library_update">Atualização global</string>
     <string name="logout_title">Desconectar de %1$s?</string>
     <string name="logout">Desconectar</string>

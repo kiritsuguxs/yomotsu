@@ -291,6 +291,11 @@
     <string name="ext_obsolete">Obsoleto</string>
     <string name="obsolete_extension_message">Esta extensão não está mais disponível. Ela pode não funcionar corretamente e pode causar problemas na app. É recomendado desinstalá-la.</string>
     <string name="pref_date_format">Formato da data</string>
+    <string name="pref_time_format">Formato da hora</string>
+    <string name="follow_system">Seguir o sistema</string>
+    <string name="follow_language">Seguir o idioma</string>
+    <string name="time_24_hours">24 horas</string>
+    <string name="time_12_hours">12 horas</string>
     <string name="pref_category_library_update">Atualização global</string>
     <string name="logout_title">Terminar sessão em %1$s?</string>
     <string name="logout">Terminar sessão</string>

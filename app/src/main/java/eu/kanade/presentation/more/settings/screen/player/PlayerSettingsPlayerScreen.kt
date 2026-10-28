@@ -330,6 +330,8 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
             }.getOrDefault(pkg)
         }
 
+        val noneLabel = stringResource(MR.strings.none)
+
         return Preference.PreferenceGroup(
             title = stringResource(AYMR.strings.pref_category_external_player),
             preferenceItems = persistentListOf(
@@ -339,7 +341,7 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
                 ),
                 Preference.PreferenceItem.ListPreference(
                     preference = externalPlayerPreference,
-                    entries = (mapOf("" to "None") + packageNamesMap).toPersistentMap(),
+                    entries = (mapOf("" to noneLabel) + packageNamesMap).toPersistentMap(),
                     title = stringResource(AYMR.strings.pref_external_player_preference),
                     onValueChanged = { pkg ->
                         alwaysUseExternalPlayer.set(pkg.isNotBlank())
