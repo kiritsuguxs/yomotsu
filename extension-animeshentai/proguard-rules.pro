@@ -1,0 +1,8 @@
+-keep class eu.kanade.tachiyomi.animeextension.** { *; }
+-dontwarn rx.**
+-dontwarn okhttp3.**
+-dontwarn org.jsoup.**
+-dontwarn androidx.**
+-dontwarn android.**
+-dontwarn uy.kohesive.injekt.**
+-dontwarn eu.kanade.tachiyomi.**
