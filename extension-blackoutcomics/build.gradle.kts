@@ -31,6 +31,20 @@ android {
         manifestPlaceholders["libVersion"] = libVersion
     }
 
+    val tempKeystore = file(System.getenv("RUNNER_TEMP") ?: "").resolve("signing.keystore")
+    val hasSigning = tempKeystore.exists()
+
+    if (hasSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = tempKeystore
+                storePassword = System.getenv("STOREPASSWORD")
+                keyAlias = System.getenv("KEYALIAS")
+                keyPassword = System.getenv("KEYPASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -38,7 +52,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 

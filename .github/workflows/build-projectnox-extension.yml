@@ -54,9 +54,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: 🔑 Prepare Keystore
+        env:
+          STOREFILEBASE64: ${{ secrets.STOREFILEBASE64 }}
+        run: |
+          if [ -n "$STOREFILEBASE64" ]; then
+            mkdir -p "$RUNNER_TEMP"
+            echo "$STOREFILEBASE64" | base64 -d > "$RUNNER_TEMP/signing.keystore"
+          fi
+
       - name: 📦 Build release APK
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release == 'true')
         working-directory: extension-projectnox
+        env:
+          STOREPASSWORD: ${{ secrets.STOREPASSWORD }}
+          KEYALIAS: ${{ secrets.KEYALIAS }}
+          KEYPASSWORD: ${{ secrets.KEYPASSWORD }}
         run: gradle assembleRelease --no-daemon
 
       - name: 📤 Upload release APK

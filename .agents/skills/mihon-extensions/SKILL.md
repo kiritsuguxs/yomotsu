@@ -130,6 +130,20 @@ android {
         manifestPlaceholders["libVersion"] = libVersion
     }
 
+    val tempKeystore = file(System.getenv("RUNNER_TEMP") ?: "").resolve("signing.keystore")
+    val hasSigning = tempKeystore.exists()
+
+    if (hasSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = tempKeystore
+                storePassword = System.getenv("STOREPASSWORD")
+                keyAlias = System.getenv("KEYALIAS")
+                keyPassword = System.getenv("KEYPASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -137,7 +151,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
@@ -323,5 +341,25 @@ for folder, size in densities.items():
 
 ## 6. Regras de CI/CD (GitHub Actions)
 
-1. **Evitar GitHub Releases para Extensões**: O Yomotsu verifica Releases para atualização do app principal. Gerar Releases para extensões no mesmo repositório confunde o atualizador. Use sempre `actions/upload-artifact@v4`.
-2. **Ambiente PRoot/AndCode**: No ambiente mobile/PRoot, não execute comandos de espera longa (`sleep`) bloqueando a sessão em segundo plano, pois o sistema operacional Android pode reiniciar o container por gerenciamento de bateria.
+1. **Assinatura Oficial Automática**:
+   Todo workflow de extensão DEVE incluir o passo `Prepare Keystore` usando o segredo oficial `STOREFILEBASE64`:
+   ```yaml
+         - name: Prepare Keystore
+           env:
+             STOREFILEBASE64: ${{ secrets.STOREFILEBASE64 }}
+           run: |
+             if [ -n "$STOREFILEBASE64" ]; then
+               mkdir -p "$RUNNER_TEMP"
+               echo "$STOREFILEBASE64" | base64 -d > "$RUNNER_TEMP/signing.keystore"
+             fi
+
+         - name: Build APK
+           working-directory: ./extension-<nome>
+           env:
+             STOREPASSWORD: ${{ secrets.STOREPASSWORD }}
+             KEYALIAS: ${{ secrets.KEYALIAS }}
+             KEYPASSWORD: ${{ secrets.KEYPASSWORD }}
+           run: gradle assembleRelease
+   ```
+2. **Evitar GitHub Releases para Extensões**: O Yomotsu verifica Releases para atualização do app principal. Gerar Releases para extensões no mesmo repositório confunde o atualizador. Use sempre `actions/upload-artifact@v4`.
+3. **Ambiente PRoot/AndCode**: No ambiente mobile/PRoot, não execute comandos de espera longa (`sleep`) bloqueando a sessão em segundo plano, pois o sistema operacional Android pode reiniciar o container por gerenciamento de bateria.
