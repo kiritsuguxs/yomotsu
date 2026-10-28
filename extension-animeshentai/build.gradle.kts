@@ -4,7 +4,7 @@ plugins {
     kotlin("plugin.serialization") version "2.0.21"
 }
 
-val extVersionCode = 2
+val extVersionCode = 3
 val libVersion = "1.6"
 
 val calculatedVersionCode = libVersion.split(".")
@@ -32,6 +32,29 @@ android {
         manifestPlaceholders["libVersion"] = libVersion
     }
 
+    val b64 = System.getenv("STOREFILEBASE64") ?: System.getenv("storeFileBase64")
+    val hasSigning = !b64.isNullOrEmpty()
+
+    if (hasSigning) {
+        val sPass = System.getenv("STOREPASSWORD") ?: System.getenv("storePassword")
+        val kAlias = System.getenv("KEYALIAS") ?: System.getenv("keyAlias")
+        val kPass = System.getenv("KEYPASSWORD") ?: System.getenv("keyPassword")
+
+        val runnerTemp = System.getenv("RUNNER_TEMP") ?: layout.buildDirectory.asFile.get().absolutePath
+        val tempKeystore = file(runnerTemp).resolve("signing.keystore")
+        tempKeystore.parentFile?.mkdirs()
+        tempKeystore.writeBytes(java.util.Base64.getDecoder().decode(b64.trim()))
+
+        signingConfigs {
+            create("release") {
+                storeFile = tempKeystore
+                storePassword = sPass
+                keyAlias = kAlias
+                keyPassword = kPass
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -39,7 +62,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 

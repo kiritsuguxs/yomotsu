@@ -29,6 +29,11 @@ jobs:
 
       - name: Build APK
         working-directory: ./extension-animeshentai
+        env:
+          STOREFILEBASE64: ${{ secrets.STOREFILEBASE64 }}
+          STOREPASSWORD: ${{ secrets.STOREPASSWORD }}
+          KEYALIAS: ${{ secrets.KEYALIAS }}
+          KEYPASSWORD: ${{ secrets.KEYPASSWORD }}
         run: gradle assembleRelease
 
       - name: Upload APK
