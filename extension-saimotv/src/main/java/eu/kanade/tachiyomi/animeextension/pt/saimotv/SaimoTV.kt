@@ -355,9 +355,5 @@ class SaimoTV : ParsedAnimeHttpSource() {
         return hoster.videoList ?: emptyList()
     }
 
-    override fun videoListParse(response: Response): List<Video> {
-        return hosterListParse(response).flatMap { it.videoList ?: emptyList() }
-    }
-
     override fun videoUrlParse(response: Response): String = response.request.url.toString()
 }

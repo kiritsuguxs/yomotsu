@@ -2,9 +2,9 @@ package eu.kanade.tachiyomi.animeextension.pt.saimotv
 
 import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 
-open class ContentTypeFilter(name: String, val values: Array<Pair<String, String>>) :
-    AnimeFilter.Select<String>(name, values.map { it.first }.toTypedArray()) {
-    fun toPath(): String = values[state].second
+open class ContentTypeFilter(name: String, private val typeValues: Array<Pair<String, String>>) :
+    AnimeFilter.Select<String>(name, typeValues.map { it.first }.toTypedArray()) {
+    fun toPath(): String = typeValues[state].second
 }
 
 class TipoFilter : ContentTypeFilter(
@@ -17,9 +17,9 @@ class TipoFilter : ContentTypeFilter(
     )
 )
 
-open class GenreFilter(name: String, val values: Array<Pair<String, String>>) :
-    AnimeFilter.Select<String>(name, values.map { it.first }.toTypedArray()) {
-    fun toSlug(): String = values[state].second
+open class GenreFilter(name: String, private val genreValues: Array<Pair<String, String>>) :
+    AnimeFilter.Select<String>(name, genreValues.map { it.first }.toTypedArray()) {
+    fun toSlug(): String = genreValues[state].second
 }
 
 class GeneroFilter : GenreFilter(
