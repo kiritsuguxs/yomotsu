@@ -210,7 +210,7 @@ class ToonLivre : HttpSource(), ConfigurableSource {
                 "completed" -> SManga.COMPLETED
                 else -> SManga.UNKNOWN
             }
-            url = json.optString("id", manga.url)
+            url = json.optString("id")
         }
     }
 
