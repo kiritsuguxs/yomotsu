@@ -1,0 +1,9 @@
+-keep class eu.kanade.tachiyomi.extension.** { *; }
+-dontwarn rx.**
+-dontwarn okhttp3.**
+-dontwarn org.jsoup.**
+-dontwarn androidx.**
+-dontwarn android.**
+-dontwarn uy.kohesive.injekt.**
+-dontwarn eu.kanade.tachiyomi.**
+-dontwarn kotlinx.coroutines.**
