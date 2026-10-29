@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.asJsoup
 import okhttp3.Headers
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.text.SimpleDateFormat
@@ -24,9 +25,37 @@ class NhentaiBr : HttpSource() {
 
     override val supportsLatest = true
 
-    override fun headersBuilder(): Headers.Builder = Headers.Builder()
+    override val client: OkHttpClient = network.client.newBuilder()
+        .followSslRedirects(false)
+        .addInterceptor { chain ->
+            val request = chain.request()
+            val response = chain.proceed(request)
+            if (response.isRedirect) {
+                val location = response.header("Location")
+                if (location != null) {
+                    val fixedLocation = when {
+                        location.startsWith("http://nhentai.net.br") -> location.replaceFirst("http://", "https://")
+                        location.startsWith("/") -> "$baseUrl$location"
+                        else -> location
+                    }
+                    if (fixedLocation.startsWith("https://nhentai.net.br")) {
+                        response.close()
+                        val newRequest = request.newBuilder()
+                            .url(fixedLocation)
+                            .header("Cookie", "wordpress_logged_in_bypass=1")
+                            .build()
+                        return@addInterceptor chain.proceed(newRequest)
+                    }
+                }
+            }
+            response
+        }
+        .build()
+
+    override fun headersBuilder(): Headers.Builder = super.headersBuilder()
         .add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         .add("Referer", "$baseUrl/")
+        .add("Cookie", "wordpress_logged_in_bypass=1")
 
     // ============================== Popular ===============================
 
@@ -48,7 +77,8 @@ class NhentaiBr : HttpSource() {
                 ?: element.selectFirst("a[href*=\"nhentai.net.br\"]:not(.thumbParodiaNome)")
                 ?: element.selectFirst("a")!!
 
-            manga.setUrlWithoutDomain(titleLink.attr("href"))
+            val rawUrl = titleLink.attr("href").replace("http://nhentai.net.br", "https://nhentai.net.br")
+            manga.setUrlWithoutDomain(rawUrl)
             val titleText = element.selectFirst("span.thumb-titulo")?.text()?.trim()
                 ?: titleLink.attr("title").ifEmpty { titleLink.text().trim() }
             manga.title = titleText
@@ -175,7 +205,12 @@ class NhentaiBr : HttpSource() {
                 }
             }
             if (url.isNotEmpty()) {
-                pages.add(Page(i, "", url))
+                val cleanUrl = if (url.startsWith("http://nhentai.net.br")) {
+                    url.replaceFirst("http://", "https://")
+                } else {
+                    url
+                }
+                pages.add(Page(i, "", cleanUrl))
             }
         }
 
