@@ -98,7 +98,7 @@ class AotInpaintService : Service() {
             .bufferedReader(Charsets.UTF_8)
             .use { it.readText() }
         val page = json.decodeFromString<PageTranslation>(rawJson)
-        if (page.blocks.none { it.translation.isNotBlank() }) return 0
+        if (page.blocks.none(AotPageInpainter::needsAotInpaint)) return 0
 
         val engine = ensureEngine()
         val count = AotPageInpainter(engine, AotPageInpainter.AOT_MODEL_TILE_SIZE)

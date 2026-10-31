@@ -294,4 +294,109 @@ class AotPageInpainterTest {
         assertFalse(blank.resolveCleanup(500f, 800f) is AotPatchCleanup)
         assertEquals(NoCleanup, blank.resolveCleanup(500f, 800f))
     }
+
+    @Test
+    fun `shadowed closed speech bubble is skipped completely while untranslated neighbor stays intact`() {
+        val backend = FakeAotBackend()
+        val inpainter = Inpainter(
+            modelPath = "/models/mit_aot_fixed512.ncnn.param",
+            cfg = InpainterConfig(method = InpainterConfig.METHOD_AOT, tileSize = 512),
+            backend = backend,
+        )
+        val pageInpainter = AotPageInpainter(inpainter, tileSize = 512)
+
+        // Closed speech bubble with dark outline/drop-shadow right next to text -> must skip AOT
+        val shadowedBubble = TranslationBlock(
+            text = "NORMALLY ONE OF YOUR PARENTS WOULD HAVE GUIDED YOU",
+            translation = "NORMALMENTE, UM DOS SEUS PAIS GUIARIA VOCÊ.",
+            width = 180f,
+            height = 60f,
+            symWidth = 10f,
+            symHeight = 16f,
+            angle = 0f,
+            x = 60f,
+            y = 80f,
+            backgroundColor = -0x1,
+            foregroundColor = -0x1000000,
+            balloonDetected = true,
+            geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION,
+        )
+        assertFalse(AotPageInpainter.needsAotInpaint(shadowedBubble))
+
+        // Untranslated neighbor line just above an artwork block -> must never be smudged
+        val untranslatedNeighbor = TranslationBlock(
+            text = "RHYTHM FOR EVERY",
+            translation = "",
+            width = 120f,
+            height = 18f,
+            symWidth = 10f,
+            symHeight = 16f,
+            angle = 0f,
+            x = 200f,
+            y = 300f,
+            balloonDetected = false,
+            geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION,
+        )
+        val translatedArt = TranslationBlock(
+            text = "INDIVIDUAL.",
+            translation = "É INDIVIDUAL.",
+            width = 100f,
+            height = 18f,
+            symWidth = 10f,
+            symHeight = 16f,
+            angle = 0f,
+            x = 210f,
+            y = 324f,
+            balloonDetected = false,
+            geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION,
+        )
+
+        val sentinelColor = (0xFF shl 24) or (250 shl 16) or (10 shl 8) or 10
+        val reader = SyntheticReader(600, 600) { x, y ->
+            if (x in 200..319 && y in 300..317) {
+                sentinelColor
+            } else {
+                val c = 40 + ((x + y) % 50)
+                (0xFF shl 24) or (c shl 16) or (c shl 8) or (c + 15)
+            }
+        }
+
+        var capturedPatch: IntArray? = null
+        var capturedW = 0
+        val page = PageTranslation(
+            blocks = mutableListOf(shadowedBubble, untranslatedNeighbor, translatedArt),
+            imgWidth = 600f,
+            imgHeight = 600f,
+        )
+
+        val count = pageInpainter.inpaintPageWithReader(
+            reader = reader,
+            page = page,
+            encodePatch = { px, w, _ ->
+                capturedPatch = px
+                capturedW = w
+                "patch"
+            },
+        )
+
+        assertEquals(1, count)
+        assertNull(shadowedBubble.aotPatchBase64)
+        assertNotNull(translatedArt.aotPatchBase64)
+
+        // Any pixel inside translatedArt's patch that overlaps untranslatedNeighbor [300..317] must remain sentinelColor
+        val region = requireNotNull(translatedArt.aotPatchRegion)
+        val patch = requireNotNull(capturedPatch)
+        val pLeft = region.x.toInt()
+        val pTop = region.y.toInt()
+        val pH = patch.size / capturedW
+        for (ly in 0 until pH) {
+            val rawY = pTop + ly
+            for (lx in 0 until capturedW) {
+                val rawX = pLeft + lx
+                if (rawX in 202..317 && rawY in 302..315) {
+                    assertEquals(sentinelColor, patch[ly * capturedW + lx])
+                }
+            }
+        }
+    }
 }

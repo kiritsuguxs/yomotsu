@@ -57,7 +57,7 @@ internal class AotPageInpainter(
     }
 
     fun inpaintPage(fd: ParcelFileDescriptor, page: PageTranslation): Int {
-        if (!inpainter.isModelLoaded || page.blocks.isEmpty()) return 0
+        if (!inpainter.isModelLoaded || page.blocks.none(::needsAotInpaint)) return 0
         if (!isNormalExifOrientation(fd)) return 0
 
         openPixelWindowReader(fd)?.use { reader ->
@@ -80,52 +80,47 @@ internal class AotPageInpainter(
         val scaleX = rawW / pageW
         val scaleY = rawH / pageH
 
-        val allSourceBoxes = page.blocks.flatMap { block ->
-            block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }.map { r ->
-                toRawRect(r, pad = 1, scaleX = scaleX, scaleY = scaleY, rawW = rawW, rawH = rawH)
+        // Untranslated neighbor blocks must never be erased or smudged by an adjacent AOT patch.
+        val untranslatedBoxes = page.blocks
+            .filter { it.translation.isBlank() }
+            .flatMap { block ->
+                block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }.map { r ->
+                    toRawRect(r, pad = 2, scaleX = scaleX, scaleY = scaleY, rawW = rawW, rawH = rawH)
+                }
             }
-        }
 
-        val blockSpecs = ArrayList<BlockMaskSpec>(page.blocks.size)
+        val candidateSpecs = ArrayList<BlockMaskSpec>()
         for ((index, block) in page.blocks.withIndex()) {
-            val isManualSized = block.layoutRegion != null && block.cleanupRegion == block.layoutRegion
-            val isTarget = block.translation.isNotBlank() && !isManualSized
+            if (!needsAotInpaint(block)) continue
             val patchRect = computePatchRect(block, pageW, pageH, scaleX, scaleY, rawW, rawH)
-            blockSpecs += BlockMaskSpec(
+            candidateSpecs += BlockMaskSpec(
                 index = index,
                 block = block,
                 patchRect = patchRect,
-                isTarget = isTarget,
+                isTarget = true,
             )
         }
 
-        if (blockSpecs.none { it.isTarget }) return 0
+        if (candidateSpecs.isEmpty()) return 0
 
-        // Prepare local glyph+stroke masks and filter out provably 100%-uniform digital solid speech bubbles.
         val aotTargets = ArrayList<PreparedBlock>()
-        val neighborMasks = ArrayList<PreparedBlock>()
-
-        for (spec in blockSpecs) {
+        for (spec in candidateSpecs) {
             val patchPixels = reader.readPixels(spec.patchRect) ?: continue
             val mask = buildBlockPatchMask(
                 block = spec.block,
                 patchRect = spec.patchRect,
-                patchPixels = patchPixels,
-                allSourceBoxes = allSourceBoxes,
+                untranslatedBoxes = untranslatedBoxes,
                 scaleX = scaleX,
                 scaleY = scaleY,
                 rawW = rawW,
                 rawH = rawH,
             )
-            val prepared = PreparedBlock(spec, mask)
-            neighborMasks += prepared
-
-            if (!spec.isTarget) continue
-            if (isUniformFlatBalloon(spec.block, patchPixels, mask)) {
-                // Keep crisp zero-cost flat fill for pure solid digital bubbles (#FFFFFF / #000000).
+            if (!mask.any { it }) continue
+            if (isUniformFlatSurface(spec.block, patchPixels, mask)) {
+                // Text floating on a pure uniform margin/gutter (#FFFFFF / #000000) needs no neural pass.
                 continue
             }
-            aotTargets += prepared
+            aotTargets += PreparedBlock(spec, mask)
         }
 
         if (aotTargets.isEmpty()) return 0
@@ -140,12 +135,12 @@ internal class AotPageInpainter(
             val origWin = reader.readPixels(winRect) ?: continue
             val winMask = BooleanArray(winW * winH)
 
-            // Mask ALL text blocks intersecting this context window so neighboring text is never copied as texture.
-            for (neighbor in neighborMasks) {
-                if (!neighbor.spec.patchRect.intersects(winRect)) continue
+            // Stamp all AOT target masks intersecting this context window so neighboring target text isn't copied.
+            for (target in aotTargets) {
+                if (!target.spec.patchRect.intersects(winRect)) continue
                 stampMaskIntoWindow(
-                    patchRect = neighbor.spec.patchRect,
-                    patchMask = neighbor.mask,
+                    patchRect = target.spec.patchRect,
+                    patchMask = target.mask,
                     winRect = winRect,
                     winMask = winMask,
                 )
@@ -181,21 +176,11 @@ internal class AotPageInpainter(
 
                 val stats = computePatchLuminanceStats(patchOut)
                 block.backgroundColor = null
-                if (!block.balloonDetected || block.foregroundColor == null) {
-                    block.foregroundColor = if (stats.meanLum < DARK_BG_LUMINANCE_THRESHOLD) {
-                        Color.WHITE
-                    } else {
-                        Color.BLACK
-                    }
-                }
-                if (block.balloonDetected && stats.stdLum > BUSY_ART_STD_THRESHOLD) {
-                    // Busy artwork or strong texture behind text: enable outlined comic text for legibility.
-                    block.balloonDetected = false
-                    block.foregroundColor = if (stats.meanLum < DARK_BG_LUMINANCE_THRESHOLD) {
-                        Color.WHITE
-                    } else {
-                        Color.BLACK
-                    }
+                block.balloonDetected = false
+                block.foregroundColor = if (stats.meanLum < DARK_BG_LUMINANCE_THRESHOLD) {
+                    Color.WHITE
+                } else {
+                    Color.BLACK
                 }
                 inpaintedCount++
             }
@@ -214,7 +199,7 @@ internal class AotPageInpainter(
         rawH: Int,
     ): IntRect {
         val symHRaw = (block.symHeight * scaleY).coerceAtLeast(10f)
-        val pad = (symHRaw * 0.42f).roundToInt().coerceIn(8, 26)
+        val pad = (symHRaw * 0.38f).roundToInt().coerceIn(8, 22)
 
         val sources = block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }
         val cleanupPatches = block.resolvedCleanupPatches(pageW, pageH).map { it.region }
@@ -254,8 +239,7 @@ internal class AotPageInpainter(
     internal fun buildBlockPatchMask(
         block: TranslationBlock,
         patchRect: IntRect,
-        patchPixels: IntArray,
-        allSourceBoxes: List<IntRect>,
+        untranslatedBoxes: List<IntRect>,
         scaleX: Float,
         scaleY: Float,
         rawW: Int,
@@ -264,13 +248,13 @@ internal class AotPageInpainter(
         val pw = patchRect.width
         val ph = patchRect.height
         val symHRaw = (block.symHeight * scaleY).coerceAtLeast(10f)
-        val dilateRadius = (symHRaw * 0.24f).roundToInt().coerceIn(5, 11)
+        val dilateRadius = (symHRaw * 0.28f).roundToInt().coerceIn(6, 12)
 
-        // Reserve 1px outer ring on interior edges so patch boundaries match surrounding page pixels 100%.
-        val minLocalX = if (patchRect.left > 0 && pw > 6) 1 else 0
-        val maxLocalX = if (patchRect.right < rawW && pw > 6) pw - 1 else pw
-        val minLocalY = if (patchRect.top > 0 && ph > 6) 1 else 0
-        val maxLocalY = if (patchRect.bottom < rawH && ph > 6) ph - 1 else ph
+        // Reserve 2px outer ring on interior edges so patch boundaries match surrounding page pixels 100%.
+        val minLocalX = if (patchRect.left > 0 && pw > 8) 2 else 0
+        val maxLocalX = if (patchRect.right < rawW && pw > 8) pw - 2 else pw
+        val minLocalY = if (patchRect.top > 0 && ph > 8) 2 else 0
+        val maxLocalY = if (patchRect.bottom < rawH && ph > 8) ph - 2 else ph
 
         val dbnetMask = block.dbnetCleanupMask
         if (dbnetMask != null && !dbnetMask.isEmpty &&
@@ -291,7 +275,7 @@ internal class AotPageInpainter(
                 }
             }
             if (valid && count > 0) {
-                return dilateBooleanMask(
+                val dilated = dilateBooleanMask(
                     seed = seed,
                     w = pw,
                     h = ph,
@@ -301,12 +285,15 @@ internal class AotPageInpainter(
                     clipRight = maxLocalX,
                     clipBottom = maxLocalY,
                 )
+                carveOutUntranslated(dilated, patchRect, untranslatedBoxes)
+                return dilated
             }
         }
 
-        // Adaptive glyph + outline detection for ML Kit / PaddleOCR footprints.
+        // Complete rounded tight line-footprint masking for ML Kit / PaddleOCR over artwork:
+        // guarantees 100% coverage of glyphs, outlines, and drop shadows even next to dark artwork lines.
         val combinedMask = BooleanArray(pw * ph)
-        val boxPad = (symHRaw * 0.16f).roundToInt().coerceIn(3, 8)
+        val boxPad = (symHRaw * 0.18f).roundToInt().coerceIn(4, 8)
         val footprints = block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }
 
         for (src in footprints) {
@@ -319,88 +306,59 @@ internal class AotPageInpainter(
             val fh = fy1 - fy0
             if (fw <= 0 || fh <= 0) continue
 
-            val seed = BooleanArray(pw * ph)
-            val topColors = IntArray(fw) { Int.MIN_VALUE }
-            val botColors = IntArray(fw) { Int.MIN_VALUE }
-            val leftColors = IntArray(fh) { Int.MIN_VALUE }
-            val rightColors = IntArray(fh) { Int.MIN_VALUE }
-
-            for (ix in 0 until fw) {
-                val lx = fx0 + ix
-                topColors[ix] = sampleCleanBorderPixel(patchPixels, pw, ph, patchRect, lx, fy0 - 1, 0, -1, allSourceBoxes)
-                botColors[ix] = sampleCleanBorderPixel(patchPixels, pw, ph, patchRect, lx, fy1, 0, 1, allSourceBoxes)
-            }
-            for (iy in 0 until fh) {
-                val ly = fy0 + iy
-                leftColors[iy] = sampleCleanBorderPixel(patchPixels, pw, ph, patchRect, fx0 - 1, ly, -1, 0, allSourceBoxes)
-                rightColors[iy] = sampleCleanBorderPixel(patchPixels, pw, ph, patchRect, fx1, ly, 1, 0, allSourceBoxes)
-            }
-
-            for (iy in 0 until fh) {
-                val ly = fy0 + iy
-                val row = ly * pw
-                val ty = if (fh > 1) iy.toFloat() / (fh - 1).toFloat() else 0.5f
-                val hPred = interpolateColors(leftColors[iy], rightColors[iy], 0.5f)
-                for (ix in 0 until fw) {
-                    val lx = fx0 + ix
-                    val tx = if (fw > 1) ix.toFloat() / (fw - 1).toFloat() else 0.5f
-                    val vPred = interpolateColors(topColors[ix], botColors[ix], ty)
-                    val hPredLocal = interpolateColors(leftColors[iy], rightColors[iy], tx) ?: hPred
-                    val px = patchPixels[row + lx]
-
-                    val matchesV = vPred != null && colorDistSq(px, vPred) <= BG_MATCH_DIST_SQ
-                    val matchesH = hPredLocal != null && colorDistSq(px, hPredLocal) <= BG_MATCH_DIST_SQ
-                    if (!matchesV && !matchesH) {
-                        seed[row + lx] = true
-                    } else if (vPred == null && hPredLocal == null) {
-                        seed[row + lx] = true
-                    }
-                }
-            }
-
-            val dilated = dilateBooleanMask(
-                seed = seed,
-                w = pw,
-                h = ph,
-                radius = dilateRadius,
-                clipLeft = (fx0 - dilateRadius).coerceAtLeast(minLocalX),
-                clipTop = (fy0 - dilateRadius).coerceAtLeast(minLocalY),
-                clipRight = (fx1 + dilateRadius).coerceAtMost(maxLocalX),
-                clipBottom = (fy1 + dilateRadius).coerceAtMost(maxLocalY),
-            )
-
-            var coveredInCore = 0
+            val cornerR = (minOf(fw, fh) / 5).coerceIn(0, 6)
+            val rSq = cornerR * cornerR
             for (ly in fy0 until fy1) {
                 val row = ly * pw
-                for (lx in fx0 until fx1) {
-                    if (dilated[row + lx]) coveredInCore++
+                val cy = when {
+                    ly < fy0 + cornerR -> (fy0 + cornerR) - ly
+                    ly >= fy1 - cornerR -> ly - (fy1 - cornerR - 1)
+                    else -> 0
                 }
-            }
-            val coreArea = fw * fh
-            if (coveredInCore * 100 < coreArea * MIN_MASK_COVERAGE_PERCENT) {
-                // Low-contrast safety fallback: mask full tight line footprint so no faint glyph survives.
-                for (ly in fy0 until fy1) {
-                    val row = ly * pw
-                    for (lx in fx0 until fx1) {
+                for (lx in fx0 until fx1) {
+                    val cx = when {
+                        lx < fx0 + cornerR -> (fx0 + cornerR) - lx
+                        lx >= fx1 - cornerR -> lx - (fx1 - cornerR - 1)
+                        else -> 0
+                    }
+                    if (cx == 0 || cy == 0 || cx * cx + cy * cy <= rSq) {
                         combinedMask[row + lx] = true
                     }
-                }
-            } else {
-                for (i in combinedMask.indices) {
-                    if (dilated[i]) combinedMask[i] = true
                 }
             }
         }
 
+        carveOutUntranslated(combinedMask, patchRect, untranslatedBoxes)
         return combinedMask
     }
 
-    internal fun isUniformFlatBalloon(
+    private fun carveOutUntranslated(
+        mask: BooleanArray,
+        patchRect: IntRect,
+        untranslatedBoxes: List<IntRect>,
+    ) {
+        if (untranslatedBoxes.isEmpty()) return
+        val pw = patchRect.width
+        for (box in untranslatedBoxes) {
+            if (!box.intersects(patchRect)) continue
+            val x0 = (box.left - patchRect.left).coerceIn(0, pw)
+            val x1 = (box.right - patchRect.left).coerceIn(x0, pw)
+            val y0 = (box.top - patchRect.top).coerceIn(0, patchRect.height)
+            val y1 = (box.bottom - patchRect.top).coerceIn(y0, patchRect.height)
+            for (ly in y0 until y1) {
+                val row = ly * pw
+                for (lx in x0 until x1) {
+                    mask[row + lx] = false
+                }
+            }
+        }
+    }
+
+    internal fun isUniformFlatSurface(
         block: TranslationBlock,
         patchPixels: IntArray,
         mask: BooleanArray,
     ): Boolean {
-        if (!block.balloonDetected) return false
         val bgColor = block.backgroundColor ?: return false
         if (((bgColor ushr 24) and 0xFF) < 240) return false
 
@@ -417,7 +375,7 @@ internal class AotPageInpainter(
             val lum = 0.299 * r + 0.587 * g + 0.114 * b
             sumLum += lum
             sumLum2 += lum * lum
-            if (colorDistSq(px, bgColor) <= FLAT_BUBBLE_DIST_SQ) {
+            if (colorDistSq(px, bgColor) <= FLAT_SURFACE_DIST_SQ) {
                 matching++
             }
             count++
@@ -426,7 +384,7 @@ internal class AotPageInpainter(
         val mean = sumLum / count
         val std = sqrt((sumLum2 / count - mean * mean).coerceAtLeast(0.0))
         val matchRatio = matching.toFloat() / count.toFloat()
-        return std < FLAT_BUBBLE_MAX_STD && matchRatio >= FLAT_BUBBLE_MIN_MATCH_RATIO
+        return std < FLAT_SURFACE_MAX_STD && matchRatio >= FLAT_SURFACE_MIN_MATCH_RATIO
     }
 
     internal data class WindowCluster(
@@ -601,58 +559,6 @@ internal class AotPageInpainter(
         return PatchStats(mean.toFloat(), std.toFloat())
     }
 
-    private fun sampleCleanBorderPixel(
-        patchPixels: IntArray,
-        pw: Int,
-        ph: Int,
-        patchRect: IntRect,
-        startX: Int,
-        startY: Int,
-        stepX: Int,
-        stepY: Int,
-        allSourceBoxes: List<IntRect>,
-    ): Int {
-        var sr = 0
-        var sg = 0
-        var sb = 0
-        var count = 0
-        var lx = startX
-        var ly = startY
-        for (step in 0 until 6) {
-            if (lx !in 0 until pw || ly !in 0 until ph) break
-            val rawX = patchRect.left + lx
-            val rawY = patchRect.top + ly
-            val insideText = allSourceBoxes.any { box ->
-                rawX in box.left until box.right && rawY in box.top until box.bottom
-            }
-            if (!insideText) {
-                val px = patchPixels[ly * pw + lx]
-                sr += (px ushr 16) and 0xFF
-                sg += (px ushr 8) and 0xFF
-                sb += px and 0xFF
-                count++
-                if (count >= 3) break
-            }
-            lx += stepX
-            ly += stepY
-        }
-        return if (count == 0) Int.MIN_VALUE else packRgb(sr / count, sg / count, sb / count)
-    }
-
-    private fun interpolateColors(c0: Int, c1: Int, t: Float): Int? {
-        if (c0 == Int.MIN_VALUE && c1 == Int.MIN_VALUE) return null
-        if (c0 == Int.MIN_VALUE) return c1
-        if (c1 == Int.MIN_VALUE) return c0
-        val clamped = t.coerceIn(0f, 1f)
-        val r = (((c0 ushr 16) and 0xFF) * (1f - clamped) + ((c1 ushr 16) and 0xFF) * clamped).roundToInt()
-        val g = (((c0 ushr 8) and 0xFF) * (1f - clamped) + ((c1 ushr 8) and 0xFF) * clamped).roundToInt()
-        val b = ((c0 and 0xFF) * (1f - clamped) + (c1 and 0xFF) * clamped).roundToInt()
-        return packRgb(r, g, b)
-    }
-
-    private fun packRgb(r: Int, g: Int, b: Int): Int =
-        (0xFF shl 24) or (r.coerceIn(0, 255) shl 16) or (g.coerceIn(0, 255) shl 8) or b.coerceIn(0, 255)
-
     private fun dilateBooleanMask(
         seed: BooleanArray,
         w: Int,
@@ -818,14 +724,27 @@ internal class AotPageInpainter(
     companion object {
         const val AOT_MODEL_TILE_SIZE = 512
         private const val MAX_CLUSTER_SPAN = 416
-        private const val BG_MATCH_DIST_SQ = 720
-        private const val MIN_MASK_COVERAGE_PERCENT = 18
-        private const val FLAT_BUBBLE_DIST_SQ = 196
-        private const val FLAT_BUBBLE_MAX_STD = 3.2
-        private const val FLAT_BUBBLE_MIN_MATCH_RATIO = 0.95f
+        private const val FLAT_SURFACE_DIST_SQ = 324
+        private const val FLAT_SURFACE_MAX_STD = 5.5
+        private const val FLAT_SURFACE_MIN_MATCH_RATIO = 0.90f
         private const val DARK_BG_LUMINANCE_THRESHOLD = 118f
-        private const val BUSY_ART_STD_THRESHOLD = 26f
         private const val MAX_FALLBACK_FULL_BITMAP_PIXELS = 25_000_000L
+
+        /**
+         * Returns true only when [block] actually needs neural background reconstruction
+         * (e.g. text over artwork, gradients, system windows, SFX).
+         * Closed solid speech bubbles ([TranslationBlock.balloonDetected]) already have
+         * boundary-constrained uniform fills and skip AOT-GAN completely.
+         */
+        fun needsAotInpaint(block: TranslationBlock): Boolean {
+            if (block.translation.isBlank()) return false
+            if (block.layoutRegion != null && block.cleanupRegion == block.layoutRegion) return false
+            val bgColor = block.backgroundColor
+            if (block.balloonDetected && bgColor != null && ((bgColor ushr 24) and 0xFF) >= 240) {
+                return false
+            }
+            return true
+        }
 
         internal fun encodeWebpBase64(pixels: IntArray, width: Int, height: Int): String? = runCatching {
             val bmp = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)

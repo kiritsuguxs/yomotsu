@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.translation.data.TranslationProvider
 import eu.kanade.translation.detection.AotInpaintClient
 import eu.kanade.translation.detection.AotInpaintResult
+import eu.kanade.translation.detection.AotPageInpainter
 import eu.kanade.translation.detection.DbnetNotification
 import eu.kanade.translation.model.CURRENT_TRANSLATION_GEOMETRY_VERSION
 import eu.kanade.translation.model.PageTranslation
@@ -396,7 +397,7 @@ class ChapterTranslator(
         chapterNumber: Int,
     ): Int {
         val targetEntries = chapterPages.pages.filter { (fileName, _) ->
-            pages[fileName]?.blocks?.any { it.translation.isNotBlank() } == true
+            pages[fileName]?.blocks?.any(AotPageInpainter::needsAotInpaint) == true
         }
         if (targetEntries.isEmpty()) return 0
 

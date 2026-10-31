@@ -7,6 +7,7 @@
 #include <mutex>
 #include <map>
 #include <new>
+#include "cpu.h"
 #include "net.h"
 #include "buffer_contract.h"
 
@@ -28,8 +29,13 @@ Java_eu_kanade_translation_detection_DbnetNativeBackend_createNative(
     std::unique_ptr<ncnn::Net> net(new (std::nothrow) ncnn::Net());
     int result = -1;
     if (net) {
+        ncnn::set_cpu_powersave(2);
+        const int big_cores = ncnn::get_big_cpu_count();
         net->opt.use_vulkan_compute = false;
-        net->opt.num_threads = 4;
+        net->opt.use_fp16_packed = true;
+        net->opt.use_fp16_storage = true;
+        net->opt.use_fp16_arithmetic = false;
+        net->opt.num_threads = (big_cores >= 2 && big_cores <= 6) ? big_cores : 4;
         result = net->load_param(p);
         if (result == 0) result = net->load_model(b);
     }

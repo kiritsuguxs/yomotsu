@@ -109,7 +109,7 @@ internal class AotInpaintClient(
         imageFile: File,
         page: PageTranslation,
     ): AotInpaintResult = requests.withLock {
-        if (page.blocks.none { it.translation.isNotBlank() }) {
+        if (page.blocks.none(AotPageInpainter::needsAotInpaint)) {
             return@withLock AotInpaintResult.Success(0)
         }
 
