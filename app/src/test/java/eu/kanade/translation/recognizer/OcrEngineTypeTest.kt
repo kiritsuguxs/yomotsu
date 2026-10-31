@@ -29,12 +29,12 @@ class OcrEngineTypeTest {
     }
 
     @Test
-    fun `paddle is explicit and supports only english`() {
+    fun `paddle is explicit and supports languages`() {
         assertEquals(OcrEngineType.PADDLE_OCR, OcrEngineType.fromPreferenceValue(1))
         assertTrue(OcrEngineType.PADDLE_OCR.supports(TextRecognizerLanguage.ENGLISH))
-        assertFalse(OcrEngineType.PADDLE_OCR.supports(TextRecognizerLanguage.CHINESE))
-        assertFalse(OcrEngineType.PADDLE_OCR.supports(TextRecognizerLanguage.JAPANESE))
-        assertFalse(OcrEngineType.PADDLE_OCR.supports(TextRecognizerLanguage.KOREAN))
+        assertTrue(OcrEngineType.PADDLE_OCR.supports(TextRecognizerLanguage.CHINESE))
+        assertTrue(OcrEngineType.PADDLE_OCR.supports(TextRecognizerLanguage.JAPANESE))
+        assertTrue(OcrEngineType.PADDLE_OCR.supports(TextRecognizerLanguage.KOREAN))
     }
 
     @Test

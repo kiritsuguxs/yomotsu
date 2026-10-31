@@ -9,11 +9,44 @@ internal object TranslationRecoveryPolicy {
         pattern = """(?i)\b(rtmth|scanlations?|(?:realm|flame|asura|void|reaper|luminous|leviatans?|reset|drake|immortal)\s*[-_]?\s*scans?|discord(?:\.gg)?/[a-z0-9_]+|www\.\S+\.(?:com|net|org|io|me|gg)|https?://\S+)\b""",
     )
 
+    private val urlPattern = Regex(
+        """(?i)\b(https?://|www\.|discord\.gg/|[a-z0-9_-]+\.(com|net|org|xyz|io|to|me|gg|tv|site|online|top))\b""",
+    )
+
+    private val scanlatorKeywords = listOf(
+        "translated by",
+        "translated and edited",
+        "proofreader",
+        "typesetter",
+        "cleaner & typesetter",
+        "cleaner and typesetter",
+        "cleaner / typesetter",
+        "raw provider",
+        "scanlation",
+        "scanlations",
+        "read first on",
+        "read first at",
+        "join our discord",
+        "discord server",
+        "to be continued",
+        "end of chapter",
+        "next chapter",
+        "all rights reserved",
+        "do not repost",
+        "support the author",
+        "support the creator",
+        "author's note",
+        "authors note",
+    )
+
     fun isWatermarkOrCredit(text: String): Boolean {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return false
         if (trimmed.equals("rtmth", ignoreCase = true) || trimmed.contains("rtmth", ignoreCase = true)) return true
-        return watermarkRegex.containsMatchIn(trimmed)
+        if (watermarkRegex.containsMatchIn(trimmed) || urlPattern.containsMatchIn(trimmed)) return true
+        val lower = trimmed.lowercase()
+        if (scanlatorKeywords.any { lower.contains(it) }) return true
+        return false
     }
 
     fun isTranslatable(block: TranslationBlock): Boolean {

@@ -105,6 +105,10 @@ class ORTSessionManager(
     }
 
     private fun readModelAsset(assetPath: String): ByteArray {
+        val file = java.io.File(assetPath)
+        if (file.exists() && file.isFile) {
+            return file.readBytes()
+        }
         return try {
             context.assets.open(assetPath).use { it.readBytes() }
         } catch (t: Throwable) {

@@ -219,7 +219,7 @@ class TranslationProviderFailureTest {
                 TextRecognizerLanguage.ENGLISH,
                 TextTranslatorLanguage.PORTUGUESE,
                 apiKey = "",
-                modelName = "gemini-1.5-pro",
+                modelName = "gemini-1.5-flash",
                 maxOutputToken = 128,
                 temp = 0.3f,
             ).translate(mutableMapOf())
