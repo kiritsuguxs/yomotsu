@@ -44,6 +44,22 @@ class TranslationRecoveryPolicyTest {
         assertFalse(TranslationRecoveryPolicy.isTranslatable(block().copy(symHeight = 90f)))
     }
 
+    @Test fun `watermarks scanlator credits and end metadata are rejected`() {
+        listOf(
+            "Read first on asurascans.com",
+            "Visit https://flamecomics.xyz for more",
+            "Join our discord: discord.gg/comic",
+            "Translated by Kiritsugu\nTypesetter: Shadow",
+            "Proofreader: John / Cleaner and Typesetter: Doe",
+            "To be continued in chapter 45",
+            "End of Chapter 12",
+            "All rights reserved. Do not repost.",
+            "Support the author on Patreon",
+        ).forEach {
+            assertFalse(TranslationRecoveryPolicy.isTranslatable(block().copy(text = it)), it)
+        }
+    }
+
     private fun block() = TranslationBlock(
         text = "Where\nare you\ngoing?", x = 100f, y = 100f, width = 25f, height = 100f,
         symWidth = 4f, symHeight = 25f, angle = 0f,

@@ -36,7 +36,7 @@ class TranslationLlmPreferencesTest {
         val store = InMemoryPreferenceStore(
             sequenceOf(
                 InMemoryPreference("translation_engine_api_key", "legacy-key", ""),
-                InMemoryPreference("translation_engine_model", "legacy-model", "gemini-1.5-pro"),
+                InMemoryPreference("translation_engine_model", "legacy-model", "gemini-1.5-flash"),
             ),
         )
         val preferences = TranslationPreferences(store)
@@ -54,9 +54,9 @@ class TranslationLlmPreferencesTest {
         val store = InMemoryPreferenceStore(
             sequenceOf(
                 InMemoryPreference("translation_engine_api_key", "legacy-key", ""),
-                InMemoryPreference("translation_engine_model", "legacy-model", "gemini-1.5-pro"),
+                InMemoryPreference("translation_engine_model", "legacy-model", "gemini-1.5-flash"),
                 InMemoryPreference("translation_openrouter_api_key", "saved-key", ""),
-                InMemoryPreference("translation_openrouter_model", "saved-model", "gemini-1.5-pro"),
+                InMemoryPreference("translation_openrouter_model", "saved-model", "gemini-1.5-flash"),
             ),
         )
         val preferences = TranslationPreferences(store)

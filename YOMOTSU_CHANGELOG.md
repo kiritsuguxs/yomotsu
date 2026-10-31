@@ -3,6 +3,22 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y1
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Filtro Inteligente Anti-Marcas d'Água e Créditos de Scanlation:** Bloqueio automático de links (discord, sites de scans), créditos de staff (*"translated by"*, *"proofreader"*, *"typesetter"*) e metadados de encerramento de capítulo (*"to be continued"*, *"end of chapter"*), preservando a arte original e evitando balões desnecessários.
+- **Tradução com Gemini 1.5 Flash Padrão:** O modelo padrão de tradução passa a ser o Gemini 1.5 Flash, oferecendo respostas 3x mais rápidas, alta taxa de requisições gratuitas e estabilidade sem erros de cota (RPM).
+- **Hifenização Automática em Balões Estreitos:** Ativada a quebra de palavras silábica automática em português no leitor, garantindo tamanho de fonte legível e harmonioso em balões verticais ou compridos.
+- **PaddleOCR Multilíngue Dinâmico:** Preparação completa para reconhecimento de texto em Coreano, Japonês e outros idiomas com carregamento de modelos sob demanda em diretório dedicado.
+- **Correção da Identidade Visual e Ícones:** Aplicação definitiva do ícone oficial e adaptativo do Yomotsu em todas as densidades de tela e versões do Android.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Anti-Watermark and Scanlation Credit Filter:** Automatically skips domain names, Discord invites, staff credits, and chapter end markers (*"to be continued"*), preventing redundant translation overlays.
+- **Gemini 1.5 Flash as Default Engine:** Switched default translation LLM to Gemini 1.5 Flash for 3x faster rendering, higher free tier rate limits, and seamless batch translation.
+- **Automatic Hyphenation for Narrow Bubbles:** Added native Portuguese word hyphenation for narrow dialogue regions, preserving optimal font size.
+- **Dynamic Multilingual PaddleOCR:** Enabled on-device multilingual OCR engine support for Korean, Japanese, and specialized languages.
+- **Adaptive Yomotsu Icon & Branding:** Unified and embedded official adaptive icons across all Android versions and launcher styles.
+
 ## 0.21.3-Y1
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**

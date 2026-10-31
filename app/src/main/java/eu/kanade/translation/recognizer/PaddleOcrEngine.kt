@@ -19,7 +19,7 @@ class PaddleOcrEngine(
     private var paddleOcr: PaddleOCR? = null
 
     init {
-        require(type.supports(language)) { "PaddleOCR requires English source text" }
+        require(type.supports(language)) { "PaddleOCR does not support $language" }
     }
 
     override suspend fun recognize(image: OcrImage): OcrPage = mutex.withLock {
@@ -30,7 +30,22 @@ class PaddleOcrEngine(
             val engine = paddleOcr ?: run {
                 val initializationStart = System.nanoTime()
                 PaddleOcrRuntime.requireOpenCv { OpenCVUtils.init(appContext) }
-                PaddleOCR.create(appContext).also {
+                val langDir = java.io.File(appContext.filesDir, "models/paddle/${language.name.lowercase()}")
+                val customRecModel = java.io.File(langDir, "inference.onnx")
+                val customRecConfig = java.io.File(langDir, "inference.yml")
+                val instance = if (customRecModel.exists() && customRecConfig.exists()) {
+                    PaddleOCR.create(
+                        appContext,
+                        com.paddle.ocr.PaddleOCRConfig(),
+                        com.paddle.ocr.EngineConfig(),
+                        detModelAssetPath = "models/det/inference.onnx",
+                        recModelAssetPath = customRecModel.absolutePath,
+                        recConfigAssetPath = customRecConfig.absolutePath,
+                    )
+                } else {
+                    PaddleOCR.create(appContext)
+                }
+                instance.also {
                     paddleOcr = it
                     initializationTimeMs = elapsedMs(initializationStart)
                 }

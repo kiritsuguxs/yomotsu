@@ -22,8 +22,13 @@ data class ModelConfig(
 ) {
     companion object {
         fun parse(context: Context, assetPath: String): ModelConfig {
+            val file = java.io.File(assetPath)
             val content = try {
-                context.assets.open(assetPath).bufferedReader().use { it.readText() }
+                if (file.exists() && file.isFile) {
+                    file.bufferedReader().use { it.readText() }
+                } else {
+                    context.assets.open(assetPath).bufferedReader().use { it.readText() }
+                }
             } catch (t: Throwable) {
                 throw OCRError.ConfigParseFailed(assetPath, t)
             }

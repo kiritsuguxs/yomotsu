@@ -9,7 +9,7 @@ object OcrEngineFactory {
         type: OcrEngineType,
         language: TextRecognizerLanguage,
     ): OcrEngine {
-        require(type.supports(language)) { "PaddleOCR requires English source text" }
+        require(type.supports(language)) { "PaddleOCR does not support $language" }
         return when (type) {
             OcrEngineType.ML_KIT -> MlKitOcrEngine(context, language)
             OcrEngineType.PADDLE_OCR -> PaddleOcrEngine(context, language)
