@@ -58,14 +58,15 @@ jobs:
 
 
 
-      - name: Prepare Yomotsu branding
+      - name: Verify Yomotsu branding icons
         run: |
-          base64 --decode branding/yomotsu-icon.png.b64 > "$RUNNER_TEMP/yomotsu-icon.png"
+          echo "Verificando ícones oficiais do Yomotsu em todas as densidades..."
           for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p "app/src/main/res/mipmap-$density"
-            cp "$RUNNER_TEMP/yomotsu-icon.png" "app/src/main/res/mipmap-$density/ic_launcher.png"
-            cp "$RUNNER_TEMP/yomotsu-icon.png" "app/src/main/res/mipmap-$density/ic_launcher_foreground.png"
+            test -f "app/src/main/res/mipmap-$density/ic_launcher.png" || exit 1
+            test -f "app/src/main/res/mipmap-$density/ic_launcher_round.png" || exit 1
+            test -f "app/src/main/res/mipmap-$density/ic_launcher_foreground.png" || exit 1
           done
+          echo "Todos os ícones oficiais estão presentes e prontos para compilação."
 
 #      - name: Run unit tests
 #        id: unit_tests
