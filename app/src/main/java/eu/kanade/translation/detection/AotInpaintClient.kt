@@ -227,7 +227,8 @@ internal class AotInpaintClient(
             override fun onNullBinding(name: ComponentName) = died()
         }
         connection = callback
-        if (!context.bindService(serviceIntent, callback, Context.BIND_AUTO_CREATE)) {
+        val flags = Context.BIND_AUTO_CREATE or Context.BIND_IMPORTANT
+        if (!context.bindService(serviceIntent, callback, flags)) {
             connection = null
             ready.completeExceptionally(IllegalStateException("Serviço AOT-GAN indisponível"))
         }

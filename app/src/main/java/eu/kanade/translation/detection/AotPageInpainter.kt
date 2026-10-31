@@ -369,22 +369,23 @@ internal class AotPageInpainter(
         for (i in patchPixels.indices) {
             if (mask[i]) continue
             val px = patchPixels[i]
-            val r = (px ushr 16) and 0xFF
-            val g = (px ushr 8) and 0xFF
-            val b = px and 0xFF
-            val lum = 0.299 * r + 0.587 * g + 0.114 * b
-            sumLum += lum
-            sumLum2 += lum * lum
+            count++
             if (colorDistSq(px, bgColor) <= FLAT_SURFACE_DIST_SQ) {
+                val r = (px ushr 16) and 0xFF
+                val g = (px ushr 8) and 0xFF
+                val b = px and 0xFF
+                val lum = 0.299 * r + 0.587 * g + 0.114 * b
+                sumLum += lum
+                sumLum2 += lum * lum
                 matching++
             }
-            count++
         }
-        if (count < 24) return false
-        val mean = sumLum / count
-        val std = sqrt((sumLum2 / count - mean * mean).coerceAtLeast(0.0))
+        if (count < 24 || matching < 20) return false
         val matchRatio = matching.toFloat() / count.toFloat()
-        return std < FLAT_SURFACE_MAX_STD && matchRatio >= FLAT_SURFACE_MIN_MATCH_RATIO
+        if (matchRatio < FLAT_SURFACE_MIN_MATCH_RATIO) return false
+        val mean = sumLum / matching
+        val matchingStd = sqrt((sumLum2 / matching - mean * mean).coerceAtLeast(0.0))
+        return matchingStd < FLAT_SURFACE_MAX_STD
     }
 
     internal data class WindowCluster(
@@ -724,9 +725,9 @@ internal class AotPageInpainter(
     companion object {
         const val AOT_MODEL_TILE_SIZE = 512
         private const val MAX_CLUSTER_SPAN = 416
-        private const val FLAT_SURFACE_DIST_SQ = 324
-        private const val FLAT_SURFACE_MAX_STD = 5.5
-        private const val FLAT_SURFACE_MIN_MATCH_RATIO = 0.90f
+        private const val FLAT_SURFACE_DIST_SQ = 400
+        private const val FLAT_SURFACE_MAX_STD = 6.0
+        private const val FLAT_SURFACE_MIN_MATCH_RATIO = 0.84f
         private const val DARK_BG_LUMINANCE_THRESHOLD = 118f
         private const val MAX_FALLBACK_FULL_BITMAP_PIXELS = 25_000_000L
 
