@@ -129,6 +129,11 @@ object TranslationGlossaryManager {
     fun clear(context: ComicTranslationContext) {
         TranslationMemory.clear(context)
     }
+
+    fun applyPreset(
+        context: ComicTranslationContext,
+        preset: GlossaryPresetType,
+    ): Int = GlossaryPresets.applyPreset(context, preset)
 }
 
 enum class GlossarySaveResult {

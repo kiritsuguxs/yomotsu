@@ -10,9 +10,11 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 - **Tradução com Gemini 1.5 Flash Padrão:** O modelo padrão de tradução passa a ser o Gemini 1.5 Flash, oferecendo respostas 3x mais rápidas, alta taxa de requisições gratuitas e estabilidade sem erros de cota (RPM).
 - **Hifenização Automática em Balões Estreitos:** Ativada a quebra de palavras silábica automática em português no leitor, garantindo tamanho de fonte legível e harmonioso em balões verticais ou compridos.
 - **PaddleOCR Multilíngue Dinâmico:** Preparação completa para reconhecimento de texto em Coreano, Japonês e outros idiomas com carregamento de modelos sob demanda em diretório dedicado.
+- **Predefinições de Glossário (Termos Manhwa e Termos Mangá):** Adicionados botões diretos na tela de glossário do leitor para importar instantaneamente vocabulários canônicos padronizados de manhwas e mangás (*Hunter, Portal, Masmorra, Ranks, -san, -kun, Sensei, Nakama*, etc.) com 1 único toque.
 - **Correção da Identidade Visual e Ícones:** Aplicação definitiva do ícone oficial e adaptativo do Yomotsu em todas as densidades de tela e versões do Android.
 
 🇺🇸 **News, Improvements & Fixes (English):**
+- **Glossary Presets (Manhwa Terms & Manga Terms):** Quick preset buttons in the reader glossary to instantly apply canonical manhwa and manga terms/honorifics with a single tap.
 - **Anti-Watermark and Scanlation Credit Filter:** Automatically skips domain names, Discord invites, staff credits, and chapter end markers (*"to be continued"*), preventing redundant translation overlays.
 - **Gemini 1.5 Flash as Default Engine:** Switched default translation LLM to Gemini 1.5 Flash for 3x faster rendering, higher free tier rate limits, and seamless batch translation.
 - **Automatic Hyphenation for Narrow Bubbles:** Added native Portuguese word hyphenation for narrow dialogue regions, preserving optimal font size.

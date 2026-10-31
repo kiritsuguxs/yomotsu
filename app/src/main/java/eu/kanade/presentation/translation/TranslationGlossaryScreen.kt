@@ -18,6 +18,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -40,6 +41,8 @@ import tachiyomi.presentation.core.i18n.stringResource
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.util.Screen
+import eu.kanade.translation.memory.GlossaryPresetType
+import eu.kanade.translation.memory.GlossaryPresets
 import eu.kanade.translation.memory.GlossarySaveResult
 import eu.kanade.translation.memory.TranslationGlossaryManager
 import eu.kanade.translation.memory.TranslationMemoryEntry
@@ -64,6 +67,7 @@ class TranslationGlossaryScreen(
         var message by remember { mutableStateOf<String?>(null) }
         var showClearDialog by remember { mutableStateOf(false) }
         var showBulkDialog by remember { mutableStateOf(false) }
+        var selectedPreset by remember { mutableStateOf<GlossaryPresetType?>(null) }
         var entryType by remember { mutableStateOf(TranslationMemoryEntryType.TERM) }
         var isProtected by remember { mutableStateOf(false) }
         var learnedCorrectionCount by remember {
@@ -199,6 +203,22 @@ class TranslationGlossaryScreen(
                                 Text(stringResource(ATMR.strings.translation_glossary_add_multiple))
                             }
                         }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        ) {
+                            OutlinedButton(
+                                onClick = { selectedPreset = GlossaryPresetType.MANHWA },
+                            ) {
+                                Text("Termos Manhwa")
+                            }
+                            OutlinedButton(
+                                onClick = { selectedPreset = GlossaryPresetType.MANGA },
+                            ) {
+                                Text("Termos Mangá")
+                            }
+                        }
                         message?.let {
                             Text(
                                 text = it,
@@ -307,6 +327,38 @@ class TranslationGlossaryScreen(
                         result.saved == 0 -> context.stringResource(ATMR.strings.translation_glossary_bulk_none)
                         result.skipped > 0 -> context.stringResource(ATMR.strings.translation_glossary_bulk_saved_skipped, result.saved, result.skipped)
                         else -> context.stringResource(ATMR.strings.translation_glossary_bulk_saved, result.saved)
+                    }
+                },
+            )
+        }
+
+        selectedPreset?.let { preset ->
+            val presetName = when (preset) {
+                GlossaryPresetType.MANHWA -> "Termos Manhwa"
+                GlossaryPresetType.MANGA -> "Termos Mangá"
+            }
+            val presetCount = GlossaryPresets.getEntries(preset).size
+            AlertDialog(
+                onDismissRequest = { selectedPreset = null },
+                title = { Text(presetName) },
+                text = {
+                    Text("Deseja aplicar os $presetCount termos padronizados de $presetName ao glossário desta obra?")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val count = TranslationGlossaryManager.applyPreset(translationContext, preset)
+                            refresh()
+                            selectedPreset = null
+                            message = "$count $presetName aplicados com sucesso!"
+                        },
+                    ) {
+                        Text(stringResource(MR.strings.action_apply))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { selectedPreset = null }) {
+                        Text(stringResource(MR.strings.action_cancel))
                     }
                 },
             )
