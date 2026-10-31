@@ -7,13 +7,21 @@ import android.os.Build
 import android.os.Process
 
 object DbnetProcess {
-    fun isWorker(context: Context): Boolean {
-        val name = if (Build.VERSION.SDK_INT >= 28) {
+    private fun currentProcessName(context: Context): String? {
+        return if (Build.VERSION.SDK_INT >= 28) {
             Application.getProcessName()
         } else {
             val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             manager.runningAppProcesses?.firstOrNull { it.pid == Process.myPid() }?.processName
         }
-        return name == "${context.packageName}:dbnet"
+    }
+
+    fun isWorker(context: Context): Boolean {
+        val name = currentProcessName(context)
+        return name == "${context.packageName}:dbnet" || name == "${context.packageName}:inpaint"
+    }
+
+    fun isInpaintWorker(context: Context): Boolean {
+        return currentProcessName(context) == "${context.packageName}:inpaint"
     }
 }

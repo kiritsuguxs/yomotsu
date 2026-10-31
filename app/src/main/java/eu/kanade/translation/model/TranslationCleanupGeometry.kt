@@ -8,6 +8,10 @@ data class TranslationCleanupPatch(val region: TranslationRegion, val cornerRadi
 sealed interface ResolvedTranslationCleanup
 data class LegacyCleanup(val patches: List<TranslationCleanupPatch>) : ResolvedTranslationCleanup
 data class DbnetMaskCleanup(val mask: DbnetCleanupMask) : ResolvedTranslationCleanup
+data class AotPatchCleanup(
+    val region: TranslationRegion,
+    val patchBase64: String,
+) : ResolvedTranslationCleanup
 data object NoCleanup : ResolvedTranslationCleanup
 
 fun TranslationBlock.resolveCleanup(
@@ -15,6 +19,15 @@ fun TranslationBlock.resolveCleanup(
     pageHeight: Float,
     experimentalPageValid: Boolean = true,
 ): ResolvedTranslationCleanup {
+    val patchBase64 = aotPatchBase64
+    val patchRegion = aotPatchRegion
+    if (!patchBase64.isNullOrBlank() && patchRegion != null && patchRegion.width > 0f && patchRegion.height > 0f) {
+        if (translation.isBlank()) return NoCleanup
+        val clamped = patchRegion.clamped(pageWidth, pageHeight)
+        if (clamped.width > 0f && clamped.height > 0f) {
+            return AotPatchCleanup(clamped, patchBase64)
+        }
+    }
     if (layoutRegion != null && cleanupRegion == layoutRegion) {
         return LegacyCleanup(resolvedCleanupPatches(pageWidth, pageHeight))
     }

@@ -1,6 +1,9 @@
 package eu.kanade.translation.presentation
 
+import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
@@ -8,11 +11,16 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import eu.kanade.translation.model.AotPatchCleanup
 import eu.kanade.translation.model.DbnetMaskCleanup
 import eu.kanade.translation.model.LegacyCleanup
 import eu.kanade.translation.model.NoCleanup
@@ -105,6 +113,42 @@ fun TranslationCleanupBlock(
                         (x + length + padding) * scaleFactor,
                         (y + 1 + padding) * scaleFactor,
                         paint,
+                    )
+                }
+            }
+        }
+        is AotPatchCleanup -> {
+            val patchBitmap = remember(cleanup.patchBase64) {
+                runCatching {
+                    val bytes = Base64.decode(cleanup.patchBase64, Base64.DEFAULT)
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                }.getOrNull()
+            }
+            val region = cleanup.region
+            if (patchBitmap != null) {
+                Image(
+                    bitmap = patchBitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    filterQuality = FilterQuality.Medium,
+                    modifier = Modifier
+                        .offset((region.x * scaleFactor).pxToDp(), (region.y * scaleFactor).pxToDp())
+                        .requiredSize(
+                            (region.width * scaleFactor).pxToDp(),
+                            (region.height * scaleFactor).pxToDp(),
+                        ),
+                )
+            } else {
+                val fallbackColor = block.backgroundColor?.let { Color(it) } ?: Color.White
+                if (fallbackColor.alpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .offset((region.x * scaleFactor).pxToDp(), (region.y * scaleFactor).pxToDp())
+                            .requiredSize(
+                                (region.width * scaleFactor).pxToDp(),
+                                (region.height * scaleFactor).pxToDp(),
+                            )
+                            .background(fallbackColor),
                     )
                 }
             }

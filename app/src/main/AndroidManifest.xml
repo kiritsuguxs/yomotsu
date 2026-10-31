@@ -75,6 +75,11 @@
             android:exported="false"
             android:process=":dbnet" />
 
+        <service
+            android:name="eu.kanade.translation.detection.AotInpaintService"
+            android:exported="false"
+            android:process=":inpaint" />
+
         <activity
             android:name=".ui.main.MainActivity"
             android:exported="true"

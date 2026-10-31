@@ -13,8 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -162,6 +164,7 @@ fun SmartTranslationBlock(
                     fontFamily = fontFamily,
                     color = block.foregroundColor?.let { Color(it) } ?: Color.Black,
                     width = innerWidth,
+                    outlined = !block.aotPatchBase64.isNullOrBlank() && !block.balloonDetected,
                     modifier = Modifier.rotate(rotation),
                 )
             }[0].measure(Constraints(maxWidth = selected.widthPx))
@@ -184,20 +187,60 @@ private fun TranslationText(
     fontFamily: FontFamily,
     color: Color,
     width: Dp,
+    outlined: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    Text(
-        text = text,
-        fontSize = fontSizeSp.sp,
-        lineHeight = (fontSizeSp * 0.98f).sp,
-        fontFamily = fontFamily,
-        color = color,
-        softWrap = true,
-        overflow = TextOverflow.Clip,
-        textAlign = TextAlign.Center,
-        style = translationTextStyle(LocalTextStyle.current, fontSizeSp, fontFamily),
-        modifier = modifier.width(width),
-    )
+    val style = translationTextStyle(LocalTextStyle.current, fontSizeSp, fontFamily)
+    if (outlined) {
+        val density = LocalDensity.current
+        val strokeWidthPx = with(density) { (fontSizeSp * 0.22f).coerceIn(2.2f, 6.5f).sp.toPx() }
+        val luminance = 0.299f * color.red + 0.587f * color.green + 0.114f * color.blue
+        val strokeColor = if (luminance < 0.5f) Color.White else Color.Black
+        Box(modifier = modifier.width(width), contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                fontSize = fontSizeSp.sp,
+                lineHeight = (fontSizeSp * 0.98f).sp,
+                fontFamily = fontFamily,
+                color = strokeColor,
+                softWrap = true,
+                overflow = TextOverflow.Clip,
+                textAlign = TextAlign.Center,
+                style = style.copy(
+                    drawStyle = Stroke(
+                        width = strokeWidthPx,
+                        join = StrokeJoin.Round,
+                    ),
+                ),
+                modifier = Modifier.width(width),
+            )
+            Text(
+                text = text,
+                fontSize = fontSizeSp.sp,
+                lineHeight = (fontSizeSp * 0.98f).sp,
+                fontFamily = fontFamily,
+                color = color,
+                softWrap = true,
+                overflow = TextOverflow.Clip,
+                textAlign = TextAlign.Center,
+                style = style,
+                modifier = Modifier.width(width),
+            )
+        }
+    } else {
+        Text(
+            text = text,
+            fontSize = fontSizeSp.sp,
+            lineHeight = (fontSizeSp * 0.98f).sp,
+            fontFamily = fontFamily,
+            color = color,
+            softWrap = true,
+            overflow = TextOverflow.Clip,
+            textAlign = TextAlign.Center,
+            style = style,
+            modifier = modifier.width(width),
+        )
+    }
 }
 
 internal fun translationTextStyle(base: TextStyle, fontSizeSp: Int, fontFamily: FontFamily): TextStyle = base.copy(

@@ -9,6 +9,9 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.lang.compareToCaseInsensitiveNaturalOrder
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.translation.data.TranslationProvider
+import eu.kanade.translation.detection.AotInpaintClient
+import eu.kanade.translation.detection.AotInpaintResult
+import eu.kanade.translation.detection.DbnetNotification
 import eu.kanade.translation.model.CURRENT_TRANSLATION_GEOMETRY_VERSION
 import eu.kanade.translation.model.PageTranslation
 import eu.kanade.translation.model.Translation
@@ -65,7 +68,9 @@ import tachiyomi.i18n.at.ATMR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.Closeable
+import java.io.File
 import java.io.InputStream
+import kotlin.coroutines.coroutineContext
 
 internal data class TextTranslatorConfiguration(
     val primaryEngine: Int,
@@ -134,6 +139,7 @@ class ChapterTranslator(
             enabled = { translationPreferences.dbnetExperimental().get() },
         )
     }
+    private val aotInpaintClient = AotInpaintClient(context)
     private var textTranslator: TextTranslator? = null
     private var textTranslatorConfiguration: TextTranslatorConfiguration? = null
 
@@ -260,11 +266,15 @@ class ChapterTranslator(
             ) ?: error("O capítulo original não foi encontrado para tradução.")
 
             val pages = mutableMapOf<String, PageTranslation>()
-            val tmpFile = translationMangaDir.createFile("tmp")!!
             val chapterPages = getChapterPages(chapterPath)
             val totalPageCount = chapterPages.pages.size
-            try {
-                chapterPages.use {
+            var inpaintedBlocksTotal = 0
+            var accumulatedInpaintTimeMs = 0L
+
+            chapterPages.use {
+                translationMangaDir.findFile("tmp")?.delete()
+                val tmpFile = translationMangaDir.createFile("tmp")!!
+                try {
                     withContext(Dispatchers.IO) {
                         chapterPages.pages.forEachIndexed { index, (fileName, streamFn) ->
                             coroutineContext.ensureActive()
@@ -297,63 +307,79 @@ class ChapterTranslator(
                             )
                         }
                     }
+                } finally {
+                    tmpFile.delete()
                 }
-            } finally { tmpFile.delete() }
 
-            val automaticPages = pages.mapValuesTo(mutableMapOf()) { (_, page) ->
-                PageTranslation(page.blocks.filter(::isTranslatableBlock).toMutableList(), page.imgWidth, page.imgHeight)
-            }
-            withContext(Dispatchers.IO) {
-                notifier.onTextTranslation(
-                    translation.manga, translation.chapter.name, totalPageCount, chapterNumber, currentSessionTotal(),
-                )
-
-                // Pipeline Overlapping: Dispatch network translation asynchronously
-                val translationDeferred = async(Dispatchers.IO) {
-                    translator.translate(
-                        automaticPages,
-                        ComicTranslationContext(translation.manga.title, translation.chapter.name),
+                val automaticPages = pages.mapValuesTo(mutableMapOf()) { (_, page) ->
+                    PageTranslation(page.blocks.filter(::isTranslatableBlock).toMutableList(), page.imgWidth, page.imgHeight)
+                }
+                withContext(Dispatchers.IO) {
+                    notifier.onTextTranslation(
+                        translation.manga, translation.chapter.name, totalPageCount, chapterNumber, currentSessionTotal(),
                     )
-                }
 
-                // While waiting for network LLM response, pre-extract and index manual candidates concurrently
-                val manualCandidatesByPage = pages.mapValues { (_, page) ->
-                    page.blocks.filterNot(::isTranslatableBlock)
-                }
+                    // Pipeline Overlapping: Dispatch network translation asynchronously
+                    val translationDeferred = async(Dispatchers.IO) {
+                        translator.translate(
+                            automaticPages,
+                            ComicTranslationContext(translation.manga.title, translation.chapter.name),
+                        )
+                    }
 
-                // Await LLM translation network result
-                translationDeferred.await()
+                    // While waiting for network LLM response, pre-extract and index manual candidates concurrently
+                    val manualCandidatesByPage = pages.mapValues { (_, page) ->
+                        page.blocks.filterNot(::isTranslatableBlock)
+                    }
 
-                // Multi-core parallel post-translation grouping across pages
-                supervisorScope {
-                    automaticPages.values.map { page ->
-                        async(Dispatchers.Default) {
-                            page.blocks = TranslationBlockGrouper.group(page.blocks, strict = strictOcrGrouping)
-                        }
-                    }.awaitAll()
-                }
+                    // Await LLM translation network result
+                    translationDeferred.await()
 
-                pages.forEach { (pageKey, page) ->
-                    val manualCandidates = manualCandidatesByPage[pageKey].orEmpty()
-                        .filterNot { TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) }
-                    val translatedBlocks = automaticPages[pageKey]?.blocks.orEmpty()
-                        .filterNot {
-                            it.translation.isBlank() ||
-                            it.translation.contains("RTMTH", ignoreCase = true) ||
-                            TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
-                            TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
-                        }
-                    page.blocks = (translatedBlocks + manualCandidates)
-                        .sortedWith(compareBy<TranslationBlock> { it.y }.thenBy { it.x }).toMutableList()
+                    // Multi-core parallel post-translation grouping across pages
+                    supervisorScope {
+                        automaticPages.values.map { page ->
+                            async(Dispatchers.Default) {
+                                page.blocks = TranslationBlockGrouper.group(page.blocks, strict = strictOcrGrouping)
+                            }
+                        }.awaitAll()
+                    }
+
+                    pages.forEach { (pageKey, page) ->
+                        val manualCandidates = manualCandidatesByPage[pageKey].orEmpty()
+                            .filterNot { TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) }
+                        val translatedBlocks = automaticPages[pageKey]?.blocks.orEmpty()
+                            .filterNot {
+                                it.translation.isBlank() ||
+                                    it.translation.contains("RTMTH", ignoreCase = true) ||
+                                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) ||
+                                    TranslationRecoveryPolicy.isWatermarkOrCredit(it.translation)
+                            }
+                        page.blocks = (translatedBlocks + manualCandidates)
+                            .sortedWith(compareBy<TranslationBlock> { it.y }.thenBy { it.x }).toMutableList()
+                    }
+
+                    if (translationPreferences.inpainterAot().get() && AotInpaintClient.isDeviceSupported()) {
+                        val inpaintStart = System.nanoTime()
+                        inpaintedBlocksTotal = applyAotInpaintingToPages(
+                            translation = translation,
+                            chapterPages = chapterPages,
+                            pages = pages,
+                            chapterNumber = chapterNumber,
+                        )
+                        accumulatedInpaintTimeMs = elapsedMs(inpaintStart)
+                    }
                 }
             }
+            translationMangaDir.findFile(saveFile)?.delete()
             translationMangaDir.createFile(saveFile)!!.openOutputStream().use { output -> Json.encodeToStream(pages, output) }
             translation.status = Translation.State.TRANSLATED
             logcat(LogPriority.INFO) {
                 "OCR chapter engine=$selectedOcrType pages=$processedPages ocrMs=$accumulatedOcrTimeMs " +
+                    "inpaintBlocks=$inpaintedBlocksTotal inpaintMs=$accumulatedInpaintTimeMs " +
                     "totalMs=${elapsedMs(pipelineStart)} failures=0"
             }
         } catch (error: Throwable) {
+            if (error is CancellationException) throw error
             translation.status = Translation.State.ERROR
             notifier.onError(translation.manga, translation.chapter.name, error)
             logcat(LogPriority.ERROR, error) {
@@ -361,6 +387,89 @@ class ChapterTranslator(
                     "totalMs=${elapsedMs(pipelineStart)} failures=1 error=${error::class.simpleName}"
             }
         }
+    }
+
+    private suspend fun applyAotInpaintingToPages(
+        translation: Translation,
+        chapterPages: ChapterPages,
+        pages: Map<String, PageTranslation>,
+        chapterNumber: Int,
+    ): Int {
+        val targetEntries = chapterPages.pages.filter { (fileName, _) ->
+            pages[fileName]?.blocks?.any { it.translation.isNotBlank() } == true
+        }
+        if (targetEntries.isEmpty()) return 0
+
+        try {
+            coroutineContext.ensureActive()
+            aotInpaintClient.ensureModelsAvailable(
+                onDownloadRequired = {
+                    DbnetNotification.post {
+                        context.applicationContext.toast(
+                            "AOT-GAN: baixando modelo de remoção de texto por IA (~11 MB)...",
+                        )
+                    }
+                },
+            )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Throwable) {
+            logcat(LogPriority.WARN, error) { "AOT-GAN model unavailable; falling back to standard cleanup" }
+            DbnetNotification.post {
+                context.applicationContext.toast(
+                    "AOT-GAN indisponível no momento; mantendo limpeza rápida de cor.",
+                )
+            }
+            return 0
+        }
+
+        val scratchDir = File(context.cacheDir, "aot-inpaint").apply { mkdirs() }
+        var inpaintedTotal = 0
+        var consecutiveFailures = 0
+
+        for ((idx, entry) in targetEntries.withIndex()) {
+            coroutineContext.ensureActive()
+            val (fileName, streamFn) = entry
+            val pageTranslation = pages[fileName] ?: continue
+            notifier.onInpaintingProgress(
+                manga = translation.manga,
+                chapterName = translation.chapter.name,
+                page = idx + 1,
+                totalPages = targetEntries.size,
+                chapterNumber = chapterNumber,
+                chapterTotal = currentSessionTotal(),
+            )
+            val tempImg = File.createTempFile("aot-page-", ".img", scratchDir)
+            try {
+                streamFn().use { input ->
+                    tempImg.outputStream().use { out ->
+                        input.copyTo(out)
+                    }
+                }
+                when (val res = aotInpaintClient.inpaintPage(tempImg, pageTranslation)) {
+                    is AotInpaintResult.Success -> {
+                        inpaintedTotal += res.inpaintedBlocks
+                        consecutiveFailures = 0
+                    }
+                    is AotInpaintResult.Failure -> {
+                        consecutiveFailures++
+                        logcat(LogPriority.WARN) { "AOT-GAN page failure ($fileName): ${res.reason}" }
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                consecutiveFailures++
+                logcat(LogPriority.WARN, error) { "AOT-GAN page error ($fileName)" }
+            } finally {
+                tempImg.delete()
+            }
+            if (consecutiveFailures >= 3) {
+                logcat(LogPriority.WARN) { "Aborting remaining AOT-GAN pages after 3 consecutive failures" }
+                break
+            }
+        }
+        return inpaintedTotal
     }
 
     private fun convertToPageTranslation(
@@ -515,6 +624,7 @@ class ChapterTranslator(
     private fun releaseOcrEngineAsync() {
         scope.launch {
             try { ocrEngineManager.release() } catch (error: Throwable) { logcat(LogPriority.ERROR, error) }
+            try { aotInpaintClient.close() } catch (error: Throwable) { logcat(LogPriority.ERROR, error) }
         }
     }
 

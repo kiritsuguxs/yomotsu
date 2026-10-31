@@ -63,11 +63,16 @@ fun TranslationBlockEditorDialog(
     var isWorking by remember(blockIndex) { mutableStateOf(false) }
     var errorMessage by remember(blockIndex) { mutableStateOf<String?>(null) }
 
+    val hasAotPatch = !block.aotPatchBase64.isNullOrBlank()
     val initialBg = remember(blockIndex) {
-        when (block.backgroundColor) {
-            Color.Black.toArgb() -> BalloonBgColor.BLACK
-            Color.Transparent.toArgb(), 0 -> BalloonBgColor.TRANSPARENT
-            else -> BalloonBgColor.WHITE
+        if (hasAotPatch && block.backgroundColor == null) {
+            null
+        } else {
+            when (block.backgroundColor) {
+                Color.Black.toArgb() -> BalloonBgColor.BLACK
+                Color.Transparent.toArgb(), 0 -> BalloonBgColor.TRANSPARENT
+                else -> BalloonBgColor.WHITE
+            }
         }
     }
     val initialFg = remember(blockIndex) {
@@ -76,7 +81,7 @@ fun TranslationBlockEditorDialog(
             else -> if (initialBg == BalloonBgColor.BLACK) BalloonFgColor.WHITE else BalloonFgColor.BLACK
         }
     }
-    var selectedBg by remember(blockIndex) { mutableStateOf(initialBg) }
+    var selectedBg by remember(blockIndex) { mutableStateOf<BalloonBgColor?>(initialBg) }
     var selectedFg by remember(blockIndex) { mutableStateOf(initialFg) }
     var bgTouched by remember(blockIndex) { mutableStateOf(false) }
     var fgTouched by remember(blockIndex) { mutableStateOf(false) }
@@ -111,6 +116,7 @@ fun TranslationBlockEditorDialog(
                 BalloonBgColor.WHITE -> Color.White.toArgb()
                 BalloonBgColor.BLACK -> Color.Black.toArgb()
                 BalloonBgColor.TRANSPARENT -> Color.Transparent.toArgb()
+                null -> block.backgroundColor
             }
         } else {
             block.backgroundColor
@@ -140,6 +146,10 @@ fun TranslationBlockEditorDialog(
         ) { result ->
             isWorking = false
             result.onSuccess { storedTranslation ->
+                if (newBgColor != block.backgroundColor) {
+                    block.aotPatchBase64 = null
+                    block.aotPatchRegion = null
+                }
                 block.translation = storedTranslation
                 block.backgroundColor = newBgColor
                 block.foregroundColor = newFgColor
@@ -157,7 +167,9 @@ fun TranslationBlockEditorDialog(
                     block.x = (block.x + deltaX).coerceAtLeast(0f)
                     block.y = (block.y + deltaY).coerceAtLeast(0f)
                     block.layoutRegion = newRegion
-                    block.cleanupRegion = newRegion
+                    if (block.aotPatchBase64.isNullOrBlank()) {
+                        block.cleanupRegion = newRegion
+                    }
                     block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
                 }
                 onTranslationChanged(storedTranslation)
@@ -284,7 +296,7 @@ fun TranslationBlockEditorDialog(
                     )
                 }
 
-                if (selectedBg == BalloonBgColor.TRANSPARENT) {
+                if (selectedBg == BalloonBgColor.TRANSPARENT || selectedBg == null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(ATMR.strings.translation_editor_text_color),

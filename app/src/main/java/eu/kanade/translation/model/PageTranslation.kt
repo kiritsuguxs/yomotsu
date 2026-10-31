@@ -37,6 +37,8 @@ data class TranslationBlock(
     // Safe erasers measured for those footprints before grouping/reanalysis.
     val sourceCleanupRegions: List<TranslationRegion> = emptyList(),
     val dbnetCleanupMask: DbnetCleanupMask? = null,
+    var aotPatchBase64: String? = null,
+    var aotPatchRegion: TranslationRegion? = null,
 )
 
 /**

@@ -62,6 +62,7 @@
     <string name="translation_notification_preparing">Preparing translation…</string>
     <string name="translation_notification_page_progress">Translating page %1$d of %2$d</string>
     <string name="translation_notification_text_progress">Translating the text from %1$d pages</string>
+    <string name="translation_notification_inpaint_progress">AI text removal: page %1$d of %2$d</string>
     <string name="translation_notification_chapter_progress">Chapter %1$d of %2$d</string>
     <string name="translation_notification_error">Could not finish the translation</string>
 

@@ -279,6 +279,144 @@ class Inpainter(
         result.setPixels(cur, 0, o.ww, o.x0, o.y0, o.ww, o.wh)
     }
 
+    /**
+     * Runs AOT-GAN inpainting on a bounded local window [windowPixels] ([winW] x [winH]),
+     * preserving near-1:1 aspect ratio even on ultra-tall Webtoon/Manhwa strips.
+     */
+    internal fun inpaintWindow(
+        windowPixels: IntArray,
+        aotMask: BooleanArray,
+        winW: Int,
+        winH: Int,
+        tileSize: Int = cfg.tileSize,
+    ): IntArray? {
+        if (handle == 0L || winW <= 0 || winH <= 0 || tileSize <= 0) return null
+        if (windowPixels.size < winW * winH || aotMask.size < winW * winH) return null
+        return try {
+            val px = if (winW == tileSize && winH == tileSize) {
+                windowPixels
+            } else {
+                resamplePixelsBilinear(windowPixels, winW, winH, tileSize, tileSize)
+            }
+            val mp = resampleMaskConservative(aotMask, winW, winH, tileSize)
+            val imgChw = aotImageChwFromPixels(px, mp, tileSize)
+            val maskArr = maskArrFromPixels(mp, tileSize)
+            val out = FloatArray(3 * tileSize * tileSize)
+
+            val rc = backend.inpaintAot(handle, imgChw, maskArr, tileSize, out)
+            check(rc == 0) { "NCNN AOT window inference failed with status code $rc" }
+
+            val resScaledPixels = aotArrToPixels(out, tileSize)
+            if (winW == tileSize && winH == tileSize) {
+                resScaledPixels
+            } else {
+                resamplePixelsBilinear(resScaledPixels, tileSize, tileSize, winW, winH)
+            }
+        } catch (t2: Throwable) {
+            Log.w(TAG, "AOT window neural inpainting failed: ${t2.message}")
+            null
+        }
+    }
+
+    internal fun resamplePixelsBilinear(
+        src: IntArray,
+        srcW: Int,
+        srcH: Int,
+        dstW: Int,
+        dstH: Int,
+    ): IntArray {
+        if (srcW == dstW && srcH == dstH) return src.copyOf(dstW * dstH)
+        val out = IntArray(dstW * dstH)
+        for (dy in 0 until dstH) {
+            val gy = ((dy + 0.5f) * srcH / dstH - 0.5f).coerceIn(0f, (srcH - 1).toFloat())
+            val y0 = gy.toInt()
+            val y1 = (y0 + 1).coerceAtMost(srcH - 1)
+            val wy = ((gy - y0) * 256f).toInt().coerceIn(0, 256)
+            val iwy = 256 - wy
+            val row0 = y0 * srcW
+            val row1 = y1 * srcW
+            val outRow = dy * dstW
+            for (dx in 0 until dstW) {
+                val gx = ((dx + 0.5f) * srcW / dstW - 0.5f).coerceIn(0f, (srcW - 1).toFloat())
+                val x0 = gx.toInt()
+                val x1 = (x0 + 1).coerceAtMost(srcW - 1)
+                val wx = ((gx - x0) * 256f).toInt().coerceIn(0, 256)
+                val iwx = 256 - wx
+
+                val c00 = src[row0 + x0]
+                val c10 = src[row0 + x1]
+                val c01 = src[row1 + x0]
+                val c11 = src[row1 + x1]
+
+                val w00 = iwx * iwy
+                val w10 = wx * iwy
+                val w01 = iwx * wy
+                val w11 = wx * wy
+
+                val r = (
+                    ((c00 ushr 16) and 0xFF) * w00 +
+                        ((c10 ushr 16) and 0xFF) * w10 +
+                        ((c01 ushr 16) and 0xFF) * w01 +
+                        ((c11 ushr 16) and 0xFF) * w11 + 32768
+                    ) ushr 16
+                val g = (
+                    ((c00 ushr 8) and 0xFF) * w00 +
+                        ((c10 ushr 8) and 0xFF) * w10 +
+                        ((c01 ushr 8) and 0xFF) * w01 +
+                        ((c11 ushr 8) and 0xFF) * w11 + 32768
+                    ) ushr 16
+                val b = (
+                    (c00 and 0xFF) * w00 +
+                        (c10 and 0xFF) * w10 +
+                        (c01 and 0xFF) * w01 +
+                        (c11 and 0xFF) * w11 + 32768
+                    ) ushr 16
+                out[outRow + dx] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        }
+        return out
+    }
+
+    internal fun resampleMaskConservative(
+        mask: BooleanArray,
+        srcW: Int,
+        srcH: Int,
+        dstSize: Int,
+    ): IntArray {
+        val out = IntArray(dstSize * dstSize)
+        if (srcW == dstSize && srcH == dstSize) {
+            for (i in out.indices) {
+                out[i] = if (mask[i]) Color.WHITE else Color.BLACK
+            }
+            return out
+        }
+        for (ty in 0 until dstSize) {
+            val sy0 = (ty * srcH) / dstSize
+            val sy1 = (((ty + 1) * srcH + dstSize - 1) / dstSize).coerceIn(sy0 + 1, srcH)
+            val outRow = ty * dstSize
+            for (tx in 0 until dstSize) {
+                val sx0 = (tx * srcW) / dstSize
+                val sx1 = (((tx + 1) * srcW + dstSize - 1) / dstSize).coerceIn(sx0 + 1, srcW)
+                var hit = false
+                var sy = sy0
+                while (sy < sy1 && !hit) {
+                    val srcRow = sy * srcW
+                    var sx = sx0
+                    while (sx < sx1) {
+                        if (mask[srcRow + sx]) {
+                            hit = true
+                            break
+                        }
+                        sx++
+                    }
+                    sy++
+                }
+                out[outRow + tx] = if (hit) Color.WHITE else Color.BLACK
+            }
+        }
+        return out
+    }
+
     override fun close() {
         if (handle != 0L) {
             val owned = handle

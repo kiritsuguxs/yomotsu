@@ -105,6 +105,30 @@ internal class TranslationNotifier(private val context: Context) {
         )
     }
 
+    fun onInpaintingProgress(
+        manga: Manga,
+        chapterName: String,
+        page: Int,
+        totalPages: Int,
+        chapterNumber: Int,
+        chapterTotal: Int,
+    ) {
+        showProgress(
+            manga = manga,
+            chapterName = chapterName,
+            progressText = context.stringResource(
+                ATMR.strings.translation_notification_inpaint_progress,
+                page,
+                totalPages,
+            ),
+            chapterNumber = chapterNumber,
+            chapterTotal = chapterTotal,
+            progress = page,
+            max = totalPages,
+            indeterminate = false,
+        )
+    }
+
     fun onError(manga: Manga, chapterName: String, error: Throwable) {
         errorBuilder
             .setContentTitle("${manga.title} - $chapterName".chop(45))

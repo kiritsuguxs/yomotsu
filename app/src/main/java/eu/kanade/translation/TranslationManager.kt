@@ -521,10 +521,16 @@ class TranslationManager(
                         pageKey = pageKey,
                         blockIndex = blockIndex,
                     ) { block ->
+                        val bgChanged = backgroundColor != block.backgroundColor
+                        val geometryChanged = widthScale != 1.0f || heightScale != 1.0f || offsetX != 0f || offsetY != 0f
+                        if (bgChanged) {
+                            block.aotPatchBase64 = null
+                            block.aotPatchRegion = null
+                        }
                         block.translation = cleanTranslation
                         block.backgroundColor = backgroundColor
                         block.foregroundColor = foregroundColor
-                        if (widthScale != 1.0f || heightScale != 1.0f || offsetX != 0f || offsetY != 0f) {
+                        if (geometryChanged) {
                             val currentLayout = block.layoutRegion ?: block.sourceRegion()
                             val newWidth = (currentLayout.width * widthScale).coerceAtLeast(10f)
                             val newHeight = (currentLayout.height * heightScale).coerceAtLeast(10f)
@@ -538,7 +544,9 @@ class TranslationManager(
                             block.x = (block.x + deltaX).coerceAtLeast(0f)
                             block.y = (block.y + deltaY).coerceAtLeast(0f)
                             block.layoutRegion = newRegion
-                            block.cleanupRegion = newRegion
+                            if (block.aotPatchBase64.isNullOrBlank()) {
+                                block.cleanupRegion = newRegion
+                            }
                             block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
                         }
                         block.text

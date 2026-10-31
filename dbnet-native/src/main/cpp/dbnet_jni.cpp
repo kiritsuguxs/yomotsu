@@ -29,7 +29,7 @@ Java_eu_kanade_translation_detection_DbnetNativeBackend_createNative(
     int result = -1;
     if (net) {
         net->opt.use_vulkan_compute = false;
-        net->opt.num_threads = 2;
+        net->opt.num_threads = 4;
         result = net->load_param(p);
         if (result == 0) result = net->load_model(b);
     }
