@@ -1,10 +1,13 @@
 # Yomotsu Anime Support - Project Memory & Architecture Guide
 
-## 1. Visão Geral do Projeto
+## 1. Visão Geral do Projeto & Estado Atual Ativo
 - **Repositório:** `kiritsuguxs/yomotsu`
-- **Branch de Trabalho:** `main` (após unificação e lançamento da versão `0.20.4-Y41`)
-- **Objetivo:** Adicionar suporte a Anime (player MPV, download de episódios, animesources e extensões de anime) na base moderna do Yomotsu (fork do Mihon), portando recursos do Aniyomi / Anikku.
-- **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`).
+- **Branch de Testes Ativa:** `temp/test-ocr-v2` (baseada limpa em `origin/main` / `v0.21.3-Y1`, `versionName = "0.21.4-Y1"`, `versionCode = 111`)
+- **Último Build Verde Pronto para Teste:** Run [`#41227949040`](https://github.com/kiritsuguxs/yomotsu/actions/runs/41227949040) — Artefato [`Yomotsu-0.21.4-Y1-arm64` (#13052443496)](https://github.com/kiritsuguxs/yomotsu/actions/runs/41227949040/artifacts/13052443496)
+- **Onde Paramos (Próximos Passos Pendentes de Decisão do Usuário):**
+  1. **Conectar o AOT-GAN ("Borracha Mágica" de IA) ao Leitor (se o usuário aprovar):** O motor C++/NCNN (`dbnet_jni.cpp` -> `inpaintAotNative`), os pesos remotos de ~11 MB (`DbnetModelStore.INPAINTER_ASSETS`) e a classe `Inpainter.kt` **já estão prontos no código**, mas a chave `translationPreferences.inpainterAot()` em `SettingsTranslationScreen.kt` ainda está desconectada de `ChapterTranslator.kt` e `TranslationCleanupBlock.kt` (hoje usa apenas preenchimento sólido de cor).
+  2. **Promover `temp/test-ocr-v2` para `main` e publicar a Release Oficial `v0.21.4-Y1`:** Assim que o usuário terminar os testes no celular (e decidir se quer conectar o AOT-GAN antes ou já lançar).
+- **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Use Python (`zipfile`, `PIL`, `urllib`) em vez de `/bin/unzip` ou `/usr/bin/file`, e compile sempre via GitHub Actions.
 
 ---
 
@@ -582,5 +585,23 @@
    - **Intercepção em `PlayerActivity.kt`:** Quando a preferência `alwaysUseExternalPlayer` está ativa, `setVideo` redireciona para `openInExternalPlayer`, despachando a intent de reprodução com o pacote selecionado (`setPackage(pkgName)`), título, headers (`headers` e `HTTP_HEADERS`), legendas e posição atual de visualização.
    - **Retorno e Progresso:** `externalPlayerLauncher` captura o retorno do VLC/player externo (`position` / `extra_position`), sincroniza o progresso no banco com `updateExternalPlayerProgress` e fecha a atividade. Fallback automático para o MPV interno caso o player externo não esteja instalado ou falhe.
    - **Lista de Players:** Expandida em `PlayerSettingsPlayerScreen.kt` incluindo `org.videolan.vlc`, `org.videolan.vlc.debug`, `is.xyz.mpv`, `live.mehiz.mpvkt`, `live.mehiz.mpvkt.preview`, `com.brouken.player` e `nextplayer`.
+
+### AQ. Evoluções da Versão 0.21.4-Y1 (Branch `temp/test-ocr-v2`)
+1. **Base Limpa e Ícone Oficial (Portão Torii Roxo Neon):**
+   - Branch `temp/test-ocr-v2` criada diretamente a partir da `origin/main` (`v0.21.3-Y1`).
+   - Removidos todos os XMLs vetoriais legados do Tachiyomi (`ic_launcher_{foreground,background,monochrome}.xml` em `main` e `debug`) e gerados PNGs redimensionados do Portão Torii oficial (`ic_yomotsu_logo.png`) em `mipmap-{mdpi..xxxhdpi}` com verificação automática no CI (`build.yml` e `release.yml`).
+2. **Melhorias de OCR, Tradução e Interface:**
+   - Filtro anti-marca d'água, links piratas e créditos de scanlation em `TranslationRecoveryPolicy.kt`.
+   - `gemini-1.5-flash` como padrão inicial em `TranslationPreferences.kt` (respeitando qualquer modelo customizado salvo pelo usuário).
+   - Hifenização automática (`Hyphens.Auto`) para balões estreitos em `SmartTranslationBlock.kt`.
+   - Suporte dinâmico a pacotes multilíngues externos no `PaddleOCR` (`OcrEngineType.kt`, `PaddleOcrEngine.kt`, `ORTSessionManager.kt`).
+   - Removido o sufixo `(experimental)` do título `Detector DBNet` em `i18n-at` (`pt-rBR`, `pt`, `es`, `base`). Nota técnica: o modelo DBNet (`dbnet_detect.ncnn.bin`) permanece em **153 MB (FP16)** fora do APK porque quantização INT8 zera a detecção de caixas no NCNN upstream.
+3. **Glossário Inteligente Completo (4 Botões em `TranslationGlossaryScreen.kt`):**
+   - **`✨ Gerar com IA` (`AiGlossaryGenerator.kt`):** Usa a chave/modelo Gemini ou OpenRouter configurado em `TranslationPreferences`, envia `mangaTitle` + `mangaGenresText` + `mangaDescription` e gera ~25–60 termos exclusivos da obra (nomes reais dos personagens marcados como `NAME` + `isProtected = true`, clãs, lugares, títulos e técnicas em PT-BR).
+   - **`🎯 Termos da Obra` (`GlossaryPresets.recommendForWork`):** Filtra 100% offline pelo título, gêneros e sinopse apenas as subcategorias compatíveis com aquela obra (com diálogo de seleção de categorias).
+   - **`Termos Manhwa` (293 termos) & `Termos Mangá` (236 termos):** 529 termos únicos divididos em 10 categorias cobrindo todos os gêneros, com filtragem contextual por página em `TranslationGlossary.kt` (`relevantText`) para não inflar os prompts enviados à LLM.
+4. **Diagnóstico do AOT-GAN ("Remoção de texto por IA"):**
+   - Identificado que `dbnet_jni.cpp` (`inpaintAotNative`), `Inpainter.kt` e `DbnetModelStore.INPAINTER_ASSETS` (~11 MB) já existem e compilam, porém `translationPreferences.inpainterAot()` ainda não está plugado ao pipeline `ChapterTranslator.kt` / `TranslationCleanupBlock.kt`. Aguardando decisão do usuário no próximo chat sobre conectar o AOT-GAN (para apagar letras sobre desenhos/cenários sem deixar retângulo sólido) ou seguir direto para o lançamento oficial da `v0.21.4-Y1`.
+
 
 
