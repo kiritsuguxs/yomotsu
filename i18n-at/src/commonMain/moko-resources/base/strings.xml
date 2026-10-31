@@ -68,7 +68,7 @@
     <string name="novels">Novels</string>
     <string name="pref_auto_translate_novels">Translate novels automatically</string>
     <string name="pref_auto_translate_novels_summary">Translates novel chapters when opening in the reader</string>
-    <string name="pref_ocr_dbnet">DBNet detector (experimental)</string>
+    <string name="pref_ocr_dbnet">DBNet detector</string>
     <string name="pref_ocr_dbnet_summary">English/ARM64 only. First use downloads 153 MB separately from the APK. Full-page ML Kit recognition; on failure, falls back to the OCR selected above.</string>
     <string name="pref_inpainter_aot">AI text removal (AOT-GAN)</string>
     <string name="pref_inpainter_aot_summary">Reconstructs background and artwork behind text using neural network (NCNN). First use downloads ~11 MB. If disabled, uses fast color fill.</string>

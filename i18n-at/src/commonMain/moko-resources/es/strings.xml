@@ -68,7 +68,7 @@
     <string name="novels">Novelas</string>
     <string name="pref_auto_translate_novels">Traducir novelas automáticamente</string>
     <string name="pref_auto_translate_novels_summary">Traduce los capítulos de novelas al abrir en el lector</string>
-    <string name="pref_ocr_dbnet">Detector DBNet (experimental)</string>
+    <string name="pref_ocr_dbnet">Detector DBNet</string>
     <string name="pref_ocr_dbnet_summary">Solo inglés/ARM64. El primer uso descarga 153 MB separados del APK. Reconocimiento ML Kit de página completa; en caso de fallo, recurre al OCR seleccionado arriba.</string>
     <string name="pref_inpainter_aot">Eliminación de texto por IA (AOT-GAN)</string>
     <string name="pref_inpainter_aot_summary">Reconstruye el fondo y arte detrás del texto usando red neuronal (NCNN). El primer uso descarga ~11 MB. Si está desactivado, usa relleno rápido de color.</string>
