@@ -99,7 +99,8 @@ class GeminiTranslator(
         val inputJson = buildComicInputJson(chunkPages) {
             preparedIterator.next().textForTranslation
         }
-        val requestText = continuity.promptPrefix() + buildComicTranslationRequest(context, inputJson)
+        val relevantGlossaryText = normalizedTexts.joinToString("\n") + "\n" + inputJson
+        val requestText = continuity.promptPrefix() + buildComicTranslationRequest(context, inputJson, relevantGlossaryText)
         val requestBody = buildGeminiRestRequestBody(
             systemInstruction = buildComicTranslationPrompt(fromLang, toLang),
             requestText = requestText,

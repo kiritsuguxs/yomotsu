@@ -48,7 +48,9 @@ object TranslationGlossary {
             .filterNot(TranslationMemoryEntry::isManualCorrection)
             .sortedByDescending { it.source.length }
             .forEach { entry ->
-                if (!containsTerm(source, entry.source)) return@forEach
+                val cleanSource = entry.source.trim()
+                if (cleanSource.isEmpty() || !source.contains(cleanSource, ignoreCase = true)) return@forEach
+                if (!containsTerm(source, cleanSource)) return@forEach
 
                 // Whole-block glossary entries are authoritative even when the
                 // translator changed punctuation or capitalization.
@@ -57,7 +59,7 @@ object TranslationGlossary {
                 // Protected entries are normally restored from placeholders.
                 // This fallback also covers engines that leave the source term
                 // untouched and preserves the safe bounded replacement from Y11.
-                result = replaceBounded(result, entry.source, entry.target)
+                result = replaceBounded(result, cleanSource, entry.target)
             }
         return result
     }
@@ -82,12 +84,18 @@ object TranslationGlossary {
         entries.asSequence()
             .filter { it.isProtected && !it.isManualCorrection && it.source.isNotBlank() }
             .sortedByDescending { it.source.length }
-            .take(MAX_PROTECTED_ENTRIES)
             .forEach { entry ->
-                protectedText = boundedRegex(entry.source).replace(protectedText) {
-                    val token = protectedToken(protectedTerms.size)
-                    protectedTerms += ProtectedGlossaryTerm(token, entry.target)
-                    token
+                if (protectedTerms.size >= MAX_PROTECTED_ENTRIES) return@forEach
+                val cleanSource = entry.source.trim()
+                if (cleanSource.isEmpty() || !protectedText.contains(cleanSource, ignoreCase = true)) return@forEach
+                protectedText = boundedRegex(cleanSource).replace(protectedText) {
+                    if (protectedTerms.size >= MAX_PROTECTED_ENTRIES) {
+                        it.value
+                    } else {
+                        val token = protectedToken(protectedTerms.size)
+                        protectedTerms += ProtectedGlossaryTerm(token, entry.target)
+                        token
+                    }
                 }
             }
 
@@ -118,13 +126,23 @@ object TranslationGlossary {
         return apply(prepared.originalText, restored, entries)
     }
 
-    fun instructions(context: ComicTranslationContext): String =
-        instructions(TranslationMemory.glossaryEntries(context))
+    fun instructions(
+        context: ComicTranslationContext,
+        relevantText: String? = null,
+    ): String = instructions(TranslationMemory.glossaryEntries(context), relevantText)
 
-    internal fun instructions(entries: List<TranslationMemoryEntry>): String {
-        val glossaryEntries = entries
-            .filterNot(TranslationMemoryEntry::isManualCorrection)
-            .take(MAX_PROMPT_ENTRIES)
+    internal fun instructions(
+        entries: List<TranslationMemoryEntry>,
+        relevantText: String? = null,
+    ): String {
+        val baseEntries = entries.filterNot(TranslationMemoryEntry::isManualCorrection)
+        val glossaryEntries = if (relevantText != null) {
+            baseEntries
+                .filter { isRelevantToText(it.source, relevantText) }
+                .take(MAX_PROMPT_ENTRIES)
+        } else {
+            baseEntries.take(MAX_PROMPT_ENTRIES)
+        }
         if (glossaryEntries.isEmpty()) return ""
 
         return buildString {
@@ -140,6 +158,14 @@ object TranslationGlossary {
             }
             append("Mantenha esses termos consistentes e nunca altere itens marcados como PROTEGIDO.")
         }
+    }
+
+    private fun isRelevantToText(sourceTerm: String, text: String): Boolean {
+        val clean = sourceTerm.trim()
+        if (clean.isEmpty() || text.isBlank()) return false
+        if (text.contains(clean, ignoreCase = true)) return true
+        return WORD_SPLIT_REGEX.split(clean)
+            .any { token -> token.length >= 3 && text.contains(token, ignoreCase = true) }
     }
 
     private fun containsTerm(text: String, term: String): Boolean {
@@ -194,6 +220,7 @@ object TranslationGlossary {
 
     private fun String.singleLine(): String = replace(Regex("\\s+"), " ").trim()
 
-    private const val MAX_PROMPT_ENTRIES = 200
+    private val WORD_SPLIT_REGEX = Regex("[^\\p{L}\\p{N}]+")
+    private const val MAX_PROMPT_ENTRIES = 300
     private const val MAX_PROTECTED_ENTRIES = 128
 }

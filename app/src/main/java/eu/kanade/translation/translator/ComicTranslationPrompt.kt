@@ -112,12 +112,13 @@ internal fun buildComicTranslationPrompt(
 internal fun buildComicTranslationRequest(
     context: ComicTranslationContext,
     inputJson: String,
+    relevantText: String? = inputJson,
 ): String {
     val workContext = buildList {
         context.mangaTitle.takeIf { it.isNotBlank() }?.let { add("Series: $it") }
         context.chapterName.takeIf { it.isNotBlank() }?.let { add("Chapter: $it") }
     }.joinToString("\n")
-    val glossary = TranslationGlossary.instructions(context)
+    val glossary = TranslationGlossary.instructions(context, relevantText)
 
     return buildString {
         if (workContext.isNotBlank()) {

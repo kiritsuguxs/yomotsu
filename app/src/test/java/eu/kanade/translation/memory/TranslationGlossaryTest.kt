@@ -103,4 +103,19 @@ class TranslationGlossaryTest {
         assertTrue(instructions.contains("[TÉCNICA] Arise => Erga-se"))
         assertFalse(instructions.contains("A full sentence"))
     }
+
+    @Test
+    fun `prompt filters large glossary to entries relevant to current page text`() {
+        val entries = GlossaryPresets.getEntries(GlossaryPresetType.MANHWA)
+        val instructions = TranslationGlossary.instructions(
+            entries = entries,
+            relevantText = "The Grand Duke of the North met the Villainess at the Tea Party.",
+        )
+
+        assertTrue(instructions.contains("Grand Duke => Grão-Duque"))
+        assertTrue(instructions.contains("Villainess => Vilã"))
+        assertTrue(instructions.contains("Tea Party => Festa do Chá"))
+        assertFalse(instructions.contains("Shadow Monarch"))
+        assertFalse(instructions.contains("Mount Hua Sect"))
+    }
 }
