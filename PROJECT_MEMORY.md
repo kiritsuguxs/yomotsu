@@ -2,11 +2,11 @@
 
 ## 1. Visão Geral do Projeto & Estado Atual Ativo
 - **Repositório:** `kiritsuguxs/yomotsu`
-- **Branch de Testes Ativa:** `temp/test-ocr-v2` (baseada limpa em `origin/main` / `v0.21.3-Y1`, `versionName = "0.21.4-Y1"`, `versionCode = 111`)
+- **Branch de Testes Ativa:** `temp/test-ocr-v2` (baseada limpa em `origin/main` / `v0.21.3-Y1`, `versionName = "0.21.4-Y2"`, `versionCode = 112`)
 - **Último Build Verde Pronto para Teste:** Run [`#41227949040`](https://github.com/kiritsuguxs/yomotsu/actions/runs/41227949040) — Artefato [`Yomotsu-0.21.4-Y1-arm64` (#13052443496)](https://github.com/kiritsuguxs/yomotsu/actions/runs/41227949040/artifacts/13052443496)
 - **Onde Paramos (Próximos Passos Pendentes de Decisão do Usuário):**
   1. **Testar o AOT-GAN ("Remoção de texto por IA") conectado ao Leitor na `temp/test-ocr-v2`:** A chave `translationPreferences.inpainterAot()` agora baixa automaticamente os ~11 MB (`mit_aot_fixed512.ncnn.{param,bin}`) no primeiro uso, reconstrói o fundo em processo isolado `:inpaint` (`AotInpaintService` + `AotPageInpainter` em janelas locais `512x512` compatíveis com tiras longas de Webtoon/Manhwa e com todos os motores OCR) e renderiza os patches WebP sem costuras em `TranslationCleanupBlock.kt` + contorno em `SmartTranslationBlock.kt`.
-  2. **Promover `temp/test-ocr-v2` para `main` e publicar a Release Oficial `v0.21.4-Y1`:** Assim que o usuário aprovar os testes do APK no celular.
+  2. **Release Oficial `v0.21.4-Y2`:** `temp/test-ocr-v2` promovida para `main` (fast-forward a partir de `v0.21.3-Y1`) e tag `v0.21.4-Y2` publicada a pedido do usuário. A `0.21.4-Y1` nunca foi publicada; suas novidades foram consolidadas na seção `0.21.4-Y2` do `YOMOTSU_CHANGELOG.md`. Os testes unitários novos (PaddleWebtoonTiler, TranslationLayoutCollisionResolver, extractAlignedPageTranslations) foram escritos mas não executados (CI tem `testDebugUnitTest` comentado e o Gradle local não roda).
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Use Python (`zipfile`, `PIL`, `urllib`) em vez de `/bin/unzip` ou `/usr/bin/file`, e compile sempre via GitHub Actions.
 
 ---
@@ -586,7 +586,7 @@
    - **Retorno e Progresso:** `externalPlayerLauncher` captura o retorno do VLC/player externo (`position` / `extra_position`), sincroniza o progresso no banco com `updateExternalPlayerProgress` e fecha a atividade. Fallback automático para o MPV interno caso o player externo não esteja instalado ou falhe.
    - **Lista de Players:** Expandida em `PlayerSettingsPlayerScreen.kt` incluindo `org.videolan.vlc`, `org.videolan.vlc.debug`, `is.xyz.mpv`, `live.mehiz.mpvkt`, `live.mehiz.mpvkt.preview`, `com.brouken.player` e `nextplayer`.
 
-### AQ. Evoluções da Versão 0.21.4-Y1 (Branch `temp/test-ocr-v2`)
+### AQ. Evoluções da Versão 0.21.4-Y2 (antiga 0.21.4-Y1, Branch `temp/test-ocr-v2`)
 1. **Base Limpa e Ícone Oficial (Portão Torii Roxo Neon):**
    - Branch `temp/test-ocr-v2` criada diretamente a partir da `origin/main` (`v0.21.3-Y1`).
    - Removidos todos os XMLs vetoriais legados do Tachiyomi (`ic_launcher_{foreground,background,monochrome}.xml` em `main` e `debug`) e gerados PNGs redimensionados do Portão Torii oficial (`ic_yomotsu_logo.png`) em `mipmap-{mdpi..xxxhdpi}` com verificação automática no CI (`build.yml` e `release.yml`).
@@ -605,5 +605,9 @@
    - **Reconstrução em Janelas Locais (`AotPageInpainter.kt`):** Usa `BitmapRegionDecoder` para decodificar apenas janelas locais `512x512` (preservando resolução 1:1 mesmo em tiras de Manhwa/Webtoon de 15.000px sem estourar RAM), funciona com **ML Kit**, **PaddleOCR** (máscara adaptativa de glifos + contorno) e **DBNet** (`DbnetCleanupMask`), pula balões digitais 100% chapados (`#FFFFFF`/`#000000`) para manter preenchimento instantâneo e reconstrói cenários, degradês, janelas de sistema e SFX com borda suavizada (feathering de 2 anéis).
    - **Renderização e Editor:** Patches salvos em `TranslationBlock` (`aotPatchBase64`, `aotPatchRegion`), exibidos tanto no leitor paginado quanto Webtoon via [`TranslationCleanupBlock.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/translation/presentation/TranslationCleanupBlock.kt) (`AotPatchCleanup`) com texto contornado automático sobre arte complexa em [`SmartTranslationBlock.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/translation/presentation/SmartTranslationBlock.kt), além de preservação/substituição limpa ao editar blocos em [`TranslationBlockEditorDialog.kt`](file:///workspace/yomotsu/app/src/main/java/eu/kanade/translation/presentation/TranslationBlockEditorDialog.kt).
 
-
-
+5. **PaddleOCR em Webtoon, Agrupamento e Anti-Colisão (Y2):**
+   - `PaddleWebtoonTiler.kt` fatia tiras altas em janelas verticais com sobreposição e desduplica caixas nas costuras; `PaddleOcrEngine.kt` usa `BitmapRegionDecoder` (fallback para bitmap completo). `PaddleTextBlockMapper.MIN_CONFIDENCE = 0.40`.
+   - `TranslationBlockGrouper.kt`: checagem de cor só entre dois blocos com balão detectado; linha perto do rabicho é unida ao balão detectado vizinho. `SpeechBubbleAnalyzer.kt`: alcance lateral ampliado e rejeição de interiores com degradê (`isUniformBalloonInterior`).
+   - `TranslationLayoutCollisionResolver.kt` (aplicado em `ChapterTranslator.kt` e no leitor via `layoutRegionOverride` em `SmartTranslationBlock.kt`) impede sobreposição de layouts. `TranslationCleanupBlock.kt` usa padding mínimo e cápsulas arredondadas para geometria medida.
+   - `extractAlignedPageTranslations` (`ComicTranslationPrompt.kt`) usado por `GeminiTranslator.kt` e `OpenRouterTranslator.kt` evita deslocamento de índices quando a IA funde itens.
+   - AOT-GAN: pula balões fechados, protege linhas vizinhas não traduzidas, máscara arredondada justa; removido `ncnn::set_cpu_powersave` (causava lentidão em SoCs 1+3+4) e `:inpaint` usa `BIND_IMPORTANT`.

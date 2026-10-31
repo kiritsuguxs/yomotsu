@@ -3,23 +3,39 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
-## 0.21.4-Y1
+## 0.21.4-Y2
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
-- **Filtro Inteligente Anti-Marcas d'Água e Créditos de Scanlation:** Bloqueio automático de links (discord, sites de scans), créditos de staff (*"translated by"*, *"proofreader"*, *"typesetter"*) e metadados de encerramento de capítulo (*"to be continued"*, *"end of chapter"*), preservando a arte original e evitando balões desnecessários.
-- **Tradução com Gemini 1.5 Flash Padrão:** O modelo padrão de tradução passa a ser o Gemini 1.5 Flash, oferecendo respostas 3x mais rápidas, alta taxa de requisições gratuitas e estabilidade sem erros de cota (RPM).
-- **Hifenização Automática em Balões Estreitos:** Ativada a quebra de palavras silábica automática em português no leitor, garantindo tamanho de fonte legível e harmonioso em balões verticais ou compridos.
-- **PaddleOCR Multilíngue Dinâmico:** Preparação completa para reconhecimento de texto em Coreano, Japonês e outros idiomas com carregamento de modelos sob demanda em diretório dedicado.
-- **Glossário Inteligente por Obra (IA + Filtro Automático por Gênero + 529 Termos):** Adicionados dois modos inteligentes na tela de glossário — **✨ Gerar com IA** (usa Gemini/OpenRouter para criar automaticamente personagens protegidos, títulos, técnicas e lugares exclusivos da obra) e **🎯 Termos da Obra** (filtra offline pelo título, gêneros e sinopse apenas os pacotes compatíveis com a história) — além das predefinições completas **Termos Manhwa** (293 termos) e **Termos Mangá** (236 termos).
-- **Correção da Identidade Visual e Ícones:** Aplicação definitiva do ícone oficial e adaptativo do Yomotsu em todas as densidades de tela e versões do Android.
+- **Remoção de Texto por IA (AOT-GAN):** Com a opção ativada, o texto original sobre a arte é apagado por uma rede neural que reconstrói o fundo, em vez de pintar uma caixa de cor chapada. Roda em processo isolado (`:inpaint`), baixa o modelo (~11 MB) na primeira vez com aviso e mostra o progresso na notificação. Se o modelo não estiver disponível, o aparelho não for compatível ou houver falhas seguidas, o app mantém a limpeza rápida por cor.
+- **Qualidade do AOT-GAN:** Balões brancos fechados ficam de fora, linhas vizinhas ainda não traduzidas são protegidas, a máscara segue o contorno das letras e texto sobre fundo liso não passa pela rede. A tradução sobre a área reconstruída ganha contorno para continuar legível.
+- **Correção de Lentidão:** Removida uma otimização de afinidade de CPU que prendia o processamento em um único núcleo em aparelhos com 1 núcleo prime. O serviço de remoção de texto agora roda com prioridade alta.
+- **PaddleOCR em Tiras Longas de Webtoon:** Tiras compridas são fatiadas em janelas com sobreposição, em vez de espremidas num detector de 960 px. Linhas de balões que antes eram ignoradas agora são lidas. Confiança mínima ajustada de 0,50 para 0,40.
+- **Balões Mais Bem Agrupados:** Linhas do mesmo balão são unidas mesmo perto do rabicho, a busca pelas paredes laterais é mais ampla e o tamanho da letra no ML Kit usa a mediana dos símbolos.
+- **Falas Sem Sobreposição:** Traduções no mesmo balão ou muito próximas não se sobrepõem mais, e uma tradução não cobre o texto vizinho ainda não traduzido.
+- **Balões com Degradê ou Aura:** Balões de habilidade e efeitos não recebem mais retângulo chapado, e a limpeza respeita melhor as bordas ovais.
+- **Tradução Mais Confiável (Gemini/OpenRouter):** Proteção contra deslocamento de falas quando a IA funde duas linhas num único item; essas linhas são refeitas em vez de bagunçar o restante da página.
+- **Glossário Inteligente por Obra (IA + Filtro Automático por Gênero + 529 Termos):** **✨ Gerar com IA** cria personagens protegidos, títulos, técnicas e lugares exclusivos da obra com Gemini/OpenRouter, e **🎯 Termos da Obra** filtra offline, pelo título, gêneros e sinopse, apenas os pacotes compatíveis. Também há as predefinições **Termos Manhwa** (293 termos) e **Termos Mangá** (236 termos), aplicadas com um toque no leitor.
+- **Filtro Anti-Marcas d'Água e Créditos de Scanlation:** Bloqueio automático de links, créditos de staff e marcas de fim de capítulo, preservando a arte original.
+- **Hifenização Automática em Balões Estreitos:** Quebra silábica em português no leitor, mantendo a fonte legível em balões verticais.
+- **PaddleOCR Multilíngue:** Preparação para reconhecimento em coreano, japonês e outros idiomas com modelos carregados sob demanda.
+- **Gemini 1.5 Flash como Modelo Inicial:** Qualquer modelo que você já tenha configurado continua sendo respeitado.
+- **Identidade Visual:** Ícone oficial e adaptativo do Yomotsu em todas as densidades, e o título "Detector DBNet" perdeu o sufixo "(experimental)".
 
 🇺🇸 **News, Improvements & Fixes (English):**
-- **Glossary Presets (Manhwa Terms & Manga Terms):** Quick preset buttons in the reader glossary to instantly apply canonical manhwa and manga terms/honorifics with a single tap.
-- **Anti-Watermark and Scanlation Credit Filter:** Automatically skips domain names, Discord invites, staff credits, and chapter end markers (*"to be continued"*), preventing redundant translation overlays.
-- **Gemini 1.5 Flash as Default Engine:** Switched default translation LLM to Gemini 1.5 Flash for 3x faster rendering, higher free tier rate limits, and seamless batch translation.
-- **Automatic Hyphenation for Narrow Bubbles:** Added native Portuguese word hyphenation for narrow dialogue regions, preserving optimal font size.
-- **Dynamic Multilingual PaddleOCR:** Enabled on-device multilingual OCR engine support for Korean, Japanese, and specialized languages.
-- **Adaptive Yomotsu Icon & Branding:** Unified and embedded official adaptive icons across all Android versions and launcher styles.
+- **AI Text Removal (AOT-GAN):** When enabled, source text over artwork is erased by a neural network that reconstructs the background instead of painting a flat-color box. It runs in an isolated `:inpaint` process, downloads its model (~11 MB) on first use with a notice, and reports progress in the notification. If the model is unavailable, the device is unsupported, or pages fail repeatedly, the app keeps the fast color-based cleanup.
+- **AOT-GAN Quality:** Closed white balloons are skipped, untranslated neighboring lines are protected, masks follow glyph outlines, and text on flat backgrounds bypasses the network. Translations drawn over a reconstructed area get an outline to stay legible.
+- **Slowdown Fixed:** Removed a CPU-affinity optimization that pinned processing to a single core on SoCs with one prime core. The text-removal service now runs with high priority.
+- **PaddleOCR on Tall Webtoon Strips:** Long strips are sliced into overlapping tiles instead of being squeezed through a 960 px detector input. Balloon lines that were previously missed are now read. Minimum confidence lowered from 0.50 to 0.40.
+- **Better Balloon Grouping:** Lines of the same balloon are merged even near the tail, balloon-edge scanning reaches farther, and ML Kit glyph size now uses the median symbol.
+- **No More Overlapping Dialogue:** Translations in the same or adjacent balloons no longer overlap, and a translation no longer covers neighboring untranslated text.
+- **Gradient and Aura Balloons:** Skill bubbles and effect balloons no longer receive flat opaque fills, and cleanup follows rounded balloon contours more closely.
+- **More Reliable Translation (Gemini/OpenRouter):** Protection against dialogue index shifting when the model merges two lines into one item; those lines are retried instead of misaligning the rest of the page.
+- **Smart Per-Series Glossary (AI + Genre Filter + 529 Terms):** **✨ Generate with AI** creates protected character names, titles, techniques and places unique to the series using Gemini/OpenRouter, and **🎯 Work Terms** filters offline, by title, genres and synopsis, only the matching packs. **Manhwa Terms** (293) and **Manga Terms** (236) presets are available with one tap in the reader.
+- **Anti-Watermark and Scanlation Credit Filter:** Automatically skips links, staff credits and chapter-end markers while preserving the original art.
+- **Automatic Hyphenation for Narrow Bubbles:** Native Portuguese word hyphenation in the reader keeps fonts legible in tall balloons.
+- **Multilingual PaddleOCR:** Groundwork for Korean, Japanese and other languages with on-demand model loading.
+- **Gemini 1.5 Flash as Initial Model:** Any model you have already configured is still respected.
+- **Branding:** Official adaptive Yomotsu icon at all densities, and the "DBNet Detector" title no longer carries the "(experimental)" suffix.
 
 ## 0.21.3-Y1
 
