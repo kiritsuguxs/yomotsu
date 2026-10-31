@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://kiritsuguxs.github.io/Yomotsu/sitemap.xml
