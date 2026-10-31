@@ -63,7 +63,7 @@ object PaddleTextBlockMapper {
         hypot(second.x - first.x, second.y - first.y)
 
     private const val REQUIRED_POINT_COUNT = 4
-    private const val MIN_CONFIDENCE = 0.50f
+    private const val MIN_CONFIDENCE = 0.40f
     private const val SHORT_TEXT_LIMIT = 12
     private const val MAX_AREA_PER_CHARACTER = 20_000f
 }

@@ -47,8 +47,8 @@ object TranslationBlockGrouper {
         val connectorContinuation = visualSizeCompatible && !strict && endsWithConnector(a, b) && shouldMergeByProximity(a, b, MAX_CONNECTOR_GLYPH_GAP)
 
         if (a.balloonDetected || b.balloonDetected) {
-            if (!colorsAreCompatible(a.backgroundColor, b.backgroundColor)) return false
             if (a.balloonDetected && b.balloonDetected) {
+                if (!colorsAreCompatible(a.backgroundColor, b.backgroundColor)) return false
                 val firstLayout = a.layoutRegion
                 val secondLayout = b.layoutRegion
                 if (firstLayout != null && secondLayout != null) {
@@ -73,13 +73,22 @@ object TranslationBlockGrouper {
             val detected = if (a.balloonDetected) a else b
             val candidate = if (a.balloonDetected) b else a
             val detectedLayout = detected.layoutRegion
-            if (detectedLayout != null) {
+            if (detectedLayout != null && visualSizeCompatible) {
                 val candidateCenterX = candidate.x + candidate.width / 2f
                 val candidateCenterY = candidate.y + candidate.height / 2f
                 val centerIsInside = candidateCenterX in detectedLayout.x..(detectedLayout.x + detectedLayout.width) && candidateCenterY in detectedLayout.y..(detectedLayout.y + detectedLayout.height)
                 val overlapsDetected = intersectionArea(candidate.sourceRegion(), detectedLayout) > 0f
                 if (centerIsInside || overlapsDetected) return true
+                // A line near a spiky/jagged balloon tail can sit just outside the inset safeLayout
+                // and pick up dark border pixels on its outer ring while belonging to the same bubble.
+                if (a.translation.isBlank() && b.translation.isBlank() &&
+                    isAdjacentToDetectedBalloon(candidate, detected, detectedLayout, paragraphGlyphGap) &&
+                    (isOpenEndedContinuation(a, b) || colorsAreCompatible(a.backgroundColor, b.backgroundColor))
+                ) {
+                    return true
+                }
             }
+            if (!colorsAreCompatible(a.backgroundColor, b.backgroundColor)) return false
             return continuousParagraph || connectorContinuation
         }
         return visualSizeCompatible && (continuousParagraph || connectorContinuation || shouldMergeByProximity(a, b, paragraphGlyphGap))
@@ -169,16 +178,39 @@ object TranslationBlockGrouper {
             b.balloonDetected -> b.layoutRegion ?: b.defaultLayoutRegion()
             else -> enclosingNullable(a.layoutRegion, b.layoutRegion) ?: enclosing(a.defaultLayoutRegion(), b.defaultLayoutRegion())
         }
+        val mergedBackground = when {
+            a.balloonDetected && !b.balloonDetected -> a.backgroundColor ?: b.backgroundColor
+            b.balloonDetected && !a.balloonDetected -> b.backgroundColor ?: a.backgroundColor
+            else -> averageColor(a.backgroundColor, b.backgroundColor)
+        }
+        val mergedForeground = when {
+            a.balloonDetected && !b.balloonDetected -> a.foregroundColor ?: b.foregroundColor
+            b.balloonDetected && !a.balloonDetected -> b.foregroundColor ?: a.foregroundColor
+            else -> averageColor(a.foregroundColor, b.foregroundColor)
+        }
         return TranslationBlock(
             text = ordered.joinToString(" ") { it.text.trim() }, translation = ordered.map { it.translation.trim() }.filter(String::isNotEmpty).joinToString(" "),
             width = source.width, height = source.height, x = source.x, y = source.y,
             symHeight = weightedAverage(a.symHeight, a.text.length, b.symHeight, b.text.length), symWidth = weightedAverage(a.symWidth, a.text.length, b.symWidth, b.text.length), angle = weightedAverage(a.angle, a.text.length, b.angle, b.text.length),
             cleanupRegion = enclosing(a.cleanupRegion ?: a.defaultCleanupRegion(), b.cleanupRegion ?: b.defaultCleanupRegion()), layoutRegion = mergedLayout,
-            backgroundColor = averageColor(a.backgroundColor, b.backgroundColor), foregroundColor = averageColor(a.foregroundColor, b.foregroundColor), balloonDetected = anyDetectedBalloon, geometryVersion = maxOf(a.geometryVersion, b.geometryVersion),
+            backgroundColor = mergedBackground, foregroundColor = mergedForeground, balloonDetected = anyDetectedBalloon, geometryVersion = maxOf(a.geometryVersion, b.geometryVersion),
             sourceRegions = a.sourceRegions.ifEmpty { listOf(a.sourceRegion()) } + b.sourceRegions.ifEmpty { listOf(b.sourceRegion()) },
             sourceCleanupRegions = (a.resolvedCleanupPatches(Float.MAX_VALUE, Float.MAX_VALUE) +
                 b.resolvedCleanupPatches(Float.MAX_VALUE, Float.MAX_VALUE)).map { it.region },
         )
+    }
+
+    private fun isAdjacentToDetectedBalloon(
+        candidate: TranslationBlock,
+        detected: TranslationBlock,
+        detectedLayout: TranslationRegion,
+        maxGlyphGap: Float,
+    ): Boolean {
+        val marginX = maxOf(candidate.symWidth * 1.5f, 12f)
+        val horizontallyContained = candidate.x >= detectedLayout.x - marginX &&
+            candidate.x + candidate.width <= detectedLayout.x + detectedLayout.width + marginX
+        if (!horizontallyContained) return false
+        return shouldMergeByProximity(candidate, detected, maxGlyphGap)
     }
 
     private fun weightedAverage(first: Float, firstWeight: Int, second: Float, secondWeight: Int): Float { val w1 = firstWeight.coerceAtLeast(1); val w2 = secondWeight.coerceAtLeast(1); return (first * w1 + second * w2) / (w1 + w2) }

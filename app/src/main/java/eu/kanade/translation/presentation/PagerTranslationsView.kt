@@ -22,6 +22,7 @@ import androidx.core.view.isVisible
 import eu.kanade.translation.data.TranslationFont
 import eu.kanade.translation.detection.DbnetCleanupMask
 import eu.kanade.translation.model.PageTranslation
+import eu.kanade.translation.model.TranslationLayoutCollisionResolver
 import eu.kanade.translation.model.TranslationPageEditor
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -135,6 +136,13 @@ class PagerTranslationsView : AbstractComposeView {
         onEdit: ((Int) -> Unit)?,
     ) {
         key(contentRevision) {
+            val resolvedLayouts = remember(contentRevision, translation.blocks.size) {
+                TranslationLayoutCollisionResolver.computeNonOverlappingLayouts(
+                    translation.blocks,
+                    translation.imgWidth,
+                    translation.imgHeight,
+                )
+            }
             translation.blocks.forEachIndexed { index, block ->
                 SmartTranslationBlock(
                     block = block,
@@ -142,6 +150,7 @@ class PagerTranslationsView : AbstractComposeView {
                     pageWidth = translation.imgWidth,
                     pageHeight = translation.imgHeight,
                     fontFamily = fontFamily,
+                    layoutRegionOverride = resolvedLayouts.getOrNull(index),
                     onLongClick = onEdit?.let { { it(index) } },
                 )
             }

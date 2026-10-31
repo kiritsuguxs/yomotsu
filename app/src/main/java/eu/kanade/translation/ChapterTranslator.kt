@@ -18,6 +18,7 @@ import eu.kanade.translation.model.PageTranslation
 import eu.kanade.translation.model.Translation
 import eu.kanade.translation.model.TranslationBlock
 import eu.kanade.translation.model.TranslationBlockGrouper
+import eu.kanade.translation.model.TranslationLayoutCollisionResolver
 import eu.kanade.translation.model.TranslationRecoveryPolicy
 import eu.kanade.translation.model.TranslationRegion
 import eu.kanade.translation.model.normalizeTranslationText
@@ -357,6 +358,7 @@ class ChapterTranslator(
                             }
                         page.blocks = (translatedBlocks + manualCandidates)
                             .sortedWith(compareBy<TranslationBlock> { it.y }.thenBy { it.x }).toMutableList()
+                        TranslationLayoutCollisionResolver.resolveInPlace(page.blocks, page.imgWidth, page.imgHeight)
                     }
 
                     if (translationPreferences.inpainterAot().get() && AotInpaintClient.isDeviceSupported()) {

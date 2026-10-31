@@ -154,12 +154,14 @@ class GeminiTranslator(
             )
         }
 
+        val pageEntries = chunkPages.entries.toList()
         var globalIndex = 0
-        for ((k, v) in chunkPages) {
+        pageEntries.forEachIndexed { pageIdx, (k, v) ->
+            val hasSubsequent = pageEntries.drop(pageIdx + 1).any { (nextKey, _) -> resJson.has(nextKey) }
+            val aligned = extractAlignedPageTranslations(resJson, k, v.blocks.size, hasSubsequent)
             v.blocks.forEachIndexed { i, b ->
                 val cachedTranslation = cached.getOrNull(globalIndex)
-                val res = resJson.optJSONArray(k)?.optString(i, "NULL")
-                val raw = if (res == null || res == "NULL" || res.isBlank()) "" else res
+                val raw = aligned.getOrElse(i) { "" }.trim()
                 val postEdited = if (raw.isNotBlank()) postEditMachineTranslation(b.text, raw, toLang) else ""
                 val finalTranslation = when {
                     !cachedTranslation.isNullOrBlank() -> TranslationGlossary.apply(b.text, cachedTranslation, context)

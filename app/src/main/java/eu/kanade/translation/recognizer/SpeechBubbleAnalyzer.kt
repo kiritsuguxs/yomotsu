@@ -15,6 +15,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 data class SpeechBubbleAnalysis(
     val cleanupRegion: TranslationRegion,
@@ -146,7 +147,8 @@ class SpeechBubbleAnalyzer(
     private fun detectBalloonInterior(block: TranslationBlock, backgroundColor: Int): TranslationRegion? {
         val source = block.sourceRegion()
         val sourceLeft = toBitmapX(source.x); val sourceRight = toBitmapX(source.x + source.width); val sourceTop = toBitmapY(source.y); val sourceBottom = toBitmapY(source.y + source.height)
-        val horizontalReach = max(block.width * 0.9f, block.symWidth * 6f); val verticalReach = max(block.height * 1.35f, block.symHeight * BALLOON_VERTICAL_REACH_IN_GLYPHS)
+        val horizontalReach = maxOf(block.width * 1.6f, block.symWidth * 14f, pageWidth * 0.32f)
+        val verticalReach = maxOf(block.height * 1.8f, block.symHeight * BALLOON_VERTICAL_REACH_IN_GLYPHS)
         val left = scanAxis(sourceLeft - 1, toBitmapX(source.x - horizontalReach), -1, bitmap.width - 1) { verticalMatchRatio(it, sourceTop, sourceBottom, backgroundColor) }
         val right = scanAxis(sourceRight + 1, toBitmapX(source.x + source.width + horizontalReach), 1, bitmap.width - 1) { verticalMatchRatio(it, sourceTop, sourceBottom, backgroundColor) }
         val top = scanAxis(sourceTop - 1, toBitmapY(source.y - verticalReach), -1, bitmap.height - 1) { horizontalMatchRatio(it, sourceLeft, sourceRight, backgroundColor) }
@@ -182,9 +184,74 @@ class SpeechBubbleAnalyzer(
         val minimumWidth = max(block.symWidth * 2.5f, source.width * MIN_SOURCE_DIMENSION_RATIO)
         val minimumHeight = max(block.symHeight * 2f, source.height * MIN_SOURCE_DIMENSION_RATIO)
         if (safeLayout.width < minimumWidth || safeLayout.height < minimumHeight) return null
+        val originalSources = block.sourceRegions.ifEmpty { listOf(source) }
         // Once accepted, keep the measured contour even if pixel rounding makes
         // it fractionally smaller. Falling back would expand outside this balloon.
-        return constrainToVisibleBoundary(safeLayout, source, backgroundColor, block.sourceRegions.ifEmpty { listOf(source) })
+        val constrainedLayout = constrainToVisibleBoundary(safeLayout, source, backgroundColor, originalSources)
+        if (!isUniformBalloonInterior(constrainedLayout, originalSources, backgroundColor)) return null
+        return constrainedLayout
+    }
+
+    /**
+     * Rejects gradient, speed-line, or glowing skill/aura bubbles from being treated as flat
+     * solid-color speech balloons so opaque rectangular fills never destroy gradient effects.
+     */
+    private fun isUniformBalloonInterior(
+        region: TranslationRegion,
+        originalSources: List<TranslationRegion>,
+        backgroundColor: Int,
+    ): Boolean {
+        val left = toBitmapX(region.x)
+        val right = toBitmapX(region.x + region.width)
+        val top = toBitmapY(region.y)
+        val bottom = toBitmapY(region.y + region.height)
+        if (right - left < 6 || bottom - top < 6) return true
+
+        val expandedSources = originalSources.map {
+            intArrayOf(
+                (toBitmapX(it.x) - 2).coerceAtLeast(0),
+                (toBitmapY(it.y) - 2).coerceAtLeast(0),
+                (toBitmapX(it.x + it.width) + 2).coerceAtMost(bitmap.width - 1),
+                (toBitmapY(it.y + it.height) + 2).coerceAtMost(bitmap.height - 1),
+            )
+        }
+        val midX = (left + right) / 2
+        val midY = (top + bottom) / 2
+        var count = 0
+        var sumLum = 0.0
+        var sumLum2 = 0.0
+        var topSum = 0.0; var topCount = 0
+        var bottomSum = 0.0; var bottomCount = 0
+        var leftSum = 0.0; var leftCount = 0
+        var rightSum = 0.0; var rightCount = 0
+
+        repeat(INTERIOR_GRID_SAMPLES) { gy ->
+            val y = lerp(top, bottom, gy / (INTERIOR_GRID_SAMPLES - 1f))
+            repeat(INTERIOR_GRID_SAMPLES) { gx ->
+                val x = lerp(left, right, gx / (INTERIOR_GRID_SAMPLES - 1f))
+                if (expandedSources.any { x in it[0]..it[2] && y in it[1]..it[3] }) return@repeat
+                if (isTextPixel(x, y)) return@repeat
+                val px = getPixel(x, y)
+                if (!colorsMatch(px, backgroundColor)) return@repeat
+                val lum = luminance(px).toDouble()
+                count++
+                sumLum += lum
+                sumLum2 += lum * lum
+                if (y <= midY) { topSum += lum; topCount++ } else { bottomSum += lum; bottomCount++ }
+                if (x <= midX) { leftSum += lum; leftCount++ } else { rightSum += lum; rightCount++ }
+            }
+        }
+        if (count < MIN_INTERIOR_UNIFORM_SAMPLES) return true
+        val mean = sumLum / count
+        val std = sqrt((sumLum2 / count - mean * mean).coerceAtLeast(0.0))
+        if (std > MAX_INTERIOR_LUMINANCE_STD) return false
+        if (topCount >= 4 && bottomCount >= 4 && abs(topSum / topCount - bottomSum / bottomCount) > MAX_INTERIOR_GRADIENT_DELTA) {
+            return false
+        }
+        if (leftCount >= 4 && rightCount >= 4 && abs(leftSum / leftCount - rightSum / rightCount) > MAX_INTERIOR_GRADIENT_DELTA) {
+            return false
+        }
+        return true
     }
 
     private fun constrainToVisibleBoundary(
@@ -354,11 +421,12 @@ class SpeechBubbleAnalyzer(
         const val MIN_BACKGROUND_RATIO=0.62f; const val MIN_DETECTION_CONFIDENCE=0.42f; const val MIN_OVERLAY_CONFIDENCE=0.42f
         const val BALLOON_HORIZONTAL_INSET_RATIO=0.08f; const val BALLOON_VERTICAL_INSET_RATIO=0.08f
         const val ROUNDED_SAFE_LAYOUT_INSET_RATIO=0.1465f; const val ROUNDED_SAFE_LAYOUT_MIN_ASPECT=0.75f; const val ROUNDED_SAFE_LAYOUT_MAX_ASPECT=1.8f
-        const val BALLOON_VERTICAL_REACH_IN_GLYPHS=14f; const val MIN_SOURCE_DIMENSION_RATIO=0.55f; const val MAX_COLOR_DISTANCE_SQUARED=6400; const val MAX_CLUSTER_DISTANCE_SQUARED=4900; const val MAX_LUMINANCE_DELTA=58; const val COLOR_BUCKET_SIZE=32
+        const val BALLOON_VERTICAL_REACH_IN_GLYPHS=18f; const val MIN_SOURCE_DIMENSION_RATIO=0.55f; const val MAX_COLOR_DISTANCE_SQUARED=6400; const val MAX_CLUSTER_DISTANCE_SQUARED=4900; const val MAX_LUMINANCE_DELTA=58; const val COLOR_BUCKET_SIZE=32
+        const val INTERIOR_GRID_SAMPLES=10; const val MIN_INTERIOR_UNIFORM_SAMPLES=12; const val MAX_INTERIOR_LUMINANCE_STD=9.5; const val MAX_INTERIOR_GRADIENT_DELTA=15.0
     }
 }
 
 internal object SpeechBubbleSizePolicy {
     fun accepts(sourceWidth:Float,sourceHeight:Float,detectedWidth:Float,detectedHeight:Float):Boolean { val sourceArea=(sourceWidth*sourceHeight).coerceAtLeast(1f); val detectedArea=detectedWidth*detectedHeight; if(detectedArea<=sourceArea*STANDARD_MAX_AREA_RATIO)return true; val aspectRatio=detectedWidth/detectedHeight.coerceAtLeast(1f); val resemblesRoundBalloon=aspectRatio in ROUND_BALLOON_MIN_ASPECT_RATIO..ROUND_BALLOON_MAX_ASPECT_RATIO; return resemblesRoundBalloon && detectedArea<=sourceArea*LARGE_ROUND_BALLOON_MAX_AREA_RATIO }
-    private const val STANDARD_MAX_AREA_RATIO=14f; private const val LARGE_ROUND_BALLOON_MAX_AREA_RATIO=140f; private const val ROUND_BALLOON_MIN_ASPECT_RATIO=0.45f; private const val ROUND_BALLOON_MAX_ASPECT_RATIO=2.2f
+    private const val STANDARD_MAX_AREA_RATIO=14f; private const val LARGE_ROUND_BALLOON_MAX_AREA_RATIO=180f; private const val ROUND_BALLOON_MIN_ASPECT_RATIO=0.45f; private const val ROUND_BALLOON_MAX_ASPECT_RATIO=2.2f
 }

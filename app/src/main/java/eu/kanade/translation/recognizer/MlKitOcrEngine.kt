@@ -41,13 +41,23 @@ class MlKitOcrEngine(
             val ocrTimeMs = elapsedMs(ocrStart)
             val blocks = result.textBlocks.mapNotNull { block ->
                 val bounds = block.boundingBox ?: return@mapNotNull null
-                val firstSymbolBounds = block.lines
-                    .firstOrNull()
-                    ?.elements
-                    ?.firstOrNull()
-                    ?.symbols
-                    ?.firstOrNull()
-                    ?.boundingBox
+                val symbolBounds = block.lines
+                    .flatMap { it.elements }
+                    .flatMap { it.symbols }
+                    .mapNotNull { it.boundingBox }
+                    .filter { it.width() > 0 && it.height() > 0 }
+                val medianSymbolWidth = if (symbolBounds.isNotEmpty()) {
+                    val widths = symbolBounds.map { it.width() }.sorted()
+                    widths[widths.size / 2].toFloat()
+                } else {
+                    1f
+                }
+                val medianSymbolHeight = if (symbolBounds.isNotEmpty()) {
+                    val heights = symbolBounds.map { it.height() }.sorted()
+                    heights[heights.size / 2].toFloat()
+                } else {
+                    1f
+                }
 
                 OcrTextBlock(
                     text = block.text,
@@ -55,8 +65,8 @@ class MlKitOcrEngine(
                     y = bounds.top.toFloat(),
                     width = bounds.width().toFloat(),
                     height = bounds.height().toFloat(),
-                    symbolWidth = firstSymbolBounds?.width()?.toFloat() ?: 1f,
-                    symbolHeight = firstSymbolBounds?.height()?.toFloat() ?: 1f,
+                    symbolWidth = medianSymbolWidth,
+                    symbolHeight = medianSymbolHeight,
                     angle = block.lines.firstOrNull()?.angle ?: 0f,
                 )
             }

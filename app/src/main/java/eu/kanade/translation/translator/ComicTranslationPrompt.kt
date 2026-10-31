@@ -104,6 +104,7 @@ internal fun buildComicTranslationPrompt(
         Output rules:
         - Return only one valid JSON object, without Markdown or explanations.
         - Preserve every input key, array order, and array length exactly.
+        - NEVER merge two adjacent array items into one string or skip an item; each input index i MUST map 1-to-1 to output index i.
         - Every output item must be a string containing only its final translation.
         - Never translate watermarks, credits, chapter notes, scanlation group names, or site links; return an empty string "" for any such element.
     """.trimIndent()
@@ -182,4 +183,37 @@ internal fun repairTruncatedComicTranslationJson(raw: String): JSONObject {
 
     require(recovered.length() > 0) { "Translation response does not contain recoverable JSON: ${raw.take(120)}" }
     return recovered
+}
+
+/**
+ * Prevents silent dialogue index-shifting when an LLM merges two items of a page array into one.
+ * Truncation at the very end of a stream still salvages its prefix; mid-response count mismatches
+ * are left empty so [ReliableTextTranslator] cleanly retries that page without poisoning [eu.kanade.translation.memory.TranslationCache].
+ */
+internal fun extractAlignedPageTranslations(
+    resJson: JSONObject,
+    pageKey: String,
+    expectedCount: Int,
+    hasSubsequentReturnedPages: Boolean,
+): List<String> {
+    if (expectedCount <= 0) return emptyList()
+    val arr = resJson.optJSONArray(pageKey) ?: return List(expectedCount) { "" }
+    val actual = arr.length()
+    if (actual == expectedCount) {
+        return List(expectedCount) { idx ->
+            val raw = arr.optString(idx, "")
+            if (raw == "NULL") "" else raw
+        }
+    }
+    if (!hasSubsequentReturnedPages && actual in 1 until expectedCount) {
+        return List(expectedCount) { idx ->
+            if (idx < actual) {
+                val raw = arr.optString(idx, "")
+                if (raw == "NULL") "" else raw
+            } else {
+                ""
+            }
+        }
+    }
+    return List(expectedCount) { "" }
 }

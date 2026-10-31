@@ -70,4 +70,20 @@ class ComicTranslationPromptTest {
         assertEquals(2, result.getJSONArray("001.jpg").length())
         assertEquals("Fala 3", result.getJSONArray("002.jpg").getString(0))
     }
+
+    @Test
+    fun `extractAlignedPageTranslations returns exact 1-to-1 list when count matches`() {
+        val json = org.json.JSONObject("""{"001.jpg":["Fala 1","Fala 2"]}""")
+        val aligned = extractAlignedPageTranslations(json, "001.jpg", 2, hasSubsequentReturnedPages = false)
+        assertEquals(listOf("Fala 1", "Fala 2"), aligned)
+    }
+
+    @Test
+    fun `extractAlignedPageTranslations rejects shifted array when intermediate page has mismatched count`() {
+        // LLM merged 2 items into 1 item, but returned subsequent pages
+        val json = org.json.JSONObject("""{"001.jpg":["Fala Unificada"],"002.jpg":["Fala 3"]}""")
+        val aligned = extractAlignedPageTranslations(json, "001.jpg", 2, hasSubsequentReturnedPages = true)
+        // Must return empty strings so ReliableTextTranslator retries and doesn't shift indices
+        assertEquals(listOf("", ""), aligned)
+    }
 }

@@ -19,14 +19,15 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
 import eu.kanade.translation.model.AotPatchCleanup
+import eu.kanade.translation.model.CURRENT_TRANSLATION_GEOMETRY_VERSION
 import eu.kanade.translation.model.DbnetMaskCleanup
 import eu.kanade.translation.model.LegacyCleanup
 import eu.kanade.translation.model.NoCleanup
 import eu.kanade.translation.model.TranslationBlock
 import eu.kanade.translation.model.clamped
 import eu.kanade.translation.model.resolveCleanup
+import eu.kanade.translation.model.sourceRegion
 
 @Composable
 fun TranslationCleanupBlock(
@@ -63,20 +64,38 @@ fun TranslationCleanupBlock(
                 )
             }
 
-            cleanup.patches.forEach { patch ->
+            val sources = block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }
+            val boundaryMeasured = block.geometryVersion >= CURRENT_TRANSLATION_GEOMETRY_VERSION &&
+                block.backgroundColor != null
+
+            cleanup.patches.forEachIndexed { index, patch ->
                 val region = patch.region
-                val padX = if (block.balloonDetected) maxOf(block.symWidth * 0.35f, (pageWidth * 0.006f).coerceAtLeast(4f)) else (pageWidth * 0.003f).coerceAtLeast(2f)
-                val padY = if (block.balloonDetected) maxOf(block.symHeight * 0.28f, (pageWidth * 0.005f).coerceAtLeast(4f)) else (pageWidth * 0.003f).coerceAtLeast(2f)
-                val adjustedX = (region.x - padX).coerceAtLeast(0f)
-                val adjustedY = (region.y - padY).coerceAtLeast(0f)
-                val adjustedWidth = minOf(pageWidth - adjustedX, region.width + padX * 2f)
-                val adjustedHeight = minOf(pageHeight - adjustedY, region.height + padY * 2f)
-                val safeRadius = if (patch.cornerRadius.isFinite()) patch.cornerRadius else 0f
-                val cleanupShape = if (block.balloonDetected || (!block.balloonDetected && block.backgroundColor == null)) {
-                    RoundedCornerShape((safeRadius * scaleFactor).pxToDp())
-                } else {
-                    RoundedCornerShape(minOf(3.dp, (safeRadius * scaleFactor).pxToDp()))
+                val source = sources.getOrNull(index)
+                val basePadX = when {
+                    boundaryMeasured -> 1.5f
+                    block.balloonDetected -> maxOf(block.symWidth * 0.35f, (pageWidth * 0.006f).coerceAtLeast(4f))
+                    else -> (pageWidth * 0.003f).coerceAtLeast(2f)
                 }
+                val basePadY = when {
+                    boundaryMeasured -> 1.5f
+                    block.balloonDetected -> maxOf(block.symHeight * 0.28f, (pageWidth * 0.005f).coerceAtLeast(4f))
+                    else -> (pageWidth * 0.003f).coerceAtLeast(2f)
+                }
+                val leftPad = if (boundaryMeasured && source != null && source.x - region.x < 1.5f) 0f else basePadX
+                val rightPad = if (boundaryMeasured && source != null && (region.x + region.width) - (source.x + source.width) < 1.5f) 0f else basePadX
+                val topPad = if (boundaryMeasured && source != null && source.y - region.y < 1.5f) 0f else basePadY
+                val bottomPad = if (boundaryMeasured && source != null && (region.y + region.height) - (source.y + source.height) < 1.5f) 0f else basePadY
+
+                val adjustedX = (region.x - leftPad).coerceAtLeast(0f)
+                val adjustedY = (region.y - topPad).coerceAtLeast(0f)
+                val adjustedRight = minOf(pageWidth, region.x + region.width + rightPad)
+                val adjustedBottom = minOf(pageHeight, region.y + region.height + bottomPad)
+                val adjustedWidth = (adjustedRight - adjustedX).coerceAtLeast(1f)
+                val adjustedHeight = (adjustedBottom - adjustedY).coerceAtLeast(1f)
+                val safeRadius = if (patch.cornerRadius.isFinite()) patch.cornerRadius else 0f
+                val capsuleRadius = minOf(adjustedWidth, adjustedHeight) * 0.24f
+                val effectiveRadius = maxOf(safeRadius, capsuleRadius)
+                val cleanupShape = RoundedCornerShape((effectiveRadius * scaleFactor).pxToDp())
                 Box(
                     modifier = Modifier
                         .offset((adjustedX * scaleFactor).pxToDp(), (adjustedY * scaleFactor).pxToDp())

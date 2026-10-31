@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.translation.model.TranslationBlock
+import eu.kanade.translation.model.TranslationRegion
 import eu.kanade.translation.model.normalizeTranslationText
 import eu.kanade.translation.model.resolvedLayoutRegion
 import eu.kanade.translation.model.withReliableSourceMetrics
@@ -44,9 +45,10 @@ fun SmartTranslationBlock(
     pageWidth: Float,
     pageHeight: Float,
     fontFamily: FontFamily,
+    layoutRegionOverride: TranslationRegion? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
-    val region = block.resolvedLayoutRegion(pageWidth, pageHeight)
+    val region = layoutRegionOverride ?: block.resolvedLayoutRegion(pageWidth, pageHeight)
     val xPx = region.x * scaleFactor
     val yPx = region.y * scaleFactor
     val width = region.width.pxToDp()

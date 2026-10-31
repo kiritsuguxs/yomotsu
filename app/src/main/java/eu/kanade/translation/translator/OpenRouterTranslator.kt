@@ -146,12 +146,14 @@ class OpenRouterTranslator(
                     .getString("content"),
             )
 
+            val pageEntries = pages.entries.toList()
             var globalIndex = 0
-            for ((pageKey, page) in pages) {
+            pageEntries.forEachIndexed { pageIdx, (pageKey, page) ->
+                val hasSubsequent = pageEntries.drop(pageIdx + 1).any { (nextKey, _) -> resJson.has(nextKey) }
+                val aligned = extractAlignedPageTranslations(resJson, pageKey, page.blocks.size, hasSubsequent)
                 page.blocks.forEachIndexed { index, block ->
                     val cachedTranslation = cached.getOrNull(globalIndex)
-                    val res = resJson.optJSONArray(pageKey)?.optString(index, "NULL")
-                    val raw = if (res == null || res == "NULL" || res.isBlank()) "" else res
+                    val raw = aligned.getOrElse(index) { "" }.trim()
                     val postEdited = if (raw.isNotBlank()) postEditMachineTranslation(block.text, raw, toLang) else ""
                     val finalTranslation = when {
                         !cachedTranslation.isNullOrBlank() -> TranslationGlossary.apply(block.text, cachedTranslation, context)
