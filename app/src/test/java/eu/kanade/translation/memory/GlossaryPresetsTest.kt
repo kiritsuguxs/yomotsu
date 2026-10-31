@@ -81,4 +81,51 @@ class GlossaryPresetsTest {
             }
         }
     }
+
+    @Test
+    fun `smart recommendation selects only matching categories for murim manhwa`() {
+        val rec = GlossaryPresets.recommendForWork(
+            title = "Return of the Mount Hua Sect",
+            genresText = "Action, Martial Arts, Webtoon",
+            description = "Chung Myung of the Mount Hua Sect wakes up 100 years later in Murim.",
+        )
+        assertEquals(GlossaryPresetType.MANHWA, rec.detectedType)
+        assertFalse(rec.usedFallbackAll)
+        assertTrue(GlossaryCategory.MANHWA_HONORIFICS in rec.matchedCategories)
+        assertTrue(GlossaryCategory.MANHWA_MURIM in rec.matchedCategories)
+        assertFalse(GlossaryCategory.MANHWA_ROMANCE_NOBILITY in rec.matchedCategories)
+        assertFalse(GlossaryCategory.MANHWA_HUNTER_SYSTEM in rec.matchedCategories)
+    }
+
+    @Test
+    fun `smart recommendation selects romance nobility for villainess work`() {
+        val rec = GlossaryPresets.recommendForWork(
+            title = "Villainess Is Destined to Die",
+            genresText = "Romance, Josei, Manhwa",
+            description = "Reincarnated as the Duke's hated daughter and pursued by the Crown Prince.",
+        )
+        assertEquals(GlossaryPresetType.MANHWA, rec.detectedType)
+        assertFalse(rec.usedFallbackAll)
+        assertTrue(GlossaryCategory.MANHWA_HONORIFICS in rec.matchedCategories)
+        assertTrue(GlossaryCategory.MANHWA_ROMANCE_NOBILITY in rec.matchedCategories)
+        assertFalse(GlossaryCategory.MANHWA_MURIM in rec.matchedCategories)
+    }
+
+    @Test
+    fun `ai glossary parser handles fenced json and truncated objects`() {
+        val raw = """
+            ```json
+            [
+              {"source": "Chung Myung", "target": "Chung Myung", "type": "NAME", "protected": true},
+              {"source": "Plum Blossom Sword", "target": "Espada da Flor de Ameixeira", "type": "TECHNIQUE", "protected": false}
+            ```
+        """.trimIndent()
+        val parsed = AiGlossaryGenerator.parseAiGlossaryEntries(raw)
+        assertEquals(2, parsed.size)
+        assertEquals("Chung Myung", parsed[0].source)
+        assertEquals(TranslationMemoryEntryType.NAME, parsed[0].type)
+        assertTrue(parsed[0].isProtected)
+        assertEquals("Espada da Flor de Ameixeira", parsed[1].target)
+        assertEquals(TranslationMemoryEntryType.TECHNIQUE, parsed[1].type)
+    }
 }

@@ -1,19 +1,27 @@
 package eu.kanade.presentation.translation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,11 +37,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.at.ATMR
@@ -41,6 +51,9 @@ import tachiyomi.presentation.core.i18n.stringResource
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.util.Screen
+import eu.kanade.translation.memory.AiGlossaryGenerator
+import eu.kanade.translation.memory.AiGlossaryResult
+import eu.kanade.translation.memory.GlossaryCategory
 import eu.kanade.translation.memory.GlossaryPresetType
 import eu.kanade.translation.memory.GlossaryPresets
 import eu.kanade.translation.memory.GlossarySaveResult
@@ -51,6 +64,8 @@ import eu.kanade.translation.translator.ComicTranslationContext
 
 class TranslationGlossaryScreen(
     private val mangaTitle: String,
+    private val mangaDescription: String = "",
+    private val mangaGenresText: String = "",
 ) : Screen() {
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +73,7 @@ class TranslationGlossaryScreen(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
         val translationContext = remember(mangaTitle) {
             ComicTranslationContext(mangaTitle = mangaTitle, chapterName = "")
         }
@@ -67,6 +83,9 @@ class TranslationGlossaryScreen(
         var message by remember { mutableStateOf<String?>(null) }
         var showClearDialog by remember { mutableStateOf(false) }
         var showBulkDialog by remember { mutableStateOf(false) }
+        var showSmartFilterDialog by remember { mutableStateOf(false) }
+        var showAiConfirmDialog by remember { mutableStateOf(false) }
+        var isGeneratingAi by remember { mutableStateOf(false) }
         var selectedPreset by remember { mutableStateOf<GlossaryPresetType?>(null) }
         var entryType by remember { mutableStateOf(TranslationMemoryEntryType.TERM) }
         var isProtected by remember { mutableStateOf(false) }
@@ -206,15 +225,52 @@ class TranslationGlossaryScreen(
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = 8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp),
+                        ) {
+                            FilledTonalButton(
+                                onClick = { showAiConfirmDialog = true },
+                                enabled = !isGeneratingAi,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                if (isGeneratingAi) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Gerando…")
+                                } else {
+                                    Text("✨ Gerar com IA")
+                                }
+                            }
+                            FilledTonalButton(
+                                onClick = { showSmartFilterDialog = true },
+                                enabled = !isGeneratingAi,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text("🎯 Termos da Obra")
+                            }
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
                         ) {
                             OutlinedButton(
                                 onClick = { selectedPreset = GlossaryPresetType.MANHWA },
+                                enabled = !isGeneratingAi,
+                                modifier = Modifier.weight(1f),
                             ) {
                                 Text("Termos Manhwa")
                             }
                             OutlinedButton(
                                 onClick = { selectedPreset = GlossaryPresetType.MANGA },
+                                enabled = !isGeneratingAi,
+                                modifier = Modifier.weight(1f),
                             ) {
                                 Text("Termos Mangá")
                             }
@@ -342,7 +398,7 @@ class TranslationGlossaryScreen(
                 onDismissRequest = { selectedPreset = null },
                 title = { Text(presetName) },
                 text = {
-                    Text("Deseja aplicar os $presetCount termos padronizados de $presetName ao glossário desta obra?")
+                    Text("Deseja aplicar todos os $presetCount termos padronizados de $presetName ao glossário desta obra?")
                 },
                 confirmButton = {
                     TextButton(
@@ -363,7 +419,196 @@ class TranslationGlossaryScreen(
                 },
             )
         }
+
+        if (showSmartFilterDialog) {
+            SmartWorkGlossaryDialog(
+                mangaTitle = mangaTitle,
+                mangaGenresText = mangaGenresText,
+                mangaDescription = mangaDescription,
+                onDismiss = { showSmartFilterDialog = false },
+                onApply = { categories ->
+                    val count = TranslationGlossaryManager.applyCategories(translationContext, categories)
+                    refresh()
+                    showSmartFilterDialog = false
+                    message = "$count termos compatíveis com esta obra foram aplicados!"
+                },
+            )
+        }
+
+        if (showAiConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showAiConfirmDialog = false },
+                title = { Text("✨ Gerar Glossário com IA") },
+                text = {
+                    Text(
+                        "A IA configurada nas Traduções vai analisar \"$mangaTitle\" (título, gêneros e sinopse) " +
+                            "para gerar personagens protegidos, títulos, técnicas e termos exclusivos desta obra.",
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showAiConfirmDialog = false
+                            isGeneratingAi = true
+                            message = "Gerando glossário exclusivo de \"$mangaTitle\" com IA… aguarde alguns segundos."
+                            coroutineScope.launch {
+                                val result = AiGlossaryGenerator.generateAndApply(
+                                    context = translationContext,
+                                    mangaTitle = mangaTitle,
+                                    mangaGenresText = mangaGenresText,
+                                    mangaDescription = mangaDescription,
+                                )
+                                isGeneratingAi = false
+                                when (result) {
+                                    is AiGlossaryResult.Success -> {
+                                        refresh()
+                                        message = "✨ ${result.addedCount} termos exclusivos da obra gerados via ${result.providerLabel} (${result.modelName})!"
+                                    }
+                                    AiGlossaryResult.MissingApiKey -> {
+                                        message = "Configure sua chave de API do Gemini ou OpenRouter em Configurações > Traduções primeiro."
+                                    }
+                                    is AiGlossaryResult.Failure -> {
+                                        message = result.reason
+                                    }
+                                }
+                            }
+                        },
+                    ) {
+                        Text("Gerar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAiConfirmDialog = false }) {
+                        Text(stringResource(MR.strings.action_cancel))
+                    }
+                },
+            )
+        }
     }
+}
+
+@Composable
+private fun SmartWorkGlossaryDialog(
+    mangaTitle: String,
+    mangaGenresText: String,
+    mangaDescription: String,
+    onDismiss: () -> Unit,
+    onApply: (Set<GlossaryCategory>) -> Unit,
+) {
+    val initialRec = remember(mangaTitle, mangaGenresText, mangaDescription) {
+        GlossaryPresets.recommendForWork(
+            title = mangaTitle,
+            genresText = mangaGenresText,
+            description = mangaDescription,
+        )
+    }
+    var activeType by remember { mutableStateOf(initialRec.detectedType) }
+    var selectedCategories by remember { mutableStateOf(initialRec.matchedCategories) }
+
+    val availableCategories = remember(activeType) { GlossaryPresets.getCategories(activeType) }
+    val selectedEntriesCount = remember(selectedCategories) {
+        GlossaryPresets.getEntriesForCategories(selectedCategories).size
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("🎯 Termos da Obra") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = if (initialRec.usedFallbackAll) {
+                        "Selecione o formato e desmarque os gêneros que não fazem parte desta obra:"
+                    } else {
+                        "Categorias filtradas automaticamente pelo título, gêneros e sinopse desta obra:"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = activeType == GlossaryPresetType.MANHWA,
+                        onClick = {
+                            activeType = GlossaryPresetType.MANHWA
+                            selectedCategories = GlossaryPresets.recommendForWork(
+                                title = mangaTitle,
+                                genresText = mangaGenresText,
+                                description = mangaDescription,
+                                forcedType = GlossaryPresetType.MANHWA,
+                            ).matchedCategories
+                        },
+                        label = { Text("Manhwa") },
+                    )
+                    FilterChip(
+                        selected = activeType == GlossaryPresetType.MANGA,
+                        onClick = {
+                            activeType = GlossaryPresetType.MANGA
+                            selectedCategories = GlossaryPresets.recommendForWork(
+                                title = mangaTitle,
+                                genresText = mangaGenresText,
+                                description = mangaDescription,
+                                forcedType = GlossaryPresetType.MANGA,
+                            ).matchedCategories
+                        },
+                        label = { Text("Mangá") },
+                    )
+                }
+                availableCategories.forEach { category ->
+                    val checked = category in selectedCategories
+                    val catCount = GlossaryPresets.getEntriesForCategory(category).size
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selectedCategories = if (checked) {
+                                    selectedCategories - category
+                                } else {
+                                    selectedCategories + category
+                                }
+                            },
+                    ) {
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = { isChecked ->
+                                selectedCategories = if (isChecked) {
+                                    selectedCategories + category
+                                } else {
+                                    selectedCategories - category
+                                }
+                            },
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = category.label,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                text = "$catCount termos",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = selectedEntriesCount > 0,
+                onClick = { onApply(selectedCategories) },
+            ) {
+                Text("${stringResource(MR.strings.action_apply)} ($selectedEntriesCount)")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(MR.strings.action_cancel))
+            }
+        },
+    )
 }
 
 @Composable

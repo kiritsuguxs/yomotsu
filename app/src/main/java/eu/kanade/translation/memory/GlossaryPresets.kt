@@ -7,9 +7,34 @@ enum class GlossaryPresetType {
     MANGA,
 }
 
+enum class GlossaryCategory(
+    val presetType: GlossaryPresetType,
+    val label: String,
+    val isHonorifics: Boolean = false,
+) {
+    MANHWA_HONORIFICS(GlossaryPresetType.MANHWA, "Honoríficos Coreanos", isHonorifics = true),
+    MANHWA_ROMANCE_NOBILITY(GlossaryPresetType.MANHWA, "Romance, Nobreza e Reencarnação"),
+    MANHWA_MURIM(GlossaryPresetType.MANHWA, "Murim, Artes Marciais e Cultivo"),
+    MANHWA_MODERN_SCHOOL(GlossaryPresetType.MANHWA, "Escolar, Gangues e Moderno"),
+    MANHWA_HUNTER_SYSTEM(GlossaryPresetType.MANHWA, "Caçadores, Sistema e Dungeons"),
+
+    MANGA_HONORIFICS(GlossaryPresetType.MANGA, "Honoríficos Japoneses", isHonorifics = true),
+    MANGA_SCHOOL_ROMCOM(GlossaryPresetType.MANGA, "Escolar, RomCom e Esportes"),
+    MANGA_ISEKAI_FANTASY(GlossaryPresetType.MANGA, "Isekai, Fantasia e RPG"),
+    MANGA_CULTURE_DAILY(GlossaryPresetType.MANGA, "Cultura Japonesa e Cotidiano"),
+    MANGA_SHONEN_SUPERNATURAL(GlossaryPresetType.MANGA, "Shonen, Samurai e Sobrenatural"),
+}
+
+data class SmartGlossaryRecommendation(
+    val detectedType: GlossaryPresetType,
+    val matchedCategories: Set<GlossaryCategory>,
+    val entries: List<TranslationMemoryEntry>,
+    val usedFallbackAll: Boolean,
+)
+
 object GlossaryPresets {
 
-    val manhwaPresetEntries: List<TranslationMemoryEntry> = listOf(
+    private val manhwaHonorificsEntries: List<TranslationMemoryEntry> = listOf(
         // 1. Honoríficos, Parentesco e Tratamentos Coreanos
         TranslationMemoryEntry("Oppa", "Oppa", TranslationMemoryEntryType.TITLE, isProtected = true),
         TranslationMemoryEntry("Hyung", "Hyung", TranslationMemoryEntryType.TITLE, isProtected = true),
@@ -27,7 +52,9 @@ object GlossaryPresets {
         TranslationMemoryEntry("Ahjumma", "Ahjumma", TranslationMemoryEntryType.TITLE, isProtected = true),
         TranslationMemoryEntry("Orabeoni", "Irmão", TranslationMemoryEntryType.TITLE, isProtected = false),
         TranslationMemoryEntry("Maknae", "Caçula", TranslationMemoryEntryType.TERM, isProtected = false),
+    )
 
+    private val manhwaRomanceNobilityEntries: List<TranslationMemoryEntry> = listOf(
         // 2. Romance, Nobreza, Reencarnação e Otome Isekai (Fantasia Romântica)
         TranslationMemoryEntry("Villainess", "Vilã", TranslationMemoryEntryType.TITLE, isProtected = false),
         TranslationMemoryEntry("Transmigration", "Transmigração", TranslationMemoryEntryType.TERM, isProtected = false),
@@ -104,7 +131,9 @@ object GlossaryPresets {
         TranslationMemoryEntry("Swordmaster", "Mestre da Espada", TranslationMemoryEntryType.TITLE, isProtected = false),
         TranslationMemoryEntry("Aura", "Aura", TranslationMemoryEntryType.TERM, isProtected = true),
         TranslationMemoryEntry("Aura Blade", "Lâmina de Aura", TranslationMemoryEntryType.TECHNIQUE, isProtected = false),
+    )
 
+    private val manhwaMurimEntries: List<TranslationMemoryEntry> = listOf(
         // 3. Murim, Artes Marciais e Cultivo
         TranslationMemoryEntry("Murim", "Murim", TranslationMemoryEntryType.TERM, isProtected = true),
         TranslationMemoryEntry("Jianghu", "Jianghu", TranslationMemoryEntryType.TERM, isProtected = true),
@@ -169,7 +198,9 @@ object GlossaryPresets {
         TranslationMemoryEntry("Elixir", "Elixir", TranslationMemoryEntryType.TERM, isProtected = true),
         TranslationMemoryEntry("Lightness Skill", "Técnica de Leveza", TranslationMemoryEntryType.TECHNIQUE, isProtected = false),
         TranslationMemoryEntry("Footwork", "Jogo de Pés", TranslationMemoryEntryType.TECHNIQUE, isProtected = false),
+    )
 
+    private val manhwaModernSchoolEntries: List<TranslationMemoryEntry> = listOf(
         // 4. Escolar, Ação Urbana, Gangues, Moderno, Chaebol e Showbiz
         TranslationMemoryEntry("Chaebol", "Chaebol", TranslationMemoryEntryType.TERM, isProtected = true),
         TranslationMemoryEntry("Chairman", "Presidente do Conselho", TranslationMemoryEntryType.TITLE, isProtected = false),
@@ -204,7 +235,9 @@ object GlossaryPresets {
         TranslationMemoryEntry("Rookie", "Novato", TranslationMemoryEntryType.TERM, isProtected = false),
         TranslationMemoryEntry("Streamer", "Streamer", TranslationMemoryEntryType.TERM, isProtected = true),
         TranslationMemoryEntry("Pro Gamer", "Jogador Profissional", TranslationMemoryEntryType.TERM, isProtected = false),
+    )
 
+    private val manhwaHunterSystemEntries: List<TranslationMemoryEntry> = listOf(
         // 5. Torre, Constelações, Apocalipse, Sistema, Caçadores e Dungeons
         TranslationMemoryEntry("Constellation", "Constelação", TranslationMemoryEntryType.TITLE, isProtected = false),
         TranslationMemoryEntry("Constellations", "Constelações", TranslationMemoryEntryType.TITLE, isProtected = false),
@@ -314,7 +347,7 @@ object GlossaryPresets {
         TranslationMemoryEntry("Rulers", "Governantes", TranslationMemoryEntryType.TITLE, isProtected = false),
     )
 
-    val mangaPresetEntries: List<TranslationMemoryEntry> = listOf(
+    private val mangaHonorificsEntries: List<TranslationMemoryEntry> = listOf(
         // 1. Honoríficos, Parentesco e Tratamentos Japoneses
         TranslationMemoryEntry("-san", "-san", TranslationMemoryEntryType.NAME, isProtected = true),
         TranslationMemoryEntry("-kun", "-kun", TranslationMemoryEntryType.NAME, isProtected = true),
@@ -345,7 +378,9 @@ object GlossaryPresets {
         TranslationMemoryEntry("Oyakata-sama", "Oyakata-sama", TranslationMemoryEntryType.TITLE, isProtected = true),
         TranslationMemoryEntry("Hime-sama", "Princesa", TranslationMemoryEntryType.TITLE, isProtected = false),
         TranslationMemoryEntry("Kami-sama", "Kami-sama", TranslationMemoryEntryType.TITLE, isProtected = true),
+    )
 
+    private val mangaSchoolRomcomEntries: List<TranslationMemoryEntry> = listOf(
         // 2. Escolar, Romance, Comédia Romântica (RomCom), Esportes e Slice of Life
         TranslationMemoryEntry("Student Council", "Conselho Estudantil", TranslationMemoryEntryType.TERM, isProtected = false),
         TranslationMemoryEntry("Student Council President", "Presidente do Conselho Estudantil", TranslationMemoryEntryType.TITLE, isProtected = false),
@@ -388,7 +423,9 @@ object GlossaryPresets {
         TranslationMemoryEntry("Mangaka", "Mangaká", TranslationMemoryEntryType.TERM, isProtected = false),
         TranslationMemoryEntry("Idol", "Idol", TranslationMemoryEntryType.TERM, isProtected = true),
         TranslationMemoryEntry("Nationals", "Torneio Nacional", TranslationMemoryEntryType.TERM, isProtected = false),
+    )
 
+    private val mangaIsekaiFantasyEntries: List<TranslationMemoryEntry> = listOf(
         // 3. Isekai, Fantasia Medieval, Aventura e RPG Japonês
         TranslationMemoryEntry("Isekai", "Outro Mundo", TranslationMemoryEntryType.TERM, isProtected = false),
         TranslationMemoryEntry("Otherworlder", "Habitante de Outro Mundo", TranslationMemoryEntryType.TERM, isProtected = false),
@@ -450,7 +487,9 @@ object GlossaryPresets {
         TranslationMemoryEntry("Cursed Sword", "Espada Amaldiçoada", TranslationMemoryEntryType.TERM, isProtected = false),
         TranslationMemoryEntry("Saintess", "Santa", TranslationMemoryEntryType.TITLE, isProtected = false),
         TranslationMemoryEntry("Overpowered", "Apelão", TranslationMemoryEntryType.TERM, isProtected = false),
+    )
 
+    private val mangaCultureDailyEntries: List<TranslationMemoryEntry> = listOf(
         // 4. Cultura Japonesa, Cotidiano, Gastronomia, Festivais e Tradição
         TranslationMemoryEntry("Yukata", "Yukata", TranslationMemoryEntryType.TERM, isProtected = true),
         TranslationMemoryEntry("Kimono", "Quimono", TranslationMemoryEntryType.TERM, isProtected = false),
@@ -497,7 +536,9 @@ object GlossaryPresets {
         TranslationMemoryEntry("Yankee", "Delinquente", TranslationMemoryEntryType.TERM, isProtected = false),
         TranslationMemoryEntry("Delinquent", "Delinquente", TranslationMemoryEntryType.TERM, isProtected = false),
         TranslationMemoryEntry("Salaryman", "Assalariado", TranslationMemoryEntryType.TERM, isProtected = false),
+    )
 
+    private val mangaShonenSupernaturalEntries: List<TranslationMemoryEntry> = listOf(
         // 5. Shonen, Seinen, Samurai, Sobrenatural, Exorcismo e Artes Marciais
         TranslationMemoryEntry("Nakama", "Companheiro", TranslationMemoryEntryType.TERM, isProtected = false),
         TranslationMemoryEntry("Shinobi", "Shinobi", TranslationMemoryEntryType.TERM, isProtected = true),
@@ -562,6 +603,51 @@ object GlossaryPresets {
         TranslationMemoryEntry("Prodigy", "Prodígio", TranslationMemoryEntryType.TERM, isProtected = false),
     )
 
+    val manhwaPresetEntries: List<TranslationMemoryEntry> =
+        manhwaHonorificsEntries +
+            manhwaRomanceNobilityEntries +
+            manhwaMurimEntries +
+            manhwaModernSchoolEntries +
+            manhwaHunterSystemEntries
+
+    val mangaPresetEntries: List<TranslationMemoryEntry> =
+        mangaHonorificsEntries +
+            mangaSchoolRomcomEntries +
+            mangaIsekaiFantasyEntries +
+            mangaCultureDailyEntries +
+            mangaShonenSupernaturalEntries
+
+    fun getCategories(type: GlossaryPresetType): List<GlossaryCategory> =
+        GlossaryCategory.entries.filter { it.presetType == type }
+
+    fun getEntriesForCategory(category: GlossaryCategory): List<TranslationMemoryEntry> = when (category) {
+        GlossaryCategory.MANHWA_HONORIFICS -> manhwaHonorificsEntries
+        GlossaryCategory.MANHWA_ROMANCE_NOBILITY -> manhwaRomanceNobilityEntries
+        GlossaryCategory.MANHWA_MURIM -> manhwaMurimEntries
+        GlossaryCategory.MANHWA_MODERN_SCHOOL -> manhwaModernSchoolEntries
+        GlossaryCategory.MANHWA_HUNTER_SYSTEM -> manhwaHunterSystemEntries
+        GlossaryCategory.MANGA_HONORIFICS -> mangaHonorificsEntries
+        GlossaryCategory.MANGA_SCHOOL_ROMCOM -> mangaSchoolRomcomEntries
+        GlossaryCategory.MANGA_ISEKAI_FANTASY -> mangaIsekaiFantasyEntries
+        GlossaryCategory.MANGA_CULTURE_DAILY -> mangaCultureDailyEntries
+        GlossaryCategory.MANGA_SHONEN_SUPERNATURAL -> mangaShonenSupernaturalEntries
+    }
+
+    fun getEntriesForCategories(categories: Collection<GlossaryCategory>): List<TranslationMemoryEntry> {
+        val seen = HashSet<String>()
+        val result = ArrayList<TranslationMemoryEntry>()
+        GlossaryCategory.entries
+            .filter { it in categories }
+            .forEach { category ->
+                getEntriesForCategory(category).forEach { entry ->
+                    if (seen.add(entry.source.lowercase())) {
+                        result += entry
+                    }
+                }
+            }
+        return result
+    }
+
     fun getEntries(type: GlossaryPresetType): List<TranslationMemoryEntry> = when (type) {
         GlossaryPresetType.MANHWA -> manhwaPresetEntries
         GlossaryPresetType.MANGA -> mangaPresetEntries
@@ -575,4 +661,139 @@ object GlossaryPresets {
         TranslationMemory.replaceEntries(context, entries, merge = true)
         return entries.size
     }
+
+    fun applyCategories(
+        context: ComicTranslationContext,
+        categories: Collection<GlossaryCategory>,
+    ): Int {
+        val entries = getEntriesForCategories(categories)
+        if (entries.isEmpty()) return 0
+        TranslationMemory.replaceEntries(context, entries, merge = true)
+        return entries.size
+    }
+
+    fun recommendForWork(
+        title: String,
+        genresText: String = "",
+        description: String = "",
+        forcedType: GlossaryPresetType? = null,
+    ): SmartGlossaryRecommendation {
+        val haystack = "$title \n $genresText \n $description".lowercase()
+        val detectedType = forcedType ?: detectPresetType(haystack)
+        val categoriesForType = getCategories(detectedType)
+        val honorificCategory = categoriesForType.first { it.isHonorifics }
+
+        val matchedSubgenres = categoriesForType
+            .filterNot { it.isHonorifics }
+            .filter { category -> matchesCategoryKeywords(haystack, category) }
+
+        val usedFallbackAll = matchedSubgenres.isEmpty()
+        val finalCategories = LinkedHashSet<GlossaryCategory>().apply {
+            add(honorificCategory)
+            if (usedFallbackAll) {
+                addAll(categoriesForType)
+            } else {
+                addAll(matchedSubgenres)
+            }
+        }
+
+        return SmartGlossaryRecommendation(
+            detectedType = detectedType,
+            matchedCategories = finalCategories,
+            entries = getEntriesForCategories(finalCategories),
+            usedFallbackAll = usedFallbackAll,
+        )
+    }
+
+    private fun detectPresetType(haystack: String): GlossaryPresetType {
+        val manhwaScore = MANHWA_ORIGIN_KEYWORDS.count { containsKeyword(haystack, it) }
+        val mangaScore = MANGA_ORIGIN_KEYWORDS.count { containsKeyword(haystack, it) }
+        return if (mangaScore > manhwaScore) GlossaryPresetType.MANGA else GlossaryPresetType.MANHWA
+    }
+
+    private fun matchesCategoryKeywords(haystack: String, category: GlossaryCategory): Boolean {
+        val keywords = CATEGORY_KEYWORDS[category].orEmpty()
+        return keywords.any { containsKeyword(haystack, it) }
+    }
+
+    private fun containsKeyword(haystack: String, keyword: String): Boolean {
+        if (keyword.length <= 3) {
+            return Regex("(?<![\\p{L}\\p{N}])${Regex.escape(keyword)}(?![\\p{L}\\p{N}])").containsMatchIn(haystack)
+        }
+        return haystack.contains(keyword)
+    }
+
+    private val MANHWA_ORIGIN_KEYWORDS = listOf(
+        "manhwa", "webtoon", "korean", "coreano", "coreana", "coreia", "korea", "seoul", "seul",
+        "murim", "jianghu", "wuxia", "xianxia", "manhua", "cultivation", "cultivo", "chaebol",
+        "villainess", "vilã", "hunter", "caçador", "leveling", "dokkaebi", "constellation",
+        "oppa", "hyung", "sunbae", "manhwa", "long strip", "full color",
+    )
+
+    private val MANGA_ORIGIN_KEYWORDS = listOf(
+        "manga", "mangá", "japanese", "japonês", "japonesa", "japão", "japan", "tokyo", "tóquio",
+        "shounen", "shonen", "seinen", "shoujo", "josei", "maou", "shinobi", "ninja", "samurai",
+        "shinigami", "yakuza", "yukata", "onsen", "senpai", "kouhai", "gyaru", "tsundere", "mangaka",
+    )
+
+    private val CATEGORY_KEYWORDS: Map<GlossaryCategory, List<String>> = mapOf(
+        GlossaryCategory.MANHWA_ROMANCE_NOBILITY to listOf(
+            "romance", "romântico", "villainess", "vilã", "duke", "duque", "duchess", "duquesa",
+            "emperor", "imperador", "empress", "imperatriz", "princess", "princesa", "prince", "príncipe",
+            "noble", "nobre", "nobreza", "aristocra", "lady", "dama", "marriage", "casamento",
+            "fiance", "fiancé", "noivo", "noiva", "reincarnat", "reencarna", "transmigra",
+            "otome", "josei", "shoujo", "palace", "palácio", "royal", "realeza", "imperial",
+            "saintess", "santa", "tyrant", "tirano", "stepmother", "madrasta", "heiress", "herdeira",
+            "magic tower", "torre mágica", "archmage", "swordmaster", "aura",
+        ),
+        GlossaryCategory.MANHWA_MURIM to listOf(
+            "murim", "martial art", "artes marciais", "wuxia", "xianxia", "cultivat", "cultivo",
+            "sect", "seita", "mount hua", "monte hua", "heavenly demon", "demônio celestial",
+            "demonic cult", "culto demoníaco", "jianghu", "swordsman", "espadachim", "sword", "espada",
+            "fist", "punho", "qi", "dantian", "meridian", "shaolin", "wudang", "namgung",
+            "tang clan", "zhuge", "patriarch", "patriarca", "disciple", "discípulo", "young master",
+            "jovem mestre", "kangho", "northern blade", "nano machine",
+        ),
+        GlossaryCategory.MANHWA_MODERN_SCHOOL to listOf(
+            "school", "escolar", "vida escolar", "high school", "colégio", "slice of life", "cotidiano",
+            "drama", "delinquent", "gang", "gangue", "bully", "bullying", "lookism", "crew",
+            "chaebol", "ceo", "office", "escritório", "idol", "showbiz", "actor", "atriz", "ator",
+            "streamer", "gamer", "esports", "music", "música", "modern", "moderno", "sports", "esporte",
+            "mercenary", "mercenário", "university", "faculdade",
+        ),
+        GlossaryCategory.MANHWA_HUNTER_SYSTEM to listOf(
+            "hunter", "caçador", "dungeon", "masmorra", "gate", "portal", "tower", "torre",
+            "system", "sistema", "level", "leveling", "nível", "rank", "ranker", "player", "jogador",
+            "necromancer", "necromante", "constellation", "constelação", "scenario", "cenário",
+            "monster", "monstro", "awakened", "awakening", "desperto", "despertar", "guild", "guilda",
+            "raid", "incursão", "apocalypse", "apocalipse", "omniscient", "regression", "regressor",
+            "regressão", "returner", "sss", "solo", "rpg", "status window", "monarch", "monarca",
+        ),
+        GlossaryCategory.MANGA_SCHOOL_ROMCOM to listOf(
+            "school", "escolar", "vida escolar", "high school", "colégio", "romance", "romcom",
+            "comedy", "comédia", "slice of life", "cotidiano", "sports", "esporte", "club", "clube",
+            "gyaru", "tsundere", "yandere", "shoujo", "music", "band", "idol", "love", "amor",
+            "childhood friend", "amiga de infância", "amigo de infância", "festival",
+        ),
+        GlossaryCategory.MANGA_ISEKAI_FANTASY to listOf(
+            "isekai", "otherworld", "outro mundo", "fantasy", "fantasia", "magic", "magia",
+            "demon lord", "demon king", "rei demônio", "maou", "hero", "herói", "adventurer",
+            "aventureiro", "guild", "guilda", "dragon", "dragão", "elf", "elfo", "dungeon",
+            "masmorra", "labyrinth", "labirinto", "reincarnat", "reencarna", "summon", "invocado",
+            "rpg", "skill", "habilidade", "slime", "goblin", "grimoire", "grimório", "medieval",
+        ),
+        GlossaryCategory.MANGA_CULTURE_DAILY to listOf(
+            "historical", "histórico", "culture", "cultura", "gourmet", "cooking", "culinária",
+            "food", "comida", "gastronomia", "japan", "japão", "shrine", "santuário", "miko",
+            "kimono", "onsen", "ryokan", "yakuza", "crime", "mystery", "mistério", "drama",
+            "slice of life", "cotidiano", "salaryman",
+        ),
+        GlossaryCategory.MANGA_SHONEN_SUPERNATURAL to listOf(
+            "action", "ação", "shounen", "shonen", "seinen", "supernatural", "sobrenatural",
+            "demon", "demônio", "exorcist", "exorcista", "curse", "maldição", "jujutsu",
+            "shinobi", "ninja", "samurai", "ronin", "shogun", "pirate", "pirata", "shinigami",
+            "yokai", "youkai", "spirit", "espírito", "martial", "marciais", "battle", "batalha",
+            "horror", "terror", "dark", "vampire", "vampiro", "tournament", "torneio",
+        ),
+    )
 }

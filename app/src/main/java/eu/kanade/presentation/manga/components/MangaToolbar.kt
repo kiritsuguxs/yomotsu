@@ -55,6 +55,8 @@ fun MangaToolbar(
     onClickToggleAutomaticTranslation: (() -> Unit)? = null,
     onClickExportEpub: (() -> Unit)? = null,
     isAnime: Boolean = false,
+    mangaDescription: String = "",
+    mangaGenresText: String = "",
 
     // For action mode
     actionModeCounter: Int,
@@ -176,7 +178,15 @@ fun MangaToolbar(
                         add(
                             AppBar.OverflowAction(
                                 title = stringResource(ATMR.strings.translation_glossary_title),
-                                onClick = { navigator.push(TranslationGlossaryScreen(title)) },
+                                onClick = {
+                                    navigator.push(
+                                        TranslationGlossaryScreen(
+                                            mangaTitle = title,
+                                            mangaDescription = mangaDescription,
+                                            mangaGenresText = mangaGenresText,
+                                        ),
+                                    )
+                                },
                             ),
                         )
                         add(

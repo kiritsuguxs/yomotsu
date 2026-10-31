@@ -134,6 +134,11 @@ object TranslationGlossaryManager {
         context: ComicTranslationContext,
         preset: GlossaryPresetType,
     ): Int = GlossaryPresets.applyPreset(context, preset)
+
+    fun applyCategories(
+        context: ComicTranslationContext,
+        categories: Collection<GlossaryCategory>,
+    ): Int = GlossaryPresets.applyCategories(context, categories)
 }
 
 enum class GlossarySaveResult {
