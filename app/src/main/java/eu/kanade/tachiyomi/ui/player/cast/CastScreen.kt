@@ -13,14 +13,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import eu.kanade.tachiyomi.data.database.models.Episode
 import eu.kanade.tachiyomi.ui.player.cast.controls.CastInfoBox
 import eu.kanade.tachiyomi.ui.player.cast.controls.CastMainControls
 import eu.kanade.tachiyomi.ui.player.cast.controls.CastTopControls
-import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.anime.model.Anime
-import tachiyomi.domain.episode.model.Episode
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
+import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
 fun CastScreen(
@@ -67,7 +67,7 @@ fun CastScreen(
         CastInfoBox(
             anime = anime,
             episodeTitle = episode?.name,
-            episodeNumber = episode?.episode_number?.toDouble(),
+            episodeNumber = episode?.chapter_number?.toDouble(),
             modifier = Modifier.constrainAs(infoBox) {
                 if (isLandscape) {
                     start.linkTo(parent.start)

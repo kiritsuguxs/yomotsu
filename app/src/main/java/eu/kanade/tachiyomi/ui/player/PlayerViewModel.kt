@@ -63,12 +63,15 @@ import eu.kanade.tachiyomi.ui.player.domain.BrightnessManager
 import eu.kanade.tachiyomi.ui.player.domain.TrackSelect
 import eu.kanade.tachiyomi.ui.player.loader.EpisodeLoader
 import eu.kanade.tachiyomi.ui.player.loader.HosterLoader
+import android.content.Intent
 import eu.kanade.tachiyomi.ui.player.cast.CastEvent
 import eu.kanade.tachiyomi.ui.player.cast.CastManager
 import eu.kanade.tachiyomi.ui.player.cast.CastManagerImpl
 import eu.kanade.tachiyomi.ui.player.cast.CastProxyServerService
 import eu.kanade.tachiyomi.ui.player.cast.CastUiData
 import eu.kanade.tachiyomi.ui.player.cast.VideoInformation
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import okhttp3.Headers
 import eu.kanade.tachiyomi.ui.player.settings.AudioPreferences
@@ -2006,7 +2009,7 @@ class PlayerViewModel @JvmOverloads constructor(
             CastEvent.Connected -> {
                 isCasting.value = true
                 castUiData.update { it.copy(isLoadingEpisode = false) }
-                startCasting(startPosition = (episodePosition / 1000L).coerceAtLeast(0L))
+                startCasting(startPosition = ((episodePosition ?: 0L) / 1000L).coerceAtLeast(0L))
             }
             is CastEvent.Disconnected -> {
                 isCasting.value = false

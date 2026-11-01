@@ -147,15 +147,12 @@ fun CastMainControls(
                 value = seekPosition,
                 isInverted = false,
                 onClick = { },
-                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.width(72.dp),
             )
 
             if (castUiData.showChapterIndicator && castUiData.currentChapter != null) {
                 CurrentChapter(
                     chapter = castUiData.currentChapter,
-                    background = MaterialTheme.colorScheme.onBackground,
-                    onBackground = MaterialTheme.colorScheme.background,
                     onClick = onClickChapter,
                 )
             }
@@ -172,7 +169,6 @@ fun CastMainControls(
                 value = durationValue,
                 isInverted = castUiData.invertDurationTimer,
                 onClick = onClickDuration,
-                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.width(72.dp),
             )
         }
