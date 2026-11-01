@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.animeextension.pt.shinokai
 
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
+import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
@@ -148,10 +149,14 @@ class Shinokai : AnimeHttpSource() {
                 "lancamento", "em lançamento", "ongoing" -> SAnime.ONGOING
                 else -> SAnime.UNKNOWN
             }
-            author = detail.author ?: detail.studio
+            author = detail.author ?: detail.artist
             artist = detail.artist
         }
     }
+
+    // =========================== Seasons (Temporadas) ===========================
+
+    override fun seasonListParse(response: Response): List<SAnime> = emptyList()
 
     // =========================== Lista de Episódios ===========================
 
@@ -184,63 +189,102 @@ class Shinokai : AnimeHttpSource() {
         return episodes.reversed()
     }
 
-    // ============================ Vídeos / Streams ============================
+    // ============================ Hosters / Vídeos ============================
 
-    override fun videoListRequest(episode: SEpisode): Request {
-        return if (episode.url.startsWith("http")) {
-            GET(episode.url, headers)
-        } else {
-            GET("$baseUrl${episode.url}", headers)
-        }
-    }
-
-    override fun videoListParse(response: Response): List<Video> {
+    override fun hosterListParse(response: Response): List<Hoster> {
         val contentType = response.header("Content-Type") ?: ""
         val url = response.request.url.toString()
+        val hosters = mutableListOf<Hoster>()
 
+        // 1. Caso a requisição já tenha retornado o manifesto HLS (.m3u8)
         if (url.contains(".m3u8") || contentType.contains("application/x-mpegURL") || contentType.contains("application/vnd.apple.mpegurl")) {
-            return playlistUtils.extractFromHls(url, masterHeaders = headers)
+            val videos = playlistUtils.extractFromHls(url, masterHeaders = headers)
+            return listOf(
+                Hoster(
+                    hosterUrl = url,
+                    hosterName = "ShinoKai HLS",
+                    videoList = videos,
+                    internalData = "",
+                    lazy = false,
+                )
+            )
         }
 
+        // 2. Se for um arquivo de vídeo direto (.mp4, .mkv)
         if (url.contains(".mp4") || contentType.contains("video/mp4")) {
-            return listOf(Video(url, "Direto (MP4)", url, headers = headers))
+            val video = Video(url, "Direto (MP4)", url, headers = headers)
+            return listOf(
+                Hoster(
+                    hosterUrl = url,
+                    hosterName = "ShinoKai MP4",
+                    videoList = listOf(video),
+                    internalData = "",
+                    lazy = false,
+                )
+            )
         }
 
+        // 3. Resposta em JSON contendo stream_url ou array de fontes
         val body = response.body?.string().orEmpty()
-        val streamData = json.decodeFromString<StreamResponseDto>(body)
-        val videoList = mutableListOf<Video>()
+        val streamData = try {
+            json.decodeFromString<StreamResponseDto>(body)
+        } catch (_: Exception) {
+            null
+        }
 
-        if (streamData.sources.isNotEmpty()) {
-            streamData.sources.forEach { source ->
-                if (source.url.contains(".m3u8")) {
-                    videoList.addAll(
-                        playlistUtils.extractFromHls(
-                            source.url,
-                            videoNameGen = { "${source.quality ?: "HLS"} - $it" },
-                            masterHeaders = headers,
-                        )
+        if (streamData != null) {
+            streamData.sources.forEachIndexed { i, source ->
+                val videos = if (source.url.contains(".m3u8")) {
+                    playlistUtils.extractFromHls(
+                        source.url,
+                        videoNameGen = { "${source.quality ?: "HLS"} - $it" },
+                        masterHeaders = headers,
                     )
                 } else {
-                    videoList.add(Video(source.url, source.quality ?: "Padrão", source.url, headers = headers))
+                    listOf(Video(source.url, source.quality ?: "Padrão", source.url, headers = headers))
+                }
+                if (videos.isNotEmpty()) {
+                    hosters.add(
+                        Hoster(
+                            hosterUrl = source.url,
+                            hosterName = "Servidor ${i + 1} (${source.quality ?: "Padrão"})",
+                            videoList = videos,
+                            internalData = "",
+                            lazy = false,
+                        )
+                    )
+                }
+            }
+
+            val directUrl = streamData.streamUrl ?: streamData.videoUrl ?: streamData.url
+            if (!directUrl.isNullOrBlank() && hosters.none { it.hosterUrl == directUrl }) {
+                val videos = if (directUrl.contains(".m3u8")) {
+                    playlistUtils.extractFromHls(directUrl, masterHeaders = headers)
+                } else {
+                    listOf(Video(directUrl, streamData.quality ?: "Padrão", directUrl, headers = headers))
+                }
+                if (videos.isNotEmpty()) {
+                    hosters.add(
+                        Hoster(
+                            hosterUrl = directUrl,
+                            hosterName = "ShinoKai Principal",
+                            videoList = videos,
+                            internalData = "",
+                            lazy = false,
+                        )
+                    )
                 }
             }
         }
 
-        val directUrl = streamData.streamUrl ?: streamData.videoUrl ?: streamData.url
-        if (!directUrl.isNullOrBlank()) {
-            if (directUrl.contains(".m3u8")) {
-                videoList.addAll(playlistUtils.extractFromHls(directUrl, masterHeaders = headers))
-            } else {
-                videoList.add(Video(directUrl, streamData.quality ?: "Padrão", directUrl, headers = headers))
-            }
-        }
-
-        return videoList.ifEmpty {
-            throw Exception("Nenhum link de reprodução encontrado para este episódio.")
-        }
+        return hosters
     }
 
-    override fun videoUrlParse(response: Response): String = ""
+    override fun videoListParse(response: Response, hoster: Hoster): List<Video> {
+        return hoster.videoList
+    }
+
+    override fun videoUrlParse(response: Response): String = response.request.url.toString()
 
     override fun getFilterList(): AnimeFilterList = ShinokaiFilters.getFilterList()
 }
