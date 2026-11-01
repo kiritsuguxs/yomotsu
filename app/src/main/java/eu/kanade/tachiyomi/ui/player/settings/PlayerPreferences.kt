@@ -78,7 +78,10 @@ class PlayerPreferences(
 
     // External player
 
-    fun enableCast() = preferenceStore.getBoolean("pref_enable_cast", false)
+    // Cast
+    fun enableCast() = preferenceStore.getBoolean("pref_enable_cast", true)
+    fun castProxy() = preferenceStore.getBoolean("pref_cast_proxy", true)
+    fun castProxyPort() = preferenceStore.getInt("pref_cast_port", 8080)
 
     fun alwaysUseExternalPlayer() = preferenceStore.getBoolean(
         "pref_always_use_external_player",

@@ -526,4 +526,17 @@
     <string name="show_episode_previews">Miniaturas dos episódios</string>
     <string name="show_episode_summaries">Resumos dos episódios</string>
     <string name="pref_hosters">Hosters</string>
+
+    <!-- Transmissão / Cast -->
+    <string name="pref_cast">Chromecast</string>
+    <string name="pref_cast_enable">Ativar Chromecast</string>
+    <string name="pref_cast_proxy">Ativar proxy local</string>
+    <string name="pref_cast_port">Porta do servidor Chromecast</string>
+    <string name="pref_cast_port_subtitle">Use uma porta sem privilégios (1025-65535)</string>
+    <string name="pref_cast_port_error">Formato inválido</string>
+    <string name="pref_cast_server">Servidor de Transmissão</string>
+    <string name="cast_server_load_failed">Falha ao carregar na TV</string>
+    <string name="cast_server_start_failed">Falha ao iniciar o servidor de transmissão</string>
+    <string name="player_cast">Transmitir</string>
+    <string name="player_cast_unknown_device">Dispositivo desconhecido</string>
 </resources>

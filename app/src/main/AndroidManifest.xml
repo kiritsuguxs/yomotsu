@@ -313,6 +313,23 @@
             android:name="android.webkit.WebView.MetricsOptOut"
             android:value="true" />
 
+        <!-- Google Cast -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="eu.kanade.tachiyomi.ui.player.cast.CastOptionsProvider" />
+
+        <activity
+            android:name="eu.kanade.tachiyomi.ui.player.cast.CastExpandedControllerActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Tachiyomi" />
+
+        <service
+            android:name="eu.kanade.tachiyomi.ui.player.cast.CastProxyServerService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
     </application>
 
 </manifest>

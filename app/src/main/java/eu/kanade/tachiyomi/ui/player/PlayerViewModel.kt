@@ -63,6 +63,14 @@ import eu.kanade.tachiyomi.ui.player.domain.BrightnessManager
 import eu.kanade.tachiyomi.ui.player.domain.TrackSelect
 import eu.kanade.tachiyomi.ui.player.loader.EpisodeLoader
 import eu.kanade.tachiyomi.ui.player.loader.HosterLoader
+import eu.kanade.tachiyomi.ui.player.cast.CastEvent
+import eu.kanade.tachiyomi.ui.player.cast.CastManager
+import eu.kanade.tachiyomi.ui.player.cast.CastManagerImpl
+import eu.kanade.tachiyomi.ui.player.cast.CastProxyServerService
+import eu.kanade.tachiyomi.ui.player.cast.CastUiData
+import eu.kanade.tachiyomi.ui.player.cast.VideoInformation
+import kotlinx.serialization.encodeToString
+import okhttp3.Headers
 import eu.kanade.tachiyomi.ui.player.settings.AudioPreferences
 import eu.kanade.tachiyomi.ui.player.settings.GesturePreferences
 import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
@@ -251,6 +259,14 @@ class PlayerViewModel @JvmOverloads constructor(
 
     private val netflixTimeout = MutableStateFlow<Int?>(null)
 
+    // Chromecast
+    val castManager: CastManager = CastManagerImpl(viewModelScope)
+    val castState = castManager.castState
+    val castUiData = MutableStateFlow(CastUiData())
+    val isCasting = MutableStateFlow(false)
+
+    private val videoInformation by lazy { VideoInformation(context, json) }
+
     // Start mpvKt
 
         
@@ -346,6 +362,10 @@ class PlayerViewModel @JvmOverloads constructor(
     // ANK <--
 
     init {
+        castManager.castEvent
+            .onEach { handleCastFlow(it) }
+            .launchIn(viewModelScope)
+
         viewModelScope.launchIO {
             subtitlePreferences.subtitleSystemFonts.changes().collectLatest {
                 _fontList.update { _ -> fetchFonts(it).toPersistentList() }
@@ -1978,19 +1998,148 @@ class PlayerViewModel @JvmOverloads constructor(
         }
     }
 
+    private fun handleCastFlow(event: CastEvent) {
+        when (event) {
+            CastEvent.ConnectionStart -> {
+                castUiData.update { it.copy(isLoadingEpisode = true) }
+            }
+            CastEvent.Connected -> {
+                isCasting.value = true
+                castUiData.update { it.copy(isLoadingEpisode = false) }
+                startCasting(startPosition = (episodePosition / 1000L).coerceAtLeast(0L))
+            }
+            is CastEvent.Disconnected -> {
+                isCasting.value = false
+                stopCastProxyServer()
+            }
+            CastEvent.ConnectionError -> {
+                isCasting.value = false
+                stopCastProxyServer()
+            }
+            is CastEvent.NextEpisode -> {
+                changeEpisode(previous = !event.next, autoPlay = true)
+            }
+            is CastEvent.OnSecondReached -> {
+                onSecondReached(event.position.toLong(), customDuration = if (event.duration > 0) event.duration else null)
+                if (event.duration > 0) {
+                    castUiData.update { it.copy(duration = event.duration) }
+                }
+            }
+            is CastEvent.TrackLoadResult -> {}
+            CastEvent.Ready -> {
+                castUiData.update { it.copy(isLoadingEpisode = false) }
+            }
+            CastEvent.LoadingFailed -> {
+                castUiData.update { it.copy(isLoadingEpisode = false) }
+            }
+            is CastEvent.PlaybackError -> {
+                castUiData.update { it.copy(isLoadingEpisode = false) }
+            }
+        }
+    }
+
+    private fun stopCastProxyServer() {
+        try {
+            context.stopService(Intent(context, CastProxyServerService::class.java))
+        } catch (_: Exception) {}
+    }
+
+    private fun getLocalIpAddress(): String? {
+        try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces() ?: return null
+            for (intf in interfaces) {
+                val addrs = intf.inetAddresses ?: continue
+                for (addr in addrs) {
+                    if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
+                        val host = addr.hostAddress
+                        if (host != null && !host.startsWith("127.")) {
+                            return host
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return null
+    }
+
+    fun startCasting(startPosition: Long = 0) {
+        val video = currentVideo.value ?: return
+        val anime = currentAnime.value ?: return
+        val episode = currentEpisode.value ?: return
+        val source = currentSource.value
+
+        pause()
+
+        viewModelScope.launch {
+            val ipAddress = getLocalIpAddress() ?: "127.0.0.1"
+            val port = playerPreferences.castProxyPort().get()
+            val useProxy = playerPreferences.castProxy().get()
+
+            // FIX BUG 1: Start proxy server for BOTH online AND local files!
+            val needServer = useProxy || !isEpisodeOnline.value
+            if (needServer) {
+                try {
+                    context.startService(
+                        Intent(context, CastProxyServerService::class.java)
+                            .putExtra(CastProxyServerService.EXTRA_ADDRESS, ipAddress),
+                    )
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e) { "Failed to start CastProxyServerService" }
+                }
+            }
+
+            val headers = video.headers ?: (source as? AnimeHttpSource)?.headers ?: Headers.Builder().build()
+            val headersMap = headers.toMap()
+
+            val targetVideoUrl = when {
+                !isEpisodeOnline.value -> {
+                    "http://$ipAddress:$port/local?url=" + java.net.URLEncoder.encode(video.videoUrl, "UTF-8")
+                }
+                useProxy -> {
+                    "http://$ipAddress:$port/proxy?url=" + java.net.URLEncoder.encode(video.videoUrl, "UTF-8") +
+                        "&header=" + java.net.URLEncoder.encode(json.encodeToString(headersMap), "UTF-8")
+                }
+                else -> video.videoUrl
+            }
+
+            val codecInfo = withContext(Dispatchers.IO) {
+                videoInformation.getVideoInformation(video.videoUrl, headers)
+            }
+
+            if (codecInfo.duration != null && codecInfo.duration > 0) {
+                castUiData.update { it.copy(duration = codecInfo.duration.toLong()) }
+            }
+
+            val proxiedVideo = video.copy(videoUrl = targetVideoUrl)
+
+            castManager.startCasting(
+                video = proxiedVideo,
+                videoInformation = codecInfo,
+                subtitleTracks = codecInfo.tracks.filter { it.type == "subtitle" },
+                audioTracks = codecInfo.tracks.filter { it.type == "audio" },
+                subtitleId = null,
+                audioId = null,
+                anime = anime,
+                episodeTitle = episode.name,
+                startPosition = startPosition,
+                playbackRate = playerPreferences.playerSpeed().get().toDouble(),
+            )
+        }
+    }
+
     /**
      * Called every time a second is reached in the player. Used to mark the flag of episode being
      * seen, update tracking services, enqueue downloaded episode deletion and download next episode.
      */
-    fun onSecondReached(position: Long) {
+    fun onSecondReached(position: Long, customDuration: Long? = null) {
         // ANK -->
         // ANK <--
 
         if (isLoadingEpisode.value) return
         val currentEp = currentEpisode.value ?: return
         if (episodeId == -1L) return
-        val dur = duration ?: return
-        if (dur == 0) return
+        val dur = customDuration?.toInt() ?: duration ?: return
+        if (dur <= 0) return
 
         // Set netflix-style timeout
         netflixTimeout.value?.let {

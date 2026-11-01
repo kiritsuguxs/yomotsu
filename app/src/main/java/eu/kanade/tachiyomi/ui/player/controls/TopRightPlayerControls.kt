@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import eu.kanade.tachiyomi.ui.player.cast.CastButton
 import eu.kanade.tachiyomi.ui.player.controls.components.AutoPlaySwitch
 import eu.kanade.tachiyomi.ui.player.controls.components.ControlsButton
 import tachiyomi.presentation.core.components.material.padding
@@ -52,6 +53,10 @@ fun TopRightPlayerControls(
     // video
     onQualityClick: () -> Unit,
     isEpisodeOnline: Boolean?,
+
+    // cast
+    isCastConnected: Boolean = false,
+    isCastLoading: Boolean = false,
 
     // more
     onMoreClick: () -> Unit,
@@ -92,6 +97,11 @@ fun TopRightPlayerControls(
                 horizontalSpacing = MaterialTheme.padding.small,
             )
         }
+        CastButton(
+            isConnected = isCastConnected,
+            isLoading = isCastLoading,
+            horizontalSpacing = MaterialTheme.padding.small,
+        )
         ControlsButton(
             icon = Icons.Default.MoreVert,
             onClick = onMoreClick,

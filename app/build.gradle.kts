@@ -140,6 +140,7 @@ dependencies {
     implementation(libs.mpv.lib)
     implementation(libs.arthenica.smartexceptions)
     implementation(libs.ffmpeg.kit)
+    implementation(libs.nanohttpd)
     implementation(libs.bundles.cast)
     baselineProfile(projects.baselineProfile)
     implementation(projects.i18n); implementation(projects.i18nAniyomi); implementation(projects.i18nAt); implementation(projects.core.archive); implementation(projects.core.common); implementation(projects.core.viewmodel); implementation(projects.coreMetadata); implementation(projects.sourceApi); implementation(projects.sourceLocal); implementation(projects.data); implementation(projects.domain); implementation(projects.presentationCore); implementation(projects.presentationWidget); implementation(projects.telemetry)

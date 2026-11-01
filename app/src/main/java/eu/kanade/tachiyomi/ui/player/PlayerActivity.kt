@@ -54,10 +54,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import eu.kanade.tachiyomi.ui.player.cast.CastScreen
+import eu.kanade.tachiyomi.ui.player.controls.Dialogs
+import eu.kanade.tachiyomi.ui.player.controls.Sheets
+import kotlinx.coroutines.flow.update
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -291,6 +296,7 @@ class PlayerActivity : BaseActivity() {
         enableEdgeToEdge()
         registerSecureActivity(this)
         super.onCreate(savedInstanceState)
+        viewModel.castManager.initialize(this)
 
         try {
             setupPlayerMPV()
@@ -388,18 +394,56 @@ class PlayerActivity : BaseActivity() {
                             }
                         },
                     )
-                    PlayerControls(
-                        viewModel = viewModel,
-                        onBackPress = {
-                            if (isPipSupportedAndEnabled && viewModel.paused == false &&
-                                playerPreferences.pipOnExit().get()
-                            ) {
-                                enterPictureInPictureMode(createPipParams())
-                            } else {
+                    val isCasting by viewModel.isCasting.collectAsState()
+                    if (isCasting) {
+                        val castState by viewModel.castState.collectAsState()
+                        val castUiData by viewModel.castUiData.collectAsState()
+                        val currentAnime by viewModel.currentAnime.collectAsState()
+                        val currentEpisode by viewModel.currentEpisode.collectAsState()
+                        val hasPreviousEpisode by viewModel.hasPreviousEpisode.collectAsState()
+                        val hasNextEpisode by viewModel.hasNextEpisode.collectAsState()
+
+                        CastScreen(
+                            anime = currentAnime,
+                            episode = currentEpisode,
+                            castState = castState,
+                            castUiData = castUiData,
+                            hasPrevious = hasPreviousEpisode,
+                            hasNext = hasNextEpisode,
+                            onBack = {
+                                viewModel.castManager.disconnect()
                                 finish()
-                            }
-                        },
-                    )
+                            },
+                            onStopCasting = {
+                                viewModel.castManager.disconnect()
+                            },
+                            onSkipIntroClicked = { viewModel.onSkipIntro() },
+                            onClickChapter = { },
+                            onClickDuration = {
+                                viewModel.castUiData.update { it.copy(invertDurationTimer = !it.invertDurationTimer) }
+                            },
+                            onSeekBarChange = { viewModel.castManager.seekTo(it.toLong()) },
+                            onClickPlaylist = { viewModel.showDialog(Dialogs.EpisodeList) },
+                            onClickSpeed = { viewModel.showSheet(Sheets.PlaybackSpeed) },
+                            onClickSubs = { viewModel.showSheet(Sheets.SubtitleTracks) },
+                            onClickAudio = { viewModel.showSheet(Sheets.AudioTracks) },
+                            onClickQuality = { viewModel.showSheet(Sheets.QualityTracks) },
+                            onCastManagerEvent = { viewModel.castManager.handleCastManagerEvent(it) },
+                        )
+                    } else {
+                        PlayerControls(
+                            viewModel = viewModel,
+                            onBackPress = {
+                                if (isPipSupportedAndEnabled && viewModel.paused == false &&
+                                    playerPreferences.pipOnExit().get()
+                                ) {
+                                    enterPictureInPictureMode(createPipParams())
+                                } else {
+                                    finish()
+                                }
+                            },
+                        )
+                    }
 
                     val errorDialogMessage by playerErrorDialogState
                     if (errorDialogMessage != null) {

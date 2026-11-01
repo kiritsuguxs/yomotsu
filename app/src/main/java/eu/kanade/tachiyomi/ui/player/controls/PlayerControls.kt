@@ -481,6 +481,7 @@ fun PlayerControls(
                         end.linkTo(parent.end)
                     },
                 ) {
+                    val castState by viewModel.castState.collectAsState()
                     TopRightPlayerControls(
                         autoPlayEnabled = autoPlayEnabled,
                         onToggleAutoPlay = { viewModel.setAutoPlay(it) },
@@ -490,6 +491,8 @@ fun PlayerControls(
                         onAudioLongClick = { viewModel.showPanel(Panels.AudioDelay) },
                         onQualityClick = { viewModel.showSheet(Sheets.QualityTracks) },
                         isEpisodeOnline = isEpisodeOnline,
+                        isCastConnected = castState.isConnected,
+                        isCastLoading = castState.isLoading,
                         onMoreClick = { viewModel.showSheet(Sheets.More) },
                         onMoreLongClick = { viewModel.showPanel(Panels.VideoFilters) },
                     )

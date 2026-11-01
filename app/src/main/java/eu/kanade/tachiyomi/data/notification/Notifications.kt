@@ -82,6 +82,9 @@ object Notifications {
      * Notification channel and ids used for app and extension updates.
      */
     private const val GROUP_APK_UPDATES = "group_apk_updates"
+    const val CHANNEL_CAST_SERVER = "cast_server_channel"
+    const val ID_CAST_SERVER = -200
+
     const val CHANNEL_APP_UPDATE = "app_apk_update_channel"
     const val ID_APP_UPDATER = 1
     const val CHANNEL_EXTENSIONS_UPDATE = "ext_apk_update_channel"
@@ -136,6 +139,10 @@ object Notifications {
             listOf(
                 buildNotificationChannel(CHANNEL_COMMON, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_common))
+                },
+                buildNotificationChannel(CHANNEL_CAST_SERVER, IMPORTANCE_LOW) {
+                    setName("Chromecast")
+                    setShowBadge(false)
                 },
                 buildNotificationChannel(CHANNEL_LIBRARY_PROGRESS, IMPORTANCE_LOW) {
                     setName(context.stringResource(MR.strings.channel_progress))

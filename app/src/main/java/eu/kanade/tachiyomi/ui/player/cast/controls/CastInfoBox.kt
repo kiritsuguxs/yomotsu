@@ -1,0 +1,66 @@
+package eu.kanade.tachiyomi.ui.player.cast.controls
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import eu.kanade.presentation.manga.components.MangaCover
+import eu.kanade.presentation.util.formatChapterNumber as formatEpisodeNumber
+import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.domain.anime.model.Anime
+import tachiyomi.i18n.aniyomi.AYMR
+import tachiyomi.presentation.core.components.material.SECONDARY_ALPHA
+import tachiyomi.presentation.core.components.material.padding
+
+@Composable
+fun CastInfoBox(
+    anime: Anime?,
+    episodeTitle: String?,
+    episodeNumber: Double?,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+    ) {
+        MangaCover.Book(
+            data = anime,
+            modifier = Modifier.weight(1f),
+        )
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = anime?.title ?: stringResource(AYMR.strings.label_anime),
+                fontSize = 16.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = episodeTitle ?: stringResource(
+                    AYMR.strings.display_mode_episode,
+                    formatEpisodeNumber(episodeNumber ?: 1.0),
+                ),
+                fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = SECONDARY_ALPHA),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
