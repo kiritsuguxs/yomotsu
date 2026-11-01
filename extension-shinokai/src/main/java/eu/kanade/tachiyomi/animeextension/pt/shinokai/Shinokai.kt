@@ -281,7 +281,7 @@ class Shinokai : AnimeHttpSource() {
     }
 
     override fun videoListParse(response: Response, hoster: Hoster): List<Video> {
-        return hoster.videoList
+        return hoster.videoList.orEmpty()
     }
 
     override fun videoUrlParse(response: Response): String = response.request.url.toString()
