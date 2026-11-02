@@ -492,7 +492,7 @@ fun PlayerControls(
                         onQualityClick = { viewModel.showSheet(Sheets.QualityTracks) },
                         isEpisodeOnline = isEpisodeOnline,
                         isCastConnected = castState.isConnected,
-                        isCastLoading = castState.isLoading,
+                        isCastLoading = castState.isConnected && castState.isLoading,
                         onMoreClick = { viewModel.showSheet(Sheets.More) },
                         onMoreLongClick = { viewModel.showPanel(Panels.VideoFilters) },
                     )

@@ -191,6 +191,7 @@ class CastManagerImpl(
                     }
                 }
             } else {
+                _castState.update { it.copy(isLoading = false) }
                 _castEvent.emit(CastEvent.LoadingFailed)
             }
 

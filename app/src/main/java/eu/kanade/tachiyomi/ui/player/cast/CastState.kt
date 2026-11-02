@@ -7,11 +7,11 @@ data class CastState(
     val isConnected: Boolean = false,
     val deviceName: String? = null,
     val playing: Boolean = false,
-    val buffering: Boolean = true,
+    val buffering: Boolean = false,
     val position: Long = 0L,
     val durationMs: Long = 0L,
     val hasLoadedVideo: Boolean = false,
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val lastLoadedSubId: Long = -1L,
     val lastLoadedAudioId: Long = -1L,
 
