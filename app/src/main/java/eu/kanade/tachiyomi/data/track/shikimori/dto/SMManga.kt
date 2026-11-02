@@ -11,14 +11,16 @@ data class SMSearchResult(
 
 @Serializable
 data class SMMangaResults(
-    val mangas: List<SMManga>,
+    val mangas: List<SMManga> = emptyList(),
+    val animes: List<SMManga> = emptyList(),
 )
 
 @Serializable
 data class SMManga(
     val id: Long,
     val name: String,
-    val chapters: Long,
+    val chapters: Long = 0,
+    val episodes: Long = 0,
     val score: Double?,
     val url: String,
     val status: String?,
@@ -32,7 +34,7 @@ data class SMManga(
         return TrackSearch.create(trackId).apply {
             remote_id = this@SMManga.id
             title = name
-            total_chapters = chapters
+            total_chapters = if (episodes > 0) episodes else chapters
             cover_url = poster?.mainUrl.orEmpty()
             summary = description.orEmpty()
             score = this@SMManga.score?.takeIf { it > 0.0 } ?: -1.0

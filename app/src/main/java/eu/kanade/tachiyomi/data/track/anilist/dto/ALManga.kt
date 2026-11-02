@@ -28,7 +28,11 @@ data class ALManga(
         cover_url = imageUrl
         summary = description?.htmlDecode() ?: ""
         score = averageScore.toDouble()
-        tracking_url = AnilistApi.mangaUrl(remote_id)
+        tracking_url = if (format in listOf("TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA", "MUSIC")) {
+            AnilistApi.animeUrl(remote_id)
+        } else {
+            AnilistApi.mangaUrl(remote_id)
+        }
         publishing_status = publishingStatus
         publishing_type = format
         if (startDateFuzzy != 0L) {

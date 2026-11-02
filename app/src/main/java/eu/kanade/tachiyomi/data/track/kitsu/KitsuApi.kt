@@ -58,8 +58,9 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
                         }
                         putJsonObject("media") {
                             putJsonObject("data") {
+                                val isAnime = track.tracking_url.contains("/anime")
                                 put("id", track.remote_id)
-                                put("type", "manga")
+                                put("type", if (isAnime) "anime" else "manga")
                             }
                         }
                     }
@@ -129,22 +130,27 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
     }
 
     suspend fun search(query: String): List<TrackSearch> {
+        return search(query, isAnime = false)
+    }
+
+    suspend fun search(query: String, isAnime: Boolean = false): List<TrackSearch> {
         return withIOContext {
             with(json) {
                 authClient.newCall(GET(ALGOLIA_KEY_URL))
                     .awaitSuccess()
                     .parseAs<KitsuSearchResult>()
                     .let {
-                        algoliaSearch(it.media.key, query)
+                        algoliaSearch(it.media.key, query, isAnime)
                     }
             }
         }
     }
 
-    private suspend fun algoliaSearch(key: String, query: String): List<TrackSearch> {
+    private suspend fun algoliaSearch(key: String, query: String, isAnime: Boolean = false): List<TrackSearch> {
         return withIOContext {
+            val filter = if (isAnime) ALGOLIA_ANIME_FILTER else ALGOLIA_FILTER
             val jsonObject = buildJsonObject {
-                put("params", "query=${URLEncoder.encode(query, StandardCharsets.UTF_8.name())}$ALGOLIA_FILTER")
+                put("params", "query=${URLEncoder.encode(query, StandardCharsets.UTF_8.name())}$filter")
             }
 
             with(json) {
@@ -163,7 +169,7 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
                     .awaitSuccess()
                     .parseAs<KitsuAlgoliaSearchResult>()
                     .hits
-                    .filter { it.subtype != "novel" }
+                    .filter { if (isAnime) true else it.subtype != "novel" }
                     .map { it.toTrack() }
             }
         }
@@ -171,9 +177,12 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
 
     suspend fun findLibManga(track: Track, userId: String): Track? {
         return withIOContext {
+            val isAnime = track.tracking_url.contains("/anime")
+            val idParam = if (isAnime) "filter[anime_id]" else "filter[manga_id]"
+            val incParam = if (isAnime) "anime" else "manga"
             val url = "${BASE_URL}library-entries".toUri().buildUpon()
-                .encodedQuery("filter[manga_id]=${track.remote_id}&filter[user_id]=$userId")
-                .appendQueryParameter("include", "manga")
+                .encodedQuery("$idParam=${track.remote_id}&filter[user_id]=$userId")
+                .appendQueryParameter("include", incParam)
                 .build()
             with(json) {
                 authClient.newCall(GET(url.toString()))
@@ -192,9 +201,11 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
 
     suspend fun getLibManga(track: Track): Track {
         return withIOContext {
+            val isAnime = track.tracking_url.contains("/anime")
+            val incParam = if (isAnime) "anime" else "manga"
             val url = "${BASE_URL}library-entries".toUri().buildUpon()
                 .encodedQuery("filter[id]=${track.library_id}")
-                .appendQueryParameter("include", "manga")
+                .appendQueryParameter("include", incParam)
                 .build()
             with(json) {
                 authClient.newCall(GET(url.toString()))
@@ -249,6 +260,7 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
         private const val BASE_URL = "https://kitsu.app/api/edge/"
         private const val LOGIN_URL = "https://kitsu.app/api/oauth/token"
         private const val BASE_MANGA_URL = "https://kitsu.app/manga/"
+        private const val BASE_ANIME_URL = "https://kitsu.app/anime/"
         private const val ALGOLIA_KEY_URL = "https://kitsu.app/api/edge/algolia-keys/media/"
 
         private const val ALGOLIA_APP_ID = "AWQO5J657S"
@@ -256,12 +268,19 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
         private const val ALGOLIA_FILTER = "&facetFilters=%5B%22kind%3Amanga%22%5D&attributesToRetrieve=" +
             "%5B%22synopsis%22%2C%22averageRating%22%2C%22canonicalTitle%22%2C%22chapterCount%22%2C%22" +
             "posterImage%22%2C%22startDate%22%2C%22subtype%22%2C%22endDate%22%2C%20%22id%22%5D"
+        private const val ALGOLIA_ANIME_FILTER = "&facetFilters=%5B%22kind%3Aanime%22%5D&attributesToRetrieve=" +
+            "%5B%22synopsis%22%2C%22averageRating%22%2C%22canonicalTitle%22%2C%22episodeCount%22%2C%22chapterCount%22%2C%22" +
+            "posterImage%22%2C%22startDate%22%2C%22subtype%22%2C%22endDate%22%2C%20%22id%22%5D"
 
         private const val VND_API_JSON = "application/vnd.api+json"
         private val VND_JSON_MEDIA_TYPE = VND_API_JSON.toMediaType()
 
         fun mangaUrl(remoteId: Long): String {
             return BASE_MANGA_URL + remoteId
+        }
+
+        fun animeUrl(remoteId: Long): String {
+            return BASE_ANIME_URL + remoteId
         }
 
         fun refreshTokenRequest(token: String) = POST(

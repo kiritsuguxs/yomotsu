@@ -72,20 +72,26 @@ class MyAnimeListApi(
     }
 
     suspend fun search(query: String): List<TrackSearch> {
+        return search(query, isAnime = false)
+    }
+
+    suspend fun search(query: String, isAnime: Boolean = false): List<TrackSearch> {
         return withIOContext {
-            val url = "$BASE_API_URL/manga".toUri().buildUpon()
+            val endpoint = if (isAnime) "anime" else "manga"
+            val fields = if (isAnime) ANIME_SEARCH_FIELDS else SEARCH_FIELDS
+            val url = "$BASE_API_URL/$endpoint".toUri().buildUpon()
                 // MAL API throws a 400 when the query is over 64 characters...
                 .appendQueryParameter("q", query.take(64))
                 .appendQueryParameter("nsfw", "true")
-                .appendQueryParameter("fields", SEARCH_FIELDS)
+                .appendQueryParameter("fields", fields)
                 .build()
             with(json) {
                 authClient.newCall(GET(url.toString()))
                     .awaitSuccess()
                     .parseAs<MALSearchResult>()
                     .data
-                    .filter { !(it.node.mediaType.contains("novel")) }
-                    .map { parseSearchItem(it.node) }
+                    .filter { if (isAnime) true else !(it.node.mediaType.contains("novel")) }
+                    .map { parseSearchItem(it.node, isAnime) }
             }
         }
     }
@@ -107,11 +113,16 @@ class MyAnimeListApi(
 
     suspend fun updateItem(track: Track): Track {
         return withIOContext {
+            val isAnime = track.tracking_url.contains("/anime")
+            val endpointUrl = if (isAnime) animeUrl(track.remote_id) else mangaUrl(track.remote_id)
+            val isRepeating = track.status == MyAnimeList.REREADING
+            val statusString = track.toMyAnimeListStatus(isAnime) ?: if (isAnime) "watching" else "reading"
+
             val formBodyBuilder = FormBody.Builder()
-                .add("status", track.toMyAnimeListStatus() ?: "reading")
-                .add("is_rereading", (track.status == MyAnimeList.REREADING).toString())
+                .add("status", statusString)
+                .add(if (isAnime) "is_rewatching" else "is_rereading", isRepeating.toString())
                 .add("score", track.score.toString())
-                .add("num_chapters_read", track.last_chapter_read.toInt().toString())
+                .add(if (isAnime) "num_watched_episodes" else "num_chapters_read", track.last_chapter_read.toInt().toString())
             convertToIsoDate(track.started_reading_date)?.let {
                 formBodyBuilder.add("start_date", it)
             }
@@ -120,7 +131,7 @@ class MyAnimeListApi(
             }
 
             val request = Request.Builder()
-                .url(mangaUrl(track.remote_id).toString())
+                .url(endpointUrl.toString())
                 .put(formBodyBuilder.build())
                 .build()
             with(json) {
@@ -149,24 +160,31 @@ class MyAnimeListApi(
 
     suspend fun deleteItem(track: DomainTrack) {
         withIOContext {
+            val isAnime = track.remoteUrl.contains("/anime")
+            val endpointUrl = if (isAnime) animeUrl(track.remoteId) else mangaUrl(track.remoteId)
             authClient
-                .newCall(DELETE(mangaUrl(track.remoteId).toString()))
+                .newCall(DELETE(endpointUrl.toString()))
                 .awaitSuccess()
         }
     }
 
     suspend fun findListItem(track: Track): Track? {
         return withIOContext {
-            val uri = "$BASE_API_URL/manga".toUri().buildUpon()
+            val isAnime = track.tracking_url.contains("/anime")
+            val endpoint = if (isAnime) "anime" else "manga"
+            val countField = if (isAnime) "num_episodes" else "num_chapters"
+            val uri = "$BASE_API_URL/$endpoint".toUri().buildUpon()
                 .appendPath(track.remote_id.toString())
-                .appendQueryParameter("fields", "num_chapters,my_list_status{start_date,finish_date}")
+                .appendQueryParameter("fields", "$countField,my_list_status{start_date,finish_date}")
                 .build()
             with(json) {
                 authClient.newCall(GET(uri.toString()))
                     .awaitSuccess()
                     .parseAs<MALListItem>()
                     .let { item ->
-                        track.total_chapters = item.numChapters
+                        val eps = item.numEpisodes
+                        val chs = item.numChapters
+                        track.total_chapters = if (isAnime && eps > 0) eps else if (chs > 0) chs else eps
                         item.myListStatus?.let { parseMangaItem(it, track) }
                     }
             }
@@ -213,24 +231,27 @@ class MyAnimeListApi(
 
     private fun parseMangaItem(listStatus: MALListItemStatus, track: Track): Track {
         return track.apply {
-            val isRereading = listStatus.isRereading
+            val isRereading = listStatus.isRereading || listStatus.isRewatching
             status = if (isRereading) MyAnimeList.REREADING else getStatus(listStatus.status)
-            last_chapter_read = listStatus.numChaptersRead
+            val readCount = if (listStatus.numEpisodesWatched > 0) listStatus.numEpisodesWatched else listStatus.numChaptersRead
+            last_chapter_read = readCount
             score = listStatus.score.toDouble()
             listStatus.startDate?.let { started_reading_date = parseDate(it) }
             listStatus.finishDate?.let { finished_reading_date = parseDate(it) }
         }
     }
 
-    private fun parseSearchItem(searchItem: MALManga): TrackSearch {
+    private fun parseSearchItem(searchItem: MALManga, isAnime: Boolean = false): TrackSearch {
         return TrackSearch.create(trackId).apply {
             remote_id = searchItem.id
             title = searchItem.title
             summary = searchItem.synopsis
-            total_chapters = searchItem.numChapters
+            val eps = searchItem.numEpisodes
+            val chs = searchItem.numChapters
+            total_chapters = if (isAnime && eps > 0) eps else if (chs > 0) chs else eps
             score = searchItem.mean
             cover_url = searchItem.covers?.large.orEmpty()
-            tracking_url = "https://myanimelist.net/manga/$remote_id"
+            tracking_url = if (isAnime) "https://myanimelist.net/anime/$remote_id" else "https://myanimelist.net/manga/$remote_id"
             publishing_status = searchItem.status.replace("_", " ")
             publishing_type = searchItem.mediaType.replace("_", " ")
             start_date = searchItem.startDate ?: ""
@@ -275,6 +296,9 @@ class MyAnimeListApi(
         private const val SEARCH_FIELDS =
             "id,title,synopsis,num_chapters,mean,main_picture,status,media_type,start_date,authors{first_name,last_name}"
 
+        private const val ANIME_SEARCH_FIELDS =
+            "id,title,synopsis,num_episodes,mean,main_picture,status,media_type,start_date"
+
         private const val LIST_PAGINATION_AMOUNT = 250
 
         private var codeVerifier: String = ""
@@ -286,6 +310,11 @@ class MyAnimeListApi(
             .build()
 
         fun mangaUrl(id: Long): Uri = "$BASE_API_URL/manga".toUri().buildUpon()
+            .appendPath(id.toString())
+            .appendPath("my_list_status")
+            .build()
+
+        fun animeUrl(id: Long): Uri = "$BASE_API_URL/anime".toUri().buildUpon()
             .appendPath(id.toString())
             .appendPath("my_list_status")
             .build()

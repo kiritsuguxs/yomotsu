@@ -82,18 +82,23 @@ class BangumiApi(
     }
 
     suspend fun search(search: String): List<TrackSearch> {
+        return search(search, isAnime = false)
+    }
+
+    suspend fun search(search: String, isAnime: Boolean = false): List<TrackSearch> {
         // This API is marked as experimental in the documentation
         // but that has been the case since 2022 with few significant
         // changes to the schema for this endpoint since
         // "实验性 API， 本 schema 和实际的 API 行为都可能随时发生改动"
         return withIOContext {
             val url = "$API_URL/v0/search/subjects?limit=20"
+            val typeValue = if (isAnime) 2 else 1 // 2: Anime, 1: Book
             val body = buildJsonObject {
                 put("keyword", search)
                 put("sort", "match")
                 putJsonObject("filter") {
                     putJsonArray("type") {
-                        add(1) // "Book" (书籍) type
+                        add(typeValue)
                     }
                 }
             }
@@ -104,7 +109,7 @@ class BangumiApi(
                     .awaitSuccess()
                     .parseAs<BGMSearchResult>()
                     .data
-                    .filter { it.platform == null || it.platform == "漫画" }
+                    .filter { if (isAnime) true else (it.platform == null || it.platform == "漫画") }
                     .map { it.toTrackSearch(trackId) }
             }
         }

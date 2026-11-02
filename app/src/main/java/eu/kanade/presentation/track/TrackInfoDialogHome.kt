@@ -78,6 +78,7 @@ fun TrackInfoDialogHome(
     onRemoved: (TrackItem) -> Unit,
     onCopyLink: (TrackItem) -> Unit,
     onTogglePrivate: (TrackItem) -> Unit,
+    isAnime: Boolean = false,
 ) {
     Column(
         modifier = Modifier
@@ -96,7 +97,7 @@ fun TrackInfoDialogHome(
                 TrackInfoItem(
                     title = item.track.title,
                     tracker = item.tracker,
-                    status = item.tracker.getStatus(item.track.status),
+                    status = item.tracker.getStatus(item.track.status, isAnime),
                     onStatusClick = { onStatusClick(item) },
                     chapters = "${item.track.lastChapterRead.toInt()}".let {
                         val totalChapters = item.track.totalChapters

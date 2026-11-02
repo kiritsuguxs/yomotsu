@@ -22,12 +22,17 @@ interface Tracker {
 
     val supportsPrivateTracking: Boolean
 
+    val supportsAnime: Boolean
+        get() = false
+
     @DrawableRes
     fun getLogo(): Int
 
     fun getStatusList(): List<Long>
 
     fun getStatus(status: Long): StringResource?
+
+    fun getStatus(status: Long, isAnime: Boolean): StringResource? = getStatus(status)
 
     fun getReadingStatus(): Long
 
@@ -49,6 +54,8 @@ interface Tracker {
     suspend fun bind(track: Track, hasReadChapters: Boolean = false): Track
 
     suspend fun search(query: String): List<TrackSearch>
+
+    suspend fun search(query: String, isAnime: Boolean): List<TrackSearch> = search(query)
 
     suspend fun refresh(track: Track): Track
 

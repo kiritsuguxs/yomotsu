@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.WheelNumberPicker
 import tachiyomi.presentation.core.components.WheelTextPicker
@@ -96,9 +97,10 @@ fun TrackChapterSelector(
     range: Iterable<Int>,
     onConfirm: () -> Unit,
     onDismissRequest: () -> Unit,
+    isAnime: Boolean = false,
 ) {
     BaseSelector(
-        title = stringResource(MR.strings.chapters),
+        title = stringResource(if (isAnime) AYMR.strings.episodes else MR.strings.chapters),
         content = {
             WheelNumberPicker(
                 items = range.toList(),

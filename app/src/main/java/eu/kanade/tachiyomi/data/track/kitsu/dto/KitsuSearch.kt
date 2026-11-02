@@ -27,7 +27,8 @@ data class KitsuAlgoliaSearchResult(
 data class KitsuAlgoliaSearchItem(
     val id: Long,
     val canonicalTitle: String,
-    val chapterCount: Long?,
+    val chapterCount: Long? = null,
+    val episodeCount: Long? = null,
     val subtype: String?,
     val posterImage: KitsuSearchItemCover?,
     val synopsis: String?,
@@ -39,10 +40,11 @@ data class KitsuAlgoliaSearchItem(
         return TrackSearch.create(TrackerManager.KITSU).apply {
             remote_id = this@KitsuAlgoliaSearchItem.id
             title = canonicalTitle
-            total_chapters = chapterCount ?: 0
+            total_chapters = episodeCount ?: chapterCount ?: 0
             cover_url = posterImage?.original ?: ""
             summary = synopsis ?: ""
-            tracking_url = KitsuApi.mangaUrl(remote_id)
+            val isAnime = episodeCount != null || subtype in listOf("TV", "movie", "OVA", "ONA", "special", "music")
+            tracking_url = if (isAnime) KitsuApi.animeUrl(remote_id) else KitsuApi.mangaUrl(remote_id)
             score = averageRating ?: -1.0
             publishing_status = if (endDate == null) "Publishing" else "Finished"
             publishing_type = subtype ?: ""

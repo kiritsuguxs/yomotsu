@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.track.kitsu.dto.KitsuOAuth
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import kotlinx.serialization.json.Json
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import uy.kohesive.injekt.injectLazy
 import java.text.DecimalFormat
 import tachiyomi.domain.track.model.Track as DomainTrack
@@ -33,6 +34,8 @@ class Kitsu(id: Long) : BaseTracker(id, "Kitsu"), DeletableTracker {
 
     private val api by lazy { KitsuApi(client, interceptor) }
 
+    override val supportsAnime: Boolean = true
+
     override fun getLogo() = R.drawable.brand_kitsu
 
     override fun getStatusList(): List<Long> {
@@ -46,6 +49,19 @@ class Kitsu(id: Long) : BaseTracker(id, "Kitsu"), DeletableTracker {
         ON_HOLD -> MR.strings.on_hold
         DROPPED -> MR.strings.dropped
         else -> null
+    }
+
+    override fun getStatus(status: Long, isAnime: Boolean): StringResource? = if (isAnime) {
+        when (status) {
+            READING -> AYMR.strings.watching
+            PLAN_TO_READ -> AYMR.strings.plan_to_watch
+            COMPLETED -> MR.strings.completed
+            ON_HOLD -> MR.strings.on_hold
+            DROPPED -> MR.strings.dropped
+            else -> null
+        }
+    } else {
+        getStatus(status)
     }
 
     override fun getReadingStatus(): Long = READING
@@ -114,7 +130,11 @@ class Kitsu(id: Long) : BaseTracker(id, "Kitsu"), DeletableTracker {
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
-        return api.search(query)
+        return search(query, isAnime = false)
+    }
+
+    override suspend fun search(query: String, isAnime: Boolean): List<TrackSearch> {
+        return api.search(query, isAnime)
     }
 
     override suspend fun refresh(track: Track): Track {

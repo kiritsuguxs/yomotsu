@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.data.track.shikimori.dto.SMOAuth
 import kotlinx.serialization.json.Json
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import uy.kohesive.injekt.injectLazy
 import tachiyomi.domain.track.model.Track as DomainTrack
 
@@ -31,6 +32,8 @@ class Shikimori(id: Long) : BaseTracker(id, "Shikimori"), DeletableTracker {
     private val interceptor by lazy { ShikimoriInterceptor(this) }
 
     private val api by lazy { ShikimoriApi(id, client, interceptor) }
+
+    override val supportsAnime: Boolean = true
 
     override fun getScoreList(): List<String> = SCORE_LIST
 
@@ -81,7 +84,11 @@ class Shikimori(id: Long) : BaseTracker(id, "Shikimori"), DeletableTracker {
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
-        return api.search(query)
+        return search(query, isAnime = false)
+    }
+
+    override suspend fun search(query: String, isAnime: Boolean): List<TrackSearch> {
+        return api.search(query, isAnime)
     }
 
     override suspend fun refresh(track: Track): Track {
@@ -107,6 +114,20 @@ class Shikimori(id: Long) : BaseTracker(id, "Shikimori"), DeletableTracker {
         DROPPED -> MR.strings.dropped
         REREADING -> MR.strings.repeating
         else -> null
+    }
+
+    override fun getStatus(status: Long, isAnime: Boolean): StringResource? = if (isAnime) {
+        when (status) {
+            READING -> AYMR.strings.watching
+            PLAN_TO_READ -> AYMR.strings.plan_to_watch
+            COMPLETED -> MR.strings.completed
+            ON_HOLD -> MR.strings.on_hold
+            DROPPED -> MR.strings.dropped
+            REREADING -> AYMR.strings.repeating_anime
+            else -> null
+        }
+    } else {
+        getStatus(status)
     }
 
     override fun getReadingStatus(): Long = READING

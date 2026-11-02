@@ -135,12 +135,14 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
         }
     }
 
-    suspend fun search(search: String): List<TrackSearch> {
+    suspend fun search(search: String, isAnime: Boolean = false): List<TrackSearch> {
         return withIOContext {
+            val typeParam = if (isAnime) "type: ANIME" else "type: MANGA, format_not_in: [NOVEL]"
+            val countField = if (isAnime) "episodes" else "chapters"
             val query = $$"""
             |query Search($query: String) {
                 |Page (perPage: 50) {
-                    |media(search: $query, type: MANGA, format_not_in: [NOVEL]) {
+                    |media(search: $query, $typeParam) {
                         |id
                         |staff {
                             |edges {
@@ -164,7 +166,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                         |format
                         |countryOfOrigin
                         |status
-                        |chapters
+                        |$countField
                         |description
                         |startDate {
                             |year
@@ -340,9 +342,14 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
         private const val API_URL = "https://graphql.anilist.co/"
         private const val BASE_URL = "https://anilist.co/api/v2/"
         private const val BASE_MANGA_URL = "https://anilist.co/manga/"
+        private const val BASE_ANIME_URL = "https://anilist.co/anime/"
 
         fun mangaUrl(mediaId: Long): String {
             return BASE_MANGA_URL + mediaId
+        }
+
+        fun animeUrl(mediaId: Long): String {
+            return BASE_ANIME_URL + mediaId
         }
 
         fun authUrl(): Uri = "${BASE_URL}oauth/authorize".toUri().buildUpon()

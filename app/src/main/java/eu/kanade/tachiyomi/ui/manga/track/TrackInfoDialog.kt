@@ -93,6 +93,7 @@ data class TrackInfoDialogHomeScreen(
     private val mangaId: Long,
     private val mangaTitle: String,
     private val sourceId: Long,
+    private val isAnime: Boolean = false,
 ) : Screen() {
 
     @Composable
@@ -104,6 +105,7 @@ data class TrackInfoDialogHomeScreen(
             extras = CreationExtras {
                 set(Model.MANGA_ID_KEY, mangaId)
                 set(Model.SOURCE_ID_KEY, sourceId)
+                set(Model.IS_ANIME_KEY, isAnime)
             },
         )
 
@@ -118,6 +120,7 @@ data class TrackInfoDialogHomeScreen(
                     TrackStatusSelectorScreen(
                         track = it.track!!,
                         serviceId = it.tracker.id,
+                        isAnime = isAnime,
                     ),
                 )
             },
@@ -126,6 +129,7 @@ data class TrackInfoDialogHomeScreen(
                     TrackChapterSelectorScreen(
                         track = it.track!!,
                         serviceId = it.tracker.id,
+                        isAnime = isAnime,
                     ),
                 )
             },
@@ -165,6 +169,7 @@ data class TrackInfoDialogHomeScreen(
                             initialQuery = it.track?.title ?: mangaTitle,
                             currentUrl = it.track?.remoteUrl,
                             serviceId = it.tracker.id,
+                            isAnime = isAnime,
                         ),
                     )
                 }
@@ -181,6 +186,7 @@ data class TrackInfoDialogHomeScreen(
             },
             onCopyLink = { context.copyTrackerLink(it) },
             onTogglePrivate = viewModel::togglePrivate,
+            isAnime = isAnime,
         )
     }
 
@@ -204,18 +210,21 @@ data class TrackInfoDialogHomeScreen(
     class Model(
         private val mangaId: Long,
         private val sourceId: Long,
+        private val isAnime: Boolean = false,
         private val getTracks: GetTracks = Injekt.get(),
     ) : StateViewModel<Model.State>(State()) {
 
         companion object {
             val MANGA_ID_KEY = CreationExtras.Key<Long>()
             val SOURCE_ID_KEY = CreationExtras.Key<Long>()
+            val IS_ANIME_KEY = CreationExtras.Key<Boolean>()
 
             val Factory = viewModelFactory {
                 initializer {
                     Model(
                         mangaId = get(MANGA_ID_KEY)!!,
                         sourceId = get(SOURCE_ID_KEY)!!,
+                        isAnime = get(IS_ANIME_KEY) ?: false,
                     )
                 }
             }
@@ -280,6 +289,7 @@ data class TrackInfoDialogHomeScreen(
             val loggedInTrackers = Injekt.get<TrackerManager>().loggedInTrackers()
             val source = Injekt.get<SourceManager>().getOrStub(sourceId)
             return loggedInTrackers
+                .filter { if (isAnime) it.supportsAnime else true }
                 // Map to TrackItem
                 .map { service -> TrackItem(find { it.trackerId == service.id }, service) }
                 // Show only if the service supports this manga's source
@@ -296,6 +306,7 @@ data class TrackInfoDialogHomeScreen(
 private data class TrackStatusSelectorScreen(
     private val track: Track,
     private val serviceId: Long,
+    private val isAnime: Boolean = false,
 ) : Screen() {
 
     @Composable
@@ -312,7 +323,7 @@ private data class TrackStatusSelectorScreen(
         TrackStatusSelector(
             selection = state.selection,
             onSelectionChange = viewModel::setSelection,
-            selections = remember { viewModel.getSelections() },
+            selections = remember { viewModel.getSelections(isAnime) },
             onConfirm = {
                 viewModel.setStatus()
                 navigator.pop()
@@ -340,8 +351,8 @@ private data class TrackStatusSelectorScreen(
             }
         }
 
-        fun getSelections(): Map<Long, StringResource?> {
-            return tracker.getStatusList().associateWith { tracker.getStatus(it) }
+        fun getSelections(isAnime: Boolean = false): Map<Long, StringResource?> {
+            return tracker.getStatusList().associateWith { tracker.getStatus(it, isAnime) }
         }
 
         fun setSelection(selection: Long) {
@@ -364,6 +375,7 @@ private data class TrackStatusSelectorScreen(
 private data class TrackChapterSelectorScreen(
     private val track: Track,
     private val serviceId: Long,
+    private val isAnime: Boolean = false,
 ) : Screen() {
 
     @Composable
@@ -387,6 +399,7 @@ private data class TrackChapterSelectorScreen(
                 navigator.pop()
             },
             onDismissRequest = navigator::pop,
+            isAnime = isAnime,
         )
     }
 
@@ -748,6 +761,7 @@ data class TrackerSearchScreen(
     private val initialQuery: String,
     private val currentUrl: String?,
     private val serviceId: Long,
+    private val isAnime: Boolean = false,
 ) : Screen() {
 
     @Composable
@@ -760,6 +774,7 @@ data class TrackerSearchScreen(
                 set(Model.CURRENT_URL_KEY, currentUrl)
                 set(Model.INITIAL_QUERY_KEY, initialQuery)
                 set(Model.TRACKER_KEY, Injekt.get<TrackerManager>().get(serviceId)!!)
+                set(Model.IS_ANIME_KEY, isAnime)
             },
         )
 
@@ -788,6 +803,7 @@ data class TrackerSearchScreen(
         private val currentUrl: String?,
         initialQuery: String,
         private val tracker: Tracker,
+        private val isAnime: Boolean = false,
     ) : StateViewModel<Model.State>(State()) {
 
         companion object {
@@ -795,6 +811,7 @@ data class TrackerSearchScreen(
             val CURRENT_URL_KEY = CreationExtras.Key<String?>()
             val INITIAL_QUERY_KEY = CreationExtras.Key<String>()
             val TRACKER_KEY = CreationExtras.Key<Tracker>()
+            val IS_ANIME_KEY = CreationExtras.Key<Boolean>()
 
             val Factory = viewModelFactory {
                 initializer {
@@ -803,6 +820,7 @@ data class TrackerSearchScreen(
                         currentUrl = get(CURRENT_URL_KEY),
                         initialQuery = get(INITIAL_QUERY_KEY)!!,
                         tracker = get(TRACKER_KEY)!!,
+                        isAnime = get(IS_ANIME_KEY) ?: false,
                     )
                 }
             }
@@ -824,7 +842,7 @@ data class TrackerSearchScreen(
 
                 val result = withIOContext {
                     try {
-                        val results = tracker.search(query)
+                        val results = tracker.search(query, isAnime)
                         Result.success(results)
                     } catch (e: Throwable) {
                         Result.failure(e)

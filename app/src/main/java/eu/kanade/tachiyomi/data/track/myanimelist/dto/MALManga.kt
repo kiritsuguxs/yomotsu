@@ -9,7 +9,9 @@ data class MALManga(
     val title: String,
     val synopsis: String = "",
     @SerialName("num_chapters")
-    val numChapters: Long,
+    val numChapters: Long = 0,
+    @SerialName("num_episodes")
+    val numEpisodes: Long = 0,
     val mean: Double = -1.0,
     @SerialName("main_picture")
     val covers: MALMangaCovers?,

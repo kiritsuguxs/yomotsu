@@ -24,12 +24,13 @@ data class KitsuListSearchResult(
             remote_id = included[0].id
             library_id = userData.id
             title = manga.canonicalTitle
-            total_chapters = manga.chapterCount ?: 0
+            total_chapters = (manga.episodeCount ?: manga.chapterCount) ?: 0
             cover_url = manga.posterImage?.original ?: ""
             summary = manga.synopsis ?: ""
-            tracking_url = KitsuApi.mangaUrl(remote_id)
+            val isAnime = manga.episodeCount != null || manga.animeType != null
+            tracking_url = if (isAnime) KitsuApi.animeUrl(remote_id) else KitsuApi.mangaUrl(remote_id)
             publishing_status = manga.status
-            publishing_type = manga.mangaType ?: ""
+            publishing_type = manga.animeType ?: manga.mangaType ?: ""
             start_date = userDataAttrs.startedAt ?: ""
             started_reading_date = KitsuDateHelper.parse(userDataAttrs.startedAt)
             finished_reading_date = KitsuDateHelper.parse(userDataAttrs.finishedAt)
@@ -73,8 +74,10 @@ data class KitsuListSearchItemIncluded(
 @Serializable
 data class KitsuListSearchItemIncludedAttributes(
     val canonicalTitle: String,
-    val chapterCount: Long?,
-    val mangaType: String?,
+    val chapterCount: Long? = null,
+    val episodeCount: Long? = null,
+    val mangaType: String? = null,
+    val animeType: String? = null,
     val posterImage: KitsuSearchItemCover?,
     val synopsis: String?,
     val startDate: String?,

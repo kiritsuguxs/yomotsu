@@ -38,13 +38,18 @@ class ShikimoriApi(
 
     suspend fun addLibManga(track: Track, userId: String): Track {
         return withIOContext {
+            val isAnime = track.tracking_url.contains("/animes/")
             with(json) {
                 val payload = buildJsonObject {
                     putJsonObject("user_rate") {
                         put("user_id", userId)
                         put("target_id", track.remote_id)
-                        put("target_type", "Manga")
-                        put("chapters", track.last_chapter_read.toInt())
+                        put("target_type", if (isAnime) "Anime" else "Manga")
+                        if (isAnime) {
+                            put("episodes", track.last_chapter_read.toInt())
+                        } else {
+                            put("chapters", track.last_chapter_read.toInt())
+                        }
                         put("score", track.score.toInt())
                         put("status", track.toShikimoriStatus())
                     }
@@ -76,13 +81,20 @@ class ShikimoriApi(
     }
 
     suspend fun search(search: String): List<TrackSearch> {
+        return search(search, isAnime = false)
+    }
+
+    suspend fun search(search: String, isAnime: Boolean = false): List<TrackSearch> {
         return withIOContext {
+            val rootField = if (isAnime) "animes" else "mangas"
+            val countField = if (isAnime) "episodes" else "chapters"
+            val filterParam = if (isAnime) "" else ", kind:\"!light_novel,!novel\""
             val query = $$"""
             |query($query: String) {
-                |mangas(search: $query, limit: 20, kind:"!light_novel,!novel") {
+                |$rootField(search: $query, limit: 20$filterParam) {
                     |id
                     |name
-                    |chapters
+                    |$countField
                     |kind
                     |poster {
                         |mainUrl
@@ -118,8 +130,10 @@ class ShikimoriApi(
                 )
                     .awaitSuccess()
                     .parseAs<SMSearchResult>()
-                    .data.mangas
-                    .map { it.toTrack(trackId) }
+                    .let { res ->
+                        (if (isAnime && res.data.animes.isNotEmpty()) res.data.animes else res.data.mangas)
+                            .map { it.toTrack(trackId) }
+                    }
             }
         }
     }

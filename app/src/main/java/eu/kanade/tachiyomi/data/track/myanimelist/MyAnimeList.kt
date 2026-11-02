@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALOAuth
 import kotlinx.serialization.json.Json
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import uy.kohesive.injekt.injectLazy
 import tachiyomi.domain.track.model.Track as DomainTrack
 
@@ -36,6 +37,8 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
 
     override val supportsReadingDates: Boolean = true
 
+    override val supportsAnime: Boolean = true
+
     override fun getLogo() = R.drawable.brand_myanimelist
 
     override fun getStatusList(): List<Long> {
@@ -50,6 +53,20 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
         DROPPED -> MR.strings.dropped
         REREADING -> MR.strings.repeating
         else -> null
+    }
+
+    override fun getStatus(status: Long, isAnime: Boolean): StringResource? = if (isAnime) {
+        when (status) {
+            READING -> AYMR.strings.watching
+            PLAN_TO_READ -> AYMR.strings.plan_to_watch
+            COMPLETED -> MR.strings.completed
+            ON_HOLD -> MR.strings.on_hold
+            DROPPED -> MR.strings.dropped
+            REREADING -> AYMR.strings.repeating_anime
+            else -> null
+        }
+    } else {
+        getStatus(status)
     }
 
     override fun getReadingStatus(): Long = READING
@@ -111,6 +128,10 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
+        return search(query, isAnime = false)
+    }
+
+    override suspend fun search(query: String, isAnime: Boolean): List<TrackSearch> {
         if (query.startsWith(SEARCH_ID_PREFIX)) {
             query.substringAfter(SEARCH_ID_PREFIX).toIntOrNull()?.let { id ->
                 return listOf(api.getMangaDetails(id))
@@ -123,7 +144,7 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
             }
         }
 
-        return api.search(query)
+        return api.search(query, isAnime)
     }
 
     override suspend fun refresh(track: Track): Track {

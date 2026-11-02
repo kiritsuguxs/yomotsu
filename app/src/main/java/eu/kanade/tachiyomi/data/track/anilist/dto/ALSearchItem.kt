@@ -11,7 +11,8 @@ data class ALSearchItem(
     val format: String,
     val status: String?,
     val startDate: ALFuzzyDate,
-    val chapters: Long?,
+    val chapters: Long? = null,
+    val episodes: Long? = null,
     val averageScore: Int?,
     val staff: ALStaff,
     val countryOfOrigin: String = "",
@@ -32,7 +33,7 @@ data class ALSearchItem(
         },
         publishingStatus = status ?: "",
         startDateFuzzy = startDate.toEpochMilli(),
-        totalChapters = chapters ?: 0,
+        totalChapters = (episodes ?: chapters) ?: 0,
         averageScore = averageScore ?: -1,
         staff = staff,
     )

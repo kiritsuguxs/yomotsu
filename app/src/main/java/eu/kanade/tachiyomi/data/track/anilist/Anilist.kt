@@ -10,6 +10,7 @@ import eu.kanade.tachiyomi.data.track.anilist.dto.ALOAuth
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import kotlinx.serialization.json.Json
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import uy.kohesive.injekt.injectLazy
 import tachiyomi.domain.track.model.Track as DomainTrack
 
@@ -40,6 +41,8 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
 
     override val supportsPrivateTracking: Boolean = true
 
+    override val supportsAnime: Boolean = true
+
     private val scorePreference = trackPreferences.anilistScoreType
 
     init {
@@ -66,6 +69,20 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
         DROPPED -> MR.strings.dropped
         REREADING -> MR.strings.repeating
         else -> null
+    }
+
+    override fun getStatus(status: Long, isAnime: Boolean): StringResource? = if (isAnime) {
+        when (status) {
+            READING -> AYMR.strings.watching
+            PLAN_TO_READ -> AYMR.strings.plan_to_watch
+            COMPLETED -> MR.strings.completed
+            ON_HOLD -> MR.strings.on_hold
+            DROPPED -> MR.strings.dropped
+            REREADING -> AYMR.strings.repeating_anime
+            else -> null
+        }
+    } else {
+        getStatus(status)
     }
 
     override fun getReadingStatus(): Long = READING
@@ -196,7 +213,11 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
-        return api.search(query)
+        return search(query, isAnime = false)
+    }
+
+    override suspend fun search(query: String, isAnime: Boolean): List<TrackSearch> {
+        return api.search(query, isAnime)
     }
 
     override suspend fun refresh(track: Track): Track {
