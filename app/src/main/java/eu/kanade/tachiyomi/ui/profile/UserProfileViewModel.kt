@@ -256,7 +256,8 @@ class UserProfileViewModel(
             if (oldUri != null && oldUri.contains("profile_images")) {
                 try { File(oldUri).delete() } catch (_: Exception) {}
             }
-            val localPath = copyUriToLocal(uriString, "avatar_${System.currentTimeMillis()}.jpg")
+            val ext = try { getExtensionFromUri(Uri.parse(uriString)) } catch (_: Exception) { "jpg" }
+            val localPath = copyUriToLocal(uriString, "avatar_${System.currentTimeMillis()}.$ext")
             if (localPath != null) {
                 profilePreferences.setAvatarCustom(localPath)
             }
@@ -275,7 +276,8 @@ class UserProfileViewModel(
             if (oldUri != null && oldUri.contains("profile_images")) {
                 try { File(oldUri).delete() } catch (_: Exception) {}
             }
-            val localPath = copyUriToLocal(uriString, "banner_${System.currentTimeMillis()}.jpg")
+            val ext = try { getExtensionFromUri(Uri.parse(uriString)) } catch (_: Exception) { "jpg" }
+            val localPath = copyUriToLocal(uriString, "banner_${System.currentTimeMillis()}.$ext")
             if (localPath != null) {
                 profilePreferences.setBannerCustom(localPath)
             }
@@ -286,6 +288,36 @@ class UserProfileViewModel(
     // Compatibility aliases
     fun setAvatarUri(uriString: String?) = setAvatarCustom(uriString)
     fun setBannerUri(uriString: String?) = setBannerCustom(uriString)
+
+    private fun getExtensionFromUri(uri: Uri): String {
+        val mimeType = try { context.contentResolver.getType(uri) } catch (_: Exception) { null }
+        return when {
+            mimeType?.contains("gif", ignoreCase = true) == true -> "gif"
+            mimeType?.contains("webp", ignoreCase = true) == true -> "webp"
+            mimeType?.contains("png", ignoreCase = true) == true -> "png"
+            mimeType?.contains("jpeg", ignoreCase = true) == true || mimeType?.contains("jpg", ignoreCase = true) == true -> "jpg"
+            else -> {
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        val bytes = ByteArray(12)
+                        val count = stream.read(bytes)
+                        if (count >= 3 && bytes[0] == 'G'.code.toByte() && bytes[1] == 'I'.code.toByte() && bytes[2] == 'F'.code.toByte()) {
+                            return "gif"
+                        }
+                        if (count >= 12 && bytes[0] == 'R'.code.toByte() && bytes[1] == 'I'.code.toByte() && bytes[2] == 'F'.code.toByte() && bytes[3] == 'F'.code.toByte() &&
+                            bytes[8] == 'W'.code.toByte() && bytes[9] == 'E'.code.toByte() && bytes[10] == 'B'.code.toByte() && bytes[11] == 'P'.code.toByte()
+                        ) {
+                            return "webp"
+                        }
+                        if (count >= 8 && bytes[0] == 0x89.toByte() && bytes[1] == 'P'.code.toByte() && bytes[2] == 'N'.code.toByte() && bytes[3] == 'G'.code.toByte()) {
+                            return "png"
+                        }
+                    }
+                } catch (_: Exception) {}
+                "jpg"
+            }
+        }
+    }
 
     private fun copyUriToLocal(uriString: String?, filename: String): String? {
         if (uriString == null) return null

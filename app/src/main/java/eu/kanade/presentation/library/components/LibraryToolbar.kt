@@ -24,9 +24,9 @@ import tachiyomi.presentation.core.components.Pill
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
 
-import androidx.compose.material.icons.outlined.Tv
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.LibraryBooks
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import eu.kanade.presentation.components.TopMediaSelector
 
 @Composable
 fun LibraryToolbar(
@@ -34,7 +34,7 @@ fun LibraryToolbar(
     selectedCount: Int,
     title: LibraryToolbarTitle,
     selectedMedia: String,
-    onClickMediaSelect: () -> Unit,
+    onSelectMedia: (String) -> Unit,
     onClickUnselectAll: () -> Unit,
     onClickSelectAll: () -> Unit,
     onClickInvertSelection: () -> Unit,
@@ -55,7 +55,7 @@ fun LibraryToolbar(
     else -> LibraryRegularToolbar(
         title = title,
         selectedMedia = selectedMedia,
-        onClickMediaSelect = onClickMediaSelect,
+        onSelectMedia = onSelectMedia,
         hasFilters = hasActiveFilters,
         searchQuery = searchQuery,
         onSearchQueryChange = onSearchQueryChange,
@@ -71,7 +71,7 @@ fun LibraryToolbar(
 private fun LibraryRegularToolbar(
     title: LibraryToolbarTitle,
     selectedMedia: String,
-    onClickMediaSelect: () -> Unit,
+    onSelectMedia: (String) -> Unit,
     hasFilters: Boolean,
     searchQuery: String?,
     onSearchQueryChange: (String?) -> Unit,
@@ -82,32 +82,27 @@ private fun LibraryRegularToolbar(
     scrollBehavior: TopAppBarScrollBehavior?,
 ) {
     val pillAlpha = if (isSystemInDarkTheme()) 0.12f else 0.08f
-    SearchToolbar(
-        navigateUp = onClickMediaSelect,
-        navigationIcon = when (selectedMedia) {
-            "Anime" -> Icons.Outlined.Tv
-            "Novel" -> Icons.Outlined.LibraryBooks
-            else -> Icons.Outlined.MenuBook
-        },
-        titleContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = title.text,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, false),
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (title.numberOfManga != null) {
-                    Pill(
-                        text = "${title.numberOfManga}",
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = pillAlpha),
-                        fontSize = 14.sp,
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SearchToolbar(
+            titleContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title.text,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, false),
+                        overflow = TextOverflow.Ellipsis,
                     )
+                    if (title.numberOfManga != null) {
+                        Pill(
+                            text = "${title.numberOfManga}",
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = pillAlpha),
+                            fontSize = 14.sp,
+                        )
+                    }
                 }
-            }
-        },
-        searchQuery = searchQuery,
-        onChangeSearchQuery = onSearchQueryChange,
+            },
+            searchQuery = searchQuery,
+            onChangeSearchQuery = onSearchQueryChange,
         actions = {
             val filterTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current
             AppBarActions(
@@ -135,6 +130,13 @@ private fun LibraryRegularToolbar(
         },
         scrollBehavior = scrollBehavior,
     )
+        if (searchQuery == null) {
+            TopMediaSelector(
+                selectedMedia = selectedMedia,
+                onSelectMedia = onSelectMedia,
+            )
+        }
+    }
 }
 
 @Composable

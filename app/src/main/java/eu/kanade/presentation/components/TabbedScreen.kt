@@ -42,6 +42,7 @@ fun TabbedScreen(
     searchQuery: String? = null,
     onChangeSearchQuery: (String?) -> Unit = {},
     navigationIcon: (@Composable () -> Unit)? = null,
+    topContent: (@Composable () -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -51,18 +52,23 @@ fun TabbedScreen(
             val tab = tabs[state.currentPage]
             val searchEnabled = tab.searchEnabled
 
-            SearchToolbar(
-                titleContent = { 
-                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        navigationIcon?.invoke()
-                        AppBarTitle(title ?: titleRes?.let { stringResource(it) }) 
-                    }
-                },
-                searchEnabled = searchEnabled,
-                searchQuery = if (searchEnabled) searchQuery else null,
-                onChangeSearchQuery = onChangeSearchQuery,
-                actions = { AppBarActions(tab.actions) },
-            )
+            Column {
+                SearchToolbar(
+                    titleContent = { 
+                        androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            navigationIcon?.invoke()
+                            AppBarTitle(title ?: titleRes?.let { stringResource(it) }) 
+                        }
+                    },
+                    searchEnabled = searchEnabled,
+                    searchQuery = if (searchEnabled) searchQuery else null,
+                    onChangeSearchQuery = onChangeSearchQuery,
+                    actions = { AppBarActions(tab.actions) },
+                )
+                if (searchQuery == null) {
+                    topContent?.invoke()
+                }
+            }
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { contentPadding ->

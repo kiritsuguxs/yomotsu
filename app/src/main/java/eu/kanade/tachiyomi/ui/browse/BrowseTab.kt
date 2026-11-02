@@ -56,6 +56,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
+import eu.kanade.presentation.components.TopMediaSelector
+import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalAnimeSearchScreen
+import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalNovelSearchScreen
+
 data object BrowseTab : Tab {
 
     override val options: TabOptions
@@ -71,7 +75,12 @@ data object BrowseTab : Tab {
         }
 
     override suspend fun onReselect(navigator: Navigator) {
-        navigator.push(GlobalSearchScreen())
+        val lastMedia = Injekt.get<eu.kanade.domain.ui.UiPreferences>().lastUsedBrowseMedia.get()
+        when (lastMedia) {
+            "Anime" -> navigator.push(GlobalAnimeSearchScreen())
+            "Novel" -> navigator.push(GlobalNovelSearchScreen())
+            else -> navigator.push(GlobalSearchScreen())
+        }
     }
 
     private val switchToExtensionTabChannel = Channel<Unit>(1, BufferOverflow.DROP_OLDEST)
@@ -84,8 +93,6 @@ data object BrowseTab : Tab {
     override fun Content() {
         val uiPreferences = androidx.compose.runtime.remember { Injekt.get<eu.kanade.domain.ui.UiPreferences>() }
         val selectedMedia by uiPreferences.lastUsedBrowseMedia.collectAsState()
-        var showMediaSheet by androidx.compose.runtime.remember { mutableStateOf(false) }
-        val sheetState = rememberModalBottomSheetState()
 
         val context = LocalContext.current
 
@@ -142,45 +149,17 @@ data object BrowseTab : Tab {
                     }
                 }
             },
-            navigationIcon = {
-                androidx.compose.material3.IconButton(onClick = { showMediaSheet = true }) {
-                    androidx.compose.material3.Icon(
-                        imageVector = when (selectedMedia) {
-                            "Anime" -> Icons.Outlined.Tv
-                            "Novel" -> Icons.Outlined.LibraryBooks
-                            else -> Icons.Outlined.MenuBook
-                        },
-                        contentDescription = "Selecionar Mídia"
-                    )
-                }
+            topContent = {
+                TopMediaSelector(
+                    selectedMedia = selectedMedia,
+                    onSelectMedia = { uiPreferences.lastUsedBrowseMedia.set(it) }
+                )
             }
         )
 
         LaunchedEffect(Unit) {
             switchToExtensionTabChannel.receiveAsFlow()
                 .collectLatest { state.scrollToPage(1) }
-        }
-
-        if (showMediaSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showMediaSheet = false },
-                sheetState = sheetState
-            ) {
-                androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 32.dp)) {
-                    ListItem(
-                        headlineContent = { Text("📖 ${stringResource(MR.strings.browse_media_manga)}") },
-                        modifier = Modifier.clickable { uiPreferences.lastUsedBrowseMedia.set("Manga"); showMediaSheet = false }
-                    )
-                    ListItem(
-                        headlineContent = { Text("🎬 ${stringResource(MR.strings.browse_media_anime)}") },
-                        modifier = Modifier.clickable { uiPreferences.lastUsedBrowseMedia.set("Anime"); showMediaSheet = false }
-                    )
-                    ListItem(
-                        headlineContent = { Text("📚 ${stringResource(MR.strings.browse_media_novel)}") },
-                        modifier = Modifier.clickable { uiPreferences.lastUsedBrowseMedia.set("Novel"); showMediaSheet = false }
-                    )
-                }
-            }
         }
 
         LaunchedEffect(Unit) {

@@ -453,7 +453,7 @@ fun UserProfileScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(ProfilePresets.PRESET_AVATARS) { preset ->
+                        items(ProfilePresets.PRESET_AVATARS, key = { it.id }) { preset ->
                             val isSelected = avatarType == "preset" && avatarPreset == preset.id
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -791,7 +791,7 @@ fun UserProfileScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(ProfilePresets.PRESET_BANNERS) { preset ->
+                        items(ProfilePresets.PRESET_BANNERS, key = { it.id }) { preset ->
                             val isSelected = bannerType == "preset" && bannerPreset == preset.id
                             Card(
                                 modifier = Modifier
@@ -813,8 +813,8 @@ fun UserProfileScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (preset.drawableRes != null) {
-                                        Image(
-                                            painter = painterResource(preset.drawableRes),
+                                        AsyncImage(
+                                            model = preset.drawableRes,
                                             contentDescription = preset.name,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxSize()
@@ -910,8 +910,8 @@ fun UserProfileScreen(
                         } else {
                             val presetBanner = ProfilePresets.getPresetBanner(bannerPreset)
                             if (presetBanner.drawableRes != null) {
-                                Image(
-                                    painter = painterResource(presetBanner.drawableRes),
+                                AsyncImage(
+                                    model = presetBanner.drawableRes,
                                     contentDescription = presetBanner.name,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -1260,8 +1260,8 @@ fun PresetAvatarDisplay(
         contentAlignment = Alignment.Center
     ) {
         if (preset.drawableRes != null) {
-            Image(
-                painter = painterResource(preset.drawableRes),
+            AsyncImage(
+                model = preset.drawableRes,
                 contentDescription = preset.name,
                 modifier = if (preset.isCharacter) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(14.dp),
                 contentScale = if (preset.isCharacter) ContentScale.Crop else ContentScale.Fit

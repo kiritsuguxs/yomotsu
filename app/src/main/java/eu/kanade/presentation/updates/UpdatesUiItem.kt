@@ -115,6 +115,7 @@ internal fun LazyListScope.updatesUiItems(
                     modifier = Modifier.animateItem(),
                     update = updatesItem.update,
                     selected = updatesItem.selected,
+                    isAnime = isAnime,
                     readProgress = updatesItem.update.lastPageRead
                         .takeIf { !updatesItem.update.read && it > 0L }
                         ?.let {
@@ -164,9 +165,24 @@ private fun UpdatesUiItem(
     downloadStateProvider: () -> Download.State,
     downloadProgressProvider: () -> Int,
     modifier: Modifier = Modifier,
+    isAnime: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
     val textAlpha = if (update.read) DISABLED_ALPHA else 1f
+    val displayName = remember(update.chapterName, isAnime) {
+        if (isAnime) {
+            val replaced = update.chapterName
+                .replace(Regex("(?i)^(?:cap[íi]tulo|cap\\.?|chapter)\\s*"), "Episódio ")
+                .replace(Regex("(?i)\\b(?:cap[íi]tulo|cap\\.?|chapter)\\b"), "Episódio")
+            if (replaced == update.chapterName && update.chapterName.trim().matches(Regex("^\\d+(?:\\.\\d+)?$"))) {
+                "Episódio ${update.chapterName.trim()}"
+            } else {
+                replaced
+            }
+        } else {
+            update.chapterName
+        }
+    }
 
     Row(
         modifier = modifier
@@ -226,7 +242,7 @@ private fun UpdatesUiItem(
                     Spacer(modifier = Modifier.width(2.dp))
                 }
                 Text(
-                    text = update.chapterName,
+                    text = displayName,
                     maxLines = 1,
                     style = MaterialTheme.typography.bodySmall,
                     color = LocalContentColor.current.copy(alpha = textAlpha),

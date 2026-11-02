@@ -40,6 +40,15 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
+import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.saveable.rememberSaveable
+import eu.kanade.core.util.insertSeparators
+import eu.kanade.presentation.components.MediaFilterChips
+import eu.kanade.tachiyomi.animesource.AnimeSource
+import eu.kanade.tachiyomi.util.lang.toLocalDate
+import tachiyomi.domain.source.service.SourceManager
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import tachiyomi.presentation.core.theme.active
 import kotlin.time.Duration.Companion.seconds
 
@@ -66,6 +75,34 @@ fun UpdateScreen(
         onSelectAll(false)
     }
 
+    var selectedMediaFilter by rememberSaveable { mutableStateOf("ALL") }
+    val sourceManager = remember { Injekt.get<SourceManager>() }
+    val filteredUiModels = remember(state.items, selectedMediaFilter) {
+        if (selectedMediaFilter == "ALL") {
+            state.getUiModel()
+        } else {
+            val filtered = state.items.filter { item ->
+                val source = sourceManager.get(item.update.sourceId)
+                val mediaType = when {
+                    source is AnimeSource || source?.javaClass?.name?.contains("anime", ignoreCase = true) == true -> "ANIME"
+                    source is eu.kanade.tachiyomi.novelsource.NovelSource || source is eu.kanade.tachiyomi.source.INovelSource || source?.javaClass?.name?.contains("novel", ignoreCase = true) == true -> "NOVEL"
+                    else -> "MANGA"
+                }
+                mediaType == selectedMediaFilter
+            }
+            filtered
+                .map { UpdatesUiModel.Item(it) }
+                .insertSeparators { before, after ->
+                    val beforeDate = before?.item?.update?.dateFetch?.toLocalDate()
+                    val afterDate = after?.item?.update?.dateFetch?.toLocalDate()
+                    when {
+                        beforeDate != afterDate && afterDate != null -> UpdatesUiModel.Header(afterDate)
+                        else -> null
+                    }
+                }
+        }
+    }
+
     Scaffold(
         topBar = { scrollBehavior ->
             UpdatesAppBar(
@@ -73,6 +110,8 @@ fun UpdateScreen(
                 onUpdateLibrary = { onUpdateLibrary() },
                 onFilterClicked = { onFilterClicked() },
                 hasFilters = hasActiveFilters,
+                selectedMediaFilter = selectedMediaFilter,
+                onSelectMediaFilter = { selectedMediaFilter = it },
                 actionModeCounter = state.selected.size,
                 onSelectAll = { onSelectAll(true) },
                 onInvertSelection = { onInvertSelection() },
@@ -95,6 +134,10 @@ fun UpdateScreen(
             state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
             state.items.isEmpty() -> EmptyScreen(
                 stringRes = MR.strings.information_no_recent,
+                modifier = Modifier.padding(contentPadding),
+            )
+            filteredUiModels.isEmpty() -> EmptyScreen(
+                stringRes = MR.strings.no_results_found,
                 modifier = Modifier.padding(contentPadding),
             )
             else -> {
@@ -122,7 +165,7 @@ fun UpdateScreen(
                         updatesLastUpdatedItem(lastUpdated)
 
                         updatesUiItems(
-                            uiModels = state.getUiModel(),
+                            uiModels = filteredUiModels,
                             selectionMode = state.selectionMode,
                             onUpdateSelected = onUpdateSelected,
                             onClickCover = onClickCover,
@@ -142,6 +185,8 @@ private fun UpdatesAppBar(
     onUpdateLibrary: () -> Unit,
     onFilterClicked: () -> Unit,
     hasFilters: Boolean,
+    selectedMediaFilter: String,
+    onSelectMediaFilter: (String) -> Unit,
     // For action mode
     actionModeCounter: Int,
     onSelectAll: () -> Unit,
@@ -150,51 +195,58 @@ private fun UpdatesAppBar(
     scrollBehavior: TopAppBarScrollBehavior,
     modifier: Modifier = Modifier,
 ) {
-    AppBar(
-        modifier = modifier,
-        title = stringResource(MR.strings.label_recent_updates),
-        actions = {
-            AppBarActions(
-                listOf(
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_filter),
-                        icon = Icons.Outlined.FilterList,
-                        iconTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
-                        onClick = onFilterClicked,
+    Column(modifier = modifier) {
+        AppBar(
+            title = stringResource(MR.strings.label_recent_updates),
+            actions = {
+                AppBarActions(
+                    listOf(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_filter),
+                            icon = Icons.Outlined.FilterList,
+                            iconTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                            onClick = onFilterClicked,
+                        ),
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_view_upcoming),
+                            icon = Icons.Outlined.CalendarMonth,
+                            onClick = onCalendarClicked,
+                        ),
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_update_library),
+                            icon = Icons.Outlined.Refresh,
+                            onClick = onUpdateLibrary,
+                        ),
                     ),
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_view_upcoming),
-                        icon = Icons.Outlined.CalendarMonth,
-                        onClick = onCalendarClicked,
+                )
+            },
+            actionModeCounter = actionModeCounter,
+            onCancelActionMode = onCancelActionMode,
+            actionModeActions = {
+                AppBarActions(
+                    listOf(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_select_all),
+                            icon = Icons.Outlined.SelectAll,
+                            onClick = onSelectAll,
+                        ),
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_select_inverse),
+                            icon = Icons.Outlined.FlipToBack,
+                            onClick = onInvertSelection,
+                        ),
                     ),
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_update_library),
-                        icon = Icons.Outlined.Refresh,
-                        onClick = onUpdateLibrary,
-                    ),
-                ),
+                )
+            },
+            scrollBehavior = scrollBehavior,
+        )
+        if (actionModeCounter == 0) {
+            MediaFilterChips(
+                selectedMedia = selectedMediaFilter,
+                onSelectMedia = onSelectMediaFilter,
             )
-        },
-        actionModeCounter = actionModeCounter,
-        onCancelActionMode = onCancelActionMode,
-        actionModeActions = {
-            AppBarActions(
-                listOf(
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_select_all),
-                        icon = Icons.Outlined.SelectAll,
-                        onClick = onSelectAll,
-                    ),
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_select_inverse),
-                        icon = Icons.Outlined.FlipToBack,
-                        onClick = onInvertSelection,
-                    ),
-                ),
-            )
-        },
-        scrollBehavior = scrollBehavior,
-    )
+        }
+    }
 }
 
 @Composable

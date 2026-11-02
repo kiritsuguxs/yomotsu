@@ -51,6 +51,7 @@ import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,6 +59,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -1367,194 +1370,208 @@ class NovelReaderActivity : ComponentActivity() {
                 )
             }
 
-            // TTS Voice and Audio Configuration Dialog
+            // TTS Voice and Audio Configuration Bottom Sheet
             if (showAudioDialog) {
-                AlertDialog(
+                val audioSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                ModalBottomSheet(
                     onDismissRequest = { showAudioDialog = false },
+                    sheetState = audioSheetState,
                     containerColor = uiSurfaceColor,
-                    titleContentColor = uiTextColor,
-                    textContentColor = uiTextColor,
-                    title = {
+                    contentColor = uiTextColor,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .padding(bottom = 32.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(ATMR.strings.novel_tts_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = uiTextColor,
+                            )
+                            IconButton(onClick = { showAudioDialog = false }) {
+                                Icon(
+                                    Icons.Outlined.Close,
+                                    contentDescription = stringResource(MR.strings.action_close),
+                                    tint = uiSubtextColor,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         Text(
-                            text = stringResource(ATMR.strings.novel_tts_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = uiTextColor,
+                            text = stringResource(ATMR.strings.novel_tts_narrator_voice),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
                         )
-                    },
-                    text = {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = stringResource(ATMR.strings.novel_tts_narrator_voice),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                            NovelTtsVoice.entries.forEach { voice ->
-                                val isSelected = selectedVoice == voice
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            selectedVoice = voice
-                                            prefs.edit().putString("novel_tts_voice", voice.id).apply()
-                                            if (isTtsPlaying) {
-                                                audioPlayer?.updateVoiceOrSpeed(voice, speechSpeed, isTranslated)
-                                            }
+                        NovelTtsVoice.entries.forEach { voice ->
+                            val isSelected = selectedVoice == voice
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        selectedVoice = voice
+                                        prefs.edit().putString("novel_tts_voice", voice.id).apply()
+                                        if (isTtsPlaying) {
+                                            audioPlayer?.updateVoiceOrSpeed(voice, speechSpeed, isTranslated)
                                         }
-                                        .padding(vertical = 4.dp, horizontal = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    RadioButton(
-                                        selected = isSelected,
-                                        onClick = {
-                                            selectedVoice = voice
-                                            prefs.edit().putString("novel_tts_voice", voice.id).apply()
-                                            if (isTtsPlaying) {
-                                                audioPlayer?.updateVoiceOrSpeed(voice, speechSpeed, isTranslated)
-                                            }
-                                        },
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Column {
-                                        Text(
-                                            text = voice.title,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = uiTextColor,
-                                        )
-                                        Text(
-                                            text = voice.subtitle,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = uiSubtextColor,
-                                        )
                                     }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            HorizontalDivider(color = uiSubtextColor.copy(alpha = 0.2f))
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Text(
-                                text = stringResource(ATMR.strings.novel_tts_reading_speed, speechSpeed),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                listOf(0.8f, 1.0f, 1.2f, 1.4f, 1.6f).forEach { speedOption ->
-                                    val isSpeedSelected = kotlin.math.abs(speechSpeed - speedOption) < 0.05f
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(
-                                                if (isSpeedSelected) MaterialTheme.colorScheme.primary
-                                                else uiSubtextColor.copy(alpha = 0.12f)
-                                            )
-                                            .clickable {
-                                                speechSpeed = speedOption
-                                                prefs.edit().putFloat("novel_tts_speed", speedOption).apply()
-                                                if (isTtsPlaying) {
-                                                    audioPlayer?.updateVoiceOrSpeed(selectedVoice, speedOption, isTranslated)
-                                                }
-                                            }
-                                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            text = "${speedOption}x",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = if (isSpeedSelected) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isSpeedSelected) MaterialTheme.colorScheme.onPrimary else uiTextColor,
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            HorizontalDivider(color = uiSubtextColor.copy(alpha = 0.2f))
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                                    .padding(vertical = 4.dp, horizontal = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(
-                                    text = "Avançar cap. automaticamente",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = uiTextColor,
-                                )
-                                Switch(
-                                    checked = autoAdvanceTts,
-                                    onCheckedChange = {
-                                        autoAdvanceTts = it
-                                        prefs.edit().putBoolean("novel_tts_auto_advance", it).apply()
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        selectedVoice = voice
+                                        prefs.edit().putString("novel_tts_voice", voice.id).apply()
+                                        if (isTtsPlaying) {
+                                            audioPlayer?.updateVoiceOrSpeed(voice, speechSpeed, isTranslated)
+                                        }
                                     },
                                 )
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = if (sleepTimerMinutes > 0) "Sleep Timer (${sleepTimerMinutes} min restantes)" else "Sleep Timer (Desligar narração)",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                listOf(0, 15, 30, 45, 60).forEach { mins ->
-                                    val isTimerSelected = sleepTimerMinutes == mins
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(
-                                                if (isTimerSelected) MaterialTheme.colorScheme.primary
-                                                else uiSubtextColor.copy(alpha = 0.12f),
-                                            )
-                                            .clickable {
-                                                sleepTimerMinutes = mins
-                                                audioPlayer?.setSleepTimer(mins)
-                                            }
-                                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            text = if (mins == 0) "Off" else "${mins}m",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = if (isTimerSelected) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isTimerSelected) MaterialTheme.colorScheme.onPrimary else uiTextColor,
-                                        )
-                                    }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Column {
+                                    Text(
+                                        text = voice.title,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = uiTextColor,
+                                    )
+                                    Text(
+                                        text = voice.subtitle,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = uiSubtextColor,
+                                    )
                                 }
                             }
+                        }
 
-                            Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = uiSubtextColor.copy(alpha = 0.2f))
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = stringResource(ATMR.strings.novel_tts_reading_speed, speechSpeed),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            listOf(0.8f, 1.0f, 1.2f, 1.4f, 1.6f).forEach { speedOption ->
+                                val isSpeedSelected = kotlin.math.abs(speechSpeed - speedOption) < 0.05f
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (isSpeedSelected) MaterialTheme.colorScheme.primary
+                                            else uiSubtextColor.copy(alpha = 0.12f)
+                                        )
+                                        .clickable {
+                                            speechSpeed = speedOption
+                                            prefs.edit().putFloat("novel_tts_speed", speedOption).apply()
+                                            if (isTtsPlaying) {
+                                                audioPlayer?.updateVoiceOrSpeed(selectedVoice, speedOption, isTranslated)
+                                            }
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "${speedOption}x",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSpeedSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSpeedSelected) MaterialTheme.colorScheme.onPrimary else uiTextColor,
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = uiSubtextColor.copy(alpha = 0.2f))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Text(
-                                text = stringResource(ATMR.strings.novel_tts_background_notice),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = uiSubtextColor.copy(alpha = 0.8f),
+                                text = "Avançar cap. automaticamente",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = uiTextColor,
+                            )
+                            Switch(
+                                checked = autoAdvanceTts,
+                                onCheckedChange = {
+                                    autoAdvanceTts = it
+                                    prefs.edit().putBoolean("novel_tts_auto_advance", it).apply()
+                                },
                             )
                         }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { showAudioDialog = false }) {
-                            Text(stringResource(MR.strings.action_close), color = MaterialTheme.colorScheme.primary)
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = if (sleepTimerMinutes > 0) "Sleep Timer (${sleepTimerMinutes} min restantes)" else "Sleep Timer (Desligar narração)",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            listOf(0, 15, 30, 45, 60).forEach { mins ->
+                                val isTimerSelected = sleepTimerMinutes == mins
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (isTimerSelected) MaterialTheme.colorScheme.primary
+                                            else uiSubtextColor.copy(alpha = 0.12f),
+                                        )
+                                        .clickable {
+                                            sleepTimerMinutes = mins
+                                            audioPlayer?.setSleepTimer(mins)
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = if (mins == 0) "Off" else "${mins}m",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isTimerSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isTimerSelected) MaterialTheme.colorScheme.onPrimary else uiTextColor,
+                                    )
+                                }
+                            }
                         }
-                    },
-                )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = stringResource(ATMR.strings.novel_tts_background_notice),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = uiSubtextColor.copy(alpha = 0.8f),
+                        )
+                    }
+                }
             }
         }
     }
