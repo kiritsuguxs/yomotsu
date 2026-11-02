@@ -60,8 +60,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import eu.kanade.tachiyomi.ui.player.cast.CastScreen
-import eu.kanade.tachiyomi.ui.player.controls.Dialogs
-import eu.kanade.tachiyomi.ui.player.controls.Sheets
 import kotlinx.coroutines.flow.update
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import androidx.compose.ui.layout.boundsInWindow
