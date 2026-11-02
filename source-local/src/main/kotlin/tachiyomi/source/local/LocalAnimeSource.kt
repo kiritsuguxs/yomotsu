@@ -190,12 +190,15 @@ class LocalAnimeSource(
 
     override fun getFilterList() = AnimeFilterList(AnimeOrderBy.Popular(context))
 
+    @Deprecated("Use the non-RxJava API instead", ReplaceWith("getPopularAnime"))
     override fun fetchPopularAnime(page: Int): Observable<AnimesPage> =
         throw UnsupportedOperationException("Not used")
 
+    @Deprecated("Use the non-RxJava API instead", ReplaceWith("getSearchAnime"))
     override fun fetchSearchAnime(page: Int, query: String, filters: AnimeFilterList): Observable<AnimesPage> =
         throw UnsupportedOperationException("Not used")
 
+    @Deprecated("Use the non-RxJava API instead", ReplaceWith("getLatestUpdates"))
     override fun fetchLatestUpdates(page: Int): Observable<AnimesPage> =
         throw UnsupportedOperationException("Not used")
 
