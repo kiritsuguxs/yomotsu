@@ -8,11 +8,12 @@
 
 ### AI-Translated Manga, Light Novel, and Anime Hub for Android
 
-*Based on Mihon and Anikku, featuring advanced OCR, automatic bubble translation, native anime player (MPV), dedicated novel reader, and Telegram Cloud synchronization.*
+*Based on Mihon and Anikku, featuring advanced OCR, automatic bubble translation, native anime player (MPV), native Smart TV streaming (Chromecast), dedicated novel reader, and Telegram Cloud synchronization.*
 
 <br/>
 
 [![Download APK](https://img.shields.io/badge/Download-Official%20APK-2ea44f?style=for-the-badge&logo=android&logoColor=white)](https://github.com/kiritsuguxs/yomotsu/releases/latest)
+[![Chromecast](https://img.shields.io/badge/Google%20Cast-Chromecast-4285F4?style=for-the-badge&logo=googlecast&logoColor=white)](#-anime-playback--smart-tv-google-cast)
 [![Telegram](https://img.shields.io/badge/Community-Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/yomotsuapp)
 [![Discord](https://img.shields.io/badge/Community-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/vNY8ep2UXh)
 
@@ -58,8 +59,8 @@ Built on top of the celebrated foundations of **Mihon (Tachiyomi)** and **Anikku
       <p>Recognizes text inside bubbles using OCR, cleans original artwork, and inserts translated text with automated typesetting.</p>
     </td>
     <td width="25%" align="center">
-      <h3>🎬 Anime Player (MPV)</h3>
-      <p>GPU-accelerated video playback, offline episode downloads, multi-audio tracks, embedded/external subtitles, and quality selection.</p>
+      <h3>🎬 Anime & Smart TV</h3>
+      <p>GPU-accelerated MPV player, native Google Cast (Chromecast) streaming, offline downloads, multi-audio tracks, and quality selection.</p>
     </td>
     <td width="25%" align="center">
       <h3>📖 Light Novel Reader</h3>
@@ -76,7 +77,10 @@ Built on top of the celebrated foundations of **Mihon (Tachiyomi)** and **Anikku
 
 ## 🚀 Main features
 
-### 🎬 Anime Playback & MPV Player
+### 🎬 Anime Playback & Smart TV (Google Cast)
+* **Native Smart TV Streaming (Google Cast / Chromecast):** Stream your favorite anime straight to your Smart TV, Android TV, or Chromecast with a single tap, turning your phone into a remote control without installing anything on the TV.
+* **Built-in Anti-Hotlink Local Proxy Server (`NanoHTTPD`):** Background header injection (`Referer`, `User-Agent`) and HLS (m3u8) stream rewriting to bypass 403 blocks from video scrapers, with full support for casting downloaded local episodes via Range Requests.
+* **Dedicated Remote Control & Seamless Continuity:** Modern remote interface (`CastScreen`) featuring automated queue transitions and instant local resume on your phone at the exact second where the TV stopped.
 * **High-Performance Native MPV Player:** Hardware-accelerated GPU rendering delivering smooth playback with minimal battery drain.
 * **Quality & Track Selection:** Seamlessly switch between video qualities (1080p, 720p, etc.), multi-language audio tracks, and embedded or external subtitles.
 * **Anime Download Manager:** Download full anime episodes directly within the app for offline viewing anywhere.

@@ -8,11 +8,12 @@
 
 ### Centro de Mangas, Novelas y Animes con Traducción por IA para Android
 
-*Basado en Mihon y Anikku, con OCR avanzado, traducción automática en las burbujas, reproductor nativo de anime (MPV), lector dedicado de novelas y sincronización a través de la Nube de Telegram.*
+*Basado en Mihon y Anikku, con OCR avanzado, traducción automática en las burbujas, reproductor nativo de anime (MPV), transmisión nativa a Smart TV (Chromecast), lector dedicado de novelas y sincronización a través de la Nube de Telegram.*
 
 <br/>
 
 [![Descargar APK](https://img.shields.io/badge/Descargar-APK%20Oficial-2ea44f?style=for-the-badge&logo=android&logoColor=white)](https://github.com/kiritsuguxs/yomotsu/releases/latest)
+[![Chromecast](https://img.shields.io/badge/Google%20Cast-Chromecast-4285F4?style=for-the-badge&logo=googlecast&logoColor=white)](#-reproducción-de-animes--smart-tv-google-cast)
 [![Telegram](https://img.shields.io/badge/Comunidad-Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/yomotsuapp)
 [![Discord](https://img.shields.io/badge/Comunidad-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/vNY8ep2UXh)
 
@@ -58,8 +59,8 @@ Construido sobre las prestigiosas bases de **Mihon (Tachiyomi)** y **Anikku (Ani
       <p>Reconoce el texto en los globos con OCR, limpia el arte original e inserta la traducción perfectamente maquetada.</p>
     </td>
     <td width="25%" align="center">
-      <h3>🎬 Reproductor de Anime (MPV)</h3>
-      <p>Reproducción acelerada por GPU, descargas offline, múltiples pistas de audio, subtítulos y selección de calidad.</p>
+      <h3>🎬 Anime y Smart TV</h3>
+      <p>Reproductor MPV acelerado por GPU, transmisión nativa a Smart TV (Chromecast), descargas offline, múltiples pistas y calidades.</p>
     </td>
     <td width="25%" align="center">
       <h3>📖 Lector de Novelas</h3>
@@ -76,7 +77,10 @@ Construido sobre las prestigiosas bases de **Mihon (Tachiyomi)** y **Anikku (Ani
 
 ## 🚀 Características principales
 
-### 🎬 Reproducción de Animes & Reproductor MPV
+### 🎬 Reproducción de Animes & Smart TV (Google Cast)
+* **Transmisión Nativa a Smart TV (Google Cast / Chromecast):** Disfruta de tus animes en la pantalla grande de tu Smart TV, Android TV o Chromecast con solo un toque, convirtiendo tu teléfono en control remoto sin instalar nada en el televisor.
+* **Servidor Proxy Local Anti-Bloqueo (`NanoHTTPD`):** Inyección en segundo plano de encabezados (`Referer` y `User-Agent`) y reescritura de streams HLS (m3u8), superando bloqueos 403 de fuentes online y permitiendo transmitir episodios descargados de la memoria local con soporte para Range Requests.
+* **Control Remoto Dedicado y Continuidad Perfecta:** Interfaz remota moderna (`CastScreen`) con avance automático al siguiente episodio y reanudación instantánea en el móvil en el segundo exacto donde paró el televisor.
 * **Reproductor Nativo MPV de Alto Rendimiento:** Renderizado acelerado por GPU que garantiza fluidez y bajo consumo de batería.
 * **Selección de Calidad y Pistas:** Cambia al instante entre múltiples resoluciones de video (1080p, 720p, etc.), pistas de audio (doblado/subtitulado) y subtítulos incrustados o externos.
 * **Gestor de Descargas de Anime:** Descarga episodios completos directamente en la app para verlos sin conexión.
