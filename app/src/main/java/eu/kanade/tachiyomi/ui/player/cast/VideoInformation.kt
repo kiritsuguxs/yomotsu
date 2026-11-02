@@ -179,7 +179,7 @@ class VideoInformation(
         val contentType = when {
             videoUrl.contains(".m3u8") -> "application/x-mpegURL"
             videoUrl.contains(".mpd") -> "application/dash+xml"
-            videoUrl.contains(".mkv") -> "video/x-matroska"
+            videoUrl.contains(".mkv") -> "video/mp4" // Chromecast HTML5 compatibility
             videoUrl.contains(".webm") -> "video/webm"
             else -> "video/mp4"
         }

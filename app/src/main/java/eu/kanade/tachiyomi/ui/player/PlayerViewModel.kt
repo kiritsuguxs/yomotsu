@@ -2054,13 +2054,30 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun getLocalIpAddress(): String? {
         try {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
-            val linkProps = cm?.getLinkProperties(cm.activeNetwork)
-            val activeIp = linkProps?.linkAddresses
-                ?.map { it.address }
-                ?.firstOrNull { it is java.net.Inet4Address && !it.isLoopbackAddress && !it.hostAddress.startsWith("127.") }
-                ?.hostAddress
-            if (!activeIp.isNullOrBlank()) {
-                return activeIp
+            if (cm != null) {
+                for (network in cm.allNetworks) {
+                    val caps = cm.getNetworkCapabilities(network) ?: continue
+                    if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+                        caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+                    ) {
+                        val lp = cm.getLinkProperties(network)
+                        val ip = lp?.linkAddresses
+                            ?.map { it.address }
+                            ?.firstOrNull { it is java.net.Inet4Address && !it.isLoopbackAddress && !it.hostAddress.startsWith("127.") }
+                            ?.hostAddress
+                        if (!ip.isNullOrBlank()) {
+                            return ip
+                        }
+                    }
+                }
+                val linkProps = cm.getLinkProperties(cm.activeNetwork)
+                val activeIp = linkProps?.linkAddresses
+                    ?.map { it.address }
+                    ?.firstOrNull { it is java.net.Inet4Address && !it.isLoopbackAddress && !it.hostAddress.startsWith("127.") }
+                    ?.hostAddress
+                if (!activeIp.isNullOrBlank()) {
+                    return activeIp
+                }
             }
         } catch (_: Exception) {}
 
@@ -2107,8 +2124,8 @@ class PlayerViewModel @JvmOverloads constructor(
             val port = playerPreferences.castProxyPort().get()
             val useProxy = playerPreferences.castProxy().get()
 
-            // FIX BUG 1: Start proxy server for BOTH online AND local files!
-            val needServer = useProxy || !isEpisodeOnline.value
+            val isLocal = video.videoUrl.startsWith("content://") || video.videoUrl.startsWith("file://") || isEpisodeOnline() != true
+            val needServer = useProxy || isLocal
             if (needServer) {
                 try {
                     context.startService(
@@ -2125,7 +2142,7 @@ class PlayerViewModel @JvmOverloads constructor(
             val headersMap = headers.toMap()
 
             val targetVideoUrl = when {
-                !isEpisodeOnline.value -> {
+                isLocal -> {
                     "http://$ipAddress:$port/local?url=" + java.net.URLEncoder.encode(video.videoUrl, "UTF-8")
                 }
                 useProxy -> {

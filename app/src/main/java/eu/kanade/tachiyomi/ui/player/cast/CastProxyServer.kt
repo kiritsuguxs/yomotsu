@@ -101,7 +101,7 @@ class CastProxyServer(
             File(cleanUrl).exists() && File(cleanUrl).canRead() -> File(cleanUrl)
             rawUrl.contains("primary%3A") || rawUrl.contains("primary:") -> {
                 val decoded = Uri.decode(rawUrl)
-                val relPath = decoded.substringAfter("primary:").substringBefore("?")
+                val relPath = decoded.substringAfterLast("primary:").substringBefore("?")
                 File("/storage/emulated/0/$relPath").takeIf { it.exists() && it.canRead() }
             }
             else -> null
@@ -137,7 +137,11 @@ class CastProxyServer(
             null
         }
 
-        val mime = contentResolver.getType(uri) ?: guessMimeFromUri(uri, rawUrl)
+        val rawMime = contentResolver.getType(uri) ?: guessMimeFromUri(uri, rawUrl)
+        val mime = when (rawMime) {
+            "video/x-matroska", "application/octet-stream" -> "video/mp4"
+            else -> rawMime
+        }
         val fileLength = (afd?.length?.takeIf { it > 0 } ?: afd?.parcelFileDescriptor?.statSize?.takeIf { it > 0 } ?: contentResolverLength) ?: -1L
         val rangeHeader = session.headers["range"]
 
@@ -405,8 +409,9 @@ class CastProxyServer(
     private fun addCorsHeaders(response: Response) {
         response.addHeader("Access-Control-Allow-Origin", "*")
         response.addHeader("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD")
-        response.addHeader("Access-Control-Allow-Headers", "origin, accept, content-type, authorization, range")
+        response.addHeader("Access-Control-Allow-Headers", "*")
         response.addHeader("Access-Control-Expose-Headers", "content-range, content-length, accept-ranges")
+        response.addHeader("Access-Control-Max-Age", "86400")
     }
 
     private fun getProxyUrl(targetUrl: String, headers: Map<String, String>): String {

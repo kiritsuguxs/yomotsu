@@ -126,35 +126,30 @@ class CastManagerImpl(
                     }.build()
                 }
 
-            val audioMediaTracks = audioTracks.map {
-                MediaTrack.Builder(it.index, MediaTrack.TYPE_AUDIO).apply {
-                    setName(it.title)
-                    setSubtype(MediaTrack.SUBTYPE_NONE)
-                    setContentType(it.contentType)
-                    setLanguage(it.language)
-                    it.contentId?.let { id ->
-                        setContentId(id)
-                    }
-                }.build()
-            }
-
-            val validTrackIds = (subtitleMediaTracks + audioMediaTracks).map { it.id }.toSet()
-            val preferred = listOfNotNull(subtitleId, audioId).filter { it in validTrackIds }.toLongArray()
+            // Note: Google's Default Media Receiver only supports text tracks via the sender API.
+            // Passing MediaTrack.TYPE_AUDIO causes Default Media Receiver to fail to load media.
+            val validTrackIds = subtitleMediaTracks.map { it.id }.toSet()
+            val preferred = listOfNotNull(subtitleId).filter { it in validTrackIds }.toLongArray()
 
             val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE).apply {
                 putString(MediaMetadata.KEY_TITLE, anime.title)
                 putString(MediaMetadata.KEY_SUBTITLE, episodeTitle)
-                anime.thumbnailUrl?.let {
-                    addImage(WebImage(it.toUri()))
+                val thumbUrl = anime.thumbnailUrl
+                if (thumbUrl != null && (thumbUrl.startsWith("http://") || thumbUrl.startsWith("https://"))) {
+                    addImage(WebImage(thumbUrl.toUri()))
                 }
             }
 
+            val safeContentType = when (videoInformation.contentType) {
+                "video/x-matroska", "application/octet-stream" -> "video/mp4"
+                else -> videoInformation.contentType.ifBlank { "video/mp4" }
+            }
+
             val mediaInfo = MediaInfo.Builder(video.videoUrl).apply {
-                setContentType(videoInformation.contentType)
+                setContentType(safeContentType)
                 setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
-                val allTracks = subtitleMediaTracks + audioMediaTracks
-                if (allTracks.isNotEmpty()) {
-                    setMediaTracks(allTracks)
+                if (subtitleMediaTracks.isNotEmpty()) {
+                    setMediaTracks(subtitleMediaTracks)
                 }
                 videoInformation.duration?.let {
                     setStreamDuration((it * 1000).toLong())
