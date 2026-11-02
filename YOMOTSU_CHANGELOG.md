@@ -3,6 +3,38 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y4
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Monitoramento de Animes Completo (Trackers):**
+  - Suporte completo a AniList, MyAnimeList, Kitsu, Shikimori e Bangumi ao visualizar animes.
+  - As buscas e sincronizações agora consultam os catálogos oficiais de animes de cada plataforma (em vez de mangás), salvando contagem de episódios e status adequados (*Assistindo*, *Pretendo assistir*, *Repetindo*).
+  - Filtro inteligente que oculta rastreadores exclusivos de mangá na aba de animes.
+  - Compatibilidade e preservação total do **Perfil Yomotsu** (XP, títulos e insígnias).
+- **Suporte Nativo a Animes Locais:**
+  - Nova fonte dedicada para animes armazenados na pasta `localanime` do dispositivo.
+  - Geração automática de miniaturas para episódios de vídeo locais e suporte à edição de capa personalizada da obra.
+- **Refinamento da Transmissão Google Cast (Chromecast):**
+  - Streaming aprimorado tanto para animes da web quanto arquivos locais pelo servidor proxy NanoHTTPD (suporte a HTTP Range Requests e rotação de portas sem conflito).
+  - Seleção otimizada de faixas de áudio e legendas compatíveis com receptores Cast padrão.
+- **Downloads de Novels:**
+  - Espelhamento de capítulos baixados em texto limpo (`chapter.txt`) na pasta de downloads do Yomotsu.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Full Anime Tracking Support:**
+  - Added native anime tracking for AniList, MyAnimeList, Kitsu, Shikimori, and Bangumi.
+  - Searches and list updates now target anime entries, tracking episode progress and anime-specific statuses (*Watching*, *Plan to watch*, *Rewatching*).
+  - Automatically hides manga-only trackers when inspecting anime entries.
+  - Full compatibility and seamless synchronization with the **Yomotsu Profile**.
+- **Local Anime Source:**
+  - Dedicated source for local video series placed in the `localanime` directory.
+  - Automatic episode thumbnail generation and support for custom series cover art.
+- **Google Cast Improvements:**
+  - Polished local and web media casting via internal NanoHTTPD proxy server.
+  - Improved subtitle and audio track handling for standard Google Cast receivers.
+- **Novel Downloads:**
+  - Mirroring downloaded novel chapters into clean UTF-8 `chapter.txt` in the Yomotsu downloads directory.
+
 ## 0.21.4-Y3
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
