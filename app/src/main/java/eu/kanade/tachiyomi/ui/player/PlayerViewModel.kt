@@ -118,6 +118,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
@@ -2135,7 +2136,9 @@ class PlayerViewModel @JvmOverloads constructor(
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Failed to start CastProxyServerService" }
                 }
-                delay(300)
+                withTimeoutOrNull(3000) {
+                    CastProxyServerService.isRunning.first { it }
+                }
             }
 
             val headers = video.headers ?: (source as? AnimeHttpSource)?.headers ?: Headers.Builder().build()
@@ -2152,8 +2155,34 @@ class PlayerViewModel @JvmOverloads constructor(
                 else -> video.videoUrl
             }
 
-            val codecInfo = withContext(Dispatchers.IO) {
-                videoInformation.getVideoInformation(video.videoUrl, headers)
+            val codecInfo = if (isLocal) {
+                val durationSec = try {
+                    val d = mpv.getPropertyInt("duration") ?: 0
+                    if (d > 0) d.toDouble() else null
+                } catch (_: Exception) {
+                    null
+                }
+                CodecInformation(
+                    contentType = "video/mp4",
+                    tracks = emptyList(),
+                    chapters = emptyList(),
+                    duration = durationSec,
+                )
+            } else {
+                withContext(Dispatchers.IO) {
+                    try {
+                        withTimeoutOrNull(3000) {
+                            videoInformation.getVideoInformation(video.videoUrl, headers)
+                        }
+                    } catch (e: Exception) {
+                        null
+                    } ?: CodecInformation(
+                        contentType = if (video.videoUrl.contains(".m3u8")) "application/x-mpegURL" else "video/mp4",
+                        tracks = emptyList(),
+                        chapters = emptyList(),
+                        duration = null,
+                    )
+                }
             }
 
             if (codecInfo.duration != null && codecInfo.duration > 0) {

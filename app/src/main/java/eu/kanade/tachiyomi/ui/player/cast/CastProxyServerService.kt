@@ -45,12 +45,16 @@ class CastProxyServerService : Service() {
             return START_NOT_STICKY
         }
 
-        if (isRunning.value) return START_STICKY
+        if (server?.isAlive == true && isRunning.value) return START_STICKY
 
         val address = intent?.getStringExtra(EXTRA_ADDRESS) ?: run {
             stopSelf()
             return START_NOT_STICKY
         }
+
+        try {
+            server?.stop()
+        } catch (_: Exception) {}
 
         val port = playerPreferences.castProxyPort().get()
         server = CastProxyServer(
@@ -66,6 +70,7 @@ class CastProxyServerService : Service() {
             logcat(LogPriority.INFO) { "Cast proxy server started on $address:$port" }
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Failed to start cast server on port $port" }
+            _isRunning.update { false }
             stopSelf()
             return START_NOT_STICKY
         }
@@ -96,16 +101,20 @@ class CastProxyServerService : Service() {
             setUsesChronometer(true)
         }
 
-        ServiceCompat.startForeground(
-            this,
-            Notifications.ID_CAST_SERVER,
-            builder.build(),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            } else {
-                0
-            },
-        )
+        try {
+            ServiceCompat.startForeground(
+                this,
+                Notifications.ID_CAST_SERVER,
+                builder.build(),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                } else {
+                    0
+                },
+            )
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Failed to start foreground for CastProxyServerService" }
+        }
 
         return START_STICKY
     }

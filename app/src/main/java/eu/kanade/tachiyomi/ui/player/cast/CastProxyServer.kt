@@ -65,7 +65,7 @@ class CastProxyServer(
             return response
         }
         return when {
-            uri.startsWith("/local") -> localServe(session)
+            uri.startsWith("/local") || uri.startsWith("/file") -> localServe(session)
             uri.startsWith("/proxy") -> proxyServe(session)
             else -> super.serve(session)
         }
@@ -93,7 +93,9 @@ class CastProxyServer(
     }
 
     private fun localServe(session: IHTTPSession): Response {
-        val rawUrl = session.parameters["url"]?.firstOrNull() ?: return badRequest("No url param")
+        val rawUrl = session.parameters["url"]?.firstOrNull()
+            ?: session.parameters["uri"]?.firstOrNull()
+            ?: return badRequest("No url param")
         val cleanUrl = if (rawUrl.startsWith("file://")) rawUrl.removePrefix("file://") else rawUrl
 
         // Try direct file first if raw filesystem path or primary: SAF storage path
