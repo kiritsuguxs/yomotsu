@@ -1139,6 +1139,21 @@ class PlayerActivity : BaseActivity() {
         if (player.isExiting) return
         if (video == null) return
 
+        if (viewModel.isCasting.value) {
+            viewModel.pause()
+            val startPos = position
+                ?: if (viewModel.isLoadingEpisode.value) {
+                    viewModel.currentEpisode.value?.let { episode ->
+                        val preservePos = playerPreferences.preserveWatchingPosition().get()
+                        if (episode.seen && !preservePos) 0L else (episode.last_second_seen / 1000L)
+                    } ?: 0L
+                } else {
+                    viewModel.castState.value.position
+                }
+            viewModel.startCasting(startPosition = startPos)
+            return
+        }
+
         val extPkg = playerPreferences.externalPlayerPreference().get().trim()
         val alwaysUseExt = playerPreferences.alwaysUseExternalPlayer().get()
         if (alwaysUseExt || extPkg.isNotBlank()) {

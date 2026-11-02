@@ -2014,6 +2014,9 @@ class PlayerViewModel @JvmOverloads constructor(
             is CastEvent.Disconnected -> {
                 isCasting.value = false
                 stopCastProxyServer()
+                if (event.lastPosition > 0L) {
+                    seekTo(event.lastPosition.toInt())
+                }
             }
             CastEvent.ConnectionError -> {
                 isCasting.value = false
