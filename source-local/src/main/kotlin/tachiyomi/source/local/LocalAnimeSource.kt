@@ -173,18 +173,12 @@ class LocalAnimeSource(
         val file = fileSystem.getAnimeDirectory(animeDirName)?.findFile(episodeName)
             ?: throw Exception("Video file not found: ${episode.url}")
 
-        val filePath = file.filePath
-        val finalUrl = if (filePath != null && java.io.File(filePath).exists()) {
-            "file://$filePath"
-        } else {
-            file.uri.toString()
-        }
-
         return listOf(
             Video(
-                videoUrl = finalUrl,
+                videoUrl = file.uri.toString(),
                 videoTitle = episode.name,
-            ),
+                initialized = true,
+            ).apply { status = Video.State.Ready },
         )
     }
 

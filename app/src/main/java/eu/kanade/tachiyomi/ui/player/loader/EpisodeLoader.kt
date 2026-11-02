@@ -156,19 +156,14 @@ class EpisodeLoader {
                 val fileSystem: LocalAnimeSourceFileSystem = Injekt.get()
                 val videoFile = fileSystem.getAnimeDirectory(animeDirName)
                     ?.findFile(episodeName)
-                val videoUri = videoFile!!.uri
-
-                val filePath = videoFile.filePath
-                val finalUrl = if (filePath != null && java.io.File(filePath).exists()) {
-                    "file://$filePath"
-                } else {
-                    videoUri.toString()
-                }
+                    ?: return emptyList()
+                val videoUri = videoFile.uri
 
                 val video = Video(
-                    videoUrl = finalUrl,
+                    videoUrl = videoUri.toString(),
                     videoTitle = episode.name,
-                )
+                    initialized = true,
+                ).apply { status = Video.State.Ready }
                 listOf(video).toHosterList()
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Failed to get hosters for local anime episode: ${episode.name}" }

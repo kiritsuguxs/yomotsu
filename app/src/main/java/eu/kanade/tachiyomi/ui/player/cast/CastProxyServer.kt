@@ -138,7 +138,7 @@ class CastProxyServer(
         }
 
         val mime = contentResolver.getType(uri) ?: guessMimeFromUri(uri, rawUrl)
-        val fileLength = (afd?.length?.takeIf { it > 0 } ?: contentResolverLength) ?: -1L
+        val fileLength = (afd?.length?.takeIf { it > 0 } ?: afd?.parcelFileDescriptor?.statSize?.takeIf { it > 0 } ?: contentResolverLength) ?: -1L
         val rangeHeader = session.headers["range"]
 
         if (session.method == Method.HEAD) {
@@ -146,6 +146,7 @@ class CastProxyServer(
             if (fileLength >= 0) response.addHeader("Content-Length", fileLength.toString())
             response.addHeader("Accept-Ranges", "bytes")
             addCorsHeaders(response)
+            try { afd?.close() } catch (_: Exception) {}
             return response
         }
 
@@ -165,11 +166,15 @@ class CastProxyServer(
                 val end = range.getOrNull(1)?.takeIf { it.isNotBlank() }?.toLongOrNull() ?: (fileLength - 1)
                 val length = (end - start + 1).coerceAtLeast(0L)
 
-                var skipped = 0L
-                while (skipped < start) {
-                    val s = afdStream.skip(start - skipped)
-                    if (s <= 0) break
-                    skipped += s
+                if (inputStream is FileInputStream) {
+                    inputStream.channel.position(start)
+                } else {
+                    var skipped = 0L
+                    while (skipped < start) {
+                        val s = afdStream.skip(start - skipped)
+                        if (s <= 0) break
+                        skipped += s
+                    }
                 }
 
                 val response = newFixedLengthResponse(Response.Status.PARTIAL_CONTENT, mime, afdStream, length)
@@ -243,7 +248,7 @@ class CastProxyServer(
         return when (ext) {
             "avi" -> "video/x-msvideo"
             "flv" -> "video/x-flv"
-            "mkv" -> "video/x-matroska"
+            "mkv" -> "video/mp4" // Chromecast HTML5 player compatibility
             "mov" -> "video/quicktime"
             "mp4", "m4v" -> "video/mp4"
             "webm" -> "video/webm"
