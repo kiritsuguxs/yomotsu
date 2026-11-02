@@ -124,7 +124,7 @@ class LocalAnimeSource(
 
         if (detailsFile != null && detailsFile.exists()) {
             try {
-                val detailsJson = detailsFile.openInputStream()?.use {
+                val detailsJson = detailsFile.openInputStream().use {
                     json.decodeFromStream<MangaDetails>(it)
                 }
                 if (detailsJson != null) {

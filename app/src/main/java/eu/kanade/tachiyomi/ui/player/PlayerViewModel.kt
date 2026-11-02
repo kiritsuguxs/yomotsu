@@ -56,6 +56,9 @@ import eu.kanade.tachiyomi.data.track.anilist.Anilist
 import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.ui.player.cast.ChapterInformation
+import eu.kanade.tachiyomi.ui.player.cast.CodecInformation
+import eu.kanade.tachiyomi.ui.player.cast.TrackInformation
 import eu.kanade.tachiyomi.ui.player.controls.components.IndexedSegment
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.HosterState
 import eu.kanade.tachiyomi.ui.player.controls.components.sheets.getChangedAt
@@ -2164,8 +2167,8 @@ class PlayerViewModel @JvmOverloads constructor(
                 }
                 CodecInformation(
                     contentType = "video/mp4",
-                    tracks = emptyList(),
-                    chapters = emptyList(),
+                    tracks = emptyList<TrackInformation>(),
+                    chapters = emptyList<ChapterInformation>(),
                     duration = durationSec,
                 )
             } else {
@@ -2178,8 +2181,8 @@ class PlayerViewModel @JvmOverloads constructor(
                         null
                     } ?: CodecInformation(
                         contentType = if (video.videoUrl.contains(".m3u8")) "application/x-mpegURL" else "video/mp4",
-                        tracks = emptyList(),
-                        chapters = emptyList(),
+                        tracks = emptyList<TrackInformation>(),
+                        chapters = emptyList<ChapterInformation>(),
                         duration = null,
                     )
                 }
