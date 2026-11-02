@@ -2,11 +2,8 @@
 
 ## 1. Visão Geral do Projeto & Estado Atual Ativo
 - **Repositório:** `kiritsuguxs/yomotsu`
-- **Branch de Testes Ativa:** `temp/test-ocr-v2` (baseada limpa em `origin/main` / `v0.21.3-Y1`, `versionName = "0.21.4-Y2"`, `versionCode = 112`)
-- **Último Build Verde Pronto para Teste:** Run [`#41227949040`](https://github.com/kiritsuguxs/yomotsu/actions/runs/41227949040) — Artefato [`Yomotsu-0.21.4-Y1-arm64` (#13052443496)](https://github.com/kiritsuguxs/yomotsu/actions/runs/41227949040/artifacts/13052443496)
-- **Onde Paramos (Próximos Passos Pendentes de Decisão do Usuário):**
-  1. **Testar o AOT-GAN ("Remoção de texto por IA") conectado ao Leitor na `temp/test-ocr-v2`:** A chave `translationPreferences.inpainterAot()` agora baixa automaticamente os ~11 MB (`mit_aot_fixed512.ncnn.{param,bin}`) no primeiro uso, reconstrói o fundo em processo isolado `:inpaint` (`AotInpaintService` + `AotPageInpainter` em janelas locais `512x512` compatíveis com tiras longas de Webtoon/Manhwa e com todos os motores OCR) e renderiza os patches WebP sem costuras em `TranslationCleanupBlock.kt` + contorno em `SmartTranslationBlock.kt`.
-  2. **Release Oficial `v0.21.4-Y2`:** `temp/test-ocr-v2` promovida para `main` (fast-forward a partir de `v0.21.3-Y1`) e tag `v0.21.4-Y2` publicada a pedido do usuário. A `0.21.4-Y1` nunca foi publicada; suas novidades foram consolidadas na seção `0.21.4-Y2` do `YOMOTSU_CHANGELOG.md`. Os testes unitários novos (PaddleWebtoonTiler, TranslationLayoutCollisionResolver, extractAlignedPageTranslations) foram escritos mas não executados (CI tem `testDebugUnitTest` comentado e o Gradle local não roda).
+- **Versão Ativa:** `versionName = "0.21.4-Y3"`, `versionCode = 113`
+- **Release Oficial Atual:** `v0.21.4-Y3` (Suporte Nativo ao Google Cast / Chromecast com Proxy NanoHTTPD, Range Requests, Autoplay e Sincronização de Minutagem).
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Use Python (`zipfile`, `PIL`, `urllib`) em vez de `/bin/unzip` ou `/usr/bin/file`, e compile sempre via GitHub Actions.
 
 ---

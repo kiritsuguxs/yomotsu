@@ -3,6 +3,26 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y3
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Transmissão Nativa via Google Cast (Chromecast):** Assista aos seus animes favoritos diretamente na Smart TV, Android TV ou Chromecast, sem necessidade de apps externos ou configurações complexas.
+- **Servidor Proxy Local Anti-Bloqueio (`NanoHTTPD`):** Sistema inteligente em segundo plano que injeta automaticamente cabeçalhos restritivos (`Referer` e `User-Agent`) e reescreve segmentos HLS (m3u8), contornando erros como `403 Forbidden` nas extensões de vídeo.
+- **Transmissão de Arquivos Locais:** Suporte completo à transmissão de episódios baixados na memória interna do aparelho com aceleração por *HTTP Range Requests*.
+- **Painel de Controle Remoto Dedicado (`CastScreen`):** Interface moderna com controles de reprodução (Play, Pause, +/-10s), seleção de faixas de legendas e áudio, alternância de qualidade e visualização da capa do anime.
+- **Fila Contínua de Episódios:** Transição automática para o próximo episódio diretamente na TV quando o atual chega ao fim, mantendo o player móvel pausado.
+- **Sincronização de Minutagem:** Continuidade perfeita ao desconectar; o player do celular retoma a reprodução exatamente no segundo em que a TV parou.
+- **Interface Polida:** Corrigido o indicador de carregamento persistente no botão de Cast, exibindo agora o glifo estático oficial do Chromecast.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Native Google Cast (Chromecast) Support:** Stream your favorite anime directly to any Smart TV, Android TV, or Chromecast device without requiring external media players or complex setup.
+- **Built-in Anti-Hotlink Local Proxy Server (`NanoHTTPD`):** Seamless background proxying that injects required anti-leech headers (`Referer`, `User-Agent`) and rewrites HLS (m3u8) manifests on the fly, preventing `403 Forbidden` errors from online sources.
+- **Local Storage Streaming:** Full support for casting downloaded episodes stored on your device via internal HTTP streaming with *Range Requests* support.
+- **Dedicated Remote Control UI (`CastScreen`):** Clean and responsive interface featuring playback controls (Play, Pause, +/-10s seek), audio & subtitle track pickers, quality selector, and media artwork preview.
+- **Seamless Playlist & Autoplay:** Automatically queues and streams the next episode directly to the remote receiver without audio/video playback bleeding onto the mobile device.
+- **Playback Position Continuity:** Zero-loss progress synchronization; disconnecting the Cast session automatically resumes local playback on your phone at the exact second where the TV stopped.
+- **Visual Polish:** Fixed an issue where the Cast button displayed an infinite purple spinner, now correctly showing the official static Chromecast icon.
+
 ## 0.21.4-Y2
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
