@@ -12,6 +12,8 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
+import tachiyomi.source.local.LocalAnimeSource
+import tachiyomi.source.local.io.LocalAnimeSourceFileSystem
 import tachiyomi.source.local.io.LocalSourceFileSystem
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
@@ -29,6 +31,7 @@ class AnimeDownloadProvider(
     private val storageManager: StorageManager = Injekt.get(),
     // AM (FILE_SIZE) -->
     private val localFileSystem: LocalSourceFileSystem = Injekt.get(),
+    private val localAnimeFileSystem: LocalAnimeSourceFileSystem = Injekt.get(),
     // <-- AM (FILE_SIZE)
 ) {
 
@@ -81,7 +84,11 @@ class AnimeDownloadProvider(
     fun findSourceDir(source: Source): UniFile? {
         // KMK -->
         return if (source.isLocal()) {
-            storageManager.getLocalSourceDirectory()
+            if (source.id == LocalAnimeSource.ID) {
+                storageManager.getLocalAnimeSourceDirectory()
+            } else {
+                storageManager.getLocalSourceDirectory()
+            }
         } else {
             // KMK <--
             downloadsDir?.findFile(getSourceDirName(source))
@@ -265,7 +272,11 @@ class AnimeDownloadProvider(
         if (source == null) return null
         return if (source.isLocal()) {
             val (mangaDirName, chapterDirName) = chapterUrl?.split('/', limit = 2) ?: return null
-            localFileSystem.getBaseDirectory()?.findFile(mangaDirName)?.findFile(chapterDirName)?.size()
+            if (source.id == LocalAnimeSource.ID) {
+                localAnimeFileSystem.getAnimeDirectory(mangaDirName)?.findFile(chapterDirName)?.size()
+            } else {
+                localFileSystem.getBaseDirectory()?.findFile(mangaDirName)?.findFile(chapterDirName)?.size()
+            }
         } else {
             findChapterDir(chapterName, chapterScanlator, mangaTitle, source)?.size()
         }

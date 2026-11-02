@@ -379,8 +379,8 @@ class LocalSource(
     }
 }
 
-fun Manga.isLocal(): Boolean = source == LocalSource.ID
+fun Manga.isLocal(): Boolean = source == LocalSource.ID || source == LocalAnimeSource.ID
 
-fun Source.isLocal(): Boolean = id == LocalSource.ID
+fun Source.isLocal(): Boolean = id == LocalSource.ID || id == LocalAnimeSource.ID
 
-fun DomainSource.isLocal(): Boolean = id == LocalSource.ID
+fun DomainSource.isLocal(): Boolean = id == LocalSource.ID || id == LocalAnimeSource.ID

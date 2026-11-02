@@ -112,8 +112,19 @@ class CastProxyServer(
             null
         }
 
-        val mime = contentResolver.getType(uri) ?: guessMimeFromUri(uri)
-        val fileLength = afd?.length ?: directFile.length()
+        val contentResolverLength = try {
+            contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                    if (sizeIndex != -1 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else null
+                } else null
+            }
+        } catch (_: Exception) {
+            null
+        }
+
+        val mime = contentResolver.getType(uri) ?: guessMimeFromUri(uri, rawUrl)
+        val fileLength = afd?.length?.takeIf { it > 0 } ?: directFile.length().takeIf { it > 0 } ?: contentResolverLength ?: -1L
         val rangeHeader = session.headers["range"]
 
         val inputStream: InputStream = try {
@@ -154,7 +165,7 @@ class CastProxyServer(
 
     private fun serveDirectFile(file: File, session: IHTTPSession): Response {
         val fileLength = file.length()
-        val mime = guessMimeFromUri(file.toURI().toString().toUri())
+        val mime = guessMimeFromUri(file.toURI().toString().toUri(), file.name)
         val rangeHeader = session.headers["range"]
         val inputStream = FileInputStream(file)
 
@@ -181,8 +192,10 @@ class CastProxyServer(
         return response.apply { addCorsHeaders(this) }
     }
 
-    private fun guessMimeFromUri(uri: Uri): String {
-        val ext = uri.lastPathSegment?.substringAfterLast(".", "")?.lowercase() ?: ""
+    private fun guessMimeFromUri(uri: Uri, rawUrl: String? = null): String {
+        val target = rawUrl ?: uri.toString()
+        val cleanTarget = Uri.decode(target).substringBefore("?").substringBefore("#")
+        val ext = cleanTarget.substringAfterLast(".", "").lowercase()
         return when (ext) {
             "avi" -> "video/x-msvideo"
             "flv" -> "video/x-flv"
@@ -194,7 +207,7 @@ class CastProxyServer(
             "ts" -> "video/mp2t"
             "m3u8" -> "application/x-mpegURL"
             "mpd" -> "application/dash+xml"
-            else -> "application/octet-stream"
+            else -> "video/mp4"
         }
     }
 

@@ -16,7 +16,9 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.episode.model.Episode
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.source.local.LocalAnimeSource
 import tachiyomi.source.local.LocalSource
+import tachiyomi.source.local.io.LocalAnimeSourceFileSystem
 import tachiyomi.source.local.io.LocalSourceFileSystem
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -44,6 +46,7 @@ class EpisodeLoader {
             return when {
                 isDownloaded -> getHostersOnDownloaded(episode, anime, source)
                 source is AnimeHttpSource -> getHostersOnHttp(episode, source)
+                source is LocalAnimeSource -> getHostersOnLocalAnime(episode)
                 source is LocalSource -> getHostersOnLocal(episode)
                 else -> error("source not supported")
             }
@@ -136,6 +139,32 @@ class EpisodeLoader {
                 val video = downloadManager.buildVideo(source, anime, episode)
                 listOf(video).toHosterList()
             } catch (_: Throwable) {
+                emptyList()
+            }
+        }
+
+        /**
+         * Returns the hoster when the [episode] is from local anime source.
+         *
+         * @param episode the episode being parsed.
+         */
+        private fun getHostersOnLocalAnime(
+            episode: Episode,
+        ): List<Hoster> {
+            return try {
+                val (animeDirName, episodeName) = episode.url.split('/', limit = 2)
+                val fileSystem: LocalAnimeSourceFileSystem = Injekt.get()
+                val videoFile = fileSystem.getAnimeDirectory(animeDirName)
+                    ?.findFile(episodeName)
+                val videoUri = videoFile!!.uri
+
+                val video = Video(
+                    videoUrl = videoUri.toString(),
+                    videoTitle = episode.name,
+                )
+                listOf(video).toHosterList()
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to get hosters for local anime episode: ${episode.name}" }
                 emptyList()
             }
         }

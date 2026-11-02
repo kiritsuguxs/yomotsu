@@ -18,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.repository.StubSourceRepository
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.source.local.LocalAnimeSource
 import tachiyomi.source.local.LocalSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -56,6 +57,11 @@ class AndroidSourceManager(
                 val mutableMap = ConcurrentHashMap<Long, Source>(
                     mapOf(
                         LocalSource.ID to LocalSource(
+                            context,
+                            Injekt.get(),
+                            Injekt.get(),
+                        ),
+                        LocalAnimeSource.ID to LocalAnimeSource(
                             context,
                             Injekt.get(),
                             Injekt.get(),
@@ -113,7 +119,7 @@ class AndroidSourceManager(
 
     override fun getAll() = sourcesMapFlow.value.values.toList()
 
-    override fun getOnlineSources() = sourcesMapFlow.value.values.filter { it.id != LocalSource.ID && it.id != eu.kanade.tachiyomi.source.TelegramSource.ID }
+    override fun getOnlineSources() = sourcesMapFlow.value.values.filter { it.id != LocalSource.ID && it.id != LocalAnimeSource.ID && it.id != eu.kanade.tachiyomi.source.TelegramSource.ID }
 
     override fun getStubSources(): List<StubSource> {
         val onlineSourceIds = getOnlineSources().map { it.id }

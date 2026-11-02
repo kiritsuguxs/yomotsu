@@ -8,18 +8,18 @@ import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import tachiyomi.core.common.storage.nameWithoutExtension
 import tachiyomi.core.common.util.system.ImageUtil
-import tachiyomi.source.local.io.LocalSourceFileSystem
+import tachiyomi.source.local.io.LocalAnimeSourceFileSystem
 import java.io.InputStream
 
 private const val DEFAULT_THUMBNAIL_NAME = "thumbnail.jpg"
 
 class LocalEpisodeThumbnailManager(
     private val context: Context,
-    private val fileSystem: LocalSourceFileSystem,
+    private val fileSystem: LocalAnimeSourceFileSystem,
 ) {
 
     fun find(animeUrl: String, fileName: String): UniFile? {
-        return fileSystem.getFilesInMangaDirectory(animeUrl)
+        return fileSystem.getFilesInAnimeDirectory(animeUrl)
             // Get all file whose names contain the episode name and the word 'thumbnail'
             .filter { it.isFile && it.nameWithoutExtension.equals(fileName, ignoreCase = true) }
             // Get the first actual image
@@ -27,7 +27,7 @@ class LocalEpisodeThumbnailManager(
     }
 
     fun update(anime: SAnime, episode: SEpisode, inputStream: InputStream): UniFile? {
-        val directory = fileSystem.getMangaDirectory(anime.url)
+        val directory = fileSystem.getAnimeDirectory(anime.url)
         if (directory == null) {
             inputStream.close()
             return null

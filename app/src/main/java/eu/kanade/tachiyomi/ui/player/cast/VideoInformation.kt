@@ -100,6 +100,8 @@ class VideoInformation(
 
             val targetUrl = if (videoUrl.startsWith("content")) {
                 videoUrl.toUri().toFFmpegString(context)
+            } else if (videoUrl.startsWith("file://")) {
+                videoUrl.toUri().toFFmpegString(context)
             } else {
                 videoUrl
             }

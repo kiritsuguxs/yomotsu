@@ -33,7 +33,7 @@ class SourceRepositoryImpl(
     override fun getOnlineSources(): Flow<List<DomainSource>> {
         return sourceManager.sources.map { sources ->
             sources
-                .filter { it.id != 0L && it.id != 9876543210L }
+                .filter { it.id != 0L && it.id != 9876543210L && it.id != 9876543211L }
                 .map(::mapSourceToDomainSource)
         }
     }
