@@ -158,8 +158,15 @@ class EpisodeLoader {
                     ?.findFile(episodeName)
                 val videoUri = videoFile!!.uri
 
+                val filePath = videoFile.filePath
+                val finalUrl = if (filePath != null && java.io.File(filePath).exists()) {
+                    "file://$filePath"
+                } else {
+                    videoUri.toString()
+                }
+
                 val video = Video(
-                    videoUrl = videoUri.toString(),
+                    videoUrl = finalUrl,
                     videoTitle = episode.name,
                 )
                 listOf(video).toHosterList()

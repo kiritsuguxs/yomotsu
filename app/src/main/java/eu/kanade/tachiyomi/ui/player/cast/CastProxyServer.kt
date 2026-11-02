@@ -59,6 +59,11 @@ class CastProxyServer(
 
     override fun serve(session: IHTTPSession?): Response? {
         val uri = session?.uri ?: return super.serve(session)
+        if (session.method == Method.OPTIONS) {
+            val response = newFixedLengthResponse(Response.Status.OK, "text/plain", null, 0)
+            addCorsHeaders(response)
+            return response
+        }
         return when {
             uri.startsWith("/local") -> localServe(session)
             uri.startsWith("/proxy") -> proxyServe(session)
@@ -91,9 +96,18 @@ class CastProxyServer(
         val rawUrl = session.parameters["url"]?.firstOrNull() ?: return badRequest("No url param")
         val cleanUrl = if (rawUrl.startsWith("file://")) rawUrl.removePrefix("file://") else rawUrl
 
-        // Try direct file first if raw filesystem path
-        val directFile = File(cleanUrl)
-        if (directFile.exists() && directFile.canRead()) {
+        // Try direct file first if raw filesystem path or primary: SAF storage path
+        val directFile = when {
+            File(cleanUrl).exists() && File(cleanUrl).canRead() -> File(cleanUrl)
+            rawUrl.contains("primary%3A") || rawUrl.contains("primary:") -> {
+                val decoded = Uri.decode(rawUrl)
+                val relPath = decoded.substringAfter("primary:").substringBefore("?")
+                File("/storage/emulated/0/$relPath").takeIf { it.exists() && it.canRead() }
+            }
+            else -> null
+        }
+
+        if (directFile != null && directFile.exists() && directFile.canRead()) {
             return serveDirectFile(directFile, session)
         }
 
@@ -124,8 +138,16 @@ class CastProxyServer(
         }
 
         val mime = contentResolver.getType(uri) ?: guessMimeFromUri(uri, rawUrl)
-        val fileLength = afd?.length?.takeIf { it > 0 } ?: directFile.length().takeIf { it > 0 } ?: contentResolverLength ?: -1L
+        val fileLength = (afd?.length?.takeIf { it > 0 } ?: contentResolverLength) ?: -1L
         val rangeHeader = session.headers["range"]
+
+        if (session.method == Method.HEAD) {
+            val response = newFixedLengthResponse(Response.Status.OK, mime, null, 0)
+            if (fileLength >= 0) response.addHeader("Content-Length", fileLength.toString())
+            response.addHeader("Accept-Ranges", "bytes")
+            addCorsHeaders(response)
+            return response
+        }
 
         val inputStream: InputStream = try {
             afd?.createInputStream() ?: contentResolver.openInputStream(uri) ?: return notFound("File not found")
@@ -140,15 +162,22 @@ class CastProxyServer(
             try {
                 val range = rangeHeader.replace("bytes=", "").split("-")
                 val start = range.getOrNull(0)?.toLongOrNull() ?: 0L
-                val end = range.getOrNull(1)?.toLongOrNull() ?: (fileLength - 1)
-                val length = end - start + 1
+                val end = range.getOrNull(1)?.takeIf { it.isNotBlank() }?.toLongOrNull() ?: (fileLength - 1)
+                val length = (end - start + 1).coerceAtLeast(0L)
 
-                afdStream.skip(start)
+                var skipped = 0L
+                while (skipped < start) {
+                    val s = afdStream.skip(start - skipped)
+                    if (s <= 0) break
+                    skipped += s
+                }
 
                 val response = newFixedLengthResponse(Response.Status.PARTIAL_CONTENT, mime, afdStream, length)
                 response.addHeader("Content-Range", "bytes $start-$end/$fileLength")
+                response.addHeader("Content-Length", length.toString())
                 response.addHeader("Accept-Ranges", "bytes")
-                return response.apply { addCorsHeaders(this) }
+                addCorsHeaders(response)
+                return response
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Error processing Range header" }
             }
@@ -159,37 +188,52 @@ class CastProxyServer(
         } else {
             newChunkedResponse(Response.Status.OK, mime, afdStream)
         }
+        if (fileLength >= 0) response.addHeader("Content-Length", fileLength.toString())
         response.addHeader("Accept-Ranges", "bytes")
-        return response.apply { addCorsHeaders(this) }
+        addCorsHeaders(response)
+        return response
     }
 
     private fun serveDirectFile(file: File, session: IHTTPSession): Response {
         val fileLength = file.length()
         val mime = guessMimeFromUri(file.toURI().toString().toUri(), file.name)
         val rangeHeader = session.headers["range"]
-        val inputStream = FileInputStream(file)
+
+        if (session.method == Method.HEAD) {
+            val response = newFixedLengthResponse(Response.Status.OK, mime, null, 0)
+            response.addHeader("Content-Length", fileLength.toString())
+            response.addHeader("Accept-Ranges", "bytes")
+            addCorsHeaders(response)
+            return response
+        }
 
         if (rangeHeader != null && fileLength > 0) {
             try {
                 val range = rangeHeader.replace("bytes=", "").split("-")
                 val start = range.getOrNull(0)?.toLongOrNull() ?: 0L
-                val end = range.getOrNull(1)?.toLongOrNull() ?: (fileLength - 1)
-                val length = end - start + 1
+                val end = range.getOrNull(1)?.takeIf { it.isNotBlank() }?.toLongOrNull() ?: (fileLength - 1)
+                val length = (end - start + 1).coerceAtLeast(0L)
 
-                inputStream.skip(start)
+                val inputStream = FileInputStream(file)
+                inputStream.channel.position(start)
 
                 val response = newFixedLengthResponse(Response.Status.PARTIAL_CONTENT, mime, inputStream, length)
                 response.addHeader("Content-Range", "bytes $start-$end/$fileLength")
+                response.addHeader("Content-Length", length.toString())
                 response.addHeader("Accept-Ranges", "bytes")
-                return response.apply { addCorsHeaders(this) }
+                addCorsHeaders(response)
+                return response
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Error processing direct file Range header" }
             }
         }
 
+        val inputStream = FileInputStream(file)
         val response = newFixedLengthResponse(Response.Status.OK, mime, inputStream, fileLength)
+        response.addHeader("Content-Length", fileLength.toString())
         response.addHeader("Accept-Ranges", "bytes")
-        return response.apply { addCorsHeaders(this) }
+        addCorsHeaders(response)
+        return response
     }
 
     private fun guessMimeFromUri(uri: Uri, rawUrl: String? = null): String {

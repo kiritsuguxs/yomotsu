@@ -202,7 +202,7 @@ class VideoInformation(
                 val isWebm = tracks
                     .filter { it.codecType == "video" || it.codecType == "audio" }
                     .all { it.codecName?.lowercase() in webm }
-                if (isWebm) "video/webm" else "video/x-matroska"
+                if (isWebm) "video/webm" else "video/mp4"
             }
             name in setOf("mp4", "mov", "m4a", "3gp", "3g2", "mj2") -> "video/mp4"
             name in setOf("asf", "wmv") -> "video/x-ms-wmv"

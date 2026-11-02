@@ -2052,10 +2052,35 @@ class PlayerViewModel @JvmOverloads constructor(
 
     private fun getLocalIpAddress(): String? {
         try {
-            val interfaces = java.net.NetworkInterface.getNetworkInterfaces() ?: return null
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+            val linkProps = cm?.getLinkProperties(cm.activeNetwork)
+            val activeIp = linkProps?.linkAddresses
+                ?.map { it.address }
+                ?.firstOrNull { it is java.net.Inet4Address && !it.isLoopbackAddress && !it.hostAddress.startsWith("127.") }
+                ?.hostAddress
+            if (!activeIp.isNullOrBlank()) {
+                return activeIp
+            }
+        } catch (_: Exception) {}
+
+        try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
+            val sorted = interfaces.sortedByDescending {
+                it.name.startsWith("wlan") || it.name.startsWith("eth") || it.name.startsWith("ap")
+            }
+            for (intf in sorted) {
+                if (intf.name.startsWith("rmnet") || intf.name.startsWith("dummy") || intf.name.startsWith("tun")) continue
+                for (addr in intf.inetAddresses.toList()) {
+                    if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
+                        val host = addr.hostAddress
+                        if (host != null && !host.startsWith("127.")) {
+                            return host
+                        }
+                    }
+                }
+            }
             for (intf in interfaces) {
-                val addrs = intf.inetAddresses ?: continue
-                for (addr in addrs) {
+                for (addr in intf.inetAddresses.toList()) {
                     if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
                         val host = addr.hostAddress
                         if (host != null && !host.startsWith("127.")) {
@@ -2092,6 +2117,7 @@ class PlayerViewModel @JvmOverloads constructor(
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Failed to start CastProxyServerService" }
                 }
+                delay(300)
             }
 
             val headers = video.headers ?: (source as? AnimeHttpSource)?.headers ?: Headers.Builder().build()

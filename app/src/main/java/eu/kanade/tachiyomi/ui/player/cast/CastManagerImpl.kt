@@ -114,17 +114,17 @@ class CastManagerImpl(
 
             _castState.update { it.copy(isLoading = true) }
 
-            val subtitleMediaTracks = subtitleTracks.map {
-                MediaTrack.Builder(it.index, MediaTrack.TYPE_TEXT).apply {
-                    setName(it.title)
-                    setSubtype(MediaTrack.SUBTYPE_SUBTITLES)
-                    setContentType(it.contentType)
-                    setLanguage(it.language)
-                    it.contentId?.let { id ->
-                        setContentId(id)
-                    }
-                }.build()
-            }
+            val subtitleMediaTracks = subtitleTracks
+                .filter { !it.contentId.isNullOrBlank() }
+                .map {
+                    MediaTrack.Builder(it.index, MediaTrack.TYPE_TEXT).apply {
+                        setName(it.title)
+                        setSubtype(MediaTrack.SUBTYPE_SUBTITLES)
+                        setContentType(it.contentType)
+                        setLanguage(it.language)
+                        setContentId(it.contentId)
+                    }.build()
+                }
 
             val audioMediaTracks = audioTracks.map {
                 MediaTrack.Builder(it.index, MediaTrack.TYPE_AUDIO).apply {
@@ -138,7 +138,8 @@ class CastManagerImpl(
                 }.build()
             }
 
-            val preferred = listOfNotNull(subtitleId, audioId).toLongArray()
+            val validTrackIds = (subtitleMediaTracks + audioMediaTracks).map { it.id }.toSet()
+            val preferred = listOfNotNull(subtitleId, audioId).filter { it in validTrackIds }.toLongArray()
 
             val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE).apply {
                 putString(MediaMetadata.KEY_TITLE, anime.title)
@@ -151,7 +152,10 @@ class CastManagerImpl(
             val mediaInfo = MediaInfo.Builder(video.videoUrl).apply {
                 setContentType(videoInformation.contentType)
                 setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
-                setMediaTracks(subtitleMediaTracks + audioMediaTracks)
+                val allTracks = subtitleMediaTracks + audioMediaTracks
+                if (allTracks.isNotEmpty()) {
+                    setMediaTracks(allTracks)
+                }
                 videoInformation.duration?.let {
                     setStreamDuration((it * 1000).toLong())
                 }
@@ -162,7 +166,9 @@ class CastManagerImpl(
                 setMediaInfo(mediaInfo)
                 setAutoplay(true)
                 setCurrentTime(startPosition * 1000L)
-                setActiveTrackIds(preferred)
+                if (preferred.isNotEmpty()) {
+                    setActiveTrackIds(preferred)
+                }
                 setPlaybackRate(
                     playbackRate.coerceIn(MediaLoadOptions.PLAYBACK_RATE_MIN, MediaLoadOptions.PLAYBACK_RATE_MAX),
                 )
