@@ -47,6 +47,7 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.source.local.image.LocalAnimeCoverManager
 import tachiyomi.source.local.image.LocalCoverManager
+import tachiyomi.source.local.image.LocalEpisodeThumbnailManager
 import tachiyomi.source.local.io.LocalAnimeSourceFileSystem
 import tachiyomi.source.local.io.LocalSourceFileSystem
 import uy.kohesive.injekt.api.InjektModule
@@ -152,6 +153,7 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { LocalCoverManager(app, get()) }
         addSingletonFactory { LocalAnimeSourceFileSystem(get()) }
         addSingletonFactory { LocalAnimeCoverManager(app, get()) }
+        addSingletonFactory { LocalEpisodeThumbnailManager(app, get()) }
         addSingletonFactory { StorageManager(app, get()) }
         addSingletonFactory { eu.kanade.tachiyomi.data.telegram.TelegramCloudManager(app) }
 

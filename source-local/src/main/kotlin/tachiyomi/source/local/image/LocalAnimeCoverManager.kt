@@ -38,13 +38,24 @@ class LocalAnimeCoverManager(
         anime: SAnime,
         inputStream: InputStream,
     ): UniFile? {
-        val directory = fileSystem.getAnimeDirectory(anime.url)
+        val targetFile = update(anime.url, inputStream)
+        if (targetFile != null) {
+            anime.thumbnail_url = targetFile.uri.toString()
+        }
+        return targetFile
+    }
+
+    fun update(
+        animeUrl: String,
+        inputStream: InputStream,
+    ): UniFile? {
+        val directory = fileSystem.getAnimeDirectory(animeUrl)
         if (directory == null) {
             inputStream.close()
             return null
         }
 
-        val targetFile = find(anime.url) ?: directory.createFile(DEFAULT_COVER_NAME)!!
+        val targetFile = find(animeUrl) ?: directory.createFile(DEFAULT_COVER_NAME)!!
 
         inputStream.use { input ->
             targetFile.openOutputStream().use { output ->
@@ -54,7 +65,6 @@ class LocalAnimeCoverManager(
 
         DiskUtil.createNoMediaFile(directory, context)
 
-        anime.thumbnail_url = targetFile.uri.toString()
         return targetFile
     }
 }

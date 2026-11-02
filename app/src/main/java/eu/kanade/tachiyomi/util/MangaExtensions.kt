@@ -4,6 +4,8 @@ import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.source.local.LocalAnimeSource
+import tachiyomi.source.local.image.LocalAnimeCoverManager
 import tachiyomi.source.local.image.LocalCoverManager
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
@@ -26,7 +28,11 @@ suspend fun Manga.editCover(
     updateManga: UpdateManga = Injekt.get(),
     coverCache: CoverCache = Injekt.get(),
 ) {
-    if (isLocal()) {
+    if (source == LocalAnimeSource.ID) {
+        val localAnimeCoverManager: LocalAnimeCoverManager = Injekt.get()
+        localAnimeCoverManager.update(url, stream)
+        updateManga.awaitUpdateCoverLastModified(id)
+    } else if (isLocal()) {
         coverManager.update(toSManga(), stream)
         updateManga.awaitUpdateCoverLastModified(id)
     } else if (favorite) {
