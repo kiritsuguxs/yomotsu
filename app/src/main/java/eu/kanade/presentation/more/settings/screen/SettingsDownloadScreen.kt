@@ -16,6 +16,7 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
@@ -67,6 +68,9 @@ object SettingsDownloadScreen : SearchableSettings {
                 downloadPreferences = downloadPreferences,
                 categories = allCategories,
             ),
+            getDeleteEpisodesGroup(
+                downloadPreferences = downloadPreferences,
+            ),
             getAutoDownloadGroup(
                 downloadPreferences = downloadPreferences,
                 allCategories = allCategories,
@@ -106,6 +110,33 @@ object SettingsDownloadScreen : SearchableSettings {
                 getExcludedCategoriesPreference(
                     downloadPreferences = downloadPreferences,
                     categories = { categories },
+                ),
+            ),
+        )
+    }
+
+    @Composable
+    private fun getDeleteEpisodesGroup(
+        downloadPreferences: DownloadPreferences,
+    ): Preference.PreferenceGroup {
+        return Preference.PreferenceGroup(
+            title = stringResource(AYMR.strings.pref_category_delete_episodes),
+            preferenceItems = listOf(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = downloadPreferences.removeEpisodeAfterMarkedAsSeen,
+                    title = stringResource(AYMR.strings.pref_remove_after_marked_as_seen),
+                ),
+                Preference.PreferenceItem.ListPreference(
+                    preference = downloadPreferences.removeEpisodeAfterSeenSlots,
+                    entries = mapOf(
+                        -1 to stringResource(MR.strings.disabled),
+                        0 to stringResource(AYMR.strings.last_seen_episode),
+                        1 to stringResource(AYMR.strings.second_to_last_episode),
+                        2 to stringResource(AYMR.strings.third_to_last_episode),
+                        3 to stringResource(AYMR.strings.fourth_to_last_episode),
+                        4 to stringResource(AYMR.strings.fifth_to_last_episode),
+                    ),
+                    title = stringResource(AYMR.strings.pref_remove_after_seen),
                 ),
             ),
         )

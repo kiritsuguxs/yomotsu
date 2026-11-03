@@ -8,16 +8,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -78,6 +83,7 @@ internal fun LazyListScope.updatesUiItems(
     onClickCover: (UpdatesItem) -> Unit,
     onClickUpdate: (UpdatesItem) -> Unit,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
+    onToggleExpand: ((Long) -> Unit)? = null,
 ) {
     items(
         items = uiModels,
@@ -116,6 +122,11 @@ internal fun LazyListScope.updatesUiItems(
                     update = updatesItem.update,
                     selected = updatesItem.selected,
                     isAnime = isAnime,
+                    extraCount = item.extraCount,
+                    isExpanded = item.isExpanded,
+                    onToggleExpand = if (item.isLeader && item.extraCount > 0) {
+                        { onToggleExpand?.invoke(updatesItem.update.mangaId) }
+                    } else null,
                     readProgress = updatesItem.update.lastPageRead
                         .takeIf { !updatesItem.update.read && it > 0L }
                         ?.let {
@@ -166,6 +177,9 @@ private fun UpdatesUiItem(
     downloadProgressProvider: () -> Int,
     modifier: Modifier = Modifier,
     isAnime: Boolean = false,
+    extraCount: Int = 0,
+    isExpanded: Boolean = true,
+    onToggleExpand: (() -> Unit)? = null,
 ) {
     val haptic = LocalHapticFeedback.current
     val textAlpha = if (update.read) DISABLED_ALPHA else 1f
@@ -258,6 +272,32 @@ private fun UpdatesUiItem(
                         maxLines = 1,
                         color = LocalContentColor.current.copy(alpha = DISABLED_ALPHA),
                         overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        if (extraCount > 0 && onToggleExpand != null) {
+            Surface(
+                onClick = onToggleExpand,
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f),
+                modifier = Modifier.padding(end = 4.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = if (isExpanded) "−" else "+$extraCount",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
             }

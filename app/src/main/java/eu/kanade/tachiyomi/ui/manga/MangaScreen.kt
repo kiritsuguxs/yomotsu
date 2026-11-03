@@ -13,10 +13,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.core.net.toUri
+import androidx.palette.graphics.Palette
+import coil3.asDrawable
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.presentation.theme.TachiyomiTheme
+import eu.kanade.tachiyomi.data.coil.getBestColor
+import eu.kanade.tachiyomi.util.system.getBitmapOrNull
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -126,8 +135,38 @@ class MangaScreen(
         val isNovel = successState.source is eu.kanade.tachiyomi.source.INovelSource
         val isAnime = (successState.source is eu.kanade.tachiyomi.animesource.AnimeSource) || successState.isAnime || viewModel.isAnime
 
-        MangaScreen(
-            state = successState,
+        val uiPreferences = remember { Injekt.get<UiPreferences>() }
+        val themeCoverBased by uiPreferences.themeCoverBased.collectAsState()
+        var seedColor by remember { mutableStateOf<Color?>(null) }
+
+        LaunchedEffect(successState.manga.thumbnailUrl, themeCoverBased) {
+            if (!themeCoverBased) {
+                seedColor = null
+                return@LaunchedEffect
+            }
+            withIOContext {
+                try {
+                    val request = ImageRequest.Builder(context)
+                        .data(successState.manga)
+                        .allowHardware(false)
+                        .size(160, 240)
+                        .build()
+                    val result = context.imageLoader.execute(request)
+                    val bitmap = result.image?.asDrawable(context.resources)?.getBitmapOrNull()
+                    if (bitmap != null) {
+                        val palette = Palette.from(bitmap).generate()
+                        val bestColor = palette.getBestColor()
+                        if (bestColor != null) {
+                            seedColor = Color(bestColor)
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
+        TachiyomiTheme(seedColor = seedColor) {
+            MangaScreen(
+                state = successState,
             snackbarHostState = viewModel.snackbarHostState,
             nextUpdate = successState.manga.expectedNextUpdate,
             isTabletUi = isTabletUi(),
@@ -360,6 +399,7 @@ class MangaScreen(
                 onDismissRequest = { showScanlatorsDialog = false },
                 onConfirm = viewModel::setExcludedScanlators,
             )
+        }
         }
     }
 

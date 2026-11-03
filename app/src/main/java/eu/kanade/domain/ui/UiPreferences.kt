@@ -46,6 +46,10 @@ class UiPreferences(
 
     val panoramaCover: Preference<Boolean> = preferenceStore.getBoolean("pref_panorama_cover", false)
 
+    val themeCoverBased: Preference<Boolean> = preferenceStore.getBoolean("pref_theme_cover_based", true)
+
+    val groupUpdatesByTitle: Preference<Boolean> = preferenceStore.getBoolean("pref_group_updates_by_title", true)
+
     val lastUsedLibraryMedia: Preference<String> = preferenceStore.getString("last_used_library_media", "Manga")
 
     val lastUsedBrowseMedia: Preference<String> = preferenceStore.getString("last_used_browse_media", "Manga")

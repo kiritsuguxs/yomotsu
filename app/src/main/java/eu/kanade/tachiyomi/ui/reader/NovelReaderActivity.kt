@@ -287,6 +287,7 @@ class NovelReaderActivity : ComponentActivity() {
         val translationPreferences: TranslationPreferences = Injekt.get()
         val upsertHistory: UpsertHistory = Injekt.get()
         val trackChapter: TrackChapter = Injekt.get()
+        val downloadPreferences: tachiyomi.domain.download.service.DownloadPreferences = Injekt.get()
         val appContext: Application = Injekt.get()
 
         val prefs = getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
@@ -580,6 +581,9 @@ class NovelReaderActivity : ComponentActivity() {
                             upsertHistory.await(HistoryUpdate(item.chapter.id, Date(), 0L))
                             if (markAsRead && !item.chapter.read) {
                                 trackChapter.await(appContext, mangaId, item.chapter.chapterNumber.toDouble())
+                                if (downloadPreferences.removeAfterReadSlots.get() != -1) {
+                                    eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.deleteChapter(mangaId, item.chapter.id)
+                                }
                             }
                         }
                         if (markAsRead && !item.chapter.read) {

@@ -94,6 +94,11 @@ object SettingsAppearanceScreen : SearchableSettings {
                         true
                     },
                 ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = uiPreferences.themeCoverBased,
+                    title = stringResource(MR.strings.pref_theme_cover_based),
+                    subtitle = stringResource(MR.strings.pref_theme_cover_based_summary),
+                ),
             ),
         )
     }
@@ -169,6 +174,11 @@ object SettingsAppearanceScreen : SearchableSettings {
                 Preference.PreferenceItem.SwitchPreference(
                     preference = uiPreferences.panoramaCover,
                     title = "Capa panorâmica na tela de detalhes",
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = uiPreferences.groupUpdatesByTitle,
+                    title = stringResource(MR.strings.pref_group_updates),
+                    subtitle = stringResource(MR.strings.pref_group_updates_summary),
                 ),
             ),
         )

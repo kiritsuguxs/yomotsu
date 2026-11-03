@@ -46,6 +46,8 @@ import eu.kanade.core.util.insertSeparators
 import eu.kanade.presentation.components.MediaFilterChips
 import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.util.lang.toLocalDate
+import eu.kanade.domain.ui.UiPreferences
+import tachiyomi.presentation.core.util.collectAsState
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -77,11 +79,15 @@ fun UpdateScreen(
 
     var selectedMediaFilter by rememberSaveable { mutableStateOf("ALL") }
     val sourceManager = remember { Injekt.get<SourceManager>() }
-    val filteredUiModels = remember(state.items, selectedMediaFilter) {
-        if (selectedMediaFilter == "ALL") {
-            state.getUiModel()
+    val uiPreferences = remember { Injekt.get<UiPreferences>() }
+    val groupUpdatesByTitle by uiPreferences.groupUpdatesByTitle.collectAsState()
+    var expandedMangaIds by rememberSaveable { mutableStateOf(setOf<Long>()) }
+
+    val filteredUiModels = remember(state.items, selectedMediaFilter, groupUpdatesByTitle, expandedMangaIds) {
+        val filtered = if (selectedMediaFilter == "ALL") {
+            state.items
         } else {
-            val filtered = state.items.filter { item ->
+            state.items.filter { item ->
                 val source = sourceManager.get(item.update.sourceId)
                 val mediaType = when {
                     source is AnimeSource || source?.javaClass?.name?.contains("anime", ignoreCase = true) == true -> "ANIME"
@@ -90,6 +96,9 @@ fun UpdateScreen(
                 }
                 mediaType == selectedMediaFilter
             }
+        }
+
+        if (!groupUpdatesByTitle) {
             filtered
                 .map { UpdatesUiModel.Item(it) }
                 .insertSeparators { before, after ->
@@ -100,6 +109,41 @@ fun UpdateScreen(
                         else -> null
                     }
                 }
+        } else {
+            val result = mutableListOf<UpdatesUiModel>()
+            val itemsByDate = filtered.groupBy { it.update.dateFetch.toLocalDate() }
+            for ((date, dateItems) in itemsByDate) {
+                result.add(UpdatesUiModel.Header(date))
+                val itemsByManga = dateItems.groupBy { it.update.mangaId }
+                for ((mangaId, mangaItems) in itemsByManga) {
+                    val first = mangaItems.first()
+                    val extraCount = mangaItems.size - 1
+                    val isExpanded = expandedMangaIds.contains(mangaId)
+
+                    result.add(
+                        UpdatesUiModel.Item(
+                            item = first,
+                            isLeader = extraCount > 0,
+                            extraCount = extraCount,
+                            isExpanded = isExpanded,
+                        ),
+                    )
+
+                    if (extraCount > 0 && isExpanded) {
+                        for (subsequent in mangaItems.drop(1)) {
+                            result.add(
+                                UpdatesUiModel.Item(
+                                    item = subsequent,
+                                    isLeader = false,
+                                    extraCount = 0,
+                                    isExpanded = true,
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+            result
         }
     }
 
@@ -171,6 +215,13 @@ fun UpdateScreen(
                             onClickCover = onClickCover,
                             onClickUpdate = onOpenChapter,
                             onDownloadChapter = onDownloadChapter,
+                            onToggleExpand = { id ->
+                                expandedMangaIds = if (expandedMangaIds.contains(id)) {
+                                    expandedMangaIds - id
+                                } else {
+                                    expandedMangaIds + id
+                                }
+                            },
                         )
                     }
                 }
@@ -285,5 +336,10 @@ private fun UpdatesBottomBar(
 
 sealed interface UpdatesUiModel {
     data class Header(val date: LocalDate) : UpdatesUiModel
-    data class Item(val item: UpdatesItem) : UpdatesUiModel
+    data class Item(
+        val item: UpdatesItem,
+        val isLeader: Boolean = false,
+        val extraCount: Int = 0,
+        val isExpanded: Boolean = true,
+    ) : UpdatesUiModel
 }

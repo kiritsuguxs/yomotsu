@@ -618,4 +618,14 @@
     <string name="cast_server_start_failed">Failed to start chromecast server</string>
     <string name="player_cast">Cast</string>
     <string name="player_cast_unknown_device">Unknown device</string>
+
+    <!-- Delete Episodes -->
+    <string name="pref_category_delete_episodes">Delete episodes</string>
+    <string name="pref_remove_after_seen">Delete episodes after watching</string>
+    <string name="pref_remove_after_marked_as_seen">Delete after manually marked as seen</string>
+    <string name="last_seen_episode">Last watched episode</string>
+    <string name="second_to_last_episode">Second to last watched</string>
+    <string name="third_to_last_episode">Third to last watched</string>
+    <string name="fourth_to_last_episode">Fourth to last watched</string>
+    <string name="fifth_to_last_episode">Fifth to last watched</string>
 </resources>

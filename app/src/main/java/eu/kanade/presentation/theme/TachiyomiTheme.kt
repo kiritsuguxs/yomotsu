@@ -6,7 +6,12 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamiccolor.ColorSpec
+import com.materialkolor.ktx.DynamicScheme
+import com.materialkolor.toColorScheme
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.AppTheme
 import eu.kanade.presentation.theme.colorscheme.BaseColorScheme
@@ -45,6 +50,41 @@ fun TachiyomiTheme(
         isAmoled = amoled ?: uiPreferences.themeDarkAmoled.get(),
         content = content,
     )
+}
+
+/** Theme with dynamic seed color extracted from entry cover */
+@Composable
+fun TachiyomiTheme(
+    seedColor: Color?,
+    appTheme: AppTheme? = null,
+    amoled: Boolean? = null,
+    content: @Composable () -> Unit,
+) {
+    val uiPreferences = Injekt.get<UiPreferences>()
+    val themeCoverBased = uiPreferences.themeCoverBased.get()
+    val isDark = isSystemInDarkTheme()
+    val isAmoled = amoled ?: uiPreferences.themeDarkAmoled.get()
+
+    if (seedColor != null && themeCoverBased) {
+        val colorScheme = remember(seedColor, isDark, isAmoled) {
+            DynamicScheme(
+                seedColor = seedColor,
+                isDark = isDark,
+                specVersion = ColorSpec.SpecVersion.SPEC_2025,
+                style = PaletteStyle.Vibrant,
+            ).toColorScheme(isAmoled = isAmoled)
+        }
+        MaterialExpressiveTheme(
+            colorScheme = colorScheme,
+            content = content,
+        )
+    } else {
+        BaseTachiyomiTheme(
+            appTheme = appTheme ?: uiPreferences.appTheme.get(),
+            isAmoled = isAmoled,
+            content = content,
+        )
+    }
 }
 
 @Composable

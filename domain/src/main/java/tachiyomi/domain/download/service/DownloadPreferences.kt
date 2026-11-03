@@ -25,6 +25,13 @@ class DownloadPreferences(
         false,
     )
 
+    val removeEpisodeAfterSeenSlots: Preference<Int> = preferenceStore.getInt("remove_after_seen_slots", -1)
+
+    val removeEpisodeAfterMarkedAsSeen: Preference<Boolean> = preferenceStore.getBoolean(
+        "pref_remove_episode_after_marked_as_seen_key",
+        false,
+    )
+
     val removeBookmarkedChapters: Preference<Boolean> = preferenceStore.getBoolean("pref_remove_bookmarked", false)
 
     val removeExcludeCategories: Preference<Set<String>> = preferenceStore.getStringSet(

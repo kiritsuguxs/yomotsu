@@ -2359,7 +2359,9 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun deleteEpisodeIfNeeded(chosenEpisode: Episode) {
         // Determine which episode should be deleted and enqueue
         val currentEpisodePosition = currentPlaylist.value.indexOf(chosenEpisode)
-        val removeAfterSeenSlots = downloadPreferences.removeAfterReadSlots.get()
+        val removeAfterSeenSlots = downloadPreferences.removeEpisodeAfterSeenSlots.get().let {
+            if (it != -1) it else downloadPreferences.removeAfterReadSlots.get()
+        }
         val episodeToDelete = currentPlaylist.value.getOrNull(
             currentEpisodePosition - removeAfterSeenSlots,
         )
@@ -2383,7 +2385,9 @@ class PlayerViewModel @JvmOverloads constructor(
      * based on the `removeAfterReadSlots` offset while the user is reading sequentially.
      */
     private fun deleteDupChapterIfNeeded(chosenEpisode: Episode) {
-        val removeAfterSeenSlots = downloadPreferences.removeAfterReadSlots.get()
+        val removeAfterSeenSlots = downloadPreferences.removeEpisodeAfterSeenSlots.get().let {
+            if (it != -1) it else downloadPreferences.removeAfterReadSlots.get()
+        }
         if (removeAfterSeenSlots != 0) return
         enqueueDeleteSeenEpisodes(chosenEpisode)
     }
