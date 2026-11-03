@@ -196,6 +196,38 @@ object ProfilePresets {
             drawableRes = R.drawable.avatar_alucard,
             backgroundGradient = listOf(Color(0xFFB71C1C), Color(0xFF000000)),
             isCharacter = true
+        ),
+        ProfilePresetAvatar(
+            id = "preset_yor",
+            name = "Yor Forger",
+            group = "Spy x Family",
+            drawableRes = R.drawable.avatar_yor,
+            backgroundGradient = listOf(Color(0xFF880E4F), Color(0xFF212121)),
+            isCharacter = true
+        ),
+        ProfilePresetAvatar(
+            id = "preset_makima",
+            name = "Makima",
+            group = "Chainsaw Man",
+            drawableRes = R.drawable.avatar_makima,
+            backgroundGradient = listOf(Color(0xFFE65100), Color(0xFF212121)),
+            isCharacter = true
+        ),
+        ProfilePresetAvatar(
+            id = "preset_2b",
+            name = "2B (YoRHa)",
+            group = "NieR: Automata",
+            drawableRes = R.drawable.avatar_2b,
+            backgroundGradient = listOf(Color(0xFF37474F), Color(0xFF212121)),
+            isCharacter = true
+        ),
+        ProfilePresetAvatar(
+            id = "preset_raiden",
+            name = "Raiden Shogun",
+            group = "Genshin Impact",
+            drawableRes = R.drawable.avatar_raiden,
+            backgroundGradient = listOf(Color(0xFF6A1B9A), Color(0xFF1A0033)),
+            isCharacter = true
         )
     )
 
@@ -271,6 +303,54 @@ object ProfilePresets {
             name = "Jardim Secreto",
             group = "O Castelo Animado",
             drawableRes = R.drawable.banner_ghibli_howl
+        ),
+        ProfilePresetBanner(
+            id = "banner_cyberpunk_city",
+            name = "Night City Neon",
+            group = "Cyberpunk: Edgerunners",
+            drawableRes = R.drawable.banner_cyberpunk_city
+        ),
+        ProfilePresetBanner(
+            id = "banner_shibuya_rain",
+            name = "Chuva em Shibuya",
+            group = "Anime Aesthetic",
+            drawableRes = R.drawable.banner_shibuya_rain
+        ),
+        ProfilePresetBanner(
+            id = "banner_elden_erdtree",
+            name = "Térvore Áurea",
+            group = "Elden Ring",
+            drawableRes = R.drawable.banner_elden_erdtree
+        ),
+        ProfilePresetBanner(
+            id = "banner_nier_ruins",
+            name = "Cidade em Ruínas",
+            group = "NieR: Automata",
+            drawableRes = R.drawable.banner_nier_ruins
+        ),
+        ProfilePresetBanner(
+            id = "banner_genshin_liyue",
+            name = "Pico de Liyue",
+            group = "Genshin Impact",
+            drawableRes = R.drawable.banner_genshin_liyue
+        ),
+        ProfilePresetBanner(
+            id = "banner_sao_aincrad",
+            name = "Castelo de Aincrad",
+            group = "Sword Art Online",
+            drawableRes = R.drawable.banner_sao_aincrad
+        ),
+        ProfilePresetBanner(
+            id = "banner_bleach_seireitei",
+            name = "Lua de Seireitei",
+            group = "Bleach",
+            drawableRes = R.drawable.banner_bleach_seireitei
+        ),
+        ProfilePresetBanner(
+            id = "banner_synthwave_sunset",
+            name = "Pôr do Sol Retrô",
+            group = "Synthwave Anime",
+            drawableRes = R.drawable.banner_synthwave_sunset
         ),
         ProfilePresetBanner(
             id = "banner_monarch",
