@@ -35,8 +35,8 @@ fun MediaFilterChips(
         filters.forEachIndexed { index, (key, label) ->
             val isSelected = selectedMedia == key
             SegmentedButton(
-                checked = isSelected,
-                onCheckedChange = { onSelectMedia(key) },
+                selected = isSelected,
+                onClick = { onSelectMedia(key) },
                 shape = SegmentedButtonDefaults.itemShape(
                     index,
                     filters.size,

@@ -34,8 +34,8 @@ fun TopMediaSelector(
         items.forEachIndexed { index, (mediaKey, label) ->
             val isSelected = selectedMedia == mediaKey
             SegmentedButton(
-                checked = isSelected,
-                onCheckedChange = { onSelectMedia(mediaKey) },
+                selected = isSelected,
+                onClick = { onSelectMedia(mediaKey) },
                 shape = SegmentedButtonDefaults.itemShape(
                     index,
                     items.size,
