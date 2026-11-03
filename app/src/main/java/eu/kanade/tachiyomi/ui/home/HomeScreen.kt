@@ -143,6 +143,10 @@ object HomeScreen : Screen() {
 
             BackHandler(enabled = tabNavigator.current != LibraryTab, onBack = goToLibraryTab)
 
+            LaunchedEffect(tabNavigator.current) {
+                showBottomNav(true)
+            }
+
             LaunchedEffect(Unit) {
                 launch {
                     librarySearchEvent.receiveAsFlow().collectLatest {

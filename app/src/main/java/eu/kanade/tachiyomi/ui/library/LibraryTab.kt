@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
@@ -300,8 +301,16 @@ data object LibraryTab : Tab {
             }
         }
 
-        LaunchedEffect(state.selectionMode, state.dialog) {
-            HomeScreen.showBottomNav(!state.selectionMode)
+        LaunchedEffect(state.selectionMode, state.dialog, isMediaSelectorVisible) {
+            HomeScreen.showBottomNav(!state.selectionMode && isMediaSelectorVisible)
+        }
+
+        DisposableEffect(Unit) {
+            onDispose {
+                scope.launch {
+                    HomeScreen.showBottomNav(true)
+                }
+            }
         }
 
         LaunchedEffect(state.isLoading) {
