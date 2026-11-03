@@ -3,6 +3,42 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y5
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Modo Imersivo na Biblioteca (Scroll to Hide):**
+  - Ao rolar a biblioteca para baixo, o seletor superior de mídia e a barra de navegação inferior recolhem suavemente, liberando a tela inteira para exibição das capas.
+  - Ao rolar para cima ou alternar de categoria, as barras reaparecem instantaneamente.
+- **Seletor de Mídia e Filtros Rápidos Segmentados:**
+  - Substituição dos botões antigos por botões segmentados simétricos e com largura total (`[ 📖 Mangás | 🎬 Animes | 📚 Light Novels ]`) no padrão oficial Material 3.
+  - Linhas de filtros proporcionais e alinhadas em Pesquisar, Atualizações e Histórico (`[ Todos | Mangás | Animes | Novels ]`).
+- **Novo Balanceamento de XP e Níveis (1 ao 1000):**
+  - Progressão justa e satisfatória: 10 XP por capítulo lido ou baixado, 36 XP por episódio assistido e 15 XP por episódio baixado.
+  - Nível 10 (*Desperto*) conquistado com ~75 a 100 capítulos (~1.000 XP).
+  - Nível 501 (*Lendário - Soberano do Tempo*) desbloqueado exatamente com 30.000 capítulos lidos (300.000 XP).
+  - Nível 1000 (*Deus Supremo do Yomotsu*) cravado em ~110.000 capítulos ou ~30.500 episódios.
+- **Reformulação das Conquistas:**
+  - Metas justas de longo prazo em 10 níveis balanceados (Bronze 1–4, Prata 5–7, Ouro 8–9 e Rubi 10), com tetos em 5.000 capítulos e 1.500 episódios.
+- **Estabilidade e Desempenho:**
+  - Otimizações no consumo de memória durante a rolagem de grades longas e transições suaves entre abas.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Immersive Library Mode (Scroll to Hide):**
+  - Scrolling down the library grid smoothly collapses both the top media selector and the bottom navigation bar, offering an edge-to-edge view with an extra row of covers.
+  - Scrolling slightly upward or switching categories restores all bars immediately.
+- **Full-Width Segmented Media Selector & Quick Filters:**
+  - Replaced older chips with official Material 3 segmented buttons (`[ 📖 Manga | 🎬 Anime | 📚 Light Novels ]`) with equal width distribution.
+  - Symmetrical quick filter rows across Search, Updates, and History (`[ All | Manga | Anime | Novels ]`).
+- **Rebalanced XP Math & 1000-Level Progression:**
+  - Fair, rewarding progression curve: 10 XP per chapter read or downloaded, 36 XP per anime episode watched, 15 XP per episode downloaded.
+  - Level 10 (*Awakened*) reached around ~75 to 100 chapters (~1,000 XP).
+  - Level 501 (*Legendary Tier - Time Sovereign*) unlocked at exactly 30,000 chapters read (300,000 XP).
+  - Level 1000 (*Supreme God of Yomotsu*) milestone reached at ~110,000 chapters or ~30,500 anime episodes.
+- **Balanced Achievements Overhaul:**
+  - Replaced unreachable 30,000-chapter targets with 10 balanced milestone tiers (Bronze, Silver, Gold, Ruby), capping at 5,000 chapters and 1,500 episodes.
+- **Stability & Performance:**
+  - Optimized memory consumption during grid scrolling and stutter-free tab transitions.
+
 ## 0.21.4-Y4
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
