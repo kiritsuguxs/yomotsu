@@ -18,7 +18,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -102,6 +107,26 @@ data object LibraryTab : Tab {
 
         val snackbarHostState = remember { SnackbarHostState() }
 
+        var isMediaSelectorVisible by rememberSaveable { mutableStateOf(true) }
+
+        LaunchedEffect(state.coercedActiveCategoryIndex) {
+            isMediaSelectorVisible = true
+        }
+
+        val nestedScrollConnection = remember {
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    val delta = available.y
+                    if (delta < -6f) {
+                        isMediaSelectorVisible = false
+                    } else if (delta > 6f) {
+                        isMediaSelectorVisible = true
+                    }
+                    return Offset.Zero
+                }
+            }
+        }
+
         val onClickRefresh: (Category?) -> Boolean = { category ->
             val started = LibraryUpdateJob.startNow(context, category, selectedMedia)
             scope.launch {
@@ -116,6 +141,7 @@ data object LibraryTab : Tab {
         }
 
         Scaffold(
+            modifier = Modifier.nestedScroll(nestedScrollConnection),
             topBar = { scrollBehavior ->
                 val defaultTitleRes = when (selectedMedia) {
                     "Anime" -> MR.strings.browse_media_anime
@@ -155,6 +181,7 @@ data object LibraryTab : Tab {
                     onSearchQueryChange = viewModel::search,
                     // For scroll overlay when no tab
                     scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
+                    isMediaSelectorVisible = isMediaSelectorVisible,
                 )
             },
             bottomBar = {

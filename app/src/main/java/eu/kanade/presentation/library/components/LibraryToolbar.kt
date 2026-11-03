@@ -24,6 +24,12 @@ import tachiyomi.presentation.core.components.Pill
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import eu.kanade.presentation.components.TopMediaSelector
@@ -45,6 +51,7 @@ fun LibraryToolbar(
     searchQuery: String?,
     onSearchQueryChange: (String?) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior?,
+    isMediaSelectorVisible: Boolean = true,
 ) = when {
     selectedCount > 0 -> LibrarySelectionToolbar(
         selectedCount = selectedCount,
@@ -64,6 +71,7 @@ fun LibraryToolbar(
         onClickGlobalUpdate = onClickGlobalUpdate,
         onClickOpenRandomManga = onClickOpenRandomManga,
         scrollBehavior = scrollBehavior,
+        isMediaSelectorVisible = isMediaSelectorVisible,
     )
 }
 
@@ -80,6 +88,7 @@ private fun LibraryRegularToolbar(
     onClickGlobalUpdate: () -> Unit,
     onClickOpenRandomManga: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior?,
+    isMediaSelectorVisible: Boolean = true,
 ) {
     val pillAlpha = if (isSystemInDarkTheme()) 0.12f else 0.08f
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -130,7 +139,11 @@ private fun LibraryRegularToolbar(
         },
         scrollBehavior = scrollBehavior,
     )
-        if (searchQuery == null) {
+        AnimatedVisibility(
+            visible = searchQuery == null && isMediaSelectorVisible,
+            enter = expandVertically(animationSpec = tween(200)) + fadeIn(animationSpec = tween(150)),
+            exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(animationSpec = tween(150)),
+        ) {
             TopMediaSelector(
                 selectedMedia = selectedMedia,
                 onSelectMedia = onSelectMedia,
