@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.core.graphics.toColorInt
+import eu.kanade.tachiyomi.ui.player.Anime4KMode
 import eu.kanade.tachiyomi.ui.player.DebandSettings
 import eu.kanade.tachiyomi.ui.player.Debanding
 import eu.kanade.tachiyomi.ui.player.Decoder.Companion.getDecoderFromValue
@@ -614,6 +615,7 @@ fun PlayerControls(
         }
 
         val statisticsPage by advancedPreferences.playerStatisticsPage().collectAsState()
+        val anime4k by decoderPreferences.anime4k().collectAsState()
 
         PlayerSheets(
             sheetShown = sheetShown,
@@ -659,6 +661,11 @@ fun PlayerControls(
             // More sheet state
             statisticsPage = statisticsPage,
             audioChannels = audioChannels,
+            anime4k = anime4k,
+            onAnime4KChange = { mode ->
+                decoderPreferences.anime4k().set(mode)
+                viewModel.applyAnime4K(mode)
+            },
             sleepTimerTimeRemaining = sleepTimerTimeRemaining,
             onStartSleepTimer = viewModel::startTimer,
             onStatisticsPageChange = { page ->

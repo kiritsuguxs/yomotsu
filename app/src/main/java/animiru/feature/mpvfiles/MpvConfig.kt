@@ -124,6 +124,9 @@ class MpvConfig(
         val scriptOptsDir = deleteAndGet(mpvDir, MPV_SCRIPTS_OPTS_DIR)
         val shadersDir = deleteAndGet(mpvDir, MPV_SHADERS_DIR)
 
+        // Copy built-in shaders from assets
+        copyAssetShaders(shadersDir)
+
         // Then, copy the user files from the Aniyomi directory
         if (advancedPlayerPreferences.mpvUserFiles().get()) {
             copyDirectoryContents(storageManager.getScriptsDirectory(), scriptsDir)
@@ -141,6 +144,22 @@ class MpvConfig(
                     }
                 }
             }
+        }
+    }
+
+    private fun copyAssetShaders(shadersDir: UniFile) {
+        runCatching {
+            val files = context.assets.list("shaders") ?: return
+            for (filename in files) {
+                val outFile = shadersDir.createFile(filename) ?: continue
+                context.assets.open("shaders/$filename").use { inputStream ->
+                    outFile.openOutputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+            }
+        }.onFailure {
+            logcat(LogPriority.ERROR, it) { "Failed to copy asset shaders: ${it.message}" }
         }
     }
 

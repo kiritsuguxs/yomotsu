@@ -138,6 +138,8 @@ class AniyomiMPVView(context: Context, attributes: AttributeSet?) : BaseMPVView(
             Debanding.GPU -> mpv?.setOptionString("deband", "yes")
         }
 
+        Anime4KMode.apply(mpv, context, decoderPreferences.anime4k().get())
+
         advancedPreferences.playerStatisticsPage().get().let {
             if (it != 0) {
                 mpv?.command("script-binding", "stats/display-stats-toggle")

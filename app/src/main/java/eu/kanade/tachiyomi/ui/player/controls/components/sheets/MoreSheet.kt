@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import eu.kanade.presentation.player.components.PlayerSheet
+import eu.kanade.tachiyomi.ui.player.Anime4KMode
 import eu.kanade.tachiyomi.ui.player.Decoder
 import eu.kanade.tachiyomi.ui.player.settings.AudioChannels
 import kotlinx.collections.immutable.ImmutableList
@@ -82,6 +83,8 @@ fun MoreSheet(
     onStartTimer: (Int) -> Unit,
     onStatisticsPageChange: (Int) -> Unit,
     onAudioChannelsChange: (AudioChannels) -> Unit,
+    anime4k: Anime4KMode,
+    onAnime4KChange: (Anime4KMode) -> Unit,
     onDismissRequest: () -> Unit,
     onEnterFiltersPanel: () -> Unit,
     modifier: Modifier = Modifier,
@@ -158,6 +161,19 @@ fun MoreSheet(
                         selected = decoder == selectedDecoder,
                         onClick = { onSelectDecoder(decoder) },
                         label = { Text(text = decoder.title) },
+                    )
+                }
+            }
+
+            Text("Anime4K")
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+            ) {
+                items(Anime4KMode.entries) { mode ->
+                    FilterChip(
+                        selected = anime4k == mode,
+                        onClick = { onAnime4KChange(mode) },
+                        label = { Text(text = mode.title) },
                     )
                 }
             }

@@ -49,6 +49,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -129,6 +130,7 @@ fun MangaInfoBox(
         // Backdrop
         val backdropGradientColors = listOf(
             Color.Transparent,
+            MaterialTheme.colorScheme.background.copy(alpha = 0.65f),
             MaterialTheme.colorScheme.background,
         )
         AsyncImage(
@@ -146,8 +148,8 @@ fun MangaInfoBox(
                         brush = Brush.verticalGradient(colors = backdropGradientColors),
                     )
                 }
-                .blur(if (panoramaCover) 2.dp else 4.dp)
-                .alpha(if (panoramaCover) 0.35f else 0.2f),
+                .blur(if (panoramaCover) 12.dp else 4.dp)
+                .alpha(if (panoramaCover) 0.4f else 0.2f),
         )
 
         // Manga & source info
@@ -238,7 +240,7 @@ fun MangaActionRow(
         )
         MangaActionButton(
             title = if (trackingCount == 0) {
-                stringResource(MR.strings.manga_tracking_tab)
+                stringResource(MR.strings.action_track)
             } else {
                 pluralStringResource(MR.plurals.num_trackers, count = trackingCount, trackingCount)
             },
@@ -733,6 +735,15 @@ private fun TagsChip(
             modifier = modifier,
             onClick = onClick,
             label = { Text(text = text, style = MaterialTheme.typography.bodySmall) },
+            shape = MaterialTheme.shapes.small,
+            colors = SuggestionChipDefaults.suggestionChipColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+            border = SuggestionChipDefaults.suggestionChipBorder(
+                enabled = true,
+                borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+            ),
         )
     }
 }
@@ -762,6 +773,8 @@ private fun RowScope.MangaActionButton(
                 text = title,
                 color = color,
                 fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
             )
         }

@@ -91,10 +91,10 @@ class ShikimoriApi(
             val filterParam = if (isAnime) "" else ", kind:\"!light_novel,!novel\""
             val query = $$"""
             |query($query: String) {
-                |$rootField(search: $query, limit: 20$filterParam) {
+                |$$rootField(search: $query, limit: 20$$filterParam) {
                     |id
                     |name
-                    |$countField
+                    |$$countField
                     |kind
                     |poster {
                         |mainUrl

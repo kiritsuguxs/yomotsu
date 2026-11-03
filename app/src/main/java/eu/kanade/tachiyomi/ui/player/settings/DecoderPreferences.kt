@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.player.settings
 
+import eu.kanade.tachiyomi.ui.player.Anime4KMode
 import eu.kanade.tachiyomi.ui.player.Debanding
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getEnum
@@ -11,6 +12,7 @@ class DecoderPreferences(
     fun gpuNext() = preferenceStore.getBoolean("pref_gpu_next", false)
     fun useYUV420P() = preferenceStore.getBoolean("use_yuv420p", true)
 
+    fun anime4k() = preferenceStore.getEnum("pref_anime4k", Anime4KMode.Off)
     fun debanding() = preferenceStore.getEnum("pref_video_debanding", Debanding.None)
     fun debandIterations() = preferenceStore.getInt("deband_iterations", 1)
     fun debandThreshold() = preferenceStore.getInt("deband_threshold", 48)

@@ -21,6 +21,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import eu.kanade.tachiyomi.ui.player.Anime4KMode
 import eu.kanade.tachiyomi.ui.player.ArtType
 import eu.kanade.tachiyomi.ui.player.Decoder
 import eu.kanade.tachiyomi.ui.player.Panels
@@ -94,6 +95,8 @@ fun PlayerSheets(
     onStartSleepTimer: (Int) -> Unit,
     onStatisticsPageChange: (Int) -> Unit,
     onAudioChannelsChange: (AudioChannels) -> Unit,
+    anime4k: Anime4KMode,
+    onAnime4KChange: (Anime4KMode) -> Unit,
 
     // Screenshot sheet
     isLocalSource: Boolean,
@@ -182,6 +185,8 @@ fun PlayerSheets(
                 onStartTimer = onStartSleepTimer,
                 onStatisticsPageChange = onStatisticsPageChange,
                 onAudioChannelsChange = onAudioChannelsChange,
+                anime4k = anime4k,
+                onAnime4KChange = onAnime4KChange,
                 onDismissRequest = onDismissRequest,
                 onEnterFiltersPanel = { onOpenPanel(Panels.VideoFilters) },
                 )

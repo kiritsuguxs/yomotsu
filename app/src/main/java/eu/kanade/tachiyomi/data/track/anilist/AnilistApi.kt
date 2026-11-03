@@ -142,7 +142,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
             val query = $$"""
             |query Search($query: String) {
                 |Page (perPage: 50) {
-                    |media(search: $query, $typeParam) {
+                    |media(search: $query, $$typeParam) {
                         |id
                         |staff {
                             |edges {
@@ -166,7 +166,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                         |format
                         |countryOfOrigin
                         |status
-                        |$countField
+                        |$$countField
                         |description
                         |startDate {
                             |year

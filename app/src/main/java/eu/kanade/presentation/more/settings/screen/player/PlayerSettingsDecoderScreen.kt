@@ -5,6 +5,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.SearchableSettings
+import eu.kanade.tachiyomi.ui.player.Anime4KMode
 import eu.kanade.tachiyomi.ui.player.Debanding
 import eu.kanade.tachiyomi.ui.player.settings.DecoderPreferences
 import kotlinx.collections.immutable.toImmutableMap
@@ -27,6 +28,7 @@ object PlayerSettingsDecoderScreen : SearchableSettings {
 
         val tryHw = decoderPreferences.tryHWDecoding()
         val useGpuNext = decoderPreferences.gpuNext()
+        val anime4k = decoderPreferences.anime4k()
         val debanding = decoderPreferences.debanding()
         val yuv420p = decoderPreferences.useYUV420P()
 
@@ -39,6 +41,14 @@ object PlayerSettingsDecoderScreen : SearchableSettings {
                 preference = useGpuNext,
                 title = stringResource(AYMR.strings.pref_gpu_next_title),
                 subtitle = stringResource(AYMR.strings.pref_gpu_next_subtitle),
+            ),
+            Preference.PreferenceItem.ListPreference(
+                preference = anime4k,
+                entries = Anime4KMode.entries.associateWith {
+                    it.title
+                }.toImmutableMap(),
+                title = "Anime4K",
+                subtitle = "Super Resolução GLSL para Anime",
             ),
             Preference.PreferenceItem.ListPreference(
                 preference = debanding,

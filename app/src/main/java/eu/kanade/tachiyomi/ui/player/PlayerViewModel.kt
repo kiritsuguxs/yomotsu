@@ -437,6 +437,10 @@ class PlayerViewModel @JvmOverloads constructor(
         }
     }
 
+    fun applyAnime4K(mode: Anime4KMode) {
+        Anime4KMode.apply(mpv, context, mode)
+    }
+
     fun fetchFonts(includeSystemFonts: Boolean): List<String> {
         // ANK -->
         val fontFiles = mutableListOf(subtitlePreferences.subtitleFont().defaultValue())
