@@ -37,9 +37,9 @@ object YomotsuLevelManager {
 
     const val MAX_LEVEL = 1000
     const val XP_PER_CHAPTER_READ = 10
-    const val XP_PER_CHAPTER_DOWNLOAD = 2
-    const val XP_PER_EPISODE_WATCHED = 25
-    const val XP_PER_EPISODE_DOWNLOAD = 5
+    const val XP_PER_CHAPTER_DOWNLOAD = 10
+    const val XP_PER_EPISODE_WATCHED = 36
+    const val XP_PER_EPISODE_DOWNLOAD = 15
 
     // Lista de Títulos baseada na evolução do Nível 1 ao 1000
     val ALL_TITLES = listOf(
@@ -167,12 +167,13 @@ object YomotsuLevelManager {
 
     /**
      * Fórmula Curva Progressiva Equilibrada:
-     * XP(Level) = 50 * (Level - 1) + 5 * (Level - 1)^2
+     * XP(Level) = 100 * (Level - 1) + 1 * (Level - 1)^2
      * - Level 1: 0 XP
-     * - Level 10: 855 XP (~85 capítulos, bate ~1k no Rank Desperto)
-     * - Level 20: 2.755 XP (Rank Leitor Novato)
-     * - Level 50: 14.455 XP (Rank C)
-     * - Level 100: 53.955 XP (Autoridade Suprema)
+     * - Level 10: 981 XP (~75 a 100 capítulos lidos/baixados bate ~1k no Rank Desperto)
+     * - Level 20: 2.261 XP (Rank Leitor Novato)
+     * - Level 50: 7.301 XP (Rank C)
+     * - Level 100: 19.701 XP (Autoridade Suprema)
+     * - Level 1000: 1.097.901 XP (~110k capítulos ou ~30k episódios de anime)
      */
     fun calculateLevelFromXp(xp: Long): Int {
         if (xp <= 0) return 1
@@ -190,7 +191,7 @@ object YomotsuLevelManager {
     fun getXpRequiredForLevel(level: Int): Long {
         if (level <= 1) return 0L
         val l = (level - 1).toLong().coerceAtMost((MAX_LEVEL - 1).toLong())
-        return 50L * l + 5L * l * l
+        return 100L * l + 1L * l * l
     }
 
     fun getUnlockedTitles(currentLevel: Int): List<YomotsuTitle> {
