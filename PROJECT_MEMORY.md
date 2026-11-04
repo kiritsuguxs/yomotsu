@@ -2,8 +2,8 @@
 
 ## 1. Visão Geral do Projeto & Estado Atual Ativo
 - **Repositório:** `kiritsuguxs/yomotsu`
-- **Versão Ativa:** `versionName = "0.21.4-Y6"`, `versionCode = 116`
-- **Release Oficial Atual:** `v0.21.4-Y6` (Tema Dinâmico Baseado na Capa, Agrupamento de Atualizações, Auto-Exclusão para Anime/Novel, Anime4K no MPV e Correção AniList/Shikimori).
+- **Versão Principal Estável (`main`):** `versionName = "0.21.4-Y6"`, `versionCode = 116` (Release Oficial Y6)
+- **Branch Ativa de Desenvolvimento:** `temp/floating-dock-ui` (`versionName = "0.21.4-Y7-DOCK"`, `versionCode = 117`)
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Use Python (`zipfile`, `PIL`, `urllib`) em vez de `/bin/unzip` ou `/usr/bin/file`, e compile sempre via GitHub Actions.
 
 ---
@@ -608,3 +608,47 @@
    - `TranslationLayoutCollisionResolver.kt` (aplicado em `ChapterTranslator.kt` e no leitor via `layoutRegionOverride` em `SmartTranslationBlock.kt`) impede sobreposição de layouts. `TranslationCleanupBlock.kt` usa padding mínimo e cápsulas arredondadas para geometria medida.
    - `extractAlignedPageTranslations` (`ComicTranslationPrompt.kt`) usado por `GeminiTranslator.kt` e `OpenRouterTranslator.kt` evita deslocamento de índices quando a IA funde itens.
    - AOT-GAN: pula balões fechados, protege linhas vizinhas não traduzidas, máscara arredondada justa; removido `ncnn::set_cpu_powersave` (causava lentidão em SoCs 1+3+4) e `:inpaint` usa `BIND_IMPORTANT`.
+
+
+---
+
+### AR. Release 0.21.4-Y6 (Anime4K v4.0.1, Tema Dinâmico da Capa, Agrupamento e Auto-Exclusão)
+1. **Anime4K v4.0.1 no MPV Player:**
+   - 39 shaders GLSL oficiais integrados em `app/src/main/assets/shaders/`.
+   - Modos A (Restauração), B (Suavização), C (Fidelidade) e Off via seletor rápido no player (`MoreSheet.kt`) e em *Configurações > Player > Decodificador*.
+2. **Tema Dinâmico Baseado na Capa (Dynamic Palette):**
+   - Extrai paleta vibrante via Android `Palette` e Coil 3 para mangás, animes e novels em `MangaScreen`.
+3. **Agrupamento de Atualizações por Título:**
+   - Múltiplos capítulos/episódios da mesma obra consolidados em um item com badge expansível `+N` na aba Atualizações.
+4. **Auto-Exclusão de Downloads de Anime e Novel:**
+   - Opções dedicadas em *Configurações > Downloads* para excluir episódios/capítulos assistidos ou lidos automaticamente.
+5. **Correção GraphQL AniList/Shikimori (HTTP 400):**
+   - Ajustada interpolação de strings raw multi-dólar do Kotlin 2.0 (`$$typeParam` / `$$countField`).
+
+### AS. Modernização Visual e Floating Glass Dock (Branch `temp/floating-dock-ui`, v0.21.4-Y7-DOCK)
+1. **Motivação e Análise de Forks (Tadami, ShinKu, Dantotsu, Kototoro):**
+   - O usuário solicitou uma análise profunda dos forks catalogados no miyomi.app e comparou com o Yomotsu.
+   - Yomotsu já possui recursos técnicos inigualáveis (OCR offline de balões com IA, Anime4K GLSL, Telegram Cloud, 3-em-1 Anime/Mangá/Novel).
+   - O objetivo era modernizar a interface sem causar inchaço (bloat), sem gastar bateria com polling/thumbnails em background e sem carrosséis poluindo a biblioteca.
+2. **Floating Glass Dock (Barra de Navegação Flutuante):**
+   - Em `HomeScreen.kt`: A barra de navegação foi descolada do rodapé da tela.
+   - Formato de pílula flutuante (`RoundedCornerShape(32.dp)`), borda sutil de neon do tema (`primary.copy(alpha = 0.35f)`), fundo translúcido suave (`surfaceVariant.copy(alpha = 0.94f)`) e elevação de sombra de 16dp.
+   - Rolagem contínua: o conteúdo da biblioteca e explorar desliza por trás da barra flutuante.
+   - Compensação em `LibraryContent.kt`: Adicionado `+ 84.dp` ao padding inferior de rolagem do `LibraryPager`, garantindo que a última linha de capas nunca fique coberta pelo dock.
+3. **Arredondamento Suave de Capas (12dp):**
+   - Em `MangaCover.kt`: Substituído `MaterialTheme.shapes.extraSmall` (4dp duro) por `RoundedCornerShape(12.dp)`. Aplicado globalmente em todas as telas (biblioteca, explorar, histórico, atualizações, detalhes).
+4. **Badges e Detalhes Translúcidos:**
+   - Em `Badges.kt`: Cantos arredondados de 6dp com `alpha = 0.90f`.
+   - Em `LibraryBadges.kt`: Badge de idioma em formato pill arredondado 6dp com ícone 20dp e texto 13sp.
+   - Em `UserProfileScreen.kt`: `StatBox` com cantos 12dp e borda neon translúcida `primary.copy(alpha = 0.25f)`.
+   - Em `BaseBrowseItem.kt`: Itens de fontes com cantos 12dp e fundo sutil translúcido.
+
+### AT. Diagnóstico de Teste do Usuário e Pipeline de Build CI
+- **Por que o primeiro teste não mostrou diferença visual:**
+  1. No GitHub Actions, commits em branches temporárias não geram lançamentos em *GitHub Releases*, geram um arquivo **Artifact (ZIP)** na página da Action.
+  2. No primeiro commit (`2a8c98a` / `92cf4c1`), o `versionCode` ainda era 116 (igual ao da release Y6 instalada). O Android não sobrescreve APKs com o mesmo `versionCode`.
+  3. No commit `8ab8412`, o `versionCode` foi incrementado para `117` e a versão nomeada como `0.21.4-Y7-DOCK`.
+- **Pipeline Ativa:**
+  - GitHub Actions Run ID: `#41860703240` (`Build & Test App`).
+  - Para testar: Baixar o zip em **Artifacts** na página da Action `https://github.com/kiritsuguxs/yomotsu/actions/runs/41860703240`, extrair e instalar o APK gerado.
+  - Verificar em *Mais > Sobre*: deve exibir `0.21.4-Y7-DOCK (117)`.

@@ -1,99 +1,108 @@
 # Memória do Projeto Yomotsu & Registro de Evoluções
 
-Este arquivo registra o contexto completo das melhorias implementadas, do estado atual do repositório e das ideias mapeadas no catálogo Miyomi (miyomi.app) para continuidade em novos chats.
+Este arquivo registra o contexto completo das melhorias implementadas, do estado atual do repositório, da análise comparativa de forks do Miyomi e das modificações ativas na branch de teste para continuidade perfeita em novos chats.
 
 ---
 
 ## 1. Estado Atual do Repositório & Git
-- **Versão Ativa:** `0.21.4-Y6` (versionCode 116)
-- **Branch Principal (`main`):** Atualizada com a release Y6 (todas as melhorias testadas e validadas na branch `temp/melhorias-ui`).
-- **Ambiente de Execução:** Android / PRoot Linux. Compilações locais via Gradle falham no PRoot devido a restrições de permissão do kernel (`SecurityException`). A verificação e compilação de APKs é realizada remotamente via GitHub Actions CI.
+- **Branch Principal (`main`):** Release oficial estável `v0.21.4-Y6` (versionCode 116).
+- **Branch Ativa de Desenvolvimento:** `temp/floating-dock-ui` (baseada na `main`, versionCode 117, versionName `0.21.4-Y7-DOCK`).
+- **Commits na branch `temp/floating-dock-ui`:**
+  - `2a8c98a`: Implementação inicial da UI moderna (Floating Dock, capas arredondadas 12dp, badges translúcidos, perfil e itens com borda sutil).
+  - `92cf4c1`: Correção de erro de compilação Compose em `HomeScreen.kt` (conflito de parâmetros nomeados `horizontal` e `bottom` em `Modifier.padding`). Build CI `#41856513392` passou com sucesso.
+  - `8ab8412`: Elevação de versão para 117 (`0.21.4-Y7-DOCK`), borda neon temática no dock (`primary.copy(alpha = 0.35f)`), rolagem contínua do conteúdo por trás do dock flutuante e compensação de padding inferior (+84dp) na biblioteca.
+- **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Compilações locais via Gradle falham no PRoot devido a restrições de segurança do kernel (`SecurityException`). Toda verificação e geração de APKs é realizada remotamente via GitHub Actions CI (`.github/workflows/build_push.yml` ou `build.yml`).
 
 ---
 
-## 2. O que Já Foi Implementado (Commit `e58d9f0`)
+## 2. Comparativo de Forks Miyomi e Decisões de Design
 
-### A. Correção do Erro HTTP 400 no AniList e Shikimori
-- **Problema:** Ao buscar animes/mangás no rastreador do AniList (ex: "Tensei shitara Ken deshita 2"), a API retornava erro `HTTP 400` com sintaxe inválida no GraphQL.
-- **Causa Raiz:** O commit `b7bebf0` introduziu strings raw multi-dólar do Kotlin 2.0 (`$$"""..."""`). Nessa sintaxe, variáveis que começam com um único `$` (como `$typeParam` e `$countField`) deixaram de ser interpoladas e eram enviadas literalmente como `"$typeParam"`.
-- **Arquivos Corrigidos:**
-  - `app/src/main/java/eu/kanade/tachiyomi/data/track/anilist/AnilistApi.kt` (ajustado para `$$typeParam` e `$$countField`)
-  - `app/src/main/java/eu/kanade/tachiyomi/data/track/shikimori/ShikimoriApi.kt` (ajustado para `$$rootField`, `$$filterParam` e `$$countField`)
+### Análise de Forks Notáveis:
+1. **Tadami / Aurora UI (`andarcanum/Tadami-Aniyomi-fork`):**
+   - Usa um visual expressivo com cards flutuantes e foco em anime, mas é pesado e focado apenas em vídeo, sem suporte maduro a mangás/novels e sem IA local.
+2. **ShinKu (`Harrys-HQ/ShinKu`):**
+   - Introduziu o conceito de **Floating Navigation Bar (Dock Flutuante)** destacado das bordas, dando uma sensação muito moderna e fluida, semelhante a apps iOS e Material 3 Expressive.
+   - Trouxe cantos mais suaves nas capas de mangás (12dp) em vez dos retângulos duros (4dp).
+3. **Dantotsu / ReDantotsu (`AsrOfficialDev/ReDantotsu`):**
+   - Visual excelente integrado ao AniList, porém extremamente inchado com menus redundantes e alto consumo de memória/bateria.
+4. **Kototoro:**
+   - Possui recursos avançados, mas a interface é poluída com badges pesados, banners e poluição visual excessiva sobre as capas.
+5. **Yomotsu (Diferenciais Únicos que nenhum fork possui):**
+   - **IA & OCR Offline Integrado:** Tradução em tempo real de balões de mangá com `ppocr-sdk`, `dbnet-native` e `AotInpaintService`.
+   - **Shaders Anime4K v4.0.1 GLSL Nativos:** Upscaling e restauração de alta fidelidade em tempo real no MPV.
+   - **3 em 1 Real:** Suporte completo e unificado a Anime + Mangá + Light Novels.
+   - **Backup Privado em Nuvem:** Suporte a Telegram Cloud e backup completo de extensões `.ext` privadas.
+   - **Performance Pura:** Mantém a leveza do Mihon oficial sem sobrecarregar o dispositivo.
 
-### B. Polimento Visual da Tela de Detalhes (Anime / Mangá)
-- **Botão de Monitoramento:** Substituído o texto longo `"Monitoramento"` (que quebrava feio em duas linhas: `Monitorament` / `o`) por `"Monitorar"` (`MR.strings.action_track`), com `maxLines = 1` e `overflow = TextOverflow.Ellipsis`.
-- **Chips de Gêneros/Tags:** Estilizados com fundo semitransparente suave (`surfaceVariant` com 45% alpha) e borda sutil translúcida, eliminando o visual opaco e bruto.
-- **Backdrop com Capa Panorâmica:** Suavização do gradiente de transição para 3 paradas com desfoque aumentado de `2.dp` para `12.dp` quando `panoramaCover` está ativo, criando um efeito de brilho ambiente moderno.
-- **Arquivo Modificado:** `app/src/main/java/eu/kanade/presentation/manga/components/MangaInfoHeader.kt`
-
-### C. Integração do Anime4K v4.0.1 no MPV Player
-- **Shaders Nativos:** 39 shaders oficiais GLSL do repositório `bloc97/Anime4K` foram adicionados em `app/src/main/assets/shaders/`.
-- **Extração e Cópia Automática:** Implementada em `MpvConfig.kt` para alimentar o diretório `${filesDir}/mpv/shaders/` automaticamente em segundo plano.
-- **Modos Calibrados para Mobile:**
-  - `Off`: Desativado (zero consumo extra).
-  - `Modo A (Restauração)`: Para animes 1080p/720p padrão (Clamp + Restore CNN + Upscale x2 + AutoDownscalePre).
-  - `Modo B (Suavização)`: Para animes com linhas serrilhadas ou artefatos (Clamp + Restore CNN Soft + Upscale x2).
-  - `Modo C (Fidelidade)`: Upscale sutil com denoising limpo.
-- **Interface Intuitiva:**
-  - Seletor de chips rápidos no player (`MoreSheet`, botão `...`).
-  - Opção no menu de configurações globais: *Mais > Configurações > Player > Decodificador*.
-  - Arquitetura auto-recuperável com fallback em tempo de execução.
-- **Arquivos Criados/Modificados:**
-  - `app/src/main/java/eu/kanade/tachiyomi/ui/player/Anime4KMode.kt`
-  - `app/src/main/java/eu/kanade/tachiyomi/ui/player/settings/DecoderPreferences.kt`
-  - `app/src/main/java/animiru/feature/mpvfiles/MpvConfig.kt`
-  - `app/src/main/java/eu/kanade/tachiyomi/ui/player/AniyomiMPVView.kt`
-  - `app/src/main/java/eu/kanade/tachiyomi/ui/player/PlayerViewModel.kt`
-  - `app/src/main/java/eu/kanade/tachiyomi/ui/player/controls/PlayerControls.kt`
-  - `app/src/main/java/eu/kanade/tachiyomi/ui/player/controls/PlayerSheets.kt`
-  - `app/src/main/java/eu/kanade/tachiyomi/ui/player/controls/components/sheets/MoreSheet.kt`
-  - `app/src/main/java/eu/kanade/presentation/more/settings/screen/player/PlayerSettingsDecoderScreen.kt`
-
-### D. Tema Dinâmico Baseado na Capa (Mangá, Anime e Novel)
-- **Algoritmo `getBestColor()`:** Implementado em `Utils.kt` a partir da fórmula do Jays2Kings/Komikku. Descarta fundos pretos, cinzas e brancos lavados, priorizando os tons vivos/vibrantes reais da arte da capa.
-- **Suporte aos 3 Mundos:** Como Mangá, Anime e Novel compartilham o `MangaScreen`, todos passam pelo extrator de paleta dinâmico via Coil 3 e Palette.
-- **Material Expressive Dinâmico:** `TachiyomiTheme` gera paleta `DynamicScheme` vibrante em tempo de execução quando ativo.
-- **Controle pelo Usuário:** Switch em *Mais > Configurações > Aparência > "Tema baseado na capa"*.
-
-### E. Auto-Exclusão de Download Após Consumo (Mangá, Anime e Novel)
-- **Na mesma tela de Downloads:** *Mais > Configurações > Downloads* agora conta com a seção dedicada para Anime ("Excluir episódios após assistir" e "Excluir após marcar como visto"), mantendo os mesmos controles já existentes para Mangá e Novel.
-- **Player MPV:** `PlayerViewModel.kt` agora respeita a configuração específica de exclusão de anime após assistir o episódio.
-- **Leitor de Novel:** `NovelReaderActivity.kt` chama `NovelDownloadManager.deleteChapter` para remover o download do capítulo lido se a preferência estiver ativa.
-
-### F. Atualizações Agrupadas por Título (Aba Atualizações)
-- **Compactação Inteligente:** Múltiplos capítulos/episódios lançados para a mesma obra são agrupados sob um item Leader com badge expansível (`+N`).
-- **Expansão Dinâmica:** Tocar no badge expande os capítulos filhos ou recolhe de volta a 1 linha limpa.
-- **Filtro Transparente:** Opera perfeitamente com os filtros de mídia existentes (ALL, ANIME, MANGA, NOVEL).
-- **Controle pelo Usuário:** Switch em *Mais > Configurações > Aparência > "Agrupar atualizações por título"*.
+### Preferências Firmes do Usuário:
+- **REJEITADO:** Mini-decks / carrosséis "Continuar Assistindo/Lendo" no topo da biblioteca (rouba espaço vertical valioso e polui a tela de quem já sabe o que quer ler/assistir).
+- **REJEITADO:** Sincronização bidirecional de trackers (risco de sobrescrever o progresso local de capítulos do usuário com dados desatualizados do AniList/MAL).
+- **REJEITADO:** Miniaturas de capas em notificações em segundo plano (gasto desnecessário de bateria e polling de rede).
+- **APROVADO & IMPLEMENTADO:**
+  - **Dock Flutuante (Floating Glass Dock):** Barra de navegação inferior destacada do chão da tela com cantos arredondados (32dp), borda neon temática sutil e fundo translúcido (estilo ShinKu/Glassmorphism).
+  - **Capas com Cantos Arredondados 12dp:** Aplicado globalmente em todas as telas (Biblioteca, Navegador/Explorar, Histórico, Atualizações, Detalhes).
+  - **Badges Suaves e Translúcidos:** Cantos arredondados de 6dp e fundo com 90% de opacidade, eliminando retângulos retos secos.
+  - **Bordas Neon Translúcidas:** Aplicadas nos cards de estatísticas do perfil (`UserProfileScreen`) e itens de extensões (`BaseBrowseItem`).
 
 ---
 
-## 3. Ideias Selecionadas do Catálogo Miyomi (miyomi.app)
+## 3. Detalhes das Modificações da Branch `temp/floating-dock-ui`
 
-Da análise de mais de 130 apps e forks (Komikku, ShinKu, Houri, J2K, ReDantotsu), estas são as melhores ideias para o Yomotsu que mantêm o app limpo e não inchado:
-
-1. **Cores Dinâmicas Baseadas na Capa (Dynamic Palette nos Detalhes):**
-   - *Origem:* Komikku / Tachiyomi J2K / ShinKu.
-   - *Conceito:* A tela de anime/mangá extrai a cor da capa via Android `Palette` e colore levemente botões de ação e gradientes daquela obra.
-
-2. **Mini-Deck "Continuar Assistindo / Lendo" no Topo da Biblioteca:**
-   - *Origem:* ShinKu / J2K.
-   - *Conceito:* Um carrossel sutil e recolhível no topo da tela inicial com os 2 ou 3 últimos animes/mangás consumidos e barra de progresso.
-
-3. **Notificação de Novos Capítulos/Episódios com a Capa da Obra:**
-   - *Origem:* Komikku.
-   - *Conceito:* A notificação em segundo plano do Android exibe a thumbnail da capa da obra em vez de um ícone genérico.
-
-4. **Atualizações Agrupadas por Título (Grouped Updates):**
-   - *Origem:* J2K / Komikku.
-   - *Conceito:* Na aba Atualizações, múltiplos capítulos/episódios da mesma obra são agrupados em um card expansível em vez de poluir a lista com 10 linhas repetidas.
-
-5. **Sincronização Bidirecional com Trackers (Auto 2-Way Sync):**
-   - *Origem:* Komikku / ShinKu.
-   - *Conceito:* Sincroniza o progresso assistido/lido no AniList/MAL diretamente com a biblioteca do app.
+### Arquivos Modificados:
+1. `app/src/main/java/eu/kanade/tachiyomi/ui/home/HomeScreen.kt`:
+   - Barra de navegação inferior convertida em Dock Flutuante.
+   - `shape = RoundedCornerShape(32.dp)`
+   - `border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))`
+   - `color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f)`
+   - `shadowElevation = 16.dp`
+   - Padding do container: `start = 16.dp, end = 16.dp, bottom = 10.dp`
+   - O Box principal de conteúdo não recebe mais `contentPadding.calculateBottomPadding()`, permitindo que os mangás e animes rolem suavemente por trás do dock flutuante translúcido.
+2. `app/src/main/java/eu/kanade/presentation/manga/components/MangaCover.kt`:
+   - Cantos das capas alterados de `MaterialTheme.shapes.extraSmall` (4dp) para `RoundedCornerShape(12.dp)`. Afeta todas as capas do aplicativo.
+3. `presentation-core/src/main/java/tachiyomi/presentation/core/components/Badges.kt`:
+   - Badges gerais com `shape = RoundedCornerShape(6.dp)` e `color.copy(alpha = 0.90f)`.
+4. `app/src/main/java/eu/kanade/presentation/library/components/LibraryBadges.kt`:
+   - Badge de idioma com cantos de 6dp translúcidos, ícone de 20dp e texto de 13sp.
+5. `app/src/main/java/eu/kanade/presentation/more/profile/UserProfileScreen.kt`:
+   - `StatBox` de estatísticas do perfil com `border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))` e `shape = RoundedCornerShape(12.dp)`.
+6. `app/src/main/java/eu/kanade/presentation/browse/components/BaseBrowseItem.kt`:
+   - Itens de fontes e extensões com `shape = RoundedCornerShape(12.dp)` e fundo sutil translúcido `surfaceVariant.copy(alpha = 0.35f)`.
+7. `app/src/main/java/eu/kanade/presentation/library/components/LibraryContent.kt`:
+   - No `LibraryPager`, adicionado padding de rolagem inferior extra (`+ 84.dp`) para que a última linha de capas da biblioteca nunca fique encoberta pelo dock ao rolar até o final.
+8. `app/build.gradle.kts`:
+   - `versionCode = 117`
+   - `versionName = "0.21.4-Y7-DOCK"`
 
 ---
 
-## 4. Diretrizes e Preferências do Usuário
-- **Design Limpo:** O usuário rejeitou qualquer badge ou poluição visual pesada sobre capas (não quer que o Yomotsu fique poluído ou difícil de mexer como o Kototoro).
-- **Trabalho em Branches:** Nunca aplicar código diretamente na `main`. Sempre usar branches temporárias (ex: `temp/melhorias-ui`).
+## 4. Diagnóstico do Teste do Usuário ("Cadê a diferença?")
+
+Quando o usuário testou o build da branch pela primeira vez, não viu diferença visual no celular pelos seguintes motivos técnicos:
+1. **Origem do APK:** No GitHub Actions, quando um build roda em uma branch temporária (como `temp/floating-dock-ui`), o APK **não** é publicado na aba de *Releases* do GitHub (`releases/latest`). Ele fica armazenado como um **Artifact (arquivo .zip)** na página da execução do GitHub Actions.
+2. **Conflito de Versão Android:** No primeiro teste, o `versionCode` ainda estava em `116`. Como o usuário já tinha a release oficial `v0.21.4-Y6` (também `versionCode 116`) instalada, o Android frequentemente rejeita ou ignora a sobreposição do APK se os códigos de versão forem idênticos.
+3. **Ajuste de Versão Feito:** No commit `8ab8412`, o `versionCode` foi alterado para `117` e o nome da versão para `0.21.4-Y7-DOCK`. Assim, o Android aceita a atualização diretamente e o usuário pode confirmar a versão em *Mais > Sobre*.
+
+---
+
+## 5. Como Baixar e Testar o APK da Branch `temp/floating-dock-ui`
+
+1. Acessar a página da execução no GitHub Actions:
+   - URL: `https://github.com/kiritsuguxs/yomotsu/actions/runs/41860703240` (ou na aba Actions do repositório `kiritsuguxs/yomotsu`).
+2. Rolar a página até a seção **Artifacts** (na parte inferior da página da Action).
+3. Baixar o arquivo zip gerado (ex: `Yomotsu-0.21.4-Y7-DOCK-arm64-v8a.zip` ou similar).
+4. Extrair o arquivo `.apk` do zip e instalar no celular Android.
+5. Abrir o Yomotsu e verificar:
+   - Em *Mais > Sobre*: deve exibir `0.21.4-Y7-DOCK (117)`.
+   - Na tela principal: a barra de navegação flutua acima da tela com cantos arredondados (32dp), borda neon temática e o conteúdo da biblioteca rola por trás dela.
+   - Na biblioteca e explorar: as capas agora possuem cantos arredondados modernos de 12dp.
+
+---
+
+## 6. Próximos Passos para o Novo Chat
+1. **Verificar o Status do Build:** Checar se a Action `#41860703240` concluiu com sucesso (`success`).
+2. **Coletar Feedback do Usuário:** Aguardar o teste prático do usuário com o APK `0.21.4-Y7-DOCK`.
+3. **Se Aprovado:**
+   - Criar Pull Request ou mergear a branch `temp/floating-dock-ui` diretamente na `main`.
+   - Ajustar a versão final para `v0.21.4-Y7` e criar a tag oficial de release.
+4. **Se o Usuário Quiser Ajustes no Dock ou Cores:**
+   - Todos os parâmetros visuais estão isolados e limpos em `HomeScreen.kt` e `MangaCover.kt`.
