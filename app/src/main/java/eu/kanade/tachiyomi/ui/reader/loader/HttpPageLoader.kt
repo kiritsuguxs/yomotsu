@@ -85,8 +85,8 @@ internal class HttpPageLoader(
 
         val pages = page.chapter.pages.orEmpty()
         if (page.index !in pages.indices) return@withContext
-        pages.loadByRollingChunked(page.index, 3, 5) { chunks ->
-            val continueLoading = chunks.take(2).flatten().map { it.index }.toSet()
+        pages.loadByRollingChunked(page.index, 4, 8) { chunks ->
+            val continueLoading = chunks.take(3).flatten().map { it.index }.toSet()
             downloadJobs.keys.filter { it !in continueLoading }
                 .forEach { downloadJobs.remove(it)?.cancel() }
         }
@@ -252,4 +252,4 @@ internal class HttpPageLoader(
     }
 }
 
-private const val LIMITED_PAGES_AHEAD = 4
+private const val LIMITED_PAGES_AHEAD = 10
