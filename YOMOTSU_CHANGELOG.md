@@ -3,6 +3,58 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y7
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Navegação em Floating Glass Dock:**
+  - Barra inferior transformada em uma doca flutuante com cantos suaves de 32dp, acabamento translúcido premium (94% de opacidade) e contorno neon sutil que harmoniza com a paleta do tema.
+  - Rolagem contínua na Biblioteca por trás da doca com compensação inteligente (+84dp) para nunca cobrir as capas.
+- **Capas Modernizadas com Curvatura de 12dp:**
+  - Curvatura refinada de 12dp aplicada de forma global e uniforme na Biblioteca, Explorar, Histórico, Atualizações e Detalhes.
+- **Badges Translúcidos Minimalistas:**
+  - Indicadores de capítulos/episódios não lidos e downloads com cantos de 6dp e 90% de opacidade.
+- **Micro-cápsulas Neon na Tela de Detalhes:**
+  - Botões de ação rápida (*Na biblioteca, Intervalo, Monitorar e WebView*) redesenhados em cápsulas independentes com cantos de 12dp, fundo translúcido e bordas neon quando ativos, compartilhado universalmente por Mangás, Animes e Novels.
+- **Leitor de Mangá Modernizado (Glass Bars):**
+  - Barras superior e inferior flutuantes com efeito vidro translúcido (cantos de 28dp) e contorno neon.
+  - Seletores de capítulos do *ChapterNavigator* envolvidos em pílulas flutuantes com elevação e contorno luminoso.
+- **Reprodutor MPV OSD & Glass Sheets:**
+  - Folhas inferiores do reprodutor (Episódios, Qualidade, Legendas, Áudio e Anime4K) com cantos arredondados de 28dp e visual translúcido.
+  - Botão *Pular Abertura* (AniSkip) redesenhado em pílula de 20dp com realce neon dinâmico.
+- **Performance & Smart Prefetch (Leitura Instantânea):**
+  - O `HttpPageLoader` agora mantém até 10 páginas à frente pré-carregadas em blocos paralelos (4 a 8 páginas por requisição), eliminando esperas ao folhear rapidamente.
+  - Modos Webtoon e Pager pré-carregam o próximo capítulo em segundo plano ao atingir as últimas 8 páginas.
+  - Cache de disco expandido de 100 MB para 350 MB com limpeza LRU automática.
+  - Paralelismo do pipeline de decodificação Coil 3 aumentado para 4 threads dedicadas.
+- **Correções & Estabilidade:**
+  - Correção de conflitos de preenchimento (`padding`) no Compose para barras de gestos e botões de navegação virtuais.
+  - Preservação total de proporção para capas panorâmicas sem distorção.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Floating Glass Dock Navigation:**
+  - Redesigned bottom navigation bar into a modern floating dock featuring 32dp rounded corners, frosted glass translucency (94% opacity), and subtle neon theme accents.
+  - Continuous library scrolling behind the dock with smart bottom padding offset (+84dp) preventing any cover clipping.
+- **Modernized 12dp Cover Rounding:**
+  - Refined 12dp corner radiuses applied uniformly across Library, Browse, History, Updates, and Details.
+- **Translucent Minimalist Badges:**
+  - Chapter/episode count and download badges with 6dp rounded corners and 90% opacity.
+- **Neon Micro-Capsules on Details Screen:**
+  - Quick-action buttons (*In library, Fetch interval, Tracking, and WebView*) styled as independent micro-capsules with 12dp corners, translucent fill, and neon borders when active across Manga, Anime, and Novels.
+- **Modernized Manga Reader (Glass Bars):**
+  - Floating translucent top and bottom toolbars with 28dp rounded curves and neon contours.
+  - Chapter navigator slider indicators wrapped in floating pills with elevation shadows.
+- **MPV Player OSD & Glass Sheets:**
+  - All player bottom sheets (Episodes, Quality, Subtitles, Audio, Anime4K) updated with 28dp rounded corners and frosted glass aesthetic.
+  - Redesigned *Skip Opening* (AniSkip) button into a 20dp neon pill.
+- **Performance & Smart Prefetch (Instant Reading):**
+  - Page prefetch buffer expanded to keep up to 10 pages ahead in memory via parallel request chunks (4-8 pages per batch).
+  - Seamless background downloading of the next chapter within the last 8 pages in Webtoon and Pager viewers.
+  - Disk LRU cache expanded from 100 MB to 350 MB with automatic rotation.
+  - Image decoding concurrency boosted to 4 parallel threads in Coil 3.
+- **Fixes & Stability:**
+  - Resolved Compose window insets padding ambiguities on gesture and 3-button navigation devices.
+  - Preserved full aspect-ratio integrity for custom and wide covers without distortion.
+
 ## 0.21.4-Y6
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
