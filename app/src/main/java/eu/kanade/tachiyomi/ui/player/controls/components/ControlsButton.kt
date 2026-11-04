@@ -17,6 +17,7 @@
 
 package eu.kanade.tachiyomi.ui.player.controls.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CatchingPokemon
 import androidx.compose.material3.Icon
@@ -142,7 +144,11 @@ fun FilledControlsButton(
     Box(
         modifier = modifier.padding(end = MaterialTheme.padding.small),
     ) {
-        Button(onClick = {}) {
+        Button(
+            onClick = {},
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+        ) {
             Text(text = text)
         }
         Box(

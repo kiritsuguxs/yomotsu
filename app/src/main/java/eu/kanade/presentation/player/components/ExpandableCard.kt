@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Card
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import tachiyomi.presentation.core.components.material.padding
 
 @SuppressLint("UnrememberedMutableState")
@@ -56,8 +58,8 @@ fun ExpandableCard(
     onExpand: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     colors: CardColors = CardDefaults.cardColors(),
-    shape: Shape = CardDefaults.shape,
-    border: BorderStroke? = null,
+    shape: Shape = RoundedCornerShape(16.dp),
+    border: BorderStroke? = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
     elevation: CardElevation = CardDefaults.cardElevation(),
     content: @Composable () -> Unit,
 ) {

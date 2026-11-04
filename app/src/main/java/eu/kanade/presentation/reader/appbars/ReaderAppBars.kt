@@ -8,7 +8,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -23,12 +25,16 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -77,9 +83,8 @@ fun ReaderAppBars(
     onToggleAutoScroll: () -> Unit,
     onClickSettings: () -> Unit,
 ) {
-    val backgroundColor = MaterialTheme.colorScheme
-        .surfaceColorAtElevation(3.dp)
-        .copy(alpha = if (isSystemInDarkTheme()) 0.9f else 0.95f)
+    val glassBackgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f)
+    val neonBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
 
     Column(modifier = Modifier.fillMaxHeight()) {
         AnimatedVisibility(
@@ -87,19 +92,28 @@ fun ReaderAppBars(
             enter = slideInVertically(readerBarsSlideAnimationSpec) { -it } + fadeIn(readerBarsFadeAnimationSpec),
             exit = slideOutVertically(readerBarsSlideAnimationSpec) { -it } + fadeOut(readerBarsFadeAnimationSpec),
         ) {
-            ReaderTopBar(
+            Surface(
                 modifier = Modifier
-                    .background(backgroundColor)
-                    .clickable(onClick = onClickTopAppBar),
-                mangaTitle = mangaTitle,
-                chapterTitle = chapterTitle,
-                navigateUp = navigateUp,
-                bookmarked = bookmarked,
-                onToggleBookmarked = onToggleBookmarked,
-                onOpenInWebView = onOpenInWebView,
-                onOpenInBrowser = onOpenInBrowser,
-                onShare = onShare,
-            )
+                    .fillMaxWidth()
+                    .border(
+                        width = 0.5.dp,
+                        color = neonBorderColor,
+                    ),
+                color = glassBackgroundColor,
+                tonalElevation = 4.dp,
+            ) {
+                ReaderTopBar(
+                    modifier = Modifier.clickable(onClick = onClickTopAppBar),
+                    mangaTitle = mangaTitle,
+                    chapterTitle = chapterTitle,
+                    navigateUp = navigateUp,
+                    bookmarked = bookmarked,
+                    onToggleBookmarked = onToggleBookmarked,
+                    onOpenInWebView = onOpenInWebView,
+                    onOpenInBrowser = onOpenInBrowser,
+                    onShare = onShare,
+                )
+            }
         }
 
         if (!chapterNavigatorType.isHorizontal()) {
@@ -148,7 +162,13 @@ fun ReaderAppBars(
             enter = slideInVertically(readerBarsSlideAnimationSpec) { it } + fadeIn(readerBarsFadeAnimationSpec),
             exit = slideOutVertically(readerBarsSlideAnimationSpec) { it } + fadeOut(readerBarsFadeAnimationSpec),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+            ) {
                 if (chapterNavigatorType.isHorizontal()) {
                     ChapterNavigator(
                         type = chapterNavigatorType,
@@ -162,22 +182,38 @@ fun ReaderAppBars(
                         onPageIndexChangeFinished = onPageIndexChangeFinished,
                     )
                 }
-                ReaderBottomBar(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(backgroundColor)
-                        .padding(horizontal = MaterialTheme.padding.small)
-                        .windowInsetsPadding(WindowInsets.navigationBars),
-                    readingMode = readingMode,
-                    onClickReadingMode = onClickReadingMode,
-                    orientation = orientation,
-                    onClickOrientation = onClickOrientation,
-                    cropEnabled = cropEnabled,
-                    onClickCropBorder = onClickCropBorder,
-                    autoScrollEnabled = autoScrollEnabled,
-                    onToggleAutoScroll = onToggleAutoScroll,
-                    onClickSettings = onClickSettings,
-                )
+                        .shadow(
+                            elevation = 16.dp,
+                            shape = RoundedCornerShape(28.dp),
+                            spotColor = Color.Black.copy(alpha = 0.65f),
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = neonBorderColor,
+                            shape = RoundedCornerShape(28.dp),
+                        ),
+                    shape = RoundedCornerShape(28.dp),
+                    color = glassBackgroundColor,
+                    tonalElevation = 8.dp,
+                ) {
+                    ReaderBottomBar(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        readingMode = readingMode,
+                        onClickReadingMode = onClickReadingMode,
+                        orientation = orientation,
+                        onClickOrientation = onClickOrientation,
+                        cropEnabled = cropEnabled,
+                        onClickCropBorder = onClickCropBorder,
+                        autoScrollEnabled = autoScrollEnabled,
+                        onToggleAutoScroll = onToggleAutoScroll,
+                        onClickSettings = onClickSettings,
+                    )
+                }
             }
         }
     }

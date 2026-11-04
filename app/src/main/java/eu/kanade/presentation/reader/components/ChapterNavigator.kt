@@ -1,6 +1,7 @@
 package eu.kanade.presentation.reader.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -38,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -103,13 +105,11 @@ fun ChapterNavigator(
     val isTabletUi = isTabletUi()
     val mainAxisPadding = if (isTabletUi) 24.dp else 8.dp
 
-    // Match with toolbar background color set in ReaderActivity
-    val backgroundColor = MaterialTheme.colorScheme
-        .surfaceColorAtElevation(3.dp)
-        .copy(alpha = if (isSystemInDarkTheme()) 0.9f else 0.95f)
+    // Modern glass surface color
+    val backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f)
     val buttonColor = IconButtonDefaults.filledIconButtonColors(
         containerColor = backgroundColor,
-        disabledContainerColor = backgroundColor,
+        disabledContainerColor = backgroundColor.copy(alpha = 0.5f),
     )
 
     val onPageChange: (Int) -> Unit = { onPageIndexChange(it - 1) }
@@ -198,7 +198,13 @@ fun HorizontalChapterNavigator(
                     Row(
                         modifier = Modifier
                             .weight(1f)
+                            .shadow(8.dp, RoundedCornerShape(24.dp))
                             .clip(RoundedCornerShape(24.dp))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                shape = RoundedCornerShape(24.dp),
+                            )
                             .background(backgroundColor)
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -281,7 +287,13 @@ fun VerticalChapterNavigator(
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .shadow(8.dp, RoundedCornerShape(24.dp))
                     .clip(RoundedCornerShape(24.dp))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(24.dp),
+                    )
                     .background(backgroundColor)
                     .padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
