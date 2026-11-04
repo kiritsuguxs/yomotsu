@@ -133,18 +133,18 @@ object HomeScreen : Screen() {
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .shadow(
-                                                elevation = 8.dp,
+                                                elevation = 16.dp,
                                                 shape = RoundedCornerShape(32.dp),
-                                                spotColor = Color.Black.copy(alpha = 0.45f),
+                                                spotColor = Color.Black.copy(alpha = 0.65f),
                                             )
                                             .border(
                                                 width = 1.dp,
-                                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.20f),
+                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                                                 shape = RoundedCornerShape(32.dp),
                                             ),
                                         shape = RoundedCornerShape(32.dp),
-                                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = 0.92f),
-                                        tonalElevation = 6.dp,
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f),
+                                        tonalElevation = 8.dp,
                                     ) {
                                         Row(
                                             modifier = Modifier
@@ -166,7 +166,9 @@ object HomeScreen : Screen() {
                 ) { contentPadding ->
                     Box(
                         modifier = Modifier
-                            .padding(contentPadding)
+                            .padding(
+                                top = contentPadding.calculateTopPadding(),
+                            )
                             .consumeWindowInsets(contentPadding),
                     ) {
                         AnimatedContent(
