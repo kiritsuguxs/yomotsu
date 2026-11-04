@@ -4,7 +4,7 @@ import android.content.Context
 import animiru.feature.mpvfiles.MpvConfig
 import `is`.xyz.mpv.MPV
 import logcat.LogPriority
-import logcat.logcat
+import tachiyomi.core.common.util.system.logcat
 import java.io.File
 
 enum class Anime4KMode(val title: String) {

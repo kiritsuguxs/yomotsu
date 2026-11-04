@@ -26,6 +26,7 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.tachiyomi.data.coil.getBestColor
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
+import tachiyomi.presentation.core.util.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -148,16 +149,24 @@ class MangaScreen(
                 try {
                     val request = ImageRequest.Builder(context)
                         .data(successState.manga)
-                        .allowHardware(false)
                         .size(160, 240)
                         .build()
                     val result = context.imageLoader.execute(request)
                     val bitmap = result.image?.asDrawable(context.resources)?.getBitmapOrNull()
                     if (bitmap != null) {
-                        val palette = Palette.from(bitmap).generate()
-                        val bestColor = palette.getBestColor()
-                        if (bestColor != null) {
-                            seedColor = Color(bestColor)
+                        val softwareBitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+                            bitmap.config == android.graphics.Bitmap.Config.HARDWARE
+                        ) {
+                            bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                        } else {
+                            bitmap
+                        }
+                        if (softwareBitmap != null) {
+                            val palette = Palette.from(softwareBitmap).generate()
+                            val bestColor = palette.getBestColor()
+                            if (bestColor != null) {
+                                seedColor = Color(bestColor)
+                            }
                         }
                     }
                 } catch (_: Exception) {}
