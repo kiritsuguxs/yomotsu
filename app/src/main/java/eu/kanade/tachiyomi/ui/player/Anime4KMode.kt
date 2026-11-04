@@ -45,9 +45,10 @@ enum class Anime4KMode(val title: String) {
         fun apply(mpv: MPV?, context: Context, mode: Anime4KMode) {
             if (mpv == null) return
             try {
+                mpv.command("change-list", "glsl-shaders", "clr", "")
                 val shaderFiles = mode.getShaderList()
                 if (shaderFiles.isEmpty()) {
-                    mpv.command("change-list", "glsl-shaders", "clr", "")
+                    mpv.command("show-text", "Anime4K: Desativado", "2000")
                     logcat(LogPriority.INFO) { "Anime4K cleared (Off)" }
                     return
                 }
@@ -57,8 +58,13 @@ enum class Anime4KMode(val title: String) {
                     copyAssetShadersFallback(context, shadersDir)
                 }
 
-                val shaderListStr = shaderFiles.joinToString(":") { File(shadersDir, it).absolutePath }
-                mpv.command("change-list", "glsl-shaders", "set", shaderListStr)
+                for (shader in shaderFiles) {
+                    val shaderFile = File(shadersDir, shader)
+                    if (shaderFile.exists()) {
+                        mpv.command("change-list", "glsl-shaders", "append", shaderFile.absolutePath)
+                    }
+                }
+                mpv.command("show-text", "Anime4K: ${mode.title}", "2000")
                 logcat(LogPriority.INFO) { "Anime4K applied: ${mode.name}" }
             } catch (e: Throwable) {
                 logcat(LogPriority.ERROR, e) { "Failed to apply Anime4K shader: ${e.message}" }

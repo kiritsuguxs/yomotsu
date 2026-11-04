@@ -71,7 +71,7 @@ fun TachiyomiTheme(
                 seedColor = seedColor,
                 isDark = isDark,
                 specVersion = ColorSpec.SpecVersion.SPEC_2025,
-                style = PaletteStyle.Vibrant,
+                style = PaletteStyle.Fidelity,
             ).toColorScheme(isAmoled = isAmoled)
         }
         MaterialExpressiveTheme(

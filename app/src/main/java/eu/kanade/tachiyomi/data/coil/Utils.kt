@@ -55,31 +55,33 @@ private val webtoonStripsKey = Extras.Key(default = false)
 
 /**
  * Calculate the best [Palette.Swatch] from [Palette]
- * Discards dead/dull/black/white background colors and favors vibrant tones.
- * @author Jays2Kings
+ * Scores swatches by visual presence (population) and color vibrancy (saturation),
+ * avoiding dead blacks, washed-out grays, and pure whites while keeping bright gold/yellow,
+ * rich reds, greens, blues and purples faithful to the cover.
  */
 fun Palette.getBestColor(): Int? {
-    val vibPopulation = vibrantSwatch?.population ?: -1
-    val domSat = dominantSwatch?.hsl?.get(1) ?: 0f
-    val domLum = dominantSwatch?.hsl?.get(2) ?: -1f
-    val mutedPopulation = mutedSwatch?.population ?: -1
-    val mutedSat = mutedSwatch?.hsl?.get(1) ?: 0f
-    val mutedSatMinAcceptable = if (mutedPopulation > vibPopulation * 3f) 0.1f else 0.25f
+    if (swatches.isEmpty()) return null
 
-    val dominantIsColorful = domSat >= .25f
-    val dominantBrightnessJustRight = domLum <= .8f && domLum > .2f
-    val vibrantIsConsiderableBigEnough = vibPopulation >= mutedPopulation * 0.75f
-    val mutedIsBig = mutedPopulation > vibPopulation * 1.5f
-    val mutedIsNotTooBoring = mutedSat > mutedSatMinAcceptable
+    // Discard near-black, near-white, and desaturated grays
+    val candidates = swatches.filter { swatch ->
+        val hsl = swatch.hsl
+        val sat = hsl[1]
+        val lum = hsl[2]
+        lum in 0.08f..0.92f && sat >= 0.16f
+    }
 
-    return when {
-        dominantIsColorful && dominantBrightnessJustRight -> dominantSwatch
-        vibrantIsConsiderableBigEnough -> vibrantSwatch
-        mutedIsBig && mutedIsNotTooBoring -> mutedSwatch
-        else -> listOfNotNull(vibrantSwatch, lightVibrantSwatch, darkVibrantSwatch)
-            .maxByOrNull {
-                if (it === vibrantSwatch) vibPopulation * 3 else it.population
-            }
+    if (candidates.isEmpty()) {
+        return vibrantSwatch?.rgb ?: dominantSwatch?.rgb
+    }
+
+    // Score: population * saturation^2 * lumBalance
+    // Favors large colorful areas (like golden wheat, colorful hair/costumes)
+    // while giving a strong bonus to vibrant saturation.
+    return candidates.maxByOrNull { swatch ->
+        val sat = swatch.hsl[1]
+        val lum = swatch.hsl[2]
+        val lumBalance = 1.0f - kotlin.math.abs(lum - 0.5f) * 0.4f
+        swatch.population.toFloat() * sat * sat * lumBalance
     }?.rgb
 }
 
