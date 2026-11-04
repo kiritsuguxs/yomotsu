@@ -5,10 +5,20 @@ import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import eu.kanade.tachiyomi.ui.home.HomeScreen
+import kotlinx.coroutines.launch
 
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -122,6 +132,39 @@ data object BrowseTab : Tab {
 
         val state = rememberPagerState { tabs.size }
 
+        val scope = rememberCoroutineScope()
+        var isTopContentVisible by rememberSaveable { mutableStateOf(true) }
+
+        LaunchedEffect(state.currentPage, selectedMedia) {
+            isTopContentVisible = true
+        }
+
+        val nestedScrollConnection = remember {
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    val delta = available.y
+                    if (delta < -6f) {
+                        isTopContentVisible = false
+                    } else if (delta > 6f) {
+                        isTopContentVisible = true
+                    }
+                    return Offset.Zero
+                }
+            }
+        }
+
+        LaunchedEffect(isTopContentVisible) {
+            HomeScreen.showBottomNav(isTopContentVisible)
+        }
+
+        DisposableEffect(Unit) {
+            onDispose {
+                scope.launch {
+                    HomeScreen.showBottomNav(true)
+                }
+            }
+        }
+
         val novelSearchQuery by novelsViewModel.searchQuery.collectAsState()
 
         TabbedScreen(
@@ -152,9 +195,11 @@ data object BrowseTab : Tab {
             topContent = {
                 TopMediaSelector(
                     selectedMedia = selectedMedia,
-                    onSelectMedia = { uiPreferences.lastUsedBrowseMedia.set(it) }
+                    onSelectMedia = { uiPreferences.lastUsedBrowseMedia.set(it) },
                 )
-            }
+            },
+            nestedScrollConnection = nestedScrollConnection,
+            isTopContentVisible = isTopContentVisible,
         )
 
         LaunchedEffect(Unit) {

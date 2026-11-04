@@ -1,5 +1,12 @@
 package eu.kanade.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -9,21 +16,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.TabRow
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.background
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -43,11 +51,14 @@ fun TabbedScreen(
     onChangeSearchQuery: (String?) -> Unit = {},
     navigationIcon: (@Composable () -> Unit)? = null,
     topContent: (@Composable () -> Unit)? = null,
+    nestedScrollConnection: NestedScrollConnection? = null,
+    isTopContentVisible: Boolean = true,
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
+        modifier = if (nestedScrollConnection != null) Modifier.nestedScroll(nestedScrollConnection) else Modifier,
         topBar = {
             val tab = tabs[state.currentPage]
             val searchEnabled = tab.searchEnabled
@@ -65,8 +76,14 @@ fun TabbedScreen(
                     onChangeSearchQuery = onChangeSearchQuery,
                     actions = { AppBarActions(tab.actions) },
                 )
-                if (searchQuery == null) {
-                    topContent?.invoke()
+                if (topContent != null) {
+                    AnimatedVisibility(
+                        visible = searchQuery == null && isTopContentVisible,
+                        enter = expandVertically(animationSpec = tween(200)) + fadeIn(animationSpec = tween(150)),
+                        exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(animationSpec = tween(150)),
+                    ) {
+                        topContent()
+                    }
                 }
             }
         },
@@ -130,7 +147,7 @@ fun TabbedScreen(
                 verticalAlignment = Alignment.Top,
             ) { page ->
                 tabs[page].content(
-                    PaddingValues(bottom = contentPadding.calculateBottomPadding()),
+                    PaddingValues(bottom = contentPadding.calculateBottomPadding() + 84.dp),
                     snackbarHostState,
                 )
             }
