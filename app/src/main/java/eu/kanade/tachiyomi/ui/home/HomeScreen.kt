@@ -126,7 +126,7 @@ object HomeScreen : Screen() {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .windowInsetsPadding(NavigationBarDefaults.windowInsets)
-                                        .padding(horizontal = 16.dp, bottom = 10.dp),
+                                        .padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Surface(
