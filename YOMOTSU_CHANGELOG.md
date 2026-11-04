@@ -3,6 +3,59 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y6
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Tema Dinâmico Baseado na Capa:**
+  - O motor de temas analisa a arte da capa em tempo de execução e projeta a paleta cromática na tela de detalhes (botões de ação, chips de gênero e destaques visuais).
+  - Suporte universal e consistente nos 3 mundos: Mangás, Animes e Light Novels.
+  - Total aderência ao modo de alto contraste para telas AMOLED (Preto Absoluto).
+  - Controle em: Configurações > Aparência > Tema baseado na capa.
+- **Agrupamento de Atualizações por Obra:**
+  - Múltiplos capítulos ou episódios de um mesmo título lançados na mesma data são agrupados sob um único card mestre no feed de Atualizações.
+  - Inclusão de chip interativo (`+N`) para expansão e recolhimento instantâneo em tempo de execução.
+  - Controle em: Configurações > Aparência > Agrupar atualizações por título.
+- **Ciclo de Auto-Exclusão de Armazenamento para Animes e Novels:**
+  - Nova categoria dedicada "Excluir episódios" integrada em Configurações > Downloads.
+  - Remoção automática programada de episódios após a reprodução (com limites configuráveis por janelas de retenção) e ao marcar manualmente como visto.
+  - Exclusão automática de capítulos lidos integrada ao leitor nativo de Light Novels.
+- **Pós-Processamento Neural Anime4K v4.0.1 (libmpv):**
+  - Integração de 39 shaders GLSL oficiais executados diretamente na GPU através do MPV.
+  - Perfis selecionáveis: Modo A (Restauração CNN), Modo B (Suavização CNN) e Modo C (Fidelidade / Denoise) na folha de opções avançadas do reprodutor com aviso em tela (OSD).
+- **Correção no AniList e Shikimori (GraphQL):**
+  - Solucionada a falha de comunicação com as APIs do AniList e Shikimori que impedia a busca e vinculação de obras com erro de sintaxe HTTP 400.
+- **Refinamentos Visuais e Fidelidade Cromática:**
+  - Esquema de cores atualizado para Material Design 3 Fidelity, preservando saturação e cores vivas reais das capas sem achatamento pastel.
+  - Extração ponderada por densidade e vivacidade (`População × Saturação²`), preservando tons dourados e iluminados.
+  - Mini card do perfil na aba Mais agora reflete o gradiente multicolorido do título equipado (ex: Rei Demônio).
+  - Botão de rastreamento padronizado para "Monitorar" em linha única, tags translúcidas e desfoque aprimorado na capa panorâmica.
+- **Estabilidade Técnica:**
+  - Correção na injeção de shaders GLSL no MPV e conversão segura de buffers de hardware no Coil 3.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **High-Fidelity Dynamic Cover Theming:**
+  - Real-time cover palette extraction engine that dynamically styles action controls, category chips, and visual accents on the details screen.
+  - Universal, consistent support across all 3 media types: Manga, Anime, and Light Novels.
+  - Native compatibility with Pure black (AMOLED) high-contrast rendering.
+  - User toggle under: Settings > Appearance > Theme based on cover.
+- **Consolidated Updates Feed Grouping:**
+  - Multiple chapters or episodes released for the same title on the same date are grouped under a single master card with an expandable badge (`+N`).
+  - User toggle under: Settings > Appearance > Group updates by title.
+- **Automated Storage & Cache Lifecycle for Anime & Novels:**
+  - Added dedicated "Delete episodes" configuration group under Settings > Downloads.
+  - Automatic purge of watched local files and upon manual view state changes, extended to the Light Novel reader.
+- **Anime4K v4.0.1 Neural Post-Processing (libmpv):**
+  - Integrated 39 official GLSL shaders running directly on the GPU via MPV (Modes A, B, and C) with real-time OSD notifications.
+- **Resolved HTTP 400 Bad Request on AniList & Shikimori:**
+  - Fixed multi-dollar GraphQL raw string interpolation under Kotlin 2.0.
+- **UI & Architectural Polish:**
+  - Material Design 3 Fidelity color specification preserving authentic hues.
+  - Weighted color extraction algorithm (`Population × Saturation²`) protecting high-luminance tones.
+  - Profile summary card username dynamically renders the equipped title's linear color gradient.
+  - Standardized single-line tracking button ("Monitorar"), translucent chips, and enhanced backdrop blur.
+- **Technical Stability:**
+  - Fixed GLSL shader path dispatch in libmpv and added hardware bitmap conversion safeguards in Coil 3.
+
 ## 0.21.4-Y5
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**

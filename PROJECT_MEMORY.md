@@ -2,8 +2,8 @@
 
 ## 1. Visão Geral do Projeto & Estado Atual Ativo
 - **Repositório:** `kiritsuguxs/yomotsu`
-- **Versão Ativa:** `versionName = "0.21.4-Y5"`, `versionCode = 115`
-- **Release Oficial Atual:** `v0.21.4-Y5` (Modo Imersivo na Biblioteca, Seletor de Mídia Segmentado M3, Rebalanceamento de XP/Níveis, Reformulação de Conquistas e Presets Oficiais).
+- **Versão Ativa:** `versionName = "0.21.4-Y6"`, `versionCode = 116`
+- **Release Oficial Atual:** `v0.21.4-Y6` (Tema Dinâmico Baseado na Capa, Agrupamento de Atualizações, Auto-Exclusão para Anime/Novel, Anime4K no MPV e Correção AniList/Shikimori).
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Use Python (`zipfile`, `PIL`, `urllib`) em vez de `/bin/unzip` ou `/usr/bin/file`, e compile sempre via GitHub Actions.
 
 ---
