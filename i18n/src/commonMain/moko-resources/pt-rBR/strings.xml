@@ -1158,4 +1158,10 @@
     <string name="browse_media_manga">Mangás</string>
     <string name="browse_media_anime">Animes</string>
     <string name="browse_media_novel">Light Novels</string>
+
+    <!-- Aparência e Atualizações -->
+    <string name="pref_theme_cover_based">Tema baseado na capa</string>
+    <string name="pref_theme_cover_based_summary">Aplicar paleta de cores dinâmica da capa na tela de detalhes</string>
+    <string name="pref_group_updates">Agrupar atualizações por título</string>
+    <string name="pref_group_updates_summary">Agrupar múltiplos capítulos ou episódios novos da mesma obra</string>
 </resources>

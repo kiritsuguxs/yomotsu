@@ -452,4 +452,14 @@
     <string name="type">Tipo</string>
     <string name="player_sheets_add_ext_audio">Adicionar faixas de áudio externas</string>
     <string name="player_hoster_tap_to_load">Toque para carregar vídeos</string>
+
+    <!-- Excluir Episódios -->
+    <string name="pref_category_delete_episodes">Excluir episódios</string>
+    <string name="pref_remove_after_seen">Excluir episódios após assistir</string>
+    <string name="pref_remove_after_marked_as_seen">Excluir após marcar manualmente como visto</string>
+    <string name="last_seen_episode">Último episódio assistido</string>
+    <string name="second_to_last_episode">Penúltimo assistido</string>
+    <string name="third_to_last_episode">Antepenúltimo assistido</string>
+    <string name="fourth_to_last_episode">Quarto último assistido</string>
+    <string name="fifth_to_last_episode">Quinto último assistido</string>
 </resources>

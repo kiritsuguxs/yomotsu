@@ -539,4 +539,14 @@
     <string name="cast_server_start_failed">Falha ao iniciar o servidor de transmissão</string>
     <string name="player_cast">Transmitir</string>
     <string name="player_cast_unknown_device">Dispositivo desconhecido</string>
+
+    <!-- Excluir Episódios -->
+    <string name="pref_category_delete_episodes">Excluir episódios</string>
+    <string name="pref_remove_after_seen">Excluir episódios após assistir</string>
+    <string name="pref_remove_after_marked_as_seen">Excluir após marcar manualmente como visto</string>
+    <string name="last_seen_episode">Último episódio assistido</string>
+    <string name="second_to_last_episode">Penúltimo assistido</string>
+    <string name="third_to_last_episode">Antepenúltimo assistido</string>
+    <string name="fourth_to_last_episode">Quarto último assistido</string>
+    <string name="fifth_to_last_episode">Quinto último assistido</string>
 </resources>

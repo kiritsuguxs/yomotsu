@@ -1126,4 +1126,10 @@
     <string name="backup_creating_yomotsu_folder">Criando backup na pasta Yomotsu…</string>
 
     <string name="label_update_available">Atualização disponível!</string>
+
+    <!-- Aparência e Atualizações -->
+    <string name="pref_theme_cover_based">Tema baseado na capa</string>
+    <string name="pref_theme_cover_based_summary">Aplicar paleta de cores dinâmica da capa na tela de detalhes</string>
+    <string name="pref_group_updates">Agrupar atualizações por título</string>
+    <string name="pref_group_updates_summary">Agrupar múltiplos capítulos ou episódios novos da mesma obra</string>
 </resources>
