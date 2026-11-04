@@ -263,7 +263,11 @@ private fun MiniHunterProfileCard(
                         fontSize = 15.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface
+                        style = androidx.compose.ui.text.TextStyle(
+                            brush = Brush.horizontalGradient(
+                                listOf(summary.title.colorStart, summary.title.colorEnd)
+                            )
+                        )
                     )
                     // Nível Badge
                     Surface(
