@@ -5,15 +5,16 @@ Este arquivo registra o contexto completo das melhorias implementadas, do estado
 ---
 
 ## 1. Estado Atual do Repositório & Git
-- **Branch Principal (`main`):** Release oficial `v0.21.4-Y7` (versionCode 121, versionName `0.21.4-Y7`).
-- **Histórico de Versões do Ciclo Y7:**
+- **Branch Principal (`main`):** Release oficial `v0.21.4-Y8` (versionCode 122, versionName `0.21.4-Y8`).
+- **Histórico de Versões do Ciclo Y7/Y8:**
   - `2a8c98a`: Implementação inicial da UI moderna (Floating Dock, capas arredondadas 12dp, badges translúcidos, perfil e itens com borda sutil).
   - `92cf4c1`: Correção de erro de compilação Compose em `HomeScreen.kt`. Build CI `#41856513392` passou com sucesso.
   - `8ab8412`: Versão 117 (`0.21.4-Y7-DOCK`): Borda neon temática no dock (`primary.copy(alpha = 0.35f)`), rolagem contínua do conteúdo por trás do dock flutuante e compensação de padding inferior (+84dp) na biblioteca. Build CI `#41860703240` passou com sucesso.
   - `a2fea97`: Versão 118: Floating Glass Dock no Leitor de Mangás (`ReaderAppBars.kt`, `ChapterNavigator.kt`), Glass Sheets translúcidas no Player MPV (`PlayerSheet.kt`), botão neon de pular abertura AniSkip (`ControlsButton.kt`) e cards do player com cantos suaves (`ExpandableCard.kt`). Build CI `#41868056633` passou com sucesso.
   - `35ea289`: Versão 119: Smart Prefetch & Cache Otimizado no Leitor (`HttpPageLoader.kt` com janela de buffer de 10 páginas, `WebtoonViewer.kt` e `PagerViewer.kt` pré-carregando o próximo capítulo nas últimas 8 páginas, `ChapterCache.kt` expandido para 350 MB e paralelismo de decodificação no `App.kt`). Build CI `#41871127570` passou com sucesso.
   - `a345faa`: Versão 120: Micro-cápsulas de ação na tela de detalhes (`MangaInfoHeader.kt` com cantos de 12dp, fundo translúcido e bordas neon quando ativos para Mangás, Animes e Novels). Build CI `#41874683257` passou com sucesso.
-  - **Versão 121 (`0.21.4-Y7`):** Consolidação oficial de todas as melhorias na branch `main`, atualização de notas da versão em `YOMOTSU_CHANGELOG.md` e tag `v0.21.4-Y7` pronta para publicação.
+  - `66838bc`: Versão 121 (`0.21.4-Y7`): Consolidação oficial do ciclo Y7 na branch `main`.
+  - **Versão 122 (`0.21.4-Y8`):** Ocultação dinâmica do Floating Dock e do seletor superior de mídias ao rolar nas telas de Navegar/Explorar (`BrowseTab.kt`, `TabbedScreen.kt`), além de compensação de padding inferior (+84dp) garantindo acesso total a todas as extensões e fontes no fim da lista em Mangás, Animes e Light Novels. Tag `v0.21.4-Y8` publicada oficialmente.
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Compilações locais via Gradle falham no PRoot devido a restrições de segurança do kernel (`SecurityException`). Toda verificação e geração de APKs é realizada remotamente via GitHub Actions CI (`.github/workflows/build_push.yml` ou `build.yml`).
 
 ---

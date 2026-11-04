@@ -3,6 +3,30 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y8
+
+🇧🇷 **Novidades, Melhorias e Correções (Português):**
+- **Ocultação Dinâmica do Floating Dock ao Rolar (Hide-on-Scroll):**
+  - A barra inferior flutuante (*Floating Glass Dock*) agora se recolhe automaticamente ao rolar para baixo nas telas de **Navegar/Explorar**, liberando área útil de visualização para as listas.
+  - Ao rolar para cima ou alternar entre abas e mídias, a doca reaparece instantaneamente de forma suave, no mesmo padrão consagrado da Biblioteca.
+- **Seletor Superior de Mídias Retrátil:**
+  - O seletor de mídias do topo (**Mangás**, **Animes**, **Light Novels**) na tela de Navegação agora conta com animação fluida de recolhimento e expansão sincronizada com o movimento de rolagem.
+- **Acesso Total às Extensões e Fontes no Fim da Lista (+84dp):**
+  - Implementada compensação de espaçamento inferior (`+84dp`) em todas as telas de extensões, fontes e migração. Os itens no final da lista nunca mais ficam encobertos ou inacessíveis atrás da barra flutuante, mesmo quando ela estiver visível.
+- **Experiência Unificada nos 3 Universos:**
+  - Comportamento idêntico, consistente e polido aplicado simultaneamente para **Mangás**, **Animes** e **Light Novels**.
+
+🇺🇸 **News, Improvements & Fixes (English):**
+- **Dynamic Floating Dock Auto-Hide on Scroll:**
+  - The bottom *Floating Glass Dock* now smoothly hides when scrolling down across the **Browse** screen, freeing up maximum screen real estate for lists.
+  - Scrolling up or switching tabs and media immediately brings the dock back into view, matching the refined Library interaction pattern.
+- **Collapsible Top Media Selector:**
+  - The top media selector (**Manga**, **Anime**, **Light Novels**) in the Browse section now features seamless expand/collapse animations synced with list scrolling.
+- **Unobstructed Bottom Extensions & Sources Access (+84dp Offset):**
+  - Added smart bottom padding (+84dp) to all extension, source, and migration lists. Items at the bottom of the feed are no longer blocked or unclickable behind the floating dock.
+- **Unified Experience Across all 3 Media Types:**
+  - Consistent, identical scroll interaction and layout protection delivered across **Manga**, **Anime**, and **Light Novels**.
+
 ## 0.21.4-Y7
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
