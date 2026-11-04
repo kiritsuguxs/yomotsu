@@ -6,13 +6,14 @@ Este arquivo registra o contexto completo das melhorias implementadas, do estado
 
 ## 1. Estado Atual do Repositório & Git
 - **Branch Principal (`main`):** Release oficial estável `v0.21.4-Y6` (versionCode 116).
-- **Branch Ativa de Desenvolvimento:** `temp/floating-dock-ui` (baseada na `main`, versionCode 119, versionName `0.21.4-Y7-DOCK`).
+- **Branch Ativa de Desenvolvimento:** `temp/floating-dock-ui` (baseada na `main`, versionCode 120, versionName `0.21.4-Y7-DOCK`).
 - **Commits na branch `temp/floating-dock-ui`:**
   - `2a8c98a`: Implementação inicial da UI moderna (Floating Dock, capas arredondadas 12dp, badges translúcidos, perfil e itens com borda sutil).
   - `92cf4c1`: Correção de erro de compilação Compose em `HomeScreen.kt`. Build CI `#41856513392` passou com sucesso.
   - `8ab8412`: Elevação de versão para 117 (`0.21.4-Y7-DOCK`), borda neon temática no dock (`primary.copy(alpha = 0.35f)`), rolagem contínua do conteúdo por trás do dock flutuante e compensação de padding inferior (+84dp) na biblioteca. Build CI `#41860703240` passou com sucesso.
   - `a2fea97`: Versão 118: Floating Glass Dock no Leitor de Mangás (`ReaderAppBars.kt`, `ChapterNavigator.kt`), Glass Sheets translúcidas no Player MPV (`PlayerSheet.kt`), botão neon de pular abertura AniSkip (`ControlsButton.kt`) e cards do player com cantos suaves (`ExpandableCard.kt`). Build CI `#41868056633` passou com sucesso.
-  - Versão 119: Smart Prefetch & Cache Otimizado no Leitor (`HttpPageLoader.kt` com janela de buffer de 10 páginas, `WebtoonViewer.kt` e `PagerViewer.kt` pré-carregando o próximo capítulo nas últimas 8 páginas, `ChapterCache.kt` expandido para 350 MB e paralelismo de decodificação no `App.kt`).
+  - `35ea289`: Versão 119: Smart Prefetch & Cache Otimizado no Leitor (`HttpPageLoader.kt` com janela de buffer de 10 páginas, `WebtoonViewer.kt` e `PagerViewer.kt` pré-carregando o próximo capítulo nas últimas 8 páginas, `ChapterCache.kt` expandido para 350 MB e paralelismo de decodificação no `App.kt`). Build CI `#41871127570` passou com sucesso.
+  - Versão 120: Micro-cápsulas de ação na tela de detalhes (`MangaInfoHeader.kt` com cantos de 12dp, fundo translúcido e bordas neon quando ativos).
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Compilações locais via Gradle falham no PRoot devido a restrições de segurança do kernel (`SecurityException`). Toda verificação e geração de APKs é realizada remotamente via GitHub Actions CI (`.github/workflows/build_push.yml` ou `build.yml`).
 
 ---
