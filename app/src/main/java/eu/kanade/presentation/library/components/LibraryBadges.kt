@@ -1,14 +1,14 @@
 package eu.kanade.presentation.library.components
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,19 +94,22 @@ internal fun LanguageBadge(
             val flag = getFlagEmoji(sourceLanguage)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(2.dp)
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f))
+                    .padding(horizontal = 3.dp, vertical = 2.dp)
             ) {
                 Image(
                     bitmap = icon,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(20.dp)
                         .clip(RoundedCornerShape(4.dp))
                 )
                 if (flag.isNotEmpty()) {
                     Text(
                         text = flag,
-                        fontSize = 16.sp,
+                        fontSize = 13.sp,
                     )
                 }
             }
@@ -115,8 +118,11 @@ internal fun LanguageBadge(
             if (flag.isNotEmpty()) {
                 Text(
                     text = flag,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(2.dp)
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f))
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
             }
         }

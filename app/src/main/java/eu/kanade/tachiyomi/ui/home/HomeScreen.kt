@@ -6,28 +6,42 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -108,9 +122,41 @@ object HomeScreen : Screen() {
                                 enter = expandVertically(),
                                 exit = shrinkVertically(),
                             ) {
-                                NavigationBar {
-                                    TABS.fastForEach {
-                                        NavigationBarItem(it)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                                        .padding(horizontal = 16.dp, bottom = 10.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .shadow(
+                                                elevation = 8.dp,
+                                                shape = RoundedCornerShape(32.dp),
+                                                spotColor = Color.Black.copy(alpha = 0.45f),
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.20f),
+                                                shape = RoundedCornerShape(32.dp),
+                                            ),
+                                        shape = RoundedCornerShape(32.dp),
+                                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = 0.92f),
+                                        tonalElevation = 6.dp,
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(68.dp)
+                                                .selectableGroup(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            TABS.fastForEach {
+                                                NavigationBarItem(it)
+                                            }
+                                        }
                                     }
                                 }
                             }

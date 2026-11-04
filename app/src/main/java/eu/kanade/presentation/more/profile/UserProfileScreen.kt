@@ -1286,8 +1286,15 @@ fun StatBox(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.height(102.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        modifier = modifier
+            .height(102.dp)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                shape = RoundedCornerShape(12.dp),
+            ),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.40f)),
     ) {
         Column(
             modifier = Modifier

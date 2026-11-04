@@ -44,18 +44,18 @@ fun Badge(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.secondary,
     textColor: Color = MaterialTheme.colorScheme.onSecondary,
-    shape: Shape = RectangleShape,
+    shape: Shape = RoundedCornerShape(6.dp),
 ) {
     Text(
         text = text,
         modifier = modifier
             .clip(shape)
-            .background(color)
-            .padding(horizontal = 3.dp, vertical = 1.dp),
+            .background(color.copy(alpha = 0.90f))
+            .padding(horizontal = 4.dp, vertical = 2.dp),
         color = textColor,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         maxLines = 1,
-        style = MaterialTheme.typography.bodySmall,
+        style = MaterialTheme.typography.labelSmall,
     )
 }
 
@@ -65,7 +65,7 @@ fun Badge(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.secondary,
     iconColor: Color = MaterialTheme.colorScheme.onSecondary,
-    shape: Shape = RectangleShape,
+    shape: Shape = RoundedCornerShape(6.dp),
 ) {
     val iconContentPlaceholder = "[icon]"
     val text = buildAnnotatedString {
@@ -95,12 +95,12 @@ fun Badge(
         inlineContent = inlineContent,
         modifier = modifier
             .clip(shape)
-            .background(color)
-            .padding(horizontal = 3.dp, vertical = 1.dp),
+            .background(color.copy(alpha = 0.90f))
+            .padding(horizontal = 4.dp, vertical = 2.dp),
         color = iconColor,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         maxLines = 1,
-        style = MaterialTheme.typography.bodySmall,
+        style = MaterialTheme.typography.labelSmall,
     )
 }
 
@@ -111,13 +111,13 @@ fun Badge(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.secondary,
     textColor: Color = MaterialTheme.colorScheme.onSecondary,
-    shape: Shape = RectangleShape,
+    shape: Shape = RoundedCornerShape(6.dp),
 ) {
     Row(
         modifier = modifier
             .clip(shape)
-            .background(color)
-            .padding(horizontal = 3.dp, vertical = 1.dp),
+            .background(color.copy(alpha = 0.90f))
+            .padding(horizontal = 4.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (imageBitmap != null) {
