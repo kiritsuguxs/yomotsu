@@ -1,7 +1,5 @@
 <div align="center">
 
-🇺🇸 English | [🇪🇸 Español](README_ES.md)
-
 <img src="./app/src/main/res/drawable-nodpi/ic_yomotsu_logo.png" alt="Yomotsu Logo" width="130"/>
 
 # Yomotsu
@@ -34,10 +32,10 @@
 
 <div align="center">
   <h3>✨ Real-Time Bubble Translation ✨</h3>
-  <img src="./assets/manga_en.jpg" width="45%" alt="Original Manga (English)"/>
-  <img src="./assets/manga_pt.jpg" width="45%" alt="Translated Manga (Portuguese)"/>
+  <img src="./assets/manga_en.jpg" width="45%" alt="Original Manga"/>
+  <img src="./assets/manga_pt.jpg" width="45%" alt="AI Translated Manga"/>
   <br/>
-  <p><i>(Example: English to Portuguese. <b>Note: Yomotsu translates from ANY language (Raw Japanese, Korean, etc.) to ANY target language you want!</b>)</i></p>
+  <p><i>(Real-time in-bubble AI translation: cleans artwork, restores backgrounds, and typesets translated dialogue automatically. Yomotsu translates from <b>ANY language</b> to <b>ANY target language</b>!)</i></p>
 </div>
 
 ---
