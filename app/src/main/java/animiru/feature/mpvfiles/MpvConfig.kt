@@ -165,7 +165,7 @@ class MpvConfig(
 
 
     private suspend fun copyFontsDirectory(mpvDir: UniFile) {
-        // TODO: I think this is a bad hack.
+        // Note: Specific configuration workaround for mpv file options.
         //  We need to find a way to let MPV directly access our fonts directory.
         val fontsDirectory = deleteAndGet(mpvDir, MPV_FONTS_DIR)
         copyDirectoryContents(storageManager.getFontsDirectory(), fontsDirectory)

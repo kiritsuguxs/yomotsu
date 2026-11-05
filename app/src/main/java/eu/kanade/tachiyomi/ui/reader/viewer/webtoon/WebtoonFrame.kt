@@ -11,8 +11,6 @@ import android.widget.FrameLayout
  * Frame layout which contains a [WebtoonRecyclerView]. It's needed to handle touch events,
  * because the recyclerview is scaled and its touch events are translated, which breaks the
  * detectors.
- *
- * TODO consider integrating this class into [WebtoonViewer].
  */
 class WebtoonFrame(context: Context) : FrameLayout(context) {
 

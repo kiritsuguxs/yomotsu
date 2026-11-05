@@ -85,7 +85,7 @@ class SuwayomiApi(private val trackId: Long) {
     suspend fun updateProgress(track: Track, deleteDownloadsOnServer: Boolean = false): Track {
         val mangaId = track.remote_id
 
-        // TODO: Include a filter on the chapter number here
+        // Note: Query unread chapters condition for remote update
         // Below, we only consider older chapters; since v2.1.1985 filtering works properly in the query
         val chaptersQuery = $$"""
         |query GetMangaUnreadChapters($mangaId: Int!) {

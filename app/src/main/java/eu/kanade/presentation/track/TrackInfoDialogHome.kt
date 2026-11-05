@@ -117,7 +117,7 @@ fun TrackInfoDialogHome(
                         dateFormat.format(item.track.startDate.toLocalDate().toJavaLocalDate())
                     }
                         .takeIf { supportsReadingDates && item.track.startDate != 0L },
-                    onStartDateClick = { onStartDateEdit(item) } // TODO
+                    onStartDateClick = { onStartDateEdit(item) }
                         .takeIf { supportsReadingDates },
                     endDate = dateFormat.format(item.track.finishDate.toJavaLocalDate())
                         .takeIf { supportsReadingDates && item.track.finishDate != 0L },

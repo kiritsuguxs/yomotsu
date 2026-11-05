@@ -13,7 +13,7 @@ import tachiyomi.domain.manga.model.Manga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-// TODO: move these into the domain model
+// Note: Extension properties to be kept aligned with domain model
 val Manga.readingMode: Long
     get() = viewerFlags and ReadingMode.MASK.toLong()
 

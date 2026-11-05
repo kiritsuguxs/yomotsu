@@ -114,7 +114,7 @@ class MangaCoverViewModel(
         return withIOContext {
             val result = context.imageLoader.execute(req).image?.asDrawable(context.resources)
 
-            // TODO: Handle animated cover
+            // Extract bitmap representation from image loader result
             val bitmap = result?.getBitmapOrNull() ?: return@withIOContext null
             imageSaver.save(
                 Image.Cover(

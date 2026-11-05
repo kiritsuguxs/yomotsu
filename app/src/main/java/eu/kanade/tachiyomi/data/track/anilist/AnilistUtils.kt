@@ -12,7 +12,7 @@ fun Track.toApiStatus() = when (status) {
     Anilist.DROPPED -> "DROPPED"
     Anilist.PLAN_TO_READ -> "PLANNING"
     Anilist.REREADING -> "REPEATING"
-    else -> throw NotImplementedError("Unknown status: $status")
+    else -> "PLANNING"
 }
 
 private val preferences: TrackPreferences by injectLazy()
@@ -40,5 +40,5 @@ fun DomainTrack.toApiScore(): String = when (preferences.anilistScoreType.get())
     }
     // 10 point decimal
     "POINT_10_DECIMAL" -> (score / 10).toString()
-    else -> throw NotImplementedError("Unknown score type")
+    else -> score.toInt().toString()
 }

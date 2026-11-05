@@ -131,8 +131,6 @@ class BackupRestorer(
             if (options.libraryEntries) {
                 restoreManga(backup.backupManga, if (options.categories) backup.backupCategories else emptyList())
             }
-
-            // TODO: optionally trigger online library + tracker update
         }
     }
 

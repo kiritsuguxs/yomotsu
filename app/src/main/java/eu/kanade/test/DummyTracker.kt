@@ -28,7 +28,7 @@ data class DummyTracker(
 ) : Tracker {
 
     override val client: OkHttpClient
-        get() = TODO("Not yet implemented")
+        get() = OkHttpClient()
 
     override fun getLogo(): Int = valLogo
 
