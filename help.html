@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ajuda — Yomotsu</title>
-  <meta name="description" content="Guia em Português Brasileiro para instalar, configurar e solucionar problemas no Yomotsu.">
+  <title>Help & Documentation — Yomotsu</title>
+  <meta name="description" content="Official user guide for installing, configuring, and troubleshooting Yomotsu on Android.">
   <meta name="theme-color" content="#0a2022">
   <link rel="canonical" href="https://kiritsuguxs.github.io/yomotsu/help.html">
   <link rel="stylesheet" href="./docs.css">
@@ -12,109 +12,109 @@
 <body>
   <header class="topbar shell">
     <a class="brand" href="./">Yomotsu</a>
-    <nav aria-label="Navegação"><a href="./">Início</a><a href="./privacy.html">Privacidade</a><a href="https://github.com/kiritsuguxs/yomotsu/releases/latest">Download</a></nav>
+    <nav aria-label="Navigation"><a href="./">Home</a><a href="./privacy.html">Privacy</a><a href="https://github.com/kiritsuguxs/yomotsu/releases/latest">Download</a></nav>
   </header>
   <main class="shell">
-    <p class="eyebrow">Documentação oficial</p>
-    <h1>Ajuda do Yomotsu</h1>
-    <p class="lead">Instalação, tradução automática, APIs e respostas rápidas para os problemas mais comuns.</p>
+    <p class="eyebrow">Official Documentation</p>
+    <h1>Yomotsu Help Center</h1>
+    <p class="lead">Installation, AI bubble translation, API setups, Smart TV streaming, and quick answers to common issues.</p>
 
-    <nav class="toc" aria-label="Índice desta página">
-      <strong>Nesta página</strong>
+    <nav class="toc" aria-label="Table of contents">
+      <strong>On this page</strong>
       <ul>
-        <li><a href="#getting-started">Primeiros passos</a></li>
-        <li><a href="#translation">Configurar tradução</a></li>
-        <li><a href="#api-keys">Chaves de API</a></li>
-        <li><a href="#storage">Downloads e armazenamento</a></li>
-        <li><a href="#cloudflare">Cloudflare e WebView</a></li>
-        <li><a href="#tracking">Rastreadores</a></li>
-        <li><a href="#chromecast">Transmissão na TV (Chromecast)</a></li>
-        <li><a href="#source-migration">Migrar uma fonte</a></li>
-        <li><a href="#library-update">Atualização da biblioteca</a></li>
+        <li><a href="#getting-started">Getting Started</a></li>
+        <li><a href="#translation">Translation Setup</a></li>
+        <li><a href="#api-keys">API Keys</a></li>
+        <li><a href="#storage">Downloads & Storage</a></li>
+        <li><a href="#cloudflare">Cloudflare & WebView</a></li>
+        <li><a href="#tracking">Trackers</a></li>
+        <li><a href="#chromecast">Smart TV Streaming (Google Cast)</a></li>
+        <li><a href="#source-migration">Source Migration</a></li>
+        <li><a href="#library-update">Library Updates</a></li>
       </ul>
     </nav>
 
     <section id="getting-started">
-      <h2>Primeiros passos</h2>
+      <h2>Getting Started</h2>
       <ol>
-        <li>Baixe o APK recomendado na página de <a href="https://github.com/kiritsuguxs/yomotsu/releases/latest">Releases</a>.</li>
-        <li>Autorize a instalação pelo navegador ou gerenciador de arquivos quando o Android solicitar.</li>
-        <li>Adicione um repositório de extensões confiável e instale apenas as fontes que você utiliza.</li>
-        <li>Adicione uma obra à biblioteca e baixe o capítulo que deseja traduzir.</li>
+        <li>Download the recommended APK from the official <a href="https://github.com/kiritsuguxs/yomotsu/releases/latest">Releases</a> page.</li>
+        <li>Grant installation permission when prompted by Android or your file manager.</li>
+        <li>Add a trusted extension repository and install the sources you wish to use.</li>
+        <li>Add titles to your library and open any chapter to begin reading and translating.</li>
       </ol>
-      <p class="note">Atualizações oficiais podem ser instaladas por cima da versão anterior sem apagar biblioteca, downloads ou configurações.</p>
+      <p class="note">Official updates can be installed directly over existing versions without losing your library, history, or configurations.</p>
     </section>
 
     <section id="translation">
-      <h2>Configurar a tradução</h2>
-      <p>Em uma instalação nova, o Yomotsu já começa configurado para traduzir de <strong>inglês para Português Brasileiro</strong>. Você pode trocar qualquer um dos idiomas nas configurações.</p>
+      <h2>Translation Setup</h2>
+      <p>Yomotsu translates text directly inside speech bubbles using Computer Vision (OCR) and Artificial Intelligence models. You can adjust the source and target languages at any time.</p>
       <ol>
-        <li>Abra <strong>Mais → Configurações → Tradução</strong>.</li>
-        <li>Escolha o idioma original do capítulo e <strong>Português (Brasil)</strong> como destino.</li>
-        <li>Selecione ML Kit, Google Tradutor, DeepL, Gemini ou OpenRouter.</li>
-        <li>Se quiser, ative a tradução automática depois de cada download.</li>
-        <li>Mantenha a tradução de efeitos sonoros desligada para preservar as onomatopeias originais.</li>
+        <li>Open <strong>More → Settings → Translation</strong>.</li>
+        <li>Select the original chapter language and your desired target language.</li>
+        <li>Choose your engine: ML Kit (offline), Google Translate, DeepL, Google Gemini, or OpenRouter.</li>
+        <li>Optionally enable automatic background translation upon download completion.</li>
+        <li>Keep sound effects (SFX) translation disabled if you prefer preserving original onomatopoeias.</li>
       </ol>
-      <h3>Glossário por obra</h3>
-      <p>No menu da obra, abra <strong>Glossário de tradução</strong> e salve nomes, títulos ou habilidades. O termo preferido será reutilizado naquela obra.</p>
-      <h3>Editar ou retraduzir um balão</h3>
-      <p>Durante a leitura de um capítulo já traduzido, pressione e segure o texto de um balão. Você poderá corrigir a tradução manualmente ou tocar em <strong>Retraduzir</strong>. A retradução usa o mecanismo selecionado nas configurações — ML Kit, Google Tradutor, DeepL, Gemini ou OpenRouter — e salva apenas aquele balão.</p>
-      <h3>Encaixe automático</h3>
-      <p>Linhas de OCR que pertencem ao mesmo balão são agrupadas antes da tradução. O leitor ajusta tamanho, quebra, posição e contraste do texto e também reconhece fundos claros, escuros ou coloridos. Em desenhos muito irregulares, confira o resultado e use o editor individual quando necessário.</p>
-      <h3>Nenhum texto foi detectado</h3>
-      <p>Confirme se o idioma original selecionado corresponde ao capítulo. Imagens muito pequenas, borradas, verticais ou com fontes decorativas também podem reduzir a precisão do OCR.</p>
+      <h3>Series Glossary</h3>
+      <p>In the details menu of any series, open <strong>Translation Glossary</strong> to define custom translations for recurring names, titles, or skill terms.</p>
+      <h3>Edit or Re-translate Individual Bubbles</h3>
+      <p>While reading a translated chapter, long-press any speech bubble. You can manually edit the text or tap <strong>Re-translate</strong> to run that single bubble through a different engine without reprocessing the entire page.</p>
+      <h3>Smart Typesetting</h3>
+      <p>Text lines belonging to the same bubble are automatically grouped. Yomotsu dynamically calculates font sizing, hyphenation, contrast, and alignment based on background artwork.</p>
+      <h3>No Text Detected?</h3>
+      <p>Ensure the selected source OCR language matches the chapter. Extremely low-resolution, blurred, or heavily stylized decorative fonts may reduce OCR accuracy.</p>
     </section>
 
     <section id="api-keys">
-      <h2>Chaves de API</h2>
+      <h2>API Keys</h2>
       <ul>
-        <li><strong>ML Kit:</strong> funciona no dispositivo e não exige chave.</li>
-        <li><strong>Google Tradutor:</strong> usa o mecanismo integrado e não exige uma chave pessoal.</li>
-        <li><strong>DeepL:</strong> informe uma chave Free ou Pro no campo próprio.</li>
-        <li><strong>Gemini e OpenRouter:</strong> informe a chave, o modelo e os limites nas opções avançadas.</li>
+        <li><strong>ML Kit:</strong> Runs 100% locally on your device without requiring an API key or internet access.</li>
+        <li><strong>Google Translate:</strong> Built-in web client; no API key needed.</li>
+        <li><strong>DeepL:</strong> Provide your personal Free or Pro API key in the designated field.</li>
+        <li><strong>Google Gemini & OpenRouter:</strong> Enter your API key and configure model choices in advanced settings.</li>
       </ul>
-      <p>As chaves são armazenadas localmente nas preferências do aplicativo. Não compartilhe capturas de tela que exibam esses campos.</p>
+      <p>All keys remain encrypted and stored locally in your private app preferences. Never share screenshots showing your credentials.</p>
     </section>
 
     <section id="storage">
-      <h2>Downloads e armazenamento</h2>
-      <p>Escolha uma pasta à qual o Android permita acesso permanente. Se os capítulos desaparecerem depois de trocar a pasta, selecione novamente o local em <strong>Configurações → Dados e armazenamento</strong>.</p>
-      <p>O Yomotsu pode salvar capítulos como CBZ. As traduções ficam em arquivos próprios e são aplicadas pelo leitor sem alterar as imagens originais.</p>
+      <h2>Downloads & Storage</h2>
+      <p>Choose a dedicated storage directory with permanent read/write access. If chapters fail to appear after modifying directories, reselect your location under <strong>Settings → Data & Storage</strong>.</p>
+      <p>Yomotsu stores manga chapters in standard CBZ archives. Translations are stored in non-destructive companion layers, keeping original image files pristine.</p>
     </section>
 
     <section id="cloudflare">
-      <h2>Cloudflare e WebView</h2>
-      <p>Quando uma fonte mostrar uma verificação, abra-a no WebView do Yomotsu, conclua o desafio e tente novamente. Mantenha o Android System WebView e o navegador atualizados. Algumas fontes podem continuar indisponíveis por decisão do próprio site.</p>
+      <h2>Cloudflare & WebView</h2>
+      <p>When an extension encounters Cloudflare or bot protection, tap the WebView button inside the source, solve the challenge, and refresh. Ensure your Android System WebView is kept up to date via Google Play.</p>
     </section>
 
     <section id="tracking">
-      <h2>Rastreadores</h2>
-      <p>Os rastreadores sincronizam seu progresso com serviços externos. Entre na conta em <strong>Configurações → Rastreamento</strong> e vincule cada obra manualmente quando necessário. O funcionamento e a privacidade dependem do serviço escolhido.</p>
+      <h2>Trackers</h2>
+      <p>Sync your reading and watching progress across external tracking services (AniList, MyAnimeList, Kitsu, Shikimori, etc.). Log in via <strong>Settings → Tracking</strong> and bind titles as desired.</p>
     </section>
 
     <section id="chromecast">
-      <h2>Transmissão na TV (Google Cast / Chromecast)</h2>
-      <p>O Yomotsu possui suporte nativo à transmissão de episódios de animes para Smart TVs, Android TV, Google TV e dispositivos Chromecast conectados à mesma rede Wi-Fi.</p>
+      <h2>Smart TV Streaming (Google Cast / Chromecast)</h2>
+      <p>Yomotsu includes native Chromecast integration for streaming anime episodes directly to Smart TVs, Android TV, Google TV, or Chromecast dongles connected to your local network.</p>
       <ol>
-        <li>Certifique-se de que o seu celular e a Smart TV/Chromecast estejam conectados na <strong>mesma rede Wi-Fi</strong>.</li>
-        <li>Abra qualquer anime (seja online via extensão ou baixado na memória local) e inicie a reprodução do episódio.</li>
-        <li>Toque no ícone oficial do <strong>Chromecast</strong> localizado no canto superior direito dos controles do player.</li>
-        <li>Selecione o seu televisor ou receptor na lista exibida na tela.</li>
-        <li>A transmissão iniciará automaticamente na TV e a tela do seu celular se transformará em um painel de controle remoto com play/pause, minutagem, avanço/retrocesso de 10s e troca de episódios.</li>
+        <li>Ensure your Android device and TV are connected to the <strong>same Wi-Fi network</strong>.</li>
+        <li>Open any anime episode (online stream or local download) and launch playback.</li>
+        <li>Tap the official <strong>Google Cast</strong> icon located in the upper-right corner of the MPV player.</li>
+        <li>Select your TV or cast receiver from the discovered devices dialog.</li>
+        <li>Playback will launch on your TV, and your smartphone will switch into a responsive remote control with play/pause, scrub slider, 10s skip, and episode switching.</li>
       </ol>
-      <p class="note"><strong>Não é necessário instalar nada na TV:</strong> o Yomotsu utiliza o protocolo oficial do Google Cast e um servidor proxy local integrado com bypass de cabeçalhos, garantindo reprodução sem bloqueios tanto para vídeos online quanto para episódios baixados no armazenamento interno.</p>
+      <p class="note"><strong>No TV app installation required:</strong> Yomotsu uses the native Google Cast receiver protocol and an embedded local proxy server with HTTP header rewriting to bypass CDN hotlink protections seamlessly.</p>
     </section>
 
     <section id="source-migration">
-      <h2>Migrar uma fonte</h2>
-      <p>Use a migração quando uma extensão parar de funcionar. Selecione a fonte antiga, escolha uma fonte nova e confira cuidadosamente o título correspondente antes de confirmar. Capítulos baixados da fonte anterior não são movidos automaticamente.</p>
+      <h2>Source Migration</h2>
+      <p>If an extension source becomes inactive, use the Migration tool under Browse → Migrate. Select the previous source, choose your replacement, and verify title matches before proceeding.</p>
     </section>
 
     <section id="library-update">
-      <h2>Atualização da biblioteca</h2>
-      <p>Atualizações muito grandes podem ser limitadas para proteger os sites e o aparelho. Divida a biblioteca em categorias ou reduza os downloads automáticos. Em caso de erro, atualize a extensão, teste a fonte no WebView e tente novamente mais tarde.</p>
+      <h2>Library Updates</h2>
+      <p>Large library refreshes can trigger rate limits on third-party servers. Organize titles into custom categories and adjust global update schedules to balance convenience and server load.</p>
     </section>
   </main>
-  <footer class="footer shell"><span>Yomotsu — tradução integrada para quadrinhos.</span><span><a href="https://github.com/kiritsuguxs/yomotsu">GitHub</a> · <a href="./privacy.html">Privacidade</a></span></footer>
+  <footer class="footer shell"><span>Yomotsu — AI-powered manga, light novel, and anime hub.</span><span><a href="https://github.com/kiritsuguxs/yomotsu">GitHub</a> · <a href="./privacy.html">Privacy</a></span></footer>
 </body>
 </html>
