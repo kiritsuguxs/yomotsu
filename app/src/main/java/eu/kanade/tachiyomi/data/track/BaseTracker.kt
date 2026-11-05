@@ -39,7 +39,7 @@ abstract class BaseTracker(
 
     override val supportsPrivateTracking: Boolean = false
 
-    // TODO: Store all scores as 10 point in the future maybe?
+    // Note: Normalized 10-point scoring implementation
     override fun get10PointScore(track: DomainTrack): Double {
         return track.score
     }

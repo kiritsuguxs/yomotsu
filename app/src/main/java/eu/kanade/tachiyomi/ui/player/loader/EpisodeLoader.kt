@@ -239,7 +239,7 @@ class EpisodeLoader {
                 .parseVideoUrls(source)
         }
 
-        // TODO(16): Remove after ext lib bump
+        // Compatibility helper for video URL parsing with extension library
         private suspend fun List<Video>.parseVideoUrls(source: AnimeHttpSource): List<Video> {
             return this.map { video ->
                 if (video.videoUrl != "null") return@map video

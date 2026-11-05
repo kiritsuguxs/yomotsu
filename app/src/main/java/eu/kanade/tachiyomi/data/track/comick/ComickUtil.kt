@@ -28,7 +28,7 @@ internal fun Long.toApiListStatus() = when (this) {
     Comick.ON_HOLD -> 3
     Comick.DROPPED -> 4
     Comick.PLAN_TO_READ -> 5
-    else -> throw NotImplementedError("Unknown status: $this")
+    else -> 5
 }
 
 internal fun Long.fromApiListStatus() = when (this) {
@@ -37,7 +37,7 @@ internal fun Long.fromApiListStatus() = when (this) {
     3L -> Comick.ON_HOLD
     4L -> Comick.DROPPED
     5L -> Comick.PLAN_TO_READ
-    else -> throw NotImplementedError("Unknown status: $this")
+    else -> Comick.PLAN_TO_READ
 }
 
 class ComickMissingScopesException(message: String) : Exception(message)

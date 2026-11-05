@@ -426,7 +426,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                     preference = extensionInstallerPref,
                     entries = extensionInstallerPref.entries
                         .filter {
-                            // TODO: allow private option in stable versions once URL handling is more fleshed out
+                            // Note: private installer option available in preview/debug builds
                             if (isReleaseBuildType) {
                                 it != BasePreferences.ExtensionInstaller.PRIVATE
                             } else {

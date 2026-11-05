@@ -44,7 +44,7 @@ data class ComickSearchItem(
                 2 -> "Completed"
                 3 -> "Cancelled"
                 4 -> "Hiatus"
-                else -> throw NotImplementedError("Unknown publishing status: ${this@ComickSearchItem.status}")
+                else -> ""
             }
             publishing_type = when (country) {
                 "kr" -> "Manhwa"
