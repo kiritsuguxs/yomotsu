@@ -1,7 +1,7 @@
 {
   "name": "Yomotsu",
   "short_name": "Yomotsu",
-  "description": "Central de mangás, novels e animes com tradução automática integrada.",
+  "description": "AI-translated manga, light novel, and anime hub for Android.",
   "start_url": "/yomotsu/",
   "display": "standalone",
   "background_color": "#000000",
