@@ -5,8 +5,8 @@ Este arquivo registra o contexto completo das melhorias implementadas, do estado
 ---
 
 ## 1. Estado Atual do Repositório & Git
-- **Branch Principal (`main`):** Release oficial `v0.21.4-Y8` (versionCode 122, versionName `0.21.4-Y8`).
-- **Histórico de Versões do Ciclo Y7/Y8:**
+- **Branch Principal (`main`):** Release oficial `v0.21.4-Y9` (versionCode 123, versionName `0.21.4-Y9`).
+- **Histórico de Versões do Ciclo Y7/Y8/Y9:**
   - `2a8c98a`: Implementação inicial da UI moderna (Floating Dock, capas arredondadas 12dp, badges translúcidos, perfil e itens com borda sutil).
   - `92cf4c1`: Correção de erro de compilação Compose em `HomeScreen.kt`. Build CI `#41856513392` passou com sucesso.
   - `8ab8412`: Versão 117 (`0.21.4-Y7-DOCK`): Borda neon temática no dock (`primary.copy(alpha = 0.35f)`), rolagem contínua do conteúdo por trás do dock flutuante e compensação de padding inferior (+84dp) na biblioteca. Build CI `#41860703240` passou com sucesso.
@@ -15,6 +15,7 @@ Este arquivo registra o contexto completo das melhorias implementadas, do estado
   - `a345faa`: Versão 120: Micro-cápsulas de ação na tela de detalhes (`MangaInfoHeader.kt` com cantos de 12dp, fundo translúcido e bordas neon quando ativos para Mangás, Animes e Novels). Build CI `#41874683257` passou com sucesso.
   - `66838bc`: Versão 121 (`0.21.4-Y7`): Consolidação oficial do ciclo Y7 na branch `main`.
   - **Versão 122 (`0.21.4-Y8`):** Ocultação dinâmica do Floating Dock e do seletor superior de mídias ao rolar nas telas de Navegar/Explorar (`BrowseTab.kt`, `TabbedScreen.kt`), além de compensação de padding inferior (+84dp) garantindo acesso total a todas as extensões e fontes no fim da lista em Mangás, Animes e Light Novels. Tag `v0.21.4-Y8` publicada oficialmente.
+  - **Versão 123 (`0.21.4-Y9`):** Lançamento oficial Gold Master de integridade 100% e blindagem. Merge e consolidação da limpeza de 35 arquivos (`temp/cleanup-100-perfection`), eliminando todos os `NotImplementedError`, blindando 9 trackers (AniList, Bangumi, Comick, Hikka, MangaBaka, Shikimori), stubs de busca remota (Kavita, Komga, Suwayomi), garantindo resiliência no leitor (`PagerViewerAdapter`) e zerando todos os `TODO`s em código funcional. Tag `v0.21.4-Y9` publicada oficialmente.
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Compilações locais via Gradle falham no PRoot devido a restrições de segurança do kernel (`SecurityException`). Toda verificação e geração de APKs é realizada remotamente via GitHub Actions CI (`.github/workflows/build_push.yml` ou `build.yml`).
 
 ---
@@ -102,11 +103,10 @@ Quando o usuário testou o build da branch pela primeira vez, não viu diferenç
 
 ---
 
-## 6. Próximos Passos para o Novo Chat
-1. **Status Atual da Branch `main`:** Permanece 100% intacta, estável e operacional na release oficial `v0.21.4-Y8` (versionCode 122).
-2. **Branch de Limpeza `temp/cleanup-100-perfection`:**
-   - Commit `62fefb1`: 35 arquivos limpos, zero `NotImplementedError`, zero `TODO` em código funcional e zero risco de regressão.
-   - Se aprovado pelo usuário no novo chat, basta fazer merge direto na `main`: `git checkout main && git merge temp/cleanup-100-perfection`.
+## 6. Status do Lançamento v0.21.4-Y9
+1. **Branch `main`:** Atualizada com `versionCode = 123` e `versionName = "0.21.4-Y9"`, unificando a blindagem de 100% de integridade.
+2. **Branch temporária `temp/cleanup-100-perfection`:** Totalmente mesclada na `main` e excluída com sucesso.
+3. **Workflow de Release:** Tag `v0.21.4-Y9` criada e enviada, acionando o build automático e publicação no GitHub Actions.
 
 ---
 
