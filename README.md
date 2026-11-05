@@ -35,7 +35,8 @@
   <img src="./assets/manga_en.jpg" width="45%" alt="Original Manga"/>
   <img src="./assets/manga_pt.jpg" width="45%" alt="AI Translated Manga"/>
   <br/>
-  <p><i>(Real-time in-bubble AI translation: cleans artwork, restores backgrounds, and typesets translated dialogue automatically. Yomotsu translates from <b>ANY language</b> to <b>ANY target language</b>!)</i></p>
+  <p><i>(Real-time in-bubble AI translation: cleans artwork, restores backgrounds, and typesets translated dialogue automatically.)</i></p>
+  <p><sub>🇧🇷 <b>Developer Note:</b> Demo screenshots were captured by the author (a Brazilian developer) translating into Portuguese. Yomotsu is <b>fully localized in English</b> and supports translating to/from English, Japanese, Korean, Chinese, Spanish, and 40+ languages!</sub></p>
 </div>
 
 ---
@@ -107,6 +108,7 @@ Built on top of the celebrated foundations of **Mihon (Tachiyomi)** and **Anikku
   <img src="./assets/traducoes_ocr.jpg" width="32%" alt="Translation and OpenRouter Settings"/>
   <img src="./assets/telegram_cloud.jpg" width="32%" alt="Telegram Cloud Settings"/>
   <p><i>Advanced customization panels: native support for Qwen, OpenRouter, PaddleOCR, and Telegram.</i></p>
+  <p><sub><i>* Settings shown in Portuguese as configured on the Brazilian creator's device. The application UI is 100% available in English.</i></sub></p>
 </div>
 
 * **Translate without leaving the reader:** Translate entire pages or full chapters with just one tap.
