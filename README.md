@@ -1,215 +1,216 @@
 <div align="center">
 
-🇧🇷 Português | [🇺🇸 English](README_EN.md) | [🇪🇸 Español](README_ES.md)
+🇺🇸 English | [🇪🇸 Español](README_ES.md)
 
-<img src="./app/src/main/res/drawable-nodpi/ic_yomotsu_logo.png" alt="Logo do Yomotsu" width="130"/>
+<img src="./app/src/main/res/drawable-nodpi/ic_yomotsu_logo.png" alt="Yomotsu Logo" width="130"/>
 
 # Yomotsu
 
-### Central de Mangás, Novels e Animes com Tradução por IA para Android
+### AI-Translated Manga, Light Novel, and Anime Hub for Android
 
-*Baseado no Mihon e Anikku, com OCR avançado, tradução automática nos balões, player nativo de animes (MPV), transmissão nativa para Smart TV (Chromecast), leitor dedicado de novels e sincronização via Nuvem Telegram.*
+*Based on Mihon and Anikku, featuring advanced OCR, automatic bubble translation, native anime player (MPV), native Smart TV streaming (Chromecast), dedicated novel reader, and Telegram Cloud synchronization.*
 
 <br/>
 
-[![Baixar APK](https://img.shields.io/badge/Baixar-APK%20Oficial-2ea44f?style=for-the-badge&logo=android&logoColor=white)](https://github.com/kiritsuguxs/yomotsu/releases/latest)
-[![Chromecast](https://img.shields.io/badge/Google%20Cast-Chromecast-4285F4?style=for-the-badge&logo=googlecast&logoColor=white)](#-reprodução-de-animes--player-mpv)
-[![Telegram](https://img.shields.io/badge/Comunidade-Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/yomotsuapp)
-[![Discord](https://img.shields.io/badge/Comunidade-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/vNY8ep2UXh)
+[![Download APK](https://img.shields.io/badge/Download-Official%20APK-2ea44f?style=for-the-badge&logo=android&logoColor=white)](https://github.com/kiritsuguxs/yomotsu/releases/latest)
+[![Chromecast](https://img.shields.io/badge/Google%20Cast-Chromecast-4285F4?style=for-the-badge&logo=googlecast&logoColor=white)](#-anime-playback--smart-tv-google-cast)
+[![Telegram](https://img.shields.io/badge/Community-Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/yomotsuapp)
+[![Discord](https://img.shields.io/badge/Community-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/vNY8ep2UXh)
 
 
 
-[![Versão](https://img.shields.io/github/v/release/kiritsuguxs/yomotsu?label=versão&labelColor=27303D&color=0877d2)](https://github.com/kiritsuguxs/yomotsu/releases/latest)
+[![Version](https://img.shields.io/github/v/release/kiritsuguxs/yomotsu?label=version&labelColor=27303D&color=0877d2)](https://github.com/kiritsuguxs/yomotsu/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/kiritsuguxs/yomotsu/total?label=downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=white)](https://github.com/kiritsuguxs/yomotsu/releases)
-[![Android 8+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#requisitos)
-[![Licença Apache 2.0](https://img.shields.io/badge/licença-Apache%202.0-0877d2)](./LICENSE)
+[![Android 8+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#-requirements)
+[![Apache 2.0 License](https://img.shields.io/badge/license-Apache%202.0-0877d2)](./LICENSE)
 
 <br/>
 
-[Recursos](#-principais-recursos) • [Animes](#-reprodução-de-animes--player-mpv) • [Motores de Tradução](#-motores-de-tradução) • [Nuvem Telegram](#-como-usar-a-nuvem-telegram) • [Download](#-download) • [Requisitos](#-requisitos) • [Créditos](#-créditos)
+[Features](#-main-features) • [Anime](#-anime-playback--smart-tv-google-cast) • [Translation Engines](#-translation-engines) • [Telegram Cloud](#-how-to-use-telegram-cloud) • [Download](#-download) • [Requirements](#-requirements) • [Credits](#-credits-and-acknowledgments)
 
 </div>
 
 ---
 
 <div align="center">
-  <h3>✨ Tradução em Tempo Real nos Balões ✨</h3>
-  <img src="./assets/manga_en.jpg" width="45%" alt="Mangá Original (Inglês)"/>
-  <img src="./assets/manga_pt.jpg" width="45%" alt="Mangá Traduzido (Português)"/>
-  <p><i>(Exemplo real de tradução no Yomotsu: Limpeza do balão e aplicação nativa em Português)</i></p>
+  <h3>✨ Real-Time Bubble Translation ✨</h3>
+  <img src="./assets/manga_en.jpg" width="45%" alt="Original Manga (English)"/>
+  <img src="./assets/manga_pt.jpg" width="45%" alt="Translated Manga (Portuguese)"/>
+  <br/>
+  <p><i>(Example: English to Portuguese. <b>Note: Yomotsu translates from ANY language (Raw Japanese, Korean, etc.) to ANY target language you want!</b>)</i></p>
 </div>
 
 ---
 
-## 💡 Sobre o Yomotsu
+## 💡 About Yomotsu
 
-O **Yomotsu** é um aplicativo Android completo para os fãs de cultura pop asiática que elimina as barreiras de idioma e fragmentação. Ele reúne em um único lugar a leitura de **mangás, manhwas, webtoons, quadrinhos, Light Novels** e a **reprodução de animes em alta definição**, combinando tecnologias de **Visão Computacional (OCR)** e **Inteligência Artificial** para traduzir diálogos e textos diretamente na tela.
+**Yomotsu** is an all-in-one Android media hub that breaks down language and ecosystem barriers. It brings the reading of **mangas, manhwas, webtoons, comics, and Light Novels** together with **high-definition anime streaming and offline playback** into a single application, combining **Computer Vision (OCR)** and **Artificial Intelligence** technologies to translate dialogue directly on your screen.
 
-Construído a partir das bases consagradas do **Mihon (Tachiyomi)** e **Anikku (Aniyomi)**, o Yomotsu oferece máxima velocidade, organização e extenso catálogo de extensões, aliado a inovações exclusivas: player de vídeo MPV com aceleração de hardware, tradução em tempo real com foco em **Português Brasileiro**, leitor fluido de novels com narração neural e backup ilimitado na **Nuvem Telegram**.
+Built on top of the celebrated foundations of **Mihon (Tachiyomi)** and **Anikku (Aniyomi)**, Yomotsu delivers lightning speed, impeccable organization, and a vast extensions catalog, enhanced with exclusive features: hardware-accelerated MPV video player, real-time bubble translation, neural novel TTS narration, and unlimited **Telegram Cloud backup**.
 
 ---
 
-## 🌟 Os 4 Pilares do Yomotsu
+## 🌟 The 4 Pillars of Yomotsu
 
 <table>
   <tr>
     <td width="25%" align="center">
-      <h3>🏮 Tradução Inteligente</h3>
-      <p>Reconhece o texto nos balões com OCR, limpa a arte original e insere a tradução perfeitamente diagramada.</p>
+      <h3>🏮 Smart Translation</h3>
+      <p>Recognizes text inside bubbles using OCR, cleans original artwork, and inserts translated text with automated typesetting.</p>
     </td>
     <td width="25%" align="center">
-      <h3>🎬 Animes & Smart TV</h3>
-      <p>Player MPV acelerado por GPU, transmissão nativa para Smart TV (Chromecast), download offline, múltiplas faixas e qualidades.</p>
+      <h3>🎬 Anime & Smart TV</h3>
+      <p>GPU-accelerated MPV player, native Google Cast (Chromecast) streaming, offline downloads, multi-audio tracks, and quality selection.</p>
     </td>
     <td width="25%" align="center">
-      <h3>📖 Leitor de Light Novels</h3>
-      <p>Modo de leitura de texto nativo com tipografia ajustável estilo Kindle, tradução de parágrafos e narração TTS.</p>
+      <h3>📖 Light Novel Reader</h3>
+      <p>Immersive text reading mode with Kindle-like typography, paragraph translation, and ultra-realistic neural TTS narration.</p>
     </td>
     <td width="25%" align="center">
-      <h3>☁️ Nuvem Telegram</h3>
-      <p>Armazenamento ilimitado no seu canal do Telegram para fazer backup de capítulos e economizar memória do celular.</p>
+      <h3>☁️ Telegram Cloud</h3>
+      <p>Unlimited cloud storage in your Telegram channel to backup chapters and free up local device storage.</p>
     </td>
   </tr>
 </table>
 
 ---
 
-## 🚀 Principais recursos
+## 🚀 Main features
 
-### 🎬 Reprodução de Animes & Smart TV (Google Cast)
-* **Transmissão Nativa na TV (Google Cast / Chromecast):** Assista aos seus animes na tela grande da sua Smart TV, Android TV ou Chromecast com apenas um toque, transformando seu celular em controle remoto sem instalar nada na TV.
-* **Servidor Proxy Local Anti-Bloqueio (`NanoHTTPD`):** Injeção em segundo plano de cabeçalhos (`Referer` e `User-Agent`) e reescrita de manifests HLS (m3u8), contornando bloqueios 403 das fontes online e permitindo transmitir até episódios baixados da pasta local com suporte a Range Requests.
-* **Controle Remoto Dedicado & Sincronização Perfeita:** Interface remota moderna (`CastScreen`) com passagem automática para o próximo episódio e retomada contínua no celular no segundo exato onde a TV parou.
-* **Player Nativo MPV de Alta Performance:** Renderização acelerada por GPU garantindo reprodução lisa e baixo consumo de bateria no dispositivo móvel.
-* **Seleção de Qualidade e Faixas:** Escolha entre múltiplas resoluções de vídeo (1080p, 720p, etc.), faixas de áudio (dublado/legendado) e legendas embutidas ou externas.
-* **Gerenciador de Downloads de Animes:** Baixe episódios completos diretamente pelo aplicativo para assistir offline onde quiser.
-* **Extensões de Animes Privadas:** Aba exclusiva de Fontes e Extensões para Animes no Explorar (base Anikku/Aniyomi) instaladas de forma interna e segura.
-* **Histórico e Atualizações Separados:** Controle inteligente de episódios assistidos e alertas de lançamentos de animes de forma independente de mangás.
+### 🎬 Anime Playback & Smart TV (Google Cast)
+* **Native Smart TV Streaming (Google Cast / Chromecast):** Stream your favorite anime straight to your Smart TV, Android TV, or Chromecast with a single tap, turning your phone into a remote control without installing anything on the TV.
+* **Built-in Anti-Hotlink Local Proxy Server (`NanoHTTPD`):** Background header injection (`Referer`, `User-Agent`) and HLS (m3u8) stream rewriting to bypass 403 blocks from video scrapers, with full support for casting downloaded local episodes via Range Requests.
+* **Dedicated Remote Control & Seamless Continuity:** Modern remote interface (`CastScreen`) featuring automated queue transitions and instant local resume on your phone at the exact second where the TV stopped.
+* **High-Performance Native MPV Player:** Hardware-accelerated GPU rendering delivering smooth playback with minimal battery drain.
+* **Quality & Track Selection:** Seamlessly switch between video qualities (1080p, 720p, etc.), multi-language audio tracks, and embedded or external subtitles.
+* **Anime Download Manager:** Download full anime episodes directly within the app for offline viewing anywhere.
+* **Private Anime Extensions:** Dedicated Anime Sources and Extensions tab in Explore (powered by Anikku/Aniyomi ecosystem), installed internally and securely.
+* **Independent History & Updates:** Separate progress tracking for watched episodes and anime release notifications independent of manga.
 
-### 🎮 Perfil Yomotsu & Sistema de Progressão
-* **Perfil Yomotsu Totalmente Repaginado:** Painel completo exibindo seu progresso, nível, conquistas e patentes.
-* **20 Avatares Oficiais de Personagens:** Retratos de anime em alta definição (512x512) com enquadramento circular perfeito para fotos de perfil (Gojo, Sukuna, Sung Jin-woo, Luffy, Zoro, Tanjiro, Nezuko, Naruto, Ichigo, Saitama, Eren, Levi, Frieren, Anya, Killua, Goku, Guts, Rimuru, Megumin, Alucard e Yomotsu Original).
-* **20 Banners Exclusivos:** 12 cenários cinematográficos de animes (Santuário Malevolente, Castelo Infinito, Thousand Sunny, Vale do Fim, Vila da Folha, Cometa Tiamat, Céu de Tóquio, Portão das Sombras, Colina das Flores, Muralha Maria, Trilhos no Mar e Jardim Secreto) e 8 gradientes minimalistas.
-* **Bordas de Rank Dinâmicas:** Molduras de avatar incluindo o Rank Dinâmico que evolui e reflete a cor da sua patente e nível de leitura no app.
-* **Métricas Completas de Biblioteca & Trackers:** Estatísticas de capítulos lidos, episódios assistidos, tempo total dedicado, downloads offline, obras concluídas e integração com serviços de rastreamento (AniList, MyAnimeList, etc.) com nota média e contagem de títulos monitorados.
-* **Conquistas Temáticas:** Desafios e conquistas para desbloquear conforme você consome mangás, novels e animes.
+### 🎮 Yomotsu Profile & Progression
+* **Completely Revamped Profile:** Full dashboard showcasing your progress, rank level, unlocked achievements, and badges.
+* **20 Official Character Avatars:** High-definition character portraits (512x512) framed perfectly for circular profile pictures (Gojo, Sukuna, Sung Jin-woo, Luffy, Zoro, Tanjiro, Nezuko, Naruto, Ichigo, Saitama, Eren, Levi, Frieren, Anya, Killua, Goku, Guts, Rimuru, Megumin, Alucard, and Yomotsu Original).
+* **20 Exclusive Banners:** 12 breathtaking widescreen anime landscapes (Malevolent Shrine, Infinity Castle, Thousand Sunny, Valley of the End, Hidden Leaf Village, Tiamat Comet, Tokyo Sky, Shadow Gate, Flower Hill, Wall Maria, Spirited Away Sea Train, and Howl's Secret Garden) plus 8 sleek minimalist gradients.
+* **Dynamic Rank Borders:** Exclusive avatar borders, including a Dynamic Rank border that automatically reflects your reading rank and progression color.
+* **Full Library Metrics & Tracker Sync:** In-depth statistics for chapters read, episodes watched, total time spent, offline downloads, completed titles, and full tracker sync (AniList, MyAnimeList, etc.) with tracked title counts and universal average score.
+* **Themed Anime Achievements:** Unlockable challenges across manga reading, novel exploration, and anime watching.
 
-### 📖 Leitura e Visualização de Mangás & Novels
-* **Suporte Completo a Obras:** Leia mangás, manhwas, webtoons, quadrinhos e **Light Novels / Webnovels**.
-* **Leitor Dedicado de Novels:** Modo texto imersivo com tipografia ajustável (fontes, tamanho de letra, espaçamento entre linhas e margens personalizadas) e narração neural ultra-realista.
-* **Modos de Imagem Avançados:** Modos de página simples, página dupla invertida e webtoon com rolagem vertical contínua.
-* **Organização Total:** Biblioteca com categorias personalizadas, histórico de leitura sincronizado, rastreadores e downloads locais.
-* **Interface Moderna:** Suporte completo a temas claro, escuro e dinâmico (Material You).
+### 📖 Manga & Novel Reading
+* **Full Title Support:** Read mangas, manhwas, webtoons, comics, and **Light Novels / Webnovels**.
+* **Dedicated Novel Reader:** Immersive text mode with adjustable typography (fonts, letter size, line spacing, custom margins) and neural audio narration.
+* **Advanced Image Modes:** Single page, inverted double page, and webtoon modes with continuous vertical scrolling.
+* **Total Organization:** Library with custom categories, synchronized reading history, trackers, and local downloads.
+* **Modern Interface:** Full support for light, dark, and dynamic themes (Material You).
 
-### 🌐 OCR e Tradução Automática com IA
+### 🌐 OCR and AI Automatic Translation
 
 <div align="center">
-  <img src="./assets/traducoes_llm.jpg" width="32%" alt="Configurações de IA e LLM"/>
-  <img src="./assets/traducoes_ocr.jpg" width="32%" alt="Configurações de Tradução e OpenRouter"/>
-  <img src="./assets/telegram_cloud.jpg" width="32%" alt="Configuração da Nuvem Telegram"/>
-  <p><i>Painéis de customização avançada: suporte nativo a Qwen, OpenRouter, PaddleOCR e Telegram.</i></p>
+  <img src="./assets/traducoes_llm.jpg" width="32%" alt="AI and LLM Settings"/>
+  <img src="./assets/traducoes_ocr.jpg" width="32%" alt="Translation and OpenRouter Settings"/>
+  <img src="./assets/telegram_cloud.jpg" width="32%" alt="Telegram Cloud Settings"/>
+  <p><i>Advanced customization panels: native support for Qwen, OpenRouter, PaddleOCR, and Telegram.</i></p>
 </div>
 
-* **Tradução sem sair do leitor:** Traduza páginas inteiras ou capítulos completos com apenas um toque.
-* **OCR de Alta Precisão:** Reconhecimento óptico de caracteres nos idiomas inglês, japonês, coreano e chinês.
-* **Múltiplos Provedores:** Escolha entre motores locais (sem gastar internet) e provedores de IA de última geração.
-* **Inpainting & Diagramação:** Apagamento do texto original e adaptação automática do tamanho da fonte para caber no balão.
-* **Glossário Contextual:** Memória por obra para manter nomes de personagens, golpes e termos traduzidos de forma consistente.
-* **Ajuste Manual:** Toque em qualquer balão para editar a tradução ou solicitar retradução individual instantaneamente.
+* **Translate without leaving the reader:** Translate entire pages or full chapters with just one tap.
+* **High Precision OCR:** Optical character recognition for English, Japanese, Korean, and Chinese.
+* **Multiple Providers:** Choose between local engines (without consuming internet data) and next-gen AI providers.
+* **Inpainting & Typesetting:** Erasure of original text and automatic font size adaptation to fit the bubble.
+* **Contextual Glossary:** Per-series memory to keep character names, attacks, and terms translated consistently.
+* **Manual Adjustment:** Tap any bubble to instantly edit the translation or request an individual re-translation.
 
-### ☁️ Nuvem Telegram (Backup & Economia de Armazenamento)
-* **Backup no Telegram:** Envie capítulos de mangás e novels diretamente para o seu supergrupo ou canal privado.
-* **Economia de Espaço no Celular:** Apague os arquivos locais automaticamente após o upload confirmado na nuvem.
-* **Restauração em 1 Toque:** Baixe qualquer capítulo ou obra completa da nuvem diretamente para a Fonte Local a qualquer momento.
-* **Gerenciador Integrado:** Visualize todas as obras salvas na nuvem, consulte capítulos e realize exclusões diretas.
-* **Sincronização Inteligente:** Catálogo que detecta e remove apenas os capítulos que foram realmente apagados do Telegram, mantendo todas as suas obras seguras.
+### ☁️ Telegram Cloud (Backup & Storage Saving)
+* **Telegram Backup:** Send manga and novel chapters directly to your supergroup or private channel.
+* **Save Phone Space:** Automatically delete local files after a confirmed cloud upload.
+* **1-Tap Restore:** Download any chapter or full series from the cloud directly back to the Local Source at any time.
+* **Integrated Manager:** View all series saved in the cloud, check chapters, and perform direct deletions.
+* **Smart Sync:** Catalog that detects and removes only chapters that were actually deleted from Telegram, keeping all your series safe.
 
 ---
 
-## 📊 Motores de Tradução
+## 📊 Translation Engines
 
-O Yomotsu oferece flexibilidade total para você escolher como traduzir suas leituras:
+Yomotsu offers total flexibility for you to choose how to translate your readings:
 
-| Motor | Tipo | Chave de API | Idiomas Suportados | Vantagens |
+| Engine | Type | API Key | Supported Languages | Advantages |
 | :--- | :---: | :---: | :---: | :--- |
-| **ML Kit (Google)** | No dispositivo | ❌ Não precisa | EN, JA, KO, ZH | **100% Offline e Instantâneo** — Não consome franquia de internet. |
-| **Google Tradutor** | Nuvem | ❌ Não precisa | Dezenas de idiomas | **Sem configuração** — Pronto para usar imediatamente. |
-| **DeepL** | Nuvem (API) | 🔑 Necessária | EN, JA, ZH | **Fluidez Extrema** — Traduções gramaticais e naturais de alto nível. |
-| **Google Gemini** | IA Generativa | 🔑 Gratuita | Todos os idiomas | **Compreensão Contextual** — Entende gírias, piadas e contexto narrativo. |
-| **OpenRouter** | IA Multimodelo | 🔑 Necessária | Todos os idiomas | **Liberdade Total** — Conecte a modelos como Claude, GPT-4, Llama e outros. |
+| **ML Kit (Google)** | On-device | ❌ Not needed | EN, JA, KO, ZH | **100% Offline & Instant** — Consumes no data. |
+| **Google Translate** | Cloud | ❌ Not needed | Dozens of languages | **No setup** — Ready to use immediately. |
+| **DeepL** | Cloud (API) | 🔑 Required | EN, JA, ZH | **Extreme Fluency** — High-level grammatical and natural translations. |
+| **Google Gemini** | Generative AI | 🔑 Free | All languages | **Contextual Understanding** — Understands slang, jokes, and narrative context. |
+| **OpenRouter** | Multi-model AI | 🔑 Required | All languages | **Total Freedom** — Connect to models like Claude, GPT-4, Llama, and others. |
 
 ---
 
-## ☁️ Como Usar a Nuvem Telegram
+## ☁️ How to Use Telegram Cloud
 
-O Yomotsu utiliza a infraestrutura do Telegram para fornecer backup ilimitado e leitura 100% em nuvem (streaming) para seus mangás e novels:
+Yomotsu uses Telegram's infrastructure to provide unlimited backup and 100% cloud reading (streaming) for your mangas and novels:
 
 ```mermaid
 flowchart LR
-    A[Capítulo Baixado] -->|Upload Automático| B[Seu Canal Telegram]
-    B -->|Libera Espaço| C[Memória do Celular Livre]
-    B -->|1 Toque| D[Restaura para a Fonte Local]
+    A[Downloaded Chapter] -->|Automatic Upload| B[Your Telegram Channel]
+    B -->|Frees Space| C[Phone Memory Free]
+    B -->|1 Tap| D[Restores to Local Source]
 ```
 
-### Passo a Passo de Configuração:
-1. **Crie um Canal ou Supergrupo Privado** no Telegram onde os arquivos serão armazenados.
-2. Abra o Telegram e converse com o **[@BotFather](https://t.me/BotFather)**:
-   * Envie `/newbot`, escolha um nome e usuário para o seu bot.
-   * Copie o **Token de Acesso** gerado (ex: `123456789:ABCdef...`).
-3. Adicione o seu bot como **Administrador** do seu canal com permissão de postar mensagens.
-4. Pegue o **ID do Canal** (você pode encaminhar uma mensagem do canal para o bot `@userinfobot` ou `@RawDataBot` para obter o ID numérico, geralmente começando com `-100`).
-5. No Yomotsu, abra **Mais > Configurações > Nuvem Telegram**:
-   * Ative a opção **Nuvem Telegram**.
-   * Cole o **Token do Bot** e o **ID do Chat/Canal**.
-   * *(Opcional)* Ative **Excluir arquivos locais após upload** para poupar espaço interno!
+### Setup Step-by-Step:
+1. **Create a Private Channel or Supergroup** on Telegram where files will be stored.
+2. Open Telegram and chat with **[@BotFather](https://t.me/BotFather)**:
+   * Send `/newbot`, choose a name and username for your bot.
+   * Copy the generated **Access Token** (e.g., `123456789:ABCdef...`).
+3. Add your bot as an **Administrator** of your channel with permission to post messages.
+4. Get the **Channel ID** (you can forward a message from the channel to the `@userinfobot` or `@RawDataBot` bot to get the numeric ID, usually starting with `-100`).
+5. In Yomotsu, open **More > Settings > Telegram Cloud**:
+   * Enable the **Telegram Cloud** option.
+   * Paste the **Bot Token** and the **Chat/Channel ID**.
+   * *(Optional)* Enable **Delete local files after upload** to save internal space!
 
 > [!TIP]
-> **Leitura 100% na Nuvem (Streaming):** Você não precisa baixar os capítulos de volta para o celular para ler! O Yomotsu possui uma Fonte nativa do Telegram que permite ler mangás e novels diretamente da nuvem, poupando 100% do seu armazenamento interno.
+> **100% Cloud Reading (Streaming):** You don't need to download chapters back to your phone to read them! Yomotsu has a native Telegram Source that allows reading mangas and novels directly from the cloud, saving 100% of your internal storage.
 
 ---
 
 ## 📥 Download
 
-A versão oficial mais recente pronta para instalação está sempre disponível em:
+The latest official version ready for installation is always available at:
 
 <div align="center">
 
-### [👉 Baixar a Última Versão do Yomotsu (APK)](https://github.com/kiritsuguxs/yomotsu/releases/latest)
+### [👉 Download Latest Yomotsu Release (APK)](https://github.com/kiritsuguxs/yomotsu/releases/latest)
 
 </div>
 
-* O arquivo principal é o **`Yomotsu-*-arm64.apk`** (otimizado para praticamente todos os celulares modernos).
-* Instalações subsequentes funcionam como atualização direta por cima da versão existente, sem perda de biblioteca ou dados.
+* The main file is **`Yomotsu-*-arm64.apk`** (optimized for almost all modern phones).
+* Subsequent installations work as direct updates over the existing version, without losing your library or data.
 
 ---
 
-## ⚙️ Requisitos
+## ⚙️ Requirements
 
-* **Sistema Operacional:** Android 8.0 (Oreo) ou superior.
-* **Permissões:** Acesso a notificações (para status de downloads e backups) e armazenamento.
-* **Conexão:** Para os tradutores de IA na nuvem (DeepL, Gemini, OpenRouter) e para a Nuvem Telegram, é necessária conexão com a internet.
-
----
-
-## ⚖️ Aviso Legal
-
-O Yomotsu é um software de código aberto e sem fins lucrativos, desenvolvido exclusivamente como um leitor de arquivos locais e cliente de integração pessoal de nuvem. **O Yomotsu não hospeda, não distribui e não possui afiliação com serviços que fornecem materiais protegidos por direitos autorais.** O aplicativo não inclui extensões ou catálogos de obras. O usuário é o único responsável por todo o conteúdo que insere, traduz ou faz backup usando esta ferramenta.
+* **OS:** Android 8.0 (Oreo) or higher.
+* **Permissions:** Access to notifications (for download and backup statuses) and storage.
+* **Connection:** Internet connection required for cloud AI translators (DeepL, Gemini, OpenRouter) and Telegram Cloud.
 
 ---
 
-## 🤝 Créditos e Agradecimentos
+## ⚖️ Legal Disclaimer
 
-O Yomotsu é fruto do esforço da comunidade open source:
-* **[Mihon / Tachiyomi](https://github.com/mihonapp/mihon)** — A base e arquitetura que tornam este leitor tão estável e completo.
-* **[Anikku / Aniyomi](https://github.com/aniyomiorg/aniyomi)** — Ecossistema e arquitetura pioneira de suporte a animes e extensões.
-* **[MPV Android](https://github.com/mpv-android/mpv-android)** — Motor de reprodução de vídeo leve, potente e com aceleração gráfica.
-* **[FFmpegKit](https://github.com/arthenica/ffmpeg-kit)** — Processamento e manipulação de fluxos de mídia e downloads seguros.
-* **[TDLib (Telegram Database Library)](https://github.com/tdlib/td)** — Motor que viabiliza a integração nativa e robusta com o Telegram.
-* **[Google ML Kit](https://developers.google.com/ml-kit)** — Reconhecimento e visão computacional em tempo real no dispositivo.
-* A todos os desenvolvedores e tradutores que apoiam o ecossistema de leitura livre no Android.
+Yomotsu is an open-source, non-profit software developed exclusively as a local file reader and personal cloud integration client. **Yomotsu does not host, distribute, or have any affiliation with services that provide copyrighted materials.** The application does not include extensions or catalogs of works. The user is solely responsible for all content they insert, translate, or backup using this tool.
+
+---
+
+## 🤝 Credits and Acknowledgments
+
+Yomotsu is the result of the open-source community's effort:
+* **[Mihon / Tachiyomi](https://github.com/mihonapp/mihon)** — The base and architecture that make this reader so stable and complete.
+* **[Anikku / Aniyomi](https://github.com/aniyomiorg/aniyomi)** — Pioneering ecosystem and architecture for anime support and media extensions.
+* **[MPV Android](https://github.com/mpv-android/mpv-android)** — Lightweight, feature-packed hardware-accelerated video player core.
+* **[FFmpegKit](https://github.com/arthenica/ffmpeg-kit)** — Robust media stream handling and secure video downloading.
+* **[TDLib (Telegram Database Library)](https://github.com/tdlib/td)** — Engine that enables native and robust integration with Telegram.
+* **[Google ML Kit](https://developers.google.com/ml-kit)** — Real-time on-device optical character recognition and computer vision.
+* To all developers and translators who support the free reading ecosystem on Android.
 
 ---
 
 <div align="center">
-  <sub>Yomotsu Oficial • Desenvolvido com foco na melhor experiência de leitura em Português Brasileiro.</sub>
+  <sub>Yomotsu Official • Developed focusing on the best reading experience.</sub>
 </div>

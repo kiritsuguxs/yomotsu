@@ -6,32 +6,30 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 ## 0.21.4-Y9
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
-- **Integridade 100% de Código (Gold Master):**
-  - Conclusão da auditoria profunda em todas as 166.185 linhas de código do Yomotsu, eliminando totalmente débitos técnicos herdados e pontos de falha silenciosa.
-  - Zero `NotImplementedError` e zero `TODO` pendente em código funcional em todo o projeto.
-- **Blindagem Completa de Trackers de Terceiros:**
-  - Proteção resiliente em 9 serviços de rastreamento (AniList, Bangumi, Comick, Hikka, MangaBaka, Shikimori, entre outros).
-  - Caso uma dessas APIs externas retorne um status novo, formato não documentado ou dados incompletos, o app adota um fallback inteligente seguro em vez de interromper o rastreador.
-- **Resiliência do Leitor de Mangás:**
-  - Proteção aprimorada no adaptador de páginas (`PagerViewerAdapter`): transições e elementos inesperados agora são renderizados de forma segura, garantindo leitura contínua e sem interrupções.
-- **Estabilidade em Servidores Locais & Stubs de Busca:**
-  - Blindagem das integrações com servidores externos (Kavita, Komga, Suwayomi), garantindo retorno de listas vazias seguras em buscas não suportadas sem disparar exceções.
-- **Higienização do Compilador e Linters:**
-  - 35 arquivos polidos e limpos, removendo avisos legados de desenvolvimento e deixando o projeto nos mais altos padrões de qualidade da indústria Android.
+- **Limpeza e estabilidade do código:**
+  - Revisão geral do código para remover pendências herdadas (`TODO` e `NotImplementedError`), trocando falhas inesperadas por tratamento de erro seguro.
+  - Alguns pontos agora usam um valor padrão seguro em vez de interromper o app. Em recursos ainda não suportados, a função retorna vazio.
+- **Mais resiliência nos rastreadores:**
+  - 9 serviços de rastreamento (AniList, Bangumi, Comick, Hikka, MangaBaka, Shikimori, entre outros) agora lidam melhor com status novos, formatos não documentados ou dados incompletos, sem derrubar o rastreador.
+- **Leitor de mangá mais estável:**
+  - O adaptador de páginas (`PagerViewerAdapter`) agora trata transições inesperadas sem fechar o leitor.
+- **Buscas em servidores próprios:**
+  - Kavita, Komga e Suwayomi retornam lista vazia em buscas não suportadas, sem gerar exceção.
+- **Manutenção interna:**
+  - 35 arquivos revisados para remover avisos antigos do compilador.
 
 🇺🇸 **News, Improvements & Fixes (English):**
-- **100% Codebase Integrity (Gold Master):**
-  - Comprehensive audit completed across all 166,185 lines of Kotlin/Java in Yomotsu, eliminating legacy technical debt and unhandled runtime traps.
-  - Achieved a certified milestone of zero `NotImplementedError` and zero lingering `TODO`s in production code.
-- **Hardened Third-Party Trackers:**
-  - Robust exception shields implemented across 9 tracking integrations (AniList, Bangumi, Comick, Hikka, MangaBaka, Shikimori, and more).
-  - If a tracking API delivers undocumented statuses or unexpected payloads, Yomotsu now gracefully handles it with resilient fallbacks rather than failing.
-- **Manga Reader Viewport Resilience:**
-  - Fortified page transition adapter (`PagerViewerAdapter`): unmapped elements and edge-case transitions now fail-safe into benign view containers, preventing reader crashes during long sessions.
-- **Self-Hosted Stubs & Remote Search Reliability:**
-  - Hardened stubs for self-hosted instances (Kavita, Komga, Suwayomi), safely returning empty lists on unsupported search hooks without triggering runtime exceptions.
-- **Compiler & Linter Hygiene:**
-  - 35 source files sanitized, cleaning up deprecated markers and bringing the codebase to top-tier Android architectural hygiene.
+- **Code cleanup and stability:**
+  - General code review removing inherited pending items (`TODO` and `NotImplementedError`), replacing unexpected failures with safe error handling.
+  - Some places now use a safe default instead of stopping the app. For features that are not supported yet, the function returns empty.
+- **More resilient trackers:**
+  - 9 tracking services (AniList, Bangumi, Comick, Hikka, MangaBaka, Shikimori, and more) now handle new statuses, undocumented formats or incomplete data without breaking the tracker.
+- **More stable manga reader:**
+  - The page adapter (`PagerViewerAdapter`) now handles unexpected transitions without closing the reader.
+- **Self-hosted server searches:**
+  - Kavita, Komga and Suwayomi return an empty list on unsupported searches, without throwing exceptions.
+- **Internal maintenance:**
+  - 35 files reviewed to remove old compiler warnings.
 
 ## 0.21.4-Y8
 

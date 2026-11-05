@@ -1,6 +1,6 @@
 <div align="center">
 
-[🇧🇷 Português](README.md) | [🇺🇸 English](README_EN.md) | 🇪🇸 Español
+[🇺🇸 English](README.md) | 🇪🇸 Español
 
 <img src="./app/src/main/res/drawable-nodpi/ic_yomotsu_logo.png" alt="Logo de Yomotsu" width="130"/>
 
@@ -26,7 +26,7 @@
 
 <br/>
 
-[Características](#-características-principales) • [Animes](#-reproducción-de-animes--reproductor-mpv) • [Motores de Traducción](#-motores-de-traducción) • [Nube de Telegram](#%E2%98%81%EF%B8%8F-c%C3%B3mo-usar-la-nube-de-telegram) • [Descarga](#-descarga) • [Requisitos](#%E2%9A%99%EF%B8%8F-requisitos) • [Créditos](#-créditos-y-agradecimientos)
+[Características](#-características-principales) • [Animes](#-reproducción-de-animes--smart-tv-google-cast) • [Motores de Traducción](#-motores-de-traducción) • [Nube de Telegram](#%E2%98%81%EF%B8%8F-c%C3%B3mo-usar-la-nube-de-telegram) • [Descarga](#-descarga) • [Requisitos](#%E2%9A%99%EF%B8%8F-requisitos) • [Créditos](#-créditos-y-agradecimientos)
 
 </div>
 
