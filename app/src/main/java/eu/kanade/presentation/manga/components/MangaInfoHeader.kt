@@ -389,7 +389,9 @@ private fun MangaAndSourceTitlesLarge(
             modifier = Modifier.fillMaxWidth(if (isPanorama) 0.96f else 0.65f),
             data = ImageRequest.Builder(LocalContext.current)
                 .data(manga)
-                .crossfade(true)
+                .size(coil3.size.Size.ORIGINAL)
+                .scale(coil3.size.Scale.FIT)
+                .crossfade(false)
                 .build(),
             contentDescription = stringResource(MR.strings.manga_cover),
             shape = if (isPanorama) MaterialTheme.shapes.medium else MaterialTheme.shapes.extraSmall,
