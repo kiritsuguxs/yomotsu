@@ -94,7 +94,8 @@ class ProfilePreferences(
         }
         val base64 = avatarCustomBase64Pref.get()
         if (base64.isNotBlank()) {
-            val restored = restoreBase64ToFile(base64, "avatar_restored_${System.currentTimeMillis()}.jpg")
+            val ext = if (base64.startsWith("GIF:")) "gif" else "jpg"
+            val restored = restoreBase64ToFile(base64.removePrefix("GIF:"), "avatar_restored_${System.currentTimeMillis()}.$ext")
             if (restored != null) {
                 avatarCustomPathPref.set(restored.absolutePath)
                 return restored.absolutePath
@@ -140,7 +141,8 @@ class ProfilePreferences(
         }
         val base64 = bannerCustomBase64Pref.get()
         if (base64.isNotBlank()) {
-            val restored = restoreBase64ToFile(base64, "banner_restored_${System.currentTimeMillis()}.jpg")
+            val ext = if (base64.startsWith("GIF:")) "gif" else "jpg"
+            val restored = restoreBase64ToFile(base64.removePrefix("GIF:"), "banner_restored_${System.currentTimeMillis()}.$ext")
             if (restored != null) {
                 bannerCustomPathPref.set(restored.absolutePath)
                 return restored.absolutePath
@@ -173,6 +175,9 @@ class ProfilePreferences(
     fun compressFileToBase64(file: File, maxDimension: Int, quality: Int): String? {
         return try {
             if (!file.exists()) return null
+            if (file.extension.equals("gif", ignoreCase = true) && file.length() <= 5 * 1024 * 1024) {
+                return "GIF:" + Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+            }
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.absolutePath, bounds)
 

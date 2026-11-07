@@ -157,7 +157,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
 
     fun setImage(drawable: Drawable, config: Config) {
         this.config = config
-        if (drawable is Animatable) {
+        if (drawable is Animatable || drawable !is BitmapDrawable) {
             prepareAnimatedImageView()
             setAnimatedImage(drawable, config)
         } else {
@@ -482,6 +482,14 @@ open class ReaderPageImageView @JvmOverloads constructor(
     ) = (pageView as? AppCompatImageView)?.apply {
         if (this is PhotoView) {
             setZoomTransitionDuration(config.zoomDuration.getSystemScaledDuration())
+        }
+
+        if (data is Drawable) {
+            setImageDrawable(data)
+            (data as? Animatable)?.start()
+            isVisible = true
+            this@ReaderPageImageView.onImageLoaded()
+            return@apply
         }
 
         val request = ImageRequest.Builder(context)

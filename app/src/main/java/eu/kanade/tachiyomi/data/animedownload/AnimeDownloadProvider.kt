@@ -36,7 +36,7 @@ class AnimeDownloadProvider(
 ) {
 
     private val downloadsDir: UniFile?
-        get() = storageManager.getDownloadsDirectory()?.createDirectory("anime")
+        get() = storageManager.getAnimeDownloadsDirectory()
 
     /**
      * Returns the download directory for a manga. For internal use only.

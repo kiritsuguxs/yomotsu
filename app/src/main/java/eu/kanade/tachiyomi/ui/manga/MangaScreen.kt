@@ -140,7 +140,7 @@ class MangaScreen(
         val themeCoverBased by uiPreferences.themeCoverBased.collectAsState()
         var seedColor by remember { mutableStateOf<Color?>(null) }
 
-        LaunchedEffect(successState.manga.thumbnailUrl, themeCoverBased) {
+        LaunchedEffect(successState.manga.thumbnailUrl, successState.manga.coverLastModified, themeCoverBased) {
             if (!themeCoverBased) {
                 seedColor = null
                 return@LaunchedEffect
@@ -244,7 +244,7 @@ class MangaScreen(
                             preferTranslated = true,
                         )
                         result.onSuccess { epubFile ->
-                            context.toast("EPUB salvo na pasta downloads do Yomotsu!")
+                            context.toast("EPUB salvo na pasta novels do Yomotsu!")
                             eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareEpub(context, epubFile)
                         }.onFailure { err ->
                             context.toast(err.message ?: "Erro ao exportar EPUB")

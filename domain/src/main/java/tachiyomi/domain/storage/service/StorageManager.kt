@@ -43,6 +43,12 @@ class StorageManager(
                     parent.createDirectory(DOWNLOADS_PATH).also {
                         DiskUtil.createNoMediaFile(it, context)
                     }
+                    parent.createDirectory(ANIME_DOWNLOADS_PATH).also {
+                        DiskUtil.createNoMediaFile(it, context)
+                    }
+                    parent.createDirectory(NOVEL_DOWNLOADS_PATH).also {
+                        DiskUtil.createNoMediaFile(it, context)
+                    }
                 }
                 _changes.send(Unit)
             }
@@ -60,6 +66,18 @@ class StorageManager(
 
     fun getDownloadsDirectory(): UniFile? {
         return baseDir?.createDirectory(DOWNLOADS_PATH)
+    }
+
+    fun getAnimeDownloadsDirectory(): UniFile? {
+        return baseDir?.createDirectory(ANIME_DOWNLOADS_PATH)?.also {
+            DiskUtil.createNoMediaFile(it, context)
+        }
+    }
+
+    fun getNovelDownloadsDirectory(): UniFile? {
+        return baseDir?.createDirectory(NOVEL_DOWNLOADS_PATH)?.also {
+            DiskUtil.createNoMediaFile(it, context)
+        }
     }
 
     fun getLocalSourceDirectory(): UniFile? {
@@ -94,6 +112,8 @@ class StorageManager(
 
 private const val AUTOMATIC_BACKUPS_PATH = "autobackup"
 private const val DOWNLOADS_PATH = "downloads"
+private const val ANIME_DOWNLOADS_PATH = "animes"
+private const val NOVEL_DOWNLOADS_PATH = "novels"
 private const val LOCAL_SOURCE_PATH = "local"
 private const val LOCAL_ANIMESOURCE_PATH = "localanime"
 

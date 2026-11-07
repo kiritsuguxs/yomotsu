@@ -1350,7 +1350,7 @@ class NovelReaderActivity : ComponentActivity() {
                                             fallbackChaptersContent = fallbackMap,
                                         )
                                         result.onSuccess { epubFile ->
-                                            toast("EPUB salvo na pasta downloads do Yomotsu!")
+                                            toast("EPUB salvo na pasta novels do Yomotsu!")
                                             eu.kanade.tachiyomi.extension.novel.epub.NovelEpubExporter.shareEpub(this@NovelReaderActivity, epubFile)
                                         }.onFailure { err ->
                                             toast(err.message ?: "Erro ao exportar EPUB")

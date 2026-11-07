@@ -196,10 +196,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                 // NetworkFetcher.Factory
                 add(OkHttpNetworkFetcherFactory(callFactoryLazy::value))
                 // Decoder.Factory
+                add(GifDecoder.Factory())
                 if (Build.VERSION.SDK_INT >= 28) {
                     add(AnimatedImageDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
                 }
                 add(TachiyomiImageDecoder.Factory())
                 // Fetcher.Factory

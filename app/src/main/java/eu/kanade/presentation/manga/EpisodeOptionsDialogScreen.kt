@@ -598,6 +598,7 @@ private fun VideoList(
                                 getHosterList(),
                                 selectedHosterVideoIndex.first,
                                 selectedHosterVideoIndex.second,
+                                forceInternalPlayer = true,
                             )
                             context.startActivity(intent)
                         }
