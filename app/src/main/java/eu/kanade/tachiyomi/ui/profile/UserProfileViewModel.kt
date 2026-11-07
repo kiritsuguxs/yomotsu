@@ -321,7 +321,7 @@ class UserProfileViewModel(
 
     private fun copyUriToLocal(uriString: String?, filename: String): String? {
         if (uriString == null) return null
-        if (!uriString.startsWith("content://")) return uriString
+        if (!uriString.startsWith("content://") && !uriString.startsWith("file://")) return uriString
 
         return try {
             val uri = Uri.parse(uriString)

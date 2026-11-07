@@ -242,11 +242,11 @@ $spineItems
                 writeTextEntry(zos, "OEBPS/content.opf", contentOpf)
             }
 
-            // Save ONLY the compact translated .epub into the Yomotsu downloads folder
+            // Save ONLY the compact translated .epub into the Yomotsu novels folder
             runCatching {
                 val source = sourceManager.get(manga.source)
                 if (source != null) {
-                    val mangaDir = downloadProvider.getMangaDir(manga.title, source).getOrNull()
+                    val mangaDir = NovelDownloadManager.getNovelDir(source, manga.title)
                     if (mangaDir != null) {
                         mangaDir.findFile("$safeTitle.html")?.delete()
                         mangaDir.findFile("$safeTitle.txt")?.delete()

@@ -9,7 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -23,6 +22,9 @@ class StorageManager(
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private var baseDir: UniFile? = getBaseDir(storagePreferences.baseStorageDirectory.get())
+    private val migrationLock = Any()
+    @Volatile
+    private var migratedUri: String? = null
 
     private val _changes: Channel<Unit> = Channel(Channel.UNLIMITED)
     val changes = _changes.receiveAsFlow()
@@ -30,23 +32,83 @@ class StorageManager(
 
     init {
         storagePreferences.baseStorageDirectory.changes()
-            .drop(1)
             .distinctUntilChanged()
             .onEach { uri ->
+                val isInitial = migratedUri == null
                 baseDir = getBaseDir(uri)
                 baseDir?.let { parent ->
-                    parent.createDirectory(AUTOMATIC_BACKUPS_PATH)
-                    parent.createDirectory(LOCAL_SOURCE_PATH)
-                    parent.createDirectory(LOCAL_ANIMESOURCE_PATH)
-                    // TachiyomiAT
-                    parent.createDirectory(TRANSLATION_PATH)
-                    parent.createDirectory(DOWNLOADS_PATH).also {
-                        DiskUtil.createNoMediaFile(it, context)
-                    }
+                    setupDirectories(parent, uri)
                 }
-                _changes.send(Unit)
+                if (!isInitial) {
+                    _changes.send(Unit)
+                }
             }
             .launchIn(scope)
+    }
+
+    private fun setupDirectories(parent: UniFile, uri: String) {
+        parent.createDirectory(AUTOMATIC_BACKUPS_PATH)
+        parent.createDirectory(LOCAL_SOURCE_PATH)
+        parent.createDirectory(LOCAL_ANIMESOURCE_PATH)
+        // TachiyomiAT
+        parent.createDirectory(TRANSLATION_PATH)
+        parent.createDirectory(DOWNLOADS_PATH).also {
+            DiskUtil.createNoMediaFile(it, context)
+        }
+        parent.createDirectory(ANIME_DOWNLOADS_PATH).also {
+            DiskUtil.createNoMediaFile(it, context)
+        }
+        parent.createDirectory(NOVEL_DOWNLOADS_PATH).also {
+            DiskUtil.createNoMediaFile(it, context)
+        }
+        ensureMpvDirectoriesMigrated(parent, uri)
+    }
+
+    private fun ensureMpvDirectoriesMigrated(
+        parent: UniFile? = baseDir,
+        uri: String? = parent?.uri?.toString(),
+    ): UniFile? {
+        val root = parent ?: return null
+        synchronized(migrationLock) {
+            val mpvDir = root.createDirectory(MPV_PATH)?.also {
+                DiskUtil.createNoMediaFile(it, context)
+            } ?: return null
+
+            if (uri != null && migratedUri == uri) {
+                return mpvDir
+            }
+
+            val subDirs = listOf(SCRIPTS_PATH, SCRIPTS_OPTS_PATH, SHADERS_PATH, FONTS_PATH)
+            for (dirName in subDirs) {
+                val targetDir = mpvDir.createDirectory(dirName)
+                val legacyDir = root.findFile(dirName)?.takeIf { it.isDirectory } ?: continue
+                if (targetDir != null) {
+                    legacyDir.listFiles()?.forEach { legacyFile ->
+                        if (legacyFile.isFile) {
+                            val fileName = legacyFile.name ?: return@forEach
+                            if (targetDir.findFile(fileName) == null) {
+                                runCatching {
+                                    targetDir.createFile(fileName)?.let { outFile ->
+                                        legacyFile.openInputStream().use { input ->
+                                            outFile.openOutputStream().use { output ->
+                                                input.copyTo(output)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        runCatching { legacyFile.delete() }
+                    }
+                }
+                runCatching { legacyDir.delete() }
+            }
+
+            if (uri != null) {
+                migratedUri = uri
+            }
+            return mpvDir
+        }
     }
 
     private fun getBaseDir(uri: String): UniFile? {
@@ -62,6 +124,18 @@ class StorageManager(
         return baseDir?.createDirectory(DOWNLOADS_PATH)
     }
 
+    fun getAnimeDownloadsDirectory(): UniFile? {
+        return baseDir?.createDirectory(ANIME_DOWNLOADS_PATH)?.also {
+            DiskUtil.createNoMediaFile(it, context)
+        }
+    }
+
+    fun getNovelDownloadsDirectory(): UniFile? {
+        return baseDir?.createDirectory(NOVEL_DOWNLOADS_PATH)?.also {
+            DiskUtil.createNoMediaFile(it, context)
+        }
+    }
+
     fun getLocalSourceDirectory(): UniFile? {
         return baseDir?.createDirectory(LOCAL_SOURCE_PATH)
     }
@@ -75,31 +149,38 @@ class StorageManager(
         return baseDir?.createDirectory(TRANSLATION_PATH)
     }
 
+    fun getMpvDirectory(): UniFile? {
+        return ensureMpvDirectoriesMigrated()
+    }
+
     fun getScriptsDirectory(): UniFile? {
-        return baseDir?.createDirectory(SCRIPTS_PATH)
+        return getMpvDirectory()?.createDirectory(SCRIPTS_PATH)
     }
 
     fun getScriptOptsDirectory(): UniFile? {
-        return baseDir?.createDirectory(SCRIPTS_OPTS_PATH)
+        return getMpvDirectory()?.createDirectory(SCRIPTS_OPTS_PATH)
     }
 
     fun getShadersDirectory(): UniFile? {
-        return baseDir?.createDirectory(SHADERS_PATH)
+        return getMpvDirectory()?.createDirectory(SHADERS_PATH)
     }
 
     fun getFontsDirectory(): UniFile? {
-        return baseDir?.createDirectory(FONTS_PATH)
+        return getMpvDirectory()?.createDirectory(FONTS_PATH)
     }
 }
 
 private const val AUTOMATIC_BACKUPS_PATH = "autobackup"
 private const val DOWNLOADS_PATH = "downloads"
+private const val ANIME_DOWNLOADS_PATH = "animes"
+private const val NOVEL_DOWNLOADS_PATH = "novels"
 private const val LOCAL_SOURCE_PATH = "local"
 private const val LOCAL_ANIMESOURCE_PATH = "localanime"
 
 // TachiyomiAT
 private const val TRANSLATION_PATH = "translations"
 
+private const val MPV_PATH = "mpv"
 private const val SCRIPTS_PATH = "scripts"
 private const val SCRIPTS_OPTS_PATH = "script-opts"
 private const val SHADERS_PATH = "shaders"

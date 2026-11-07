@@ -111,10 +111,10 @@ class AnimeDownloadCache(
         .stateIn(scope, SharingStarted.WhileSubscribed(), false)
 
     private val diskCacheFile: File
-        get() = File(context.cacheDir, "dl_index_cache_v3")
+        get() = File(context.cacheDir, "anime_dl_index_cache_v3")
 
     private val rootDownloadsDirMutex = Mutex()
-    private var rootDownloadsDir = RootDirectory(storageManager.getDownloadsDirectory()?.createDirectory("anime"))
+    private var rootDownloadsDir = RootDirectory(storageManager.getAnimeDownloadsDirectory())
 
     init {
         // Attempt to read cache file
@@ -456,7 +456,7 @@ class AnimeDownloadCache(
             val sourceMap = sources.associate { provider.getSourceDirName(it).lowercase() to it.id }
 
             rootDownloadsDirMutex.withLock {
-                val updatedRootDir = RootDirectory(storageManager.getDownloadsDirectory()?.createDirectory("anime"))
+                val updatedRootDir = RootDirectory(storageManager.getAnimeDownloadsDirectory())
 
                 updatedRootDir.sourceDirs = updatedRootDir.dir?.listFiles().orEmpty()
                     .filter { it.isDirectory && !it.name.isNullOrBlank() }

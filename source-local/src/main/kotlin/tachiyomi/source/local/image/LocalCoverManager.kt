@@ -34,9 +34,12 @@ class LocalCoverManager(
             return null
         }
 
-        val targetFile = find(manga.url) ?: directory.createFile(DEFAULT_COVER_NAME)!!
+        val buffered = inputStream.buffered()
+        val ext = ImageUtil.findImageType(buffered)?.extension ?: "jpg"
+        find(manga.url)?.delete()
+        val targetFile = directory.createFile("cover.$ext") ?: directory.createFile(DEFAULT_COVER_NAME)!!
 
-        inputStream.use { input ->
+        buffered.use { input ->
             targetFile.openOutputStream().use { output ->
                 input.copyTo(output)
             }

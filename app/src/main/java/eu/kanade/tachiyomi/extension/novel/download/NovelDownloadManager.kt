@@ -2,9 +2,11 @@ package eu.kanade.tachiyomi.extension.novel.download
 
 import android.app.Application
 import androidx.core.text.HtmlCompat
+import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.extension.novel.NovelSourceWrapper
 import eu.kanade.tachiyomi.extension.novel.translation.NovelTranslator
+import eu.kanade.tachiyomi.source.Source
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -22,6 +24,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.domain.translation.TranslationPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -32,6 +35,7 @@ object NovelDownloadManager {
 
     private val app: Application by lazy { Injekt.get() }
     private val sourceManager: SourceManager by lazy { Injekt.get() }
+    private val storageManager: StorageManager by lazy { Injekt.get() }
     private val translationPreferences: TranslationPreferences by lazy { Injekt.get() }
     private val downloadProvider: DownloadProvider by lazy { Injekt.get() }
 
@@ -131,6 +135,14 @@ object NovelDownloadManager {
             .trim()
     }
 
+    fun getNovelDir(source: Source, mangaTitle: String): UniFile? {
+        val novelsRoot = storageManager.getNovelDownloadsDirectory() ?: return null
+        val sourceDirName = downloadProvider.getSourceDirName(source)
+        val sourceDir = novelsRoot.createDirectory(sourceDirName) ?: return null
+        val mangaDirName = downloadProvider.getMangaDirName(mangaTitle)
+        return sourceDir.createDirectory(mangaDirName)
+    }
+
     private fun saveToYomotsuFolder(
         source: NovelSourceWrapper,
         manga: Manga,
@@ -139,7 +151,7 @@ object NovelDownloadManager {
         translatedText: String? = null,
     ) {
         runCatching {
-            val mangaDir = downloadProvider.getMangaDir(manga.title, source).getOrNull() ?: return
+            val mangaDir = getNovelDir(source, manga.title) ?: return
             val chapterDirName = downloadProvider.getChapterDirName(
                 chapter.name,
                 chapter.scanlator,
@@ -159,7 +171,7 @@ object NovelDownloadManager {
                 out.write(finalContent.toByteArray(Charsets.UTF_8))
             }
         }.onFailure { e ->
-            logcat(LogPriority.WARN, e) { "Failed to mirror novel chapter into Yomotsu downloads folder" }
+            logcat(LogPriority.WARN, e) { "Failed to mirror novel chapter into Yomotsu novels folder" }
         }
     }
 

@@ -207,6 +207,7 @@ class PlayerActivity : BaseActivity() {
             hostList: List<Hoster>? = null,
             hostIndex: Int? = null,
             vidIndex: Int? = null,
+            forceInternalPlayer: Boolean = false,
         ): Intent {
             return Intent(context, PlayerActivity::class.java).apply {
                 if (animeId != null) putExtra("animeId", animeId)
@@ -214,6 +215,7 @@ class PlayerActivity : BaseActivity() {
                 hostIndex?.let { putExtra("hostIndex", it) }
                 vidIndex?.let { putExtra("vidIndex", it) }
                 hostList?.let { putExtra("hostList", it.serialize()) }
+                putExtra("forceInternalPlayer", forceInternalPlayer)
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
         }
@@ -234,6 +236,7 @@ class PlayerActivity : BaseActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
 
         val animeId = intent.getLongExtra("animeId", -1L).takeIf { it != -1L }
             ?: intent.getLongExtra("manga", -1L).takeIf { it != -1L }
@@ -1154,9 +1157,9 @@ class PlayerActivity : BaseActivity() {
             return
         }
 
-        val extPkg = playerPreferences.externalPlayerPreference().get().trim()
+        val forceInternal = intent?.getBooleanExtra("forceInternalPlayer", false) == true
         val alwaysUseExt = playerPreferences.alwaysUseExternalPlayer().get()
-        if (alwaysUseExt || extPkg.isNotBlank()) {
+        if (!forceInternal && alwaysUseExt) {
             openInExternalPlayer(video, position)
             return
         }
