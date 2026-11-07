@@ -3,6 +3,54 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y10
+
+🇧🇷 **Português (Brasil)**
+
+### ✨ Novidades & Melhorias
+- **Arquitetura de Armazenamento Dedicada (`animes/` e `novels/`):**
+  - Episódios de **Animes** baixados agora são armazenados diretamente em `<Yomotsu>/animes/` (com índice de cache exclusivo `anime_dl_index_cache_v3` e proteção `.nomedia`), eliminando o aninhamento dentro da pasta de mangás.
+  - Capítulos de **Light Novels** (`.txt`) e livros exportados (`.epub`) agora contam com o diretório dedicado `<Yomotsu>/novels/`.
+  - **Retrocompatibilidade Transparente:** Arquivos baixados anteriormente nas pastas antigas continuam sendo reconhecidos, reproduzidos, lidos e gerenciados normalmente sem necessidade de intervenção manual.
+- **Padronização e Limpeza Automática do Diretório Raiz (`mpv/`):**
+  - As pastas técnicas de customização do reprodutor de vídeo (`fonts`, `scripts`, `script-opts` e `shaders`) agora ficam centralizadas dentro de `<Yomotsu>/mpv/`.
+  - **Migração Automática:** Ao iniciar o aplicativo, o `StorageManager` transfere automaticamente eventuais arquivos existentes nas pastas antigas da raiz para `<Yomotsu>/mpv/` e remove os diretórios vazios excedentes, mantendo a pasta principal do Yomotsu limpa e organizada.
+- **Suporte Completo a Capas Animadas (`.gif`) em Todas as Fontes e Perfis:**
+  - Adicionado suporte nativo a capas e avatares animados em obras fora da biblioteca, fontes locais (`LocalSource` e `LocalAnimeSource`, preservando a animação sem conversão estática para `.jpg`) e nos backups completos de perfil de usuário (`ProfilePreferences`).
+
+### 🛠️ Correções
+- **Roteamento Inteligente entre Reprodutor Interno (MPV) e Player Externo:**
+  - Corrigido o comportamento em que o reprodutor externo continuava sendo acionado após desativar a opção *"Sempre usar reprodutor externo"*, exigindo que o usuário redefinisse manualmente o aplicativo externo para *"Nenhum"*.
+  - Corrigido o botão **"Player Interno"** no diálogo de seleção de qualidade do episódio para que sempre force a abertura no reprodutor nativo MPV, respeitando a escolha imediata do usuário.
+- **Renderização e Encaixe de Capas Animadas (`.gif`) no Modo Panorâmico e Visualizador:**
+  - Corrigido o corte vertical (topo/base) e as bordas vazias laterais em capas `.gif` personalizadas no modo **Capa Panorâmica (`16:9`)** através de escalonamento vetorial direto em Canvas (`drawWithContent`), garantindo preenchimento completo de ponta a ponta sem perda de enquadramento.
+  - Corrigido o congelamento de capas `.gif` ao abrir o visualizador de capa em tela cheia (`MangaCoverDialog`), substituindo a decodificação estática por renderização animada contínua no `ReaderPageImageView`.
+- **Estabilidade na Ordenação de Capítulos:**
+  - Substituída a última exceção herdada (`NotImplementedError`) no ordenador padrão de capítulos (`ChapterSort.kt`) por um fallback seguro baseado na ordem da fonte (`sourceOrder`).
+
+🇺🇸 **English**
+
+### ✨ New Features & Improvements
+- **Dedicated Media Storage Architecture (`animes/` & `novels/`):**
+  - Downloaded **Anime** episodes are now stored directly under `<Yomotsu>/animes/` (backed by a dedicated `anime_dl_index_cache_v3` disk index and `.nomedia` protection), removing redundant nesting inside the manga downloads folder.
+  - Downloaded **Light Novel** chapters (`.txt`) and exported books (`.epub`) now reside in their own dedicated `<Yomotsu>/novels/` directory.
+  - **Seamless Backward Compatibility:** Previously downloaded files in legacy directories remain fully indexed, playable, readable, and manageable without manual file migration.
+- **Root Directory Standardization & Automated Cleanup (`mpv/`):**
+  - Technical video player customization folders (`fonts`, `scripts`, `script-opts`, and `shaders`) are now consolidated under `<Yomotsu>/mpv/`.
+  - **Automated Migration:** On startup, `StorageManager` automatically migrates any user files from legacy root folders into `<Yomotsu>/mpv/` and removes leftover empty directories, keeping the root Yomotsu directory clean and structured.
+- **End-to-End Animated Cover (`.gif`) Support Across Sources & Profiles:**
+  - Added full animated `.gif` persistence and rendering for non-favorite entries, local sources (`LocalSource` and `LocalAnimeSource`, bypassing lossy `.jpg` re-encoding), and user profile backups (`ProfilePreferences`).
+
+### 🛠️ Bug Fixes
+- **Smart Internal (MPV) vs. External Player Routing:**
+  - Fixed an issue where the external video player continued to launch after disabling *"Always use external player"* unless the external player app preference was manually reset to *"None"*.
+  - Fixed the **"Internal Player"** action in the episode quality dialog so it strictly forces playback in the built-in MPV player.
+- **Animated Cover (`.gif`) Aspect Ratio & Fullscreen Viewer Rendering:**
+  - Fixed top/bottom cropping and horizontal pillarboxing on custom `.gif` covers in **Panorama Cover (`16:9`)** mode using direct Canvas matrix scaling (`drawWithContent`), ensuring full edge-to-edge coverage while preserving the complete animation frame.
+  - Fixed animated `.gif` covers freezing into static bitmaps when opened in the fullscreen cover dialog (`MangaCoverDialog`) by routing animated drawables directly through `ReaderPageImageView`.
+- **Chapter Sorting Resilience:**
+  - Replaced the last remaining `NotImplementedError` in `ChapterSort.kt` with a safe `sourceOrder` fallback.
+
 ## 0.21.4-Y9
 
 🇧🇷 **Novidades, Melhorias e Correções (Português):**
