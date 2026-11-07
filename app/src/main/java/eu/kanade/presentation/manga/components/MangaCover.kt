@@ -81,7 +81,7 @@ enum class MangaCover(val ratio: Float) {
                                 val sx = if (aspect < dstAspect) dstAspect / aspect else 1f
                                 val sy = if (aspect > dstAspect) aspect / dstAspect else 1f
                                 scale(scaleX = sx, scaleY = sy, pivot = center) {
-                                    drawContent()
+                                    this@drawWithContent.drawContent()
                                 }
                             } else {
                                 drawContent()
