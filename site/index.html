@@ -446,7 +446,7 @@
       font-size: 0.95rem;
     }
 
-    /* Features Grid (100% Dark & Legível!) */
+    /* Features Grid */
     .features {
       padding-block: 100px 110px;
       border-top: 1px solid var(--border);
@@ -638,11 +638,11 @@
 </head>
 <body>
   <header class="topbar shell">
-    <a class="brand" href="#inicio" aria-label="Yomotsu — Home">
+    <a class="brand" href="#top" aria-label="Yomotsu — Home">
       <img src="./icon.png" alt="" width="42" height="42">
       <span>Yomotsu</span>
     </a>
-    <nav aria-label="Navegação principal">
+    <nav aria-label="Main navigation">
       <a href="#how-it-works">How it works</a>
       <a href="#features">Features</a>
       <a href="./help.html">Help</a>
@@ -650,9 +650,9 @@
     </nav>
   </header>
 
-  <main id="conteudo">
+  <main id="content">
     <!-- Hero Section -->
-    <section class="hero shell" id="inicio">
+    <section class="hero shell" id="top">
       <div>
         <p class="eyebrow"><i></i> Manga, Light Novel & Anime Hub</p>
         <h1>Your entertainment doesn't stop at language barriers.</h1>
@@ -677,17 +677,17 @@
             <span class="compare-badge">RAW ➔ English</span>
           </div>
           <div class="comparison-container" id="mangaCompare" style="--compare-pos: 50%;">
-            <!-- Imagem Traduzida (Base) -->
+            <!-- Translated Image (Base) -->
             <img src="./assets/manga_pt.jpg" alt="Translated Page" class="compare-img compare-after" draggable="false">
             
-            <!-- Imagem Original (Sobreposta e cortada pelo slider) -->
+            <!-- Original Image (Overlaid and clipped by slider) -->
             <img src="./assets/manga_en.jpg" alt="Original RAW Page" class="compare-img compare-before" draggable="false">
 
-            <!-- Etiquetas flutuantes -->
+            <!-- Floating badges -->
             <div class="badge-tag tag-left">Original</div>
             <div class="badge-tag tag-right">AI Translated</div>
 
-            <!-- Linha divisória e puxador -->
+            <!-- Divider line and handle -->
             <div class="slider-divider">
               <div class="slider-handle">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -699,7 +699,7 @@
               </div>
             </div>
 
-            <!-- Controle deslizante invisível cobrindo a área -->
+            <!-- Invisible range slider covering the area -->
             <input type="range" min="0" max="100" value="50" class="compare-slider" id="compareSlider" aria-label="Drag to compare before and after">
           </div>
           <div class="comparison-footer" style="display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center;">
@@ -789,7 +789,7 @@
           </article>
           <article class="card">
             <span>08</span>
-            <h3>Nuvem Telegram</h3>
+            <h3>Telegram Cloud</h3>
             <p>Unlimited cloud storage in your personal Telegram channel to back up libraries and save local device space.</p>
           </article>
           <article class="card">
@@ -837,13 +837,13 @@
           <h2>Experience Yomotsu today.</h2>
           <p>Download the latest release and enjoy your favorite titles without language barriers.</p>
         </div>
-        <a class="button light" href="https://github.com/kiritsuguxs/yomotsu/releases/latest">Download APK Oficial ↗</a>
+        <a class="button light" href="https://github.com/kiritsuguxs/yomotsu/releases/latest">Download Official APK ↗</a>
       </div>
     </section>
   </main>
 
   <footer class="footer shell">
-    <a class="brand" href="#inicio">
+    <a class="brand" href="#top">
       <img src="./icon.png" alt="" width="36" height="36">
       <span>Yomotsu</span>
     </a>

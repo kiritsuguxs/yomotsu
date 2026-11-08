@@ -5,8 +5,8 @@ Este arquivo registra o contexto completo das melhorias implementadas, do estado
 ---
 
 ## 1. Estado Atual do Repositório & Git
-- **Branch Principal (`main`):** Release oficial `v0.21.4-Y9` (versionCode 123, versionName `0.21.4-Y9`).
-- **Histórico de Versões do Ciclo Y7/Y8/Y9:**
+- **Branch Principal (`main`):** Release oficial `v0.21.4-Y10` (versionCode 124, versionName `0.21.4-Y10`).
+- **Histórico de Versões do Ciclo Y7/Y8/Y9/Y10:**
   - `2a8c98a`: Implementação inicial da UI moderna (Floating Dock, capas arredondadas 12dp, badges translúcidos, perfil e itens com borda sutil).
   - `92cf4c1`: Correção de erro de compilação Compose em `HomeScreen.kt`. Build CI `#41856513392` passou com sucesso.
   - `8ab8412`: Versão 117 (`0.21.4-Y7-DOCK`): Borda neon temática no dock (`primary.copy(alpha = 0.35f)`), rolagem contínua do conteúdo por trás do dock flutuante e compensação de padding inferior (+84dp) na biblioteca. Build CI `#41860703240` passou com sucesso.
@@ -16,6 +16,7 @@ Este arquivo registra o contexto completo das melhorias implementadas, do estado
   - `66838bc`: Versão 121 (`0.21.4-Y7`): Consolidação oficial do ciclo Y7 na branch `main`.
   - **Versão 122 (`0.21.4-Y8`):** Ocultação dinâmica do Floating Dock e do seletor superior de mídias ao rolar nas telas de Navegar/Explorar (`BrowseTab.kt`, `TabbedScreen.kt`), além de compensação de padding inferior (+84dp) garantindo acesso total a todas as extensões e fontes no fim da lista em Mangás, Animes e Light Novels. Tag `v0.21.4-Y8` publicada oficialmente.
   - **Versão 123 (`0.21.4-Y9`):** Lançamento oficial Gold Master de integridade 100% e blindagem. Merge e consolidação da limpeza de 35 arquivos (`temp/cleanup-100-perfection`), eliminando todos os `NotImplementedError`, blindando 9 trackers (AniList, Bangumi, Comick, Hikka, MangaBaka, Shikimori), stubs de busca remota (Kavita, Komga, Suwayomi), garantindo resiliência no leitor (`PagerViewerAdapter`) e zerando todos os `TODO`s em código funcional. Tag `v0.21.4-Y9` publicada oficialmente.
+  - **Versão 124 (`0.21.4-Y10`):** Diretórios dedicados `<Yomotsu>/animes/` e `<Yomotsu>/novels/` para downloads, centralização e migração automática das pastas do MPV (`fonts`, `scripts`, `script-opts`, `shaders`) em `<Yomotsu>/mpv/` no `StorageManager.kt`, suporte completo a capas `.gif` animadas (incluindo preenchimento 16:9 no modo Panorâmico via `drawWithContent` em `MangaCover.kt` e animação no `MangaCoverDialog`), correção do toggle MPV/Player Externo e fallback seguro no `ChapterSort.kt`. Site oficial (`site/index.html`, `help.html`, `privacy.html`) e `README.md` 100% padronizados em inglês. Tag `v0.21.4-Y10` publicada oficialmente.
 - **Ambiente de Execução:** Android / PRoot Linux (`/workspace/yomotsu`). Compilações locais via Gradle falham no PRoot devido a restrições de segurança do kernel (`SecurityException`). Toda verificação e geração de APKs é realizada remotamente via GitHub Actions CI (`.github/workflows/build_push.yml` ou `build.yml`).
 
 ---
