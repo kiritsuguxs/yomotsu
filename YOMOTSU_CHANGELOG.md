@@ -9,6 +9,7 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 
 ### ✨ Novidades & Melhorias
 - **Arquitetura Relacional de Mesclagem de Séries (3 em 1: Mangá, Novel e Anime):**
+  - **Como Mesclar na Prática (Dica Rápida):** Basta ter duas ou mais versões da mesma obra na sua biblioteca. Toque e segure sobre a primeira capa para ativar a seleção múltipla, marque as outras versões e toque no ícone de **Mesclar** (duas setas convergentes) na barra inferior. As obras serão unificadas imediatamente em uma única entrada com capítulos combinados!
   - **Suporte Multimídia Completo:** O sistema de mesclagem de séries agora abrange todas as três mídias do Yomotsu (**Mangás/Manhwas**, **Light Novels** e **Animes**), permitindo unificar múltiplas fontes da mesma obra em uma única entrada na biblioteca.
   - **Motor Relacional SQLDelight (`14.sqm`):** Implementada a arquitetura relacional de grupos de mesclagem (`merge_group` e `merged_chapter_unit`) com suporte nativo a triggers de integridade referencial. O desmembramento (*Split*) ou remoção é instantâneo e não afeta o progresso ou o banco de dados.
   - **Costura Inteligente de Capítulos (Stitching Engine):** Sistema inteligente de agrupamento e ordenação prioritária que preenche automaticamente lacunas de capítulos ou episódios ausentes utilizando fontes alternativas.
@@ -31,6 +32,7 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 
 ### ✨ New Features & Improvements
 - **Relational Series Merging Architecture (3-in-1: Manga, Novel & Anime):**
+  - **Quick How-To (Merge Tip):** Make sure you have two or more versions of the same title added to your library. Long-press the first cover to enter multi-selection mode, select the other version(s), and tap the **Merge** icon (converging arrows) on the bottom action bar. They will instantly unite into a single entry with combined chapters/episodes!
   - **Unified Multi-Media Support:** Series merging now extends across all three Yomotsu media types (**Manga/Manhwa**, **Light Novels**, and **Anime**), letting you combine multiple providers of the same title into a single cohesive library entry.
   - **SQLDelight Relational Engine (`14.sqm`):** Implemented relational merge tables (`merge_group` and `merged_chapter_unit`) backed by cascade integrity triggers. Splitting or removing merged sources is non-destructive and preserves reading history.
   - **Smart Chapter Stitching Engine:** Intelligent chapter/episode aggregation and priority pooling that automatically fills in gaps from alternative providers when chapters are missing or delayed.
