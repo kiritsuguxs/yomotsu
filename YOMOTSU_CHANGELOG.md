@@ -3,6 +3,52 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y11
+
+🇧🇷 **Português (Brasil)**
+
+### ✨ Novidades & Melhorias
+- **Arquitetura Relacional de Mesclagem de Séries (3 em 1: Mangá, Novel e Anime):**
+  - **Suporte Multimídia Completo:** O sistema de mesclagem de séries agora abrange todas as três mídias do Yomotsu (**Mangás/Manhwas**, **Light Novels** e **Animes**), permitindo unificar múltiplas fontes da mesma obra em uma única entrada na biblioteca.
+  - **Motor Relacional SQLDelight (`14.sqm`):** Implementada a arquitetura relacional de grupos de mesclagem (`merge_group` e `merged_chapter_unit`) com suporte nativo a triggers de integridade referencial. O desmembramento (*Split*) ou remoção é instantâneo e não afeta o progresso ou o banco de dados.
+  - **Costura Inteligente de Capítulos (Stitching Engine):** Sistema inteligente de agrupamento e ordenação prioritária que preenche automaticamente lacunas de capítulos ou episódios ausentes utilizando fontes alternativas.
+  - **Navegação Dinâmica por Chips:** Introduzidos chips interativos na tela de detalhes para alternar instantaneamente entre a visualização mesclada unificada (`[Todas]`) ou focar em uma fonte individual (`[ManGeek]`, `[MangaFlix]`, etc.).
+  - **Gerenciador de Fontes Mescladas:** Novo diálogo com ordenação por arrastar e soltar para definir a hierarquia de prioridade entre as fontes, além de opções para separar extensões específicas ou desvincular em massa.
+  - **Configurações da Biblioteca:** Adicionada opção em *Mais > Configurações > Biblioteca* para habilitar ou desabilitar a mesclagem de séries.
+- **Refinamento Visual dos Selos de Capa na Biblioteca (`LibraryBadges`):**
+  - Removido o container de fundo escuro/cinza e preenchimentos opacos atrás do ícone da extensão e da bandeira de idioma.
+  - Os selos agora flutuam de forma 100% transparente diretamente sobre a arte da capa, proporcionando um acabamento muito mais limpo e integrado.
+
+### 🛠️ Correções
+- **Reatividade do Cabeçalho da Obra ao Alternar Fontes Mescladas:**
+  - Corrigido o problema em que o nome e status da extensão no cabeçalho permaneciam fixados na fonte inicial mesmo após selecionar outro chip de extensão, adicionando observação reativa de estado (`remember(state.source)` e propagação do `source` no fluxo de dados).
+- **Identificação da Extensão na Lista Mesclada:**
+  - Na visualização combinada (`[Todas]`), os capítulos e episódios agora exibem a extensão de procedência no subtítulo (ex.: `02/11/2026 • ManGeek`), permitindo identificar com clareza a origem de cada item.
+- **Roteamento Unificado de Leitura e Reprodução:**
+  - Integração do `MergedChapterLoader` com os players internos (leitor de mangás, leitor de novels e player de vídeo MPV), garantindo que cada capítulo ou episódio mesclado seja carregado a partir de sua fonte original correta.
+
+🇺🇸 **English**
+
+### ✨ New Features & Improvements
+- **Relational Series Merging Architecture (3-in-1: Manga, Novel & Anime):**
+  - **Unified Multi-Media Support:** Series merging now extends across all three Yomotsu media types (**Manga/Manhwa**, **Light Novels**, and **Anime**), letting you combine multiple providers of the same title into a single cohesive library entry.
+  - **SQLDelight Relational Engine (`14.sqm`):** Implemented relational merge tables (`merge_group` and `merged_chapter_unit`) backed by cascade integrity triggers. Splitting or removing merged sources is non-destructive and preserves reading history.
+  - **Smart Chapter Stitching Engine:** Intelligent chapter/episode aggregation and priority pooling that automatically fills in gaps from alternative providers when chapters are missing or delayed.
+  - **Dynamic Source Filter Chips:** Detail screens now feature filter chips to seamlessly toggle between the unified overview (`[All]`) and provider-specific chapter lists (`[Source A]`, `[Source B]`).
+  - **Merge Sources Management Dialog:** Added drag-and-drop reordering to customize provider priority, with granular actions to split individual sources or detach all merged entries.
+  - **Library Preference Toggle:** Added a setting under *More > Settings > Library* to enable or disable series merging globally.
+- **Library Cover Badges Visual Refinement (`LibraryBadges`):**
+  - Removed the opaque dark/grey background container and padding behind provider icons and language flags.
+  - Badges now float completely transparently over the cover art, delivering a sleeker, unobstructed library grid view.
+
+### 🛠️ Bug Fixes
+- **Detail Header Reactivity Across Merge Source Chips:**
+  - Fixed an issue where the provider title and status in the header remained frozen on the initial source after tapping another source chip, resolved via reactive cache keys (`remember(state.source)` and proper `source` propagation in the view model).
+- **Source Origin Attribution in Merged Chapter Lists:**
+  - In the unified view (`[All]`), chapter and episode subtitles now indicate their originating provider (e.g., `02/11/2026 • ManGeek`), providing clear visibility into which source serves each release.
+- **Unified Reader & Player Routing:**
+  - Integrated `MergedChapterLoader` across manga reader, novel reader, and MPV video player engines to ensure every merged chapter/episode correctly delegates to its underlying source.
+
 ## 0.21.4-Y10
 
 🇧🇷 **Português (Brasil)**
