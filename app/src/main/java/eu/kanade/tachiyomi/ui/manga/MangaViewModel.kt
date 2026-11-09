@@ -279,6 +279,7 @@ class MangaViewModel(
                     updateSuccessState {
                         it.copy(
                             manga = manga,
+                            source = sourceManager.getOrStub(manga.source),
                             chapters = chapters.toChapterListItems(manga),
                         )
                     }

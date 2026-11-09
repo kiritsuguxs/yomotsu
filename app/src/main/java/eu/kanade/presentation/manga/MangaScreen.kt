@@ -304,6 +304,10 @@ private fun MangaScreenSmallImpl(
         )
     }
 
+    val sourceMap = remember(state.mergeSources) {
+        state.mergeSources.associate { it.id to it.sourceName }
+    }
+
     BackHandler(enabled = isAnySelected) {
         onAllChapterSelected(false)
     }
@@ -428,8 +432,8 @@ private fun MangaScreenSmallImpl(
                             isTabletUi = false,
                             appBarPadding = topPadding,
                             manga = state.manga,
-                            sourceName = remember { state.source.getNameForMangaInfo() },
-                            isStubSource = remember { state.source is StubSource },
+                            sourceName = remember(state.source) { state.source.getNameForMangaInfo() },
+                            isStubSource = remember(state.source) { state.source is StubSource },
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
                         )
@@ -510,6 +514,9 @@ private fun MangaScreenSmallImpl(
                         onChapterSwipe = onChapterSwipe,
                         onTranslationChapter = onTranslationChapter,
                         isAnime = state.isAnime,
+                        isMerged = state.isMerged,
+                        selectedMergeSource = state.selectedMergeSource,
+                        sourceMap = sourceMap,
                     )
                 }
             }
@@ -583,6 +590,10 @@ fun MangaScreenLargeImpl(
             second = state.chapterListItems,
             third = state.isAnySelected,
         )
+    }
+
+    val sourceMap = remember(state.mergeSources) {
+        state.mergeSources.associate { it.id to it.sourceName }
     }
 
     val insetPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues()
@@ -702,8 +713,8 @@ fun MangaScreenLargeImpl(
                             isTabletUi = true,
                             appBarPadding = contentPadding.calculateTopPadding(),
                             manga = state.manga,
-                            sourceName = remember { state.source.getNameForMangaInfo() },
-                            isStubSource = remember { state.source is StubSource },
+                            sourceName = remember(state.source) { state.source.getNameForMangaInfo() },
+                            isStubSource = remember(state.source) { state.source is StubSource },
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
                         )
@@ -785,6 +796,9 @@ fun MangaScreenLargeImpl(
                                 onChapterSwipe = onChapterSwipe,
                                 onTranslationChapter = onTranslationChapter,
                                 isAnime = state.isAnime,
+                                isMerged = state.isMerged,
+                                selectedMergeSource = state.selectedMergeSource,
+                                sourceMap = sourceMap,
                             )
                         }
                     }
@@ -863,6 +877,9 @@ private fun LazyListScope.sharedChapterItems(
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
     isAnime: Boolean = false,
+    isMerged: Boolean = false,
+    selectedMergeSource: Long? = null,
+    sourceMap: Map<Long, String> = emptyMap(),
 ) {
     items(
         items = chapters,
@@ -881,6 +898,15 @@ private fun LazyListScope.sharedChapterItems(
                 MissingChapterCountListItem(count = item.count)
             }
             is ChapterList.Item -> {
+                val sourceLabel = if (isMerged && selectedMergeSource == null) {
+                    sourceMap[item.chapter.mangaId]
+                } else {
+                    null
+                }
+                val scanlator = listOfNotNull(
+                    sourceLabel,
+                    item.chapter.scanlator.takeIf { !it.isNullOrBlank() },
+                ).joinToString(" • ").ifEmpty { null }
                 MangaChapterListItem(
                     title = if (manga.displayMode == Manga.CHAPTER_DISPLAY_NUMBER) {
                         stringResource(
@@ -918,7 +944,7 @@ private fun LazyListScope.sharedChapterItems(
                                 )
                             }
                     },
-                    scanlator = item.chapter.scanlator.takeIf { !it.isNullOrBlank() },
+                    scanlator = scanlator,
                     read = item.chapter.read,
                     bookmark = item.chapter.bookmark,
                     selected = item.selected,
