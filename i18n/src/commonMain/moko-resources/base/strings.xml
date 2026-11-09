@@ -1311,4 +1311,32 @@
     <string name="browse_media_manga">Manga</string>
     <string name="browse_media_anime">Anime</string>
     <string name="browse_media_novel">Light Novel</string>
+
+    <!-- Merge Series -->
+    <string name="label_merged_series">Merged series</string>
+    <string name="action_manage_sources">Manage sources</string>
+    <string name="action_merge">Merge</string>
+    <string name="action_unmerge">Unmerge</string>
+    <string name="merge_sources_primary">Primary</string>
+    <string name="merge_sources_reorder_hint">Drag to set which source leads the combined chapter list.</string>
+    <string name="merge_sources_reset_order_action">Reset order</string>
+    <string name="merge_sources_split_action">Split</string>
+    <string name="merge_sources_split_confirm">Split %s out of this merged group?</string>
+    <string name="merge_sources_remove_action">Remove from library</string>
+    <string name="merge_sources_remove_all_action">Remove all from library</string>
+    <string name="merge_sources_split">Split from the merged group</string>
+    <string name="merge_sources_removed">Removed from library</string>
+    <string name="merge_sources_all">All</string>
+    <string name="merge_unified">Unified</string>
+    <string name="action_merge_source_icons">Show source icons on merged covers</string>
+    <string name="action_series_merging">Group series across sources</string>
+    <string name="pref_series_merging_summary">Collapse the same series from different sources into one entry</string>
+    <string name="pref_suggest_group_same_title">Suggest grouping same-titled series</string>
+    <string name="pref_suggest_group_same_title_summary">Offer to group a new series with a matching library entry</string>
+    <string name="pref_clear_merges">Clear all merges</string>
+    <string name="pref_clear_merges_summary">Split every merged series back into separate per-source entries</string>
+    <string name="merges_cleared">Merged series cleared</string>
+    <string name="pref_preferred_sources">Preferred sources</string>
+    <string name="pref_preferred_sources_summary">Rank sources to pick which one leads a merged chapter list</string>
+    <string name="pref_preferred_sources_guide">Higher-ranked sources lead a merged series\' combined chapter list. Unranked sources fall back to the one with the most chapters.</string>
 </resources>

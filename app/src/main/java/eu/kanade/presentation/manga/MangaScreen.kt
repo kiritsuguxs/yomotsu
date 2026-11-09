@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastMap
+import eu.kanade.presentation.components.MergeSourceChips
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterHeader
@@ -122,6 +123,9 @@ fun MangaScreen(
     onEditNotesClicked: () -> Unit,
     onToggleAutomaticTranslation: (() -> Unit)? = null,
     onExportEpubClicked: (() -> Unit)? = null,
+    onClickManageMergeSources: (() -> Unit)? = null,
+    onSelectMergeSource: ((Long?) -> Unit)? = null,
+    onSplitMergeSource: ((Long) -> Unit)? = null,
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
@@ -174,6 +178,9 @@ fun MangaScreen(
             onEditNotesClicked = onEditNotesClicked,
             onToggleAutomaticTranslation = onToggleAutomaticTranslation,
             onExportEpubClicked = onExportEpubClicked,
+            onClickManageMergeSources = onClickManageMergeSources,
+            onSelectMergeSource = onSelectMergeSource,
+            onSplitMergeSource = onSplitMergeSource,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
             onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
@@ -214,6 +221,9 @@ fun MangaScreen(
             onEditNotesClicked = onEditNotesClicked,
             onToggleAutomaticTranslation = onToggleAutomaticTranslation,
             onExportEpubClicked = onExportEpubClicked,
+            onClickManageMergeSources = onClickManageMergeSources,
+            onSelectMergeSource = onSelectMergeSource,
+            onSplitMergeSource = onSplitMergeSource,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
             onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
@@ -263,6 +273,9 @@ private fun MangaScreenSmallImpl(
     onEditCategoryClicked: (() -> Unit)?,
     onEditIntervalClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
+    onClickManageMergeSources: (() -> Unit)? = null,
+    onSelectMergeSource: ((Long?) -> Unit)? = null,
+    onSplitMergeSource: ((Long) -> Unit)? = null,
     onEditNotesClicked: () -> Unit,
     onToggleAutomaticTranslation: (() -> Unit)? = null,
     onExportEpubClicked: (() -> Unit)? = null,
@@ -325,6 +338,7 @@ private fun MangaScreenSmallImpl(
                 onClickEditCategory = onEditCategoryClicked,
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
+                onClickManageMergeSources = onClickManageMergeSources,
                 onClickEditNotes = onEditNotesClicked,
                 automaticTranslationEnabled = state.autoTranslateEnabled,
                 onClickToggleAutomaticTranslation = onToggleAutomaticTranslation,
@@ -454,6 +468,20 @@ private fun MangaScreenSmallImpl(
                         )
                     }
 
+                    if (state.mergeSources.size > 1 && onSelectMergeSource != null && onSplitMergeSource != null) {
+                        item(
+                            key = "merge_source_chips",
+                            contentType = "merge_source_chips",
+                        ) {
+                            MergeSourceChips(
+                                sources = state.mergeSources,
+                                selectedId = state.selectedMergeSource,
+                                onSelect = onSelectMergeSource,
+                                onSplitSource = onSplitMergeSource,
+                            )
+                        }
+                    }
+
                     item(
                         key = MangaScreenItem.CHAPTER_HEADER,
                         contentType = MangaScreenItem.CHAPTER_HEADER,
@@ -525,6 +553,9 @@ fun MangaScreenLargeImpl(
     onEditCategoryClicked: (() -> Unit)?,
     onEditIntervalClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
+    onClickManageMergeSources: (() -> Unit)? = null,
+    onSelectMergeSource: ((Long?) -> Unit)? = null,
+    onSplitMergeSource: ((Long) -> Unit)? = null,
     onEditNotesClicked: () -> Unit,
     onToggleAutomaticTranslation: (() -> Unit)? = null,
     onExportEpubClicked: (() -> Unit)? = null,
@@ -580,6 +611,7 @@ fun MangaScreenLargeImpl(
                 onClickEditCategory = onEditCategoryClicked,
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
+                onClickManageMergeSources = onClickManageMergeSources,
                 onClickEditNotes = onEditNotesClicked,
                 automaticTranslationEnabled = state.autoTranslateEnabled,
                 onClickToggleAutomaticTranslation = onToggleAutomaticTranslation,
@@ -711,6 +743,20 @@ fun MangaScreenLargeImpl(
                                 bottom = contentPadding.calculateBottomPadding(),
                             ),
                         ) {
+                            if (state.mergeSources.size > 1 && onSelectMergeSource != null && onSplitMergeSource != null) {
+                                item(
+                                    key = "merge_source_chips",
+                                    contentType = "merge_source_chips",
+                                ) {
+                                    MergeSourceChips(
+                                        sources = state.mergeSources,
+                                        selectedId = state.selectedMergeSource,
+                                        onSelect = onSelectMergeSource,
+                                        onSplitSource = onSplitMergeSource,
+                                    )
+                                }
+                            }
+
                             item(
                                 key = MangaScreenItem.CHAPTER_HEADER,
                                 contentType = MangaScreenItem.CHAPTER_HEADER,

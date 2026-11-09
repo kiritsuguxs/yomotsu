@@ -56,6 +56,7 @@ object SettingsLibraryScreen : SearchableSettings {
         return listOf(
             getCategoriesGroup(LocalNavigator.currentOrThrow, allCategories, libraryPreferences),
             getGlobalUpdateGroup(allCategories, libraryPreferences),
+            getMergedSeriesGroup(libraryPreferences),
             getBehaviorGroup(libraryPreferences),
         )
     }
@@ -203,6 +204,31 @@ object SettingsLibraryScreen : SearchableSettings {
                 Preference.PreferenceItem.SwitchPreference(
                     preference = libraryPreferences.newShowUpdatesCount,
                     title = stringResource(MR.strings.pref_library_update_show_tab_badge),
+                ),
+            ),
+        )
+    }
+
+    @Composable
+    private fun getMergedSeriesGroup(
+        libraryPreferences: LibraryPreferences,
+    ): Preference.PreferenceGroup {
+        return Preference.PreferenceGroup(
+            title = stringResource(MR.strings.label_merged_series),
+            preferenceItems = listOf(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.seriesMergingEnabled,
+                    title = stringResource(MR.strings.action_series_merging),
+                    subtitle = stringResource(MR.strings.pref_series_merging_summary),
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.autoMergeSameTitle,
+                    title = stringResource(MR.strings.pref_suggest_group_same_title),
+                    subtitle = stringResource(MR.strings.pref_suggest_group_same_title_summary),
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.showMergeSourceIcons,
+                    title = stringResource(MR.strings.action_merge_source_icons),
                 ),
             ),
         )

@@ -1164,4 +1164,32 @@
     <string name="pref_theme_cover_based_summary">Aplicar paleta de cores dinâmica da capa na tela de detalhes</string>
     <string name="pref_group_updates">Agrupar atualizações por título</string>
     <string name="pref_group_updates_summary">Agrupar múltiplos capítulos ou episódios novos da mesma obra</string>
+
+    <!-- Merge Series -->
+    <string name="label_merged_series">Séries mescladas</string>
+    <string name="action_manage_sources">Gerenciar fontes</string>
+    <string name="action_merge">Mesclar</string>
+    <string name="action_unmerge">Desfazer mesclagem</string>
+    <string name="merge_sources_primary">Principal</string>
+    <string name="merge_sources_reorder_hint">Arraste para definir qual fonte lidera a lista de capítulos combinada.</string>
+    <string name="merge_sources_reset_order_action">Redefinir ordem</string>
+    <string name="merge_sources_split_action">Separar</string>
+    <string name="merge_sources_split_confirm">Separar %s deste grupo mesclado?</string>
+    <string name="merge_sources_remove_action">Remover da biblioteca</string>
+    <string name="merge_sources_remove_all_action">Remover todos da biblioteca</string>
+    <string name="merge_sources_split">Separado do grupo mesclado</string>
+    <string name="merge_sources_removed">Removido da biblioteca</string>
+    <string name="merge_sources_all">Todas</string>
+    <string name="merge_unified">Unificado</string>
+    <string name="action_merge_source_icons">Mostrar ícones de fonte nas capas mescladas</string>
+    <string name="action_series_merging">Agrupar séries entre fontes</string>
+    <string name="pref_series_merging_summary">Agrupar a mesma série de fontes diferentes em uma única entrada</string>
+    <string name="pref_suggest_group_same_title">Sugerir agrupar séries com mesmo título</string>
+    <string name="pref_suggest_group_same_title_summary">Sugerir agrupar uma nova série com uma entrada correspondente na biblioteca</string>
+    <string name="pref_clear_merges">Limpar todas as mesclagens</string>
+    <string name="pref_clear_merges_summary">Separar todas as séries mescladas de volta em entradas individuais</string>
+    <string name="merges_cleared">Séries mescladas limpas</string>
+    <string name="pref_preferred_sources">Fontes preferidas</string>
+    <string name="pref_preferred_sources_summary">Ordene fontes para escolher qual lidera a lista combinada de capítulos</string>
+    <string name="pref_preferred_sources_guide">Fontes com melhor classificação lideram a lista de capítulos combinada de uma série mesclada. Fontes não classificadas usam como critério aquela com mais capítulos.</string>
 </resources>

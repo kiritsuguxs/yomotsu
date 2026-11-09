@@ -38,6 +38,7 @@ import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.presentation.browse.components.RemoveMangaDialog
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.components.ManageMergeSourcesDialog
 import eu.kanade.presentation.components.NavigatorAdaptiveSheet
 import eu.kanade.presentation.manga.ChapterSettingsDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
@@ -233,6 +234,9 @@ class MangaScreen(
             }.takeIf { successState.manga.favorite },
             onEditNotesClicked = { navigator.push(MangaNotesScreen(manga = successState.manga)) },
             onToggleAutomaticTranslation = viewModel::toggleAutomaticTranslation.takeIf { !isNovel && !isAnime },
+            onClickManageMergeSources = viewModel::showManageSourcesDialog.takeIf { successState.isMerged },
+            onSelectMergeSource = viewModel::selectMergeSource.takeIf { successState.isMerged },
+            onSplitMergeSource = { sourceId -> viewModel.splitMergeSources(listOf(sourceId)) }.takeIf { successState.isMerged },
             onExportEpubClicked = if (isNovel) {
                 {
                     context.toast("Gerando EPUB...")
@@ -316,6 +320,18 @@ class MangaScreen(
                     // Initiated from the context of [dialog.target] so we show [dialog.current].
                     onClickTitle = { navigator.push(MangaScreen(dialog.current.id)) },
                     onDismissRequest = onDismissRequest,
+                )
+            }
+            MangaViewModel.Dialog.ManageSources -> {
+                ManageMergeSourcesDialog(
+                    sources = successState.mergeSources,
+                    isOverridden = false,
+                    onDismissRequest = onDismissRequest,
+                    onReorder = viewModel::reorderMergeSources,
+                    onResetOrder = viewModel::resetMergeSourceOrder,
+                    onSplit = viewModel::splitMergeSources,
+                    onRemoveFromLibrary = viewModel::removeMergeSourcesFromLibrary,
+                    onRemoveAll = viewModel::removeAllMergeSourcesFromLibrary,
                 )
             }
             MangaViewModel.Dialog.SettingsSheet -> ChapterSettingsDialog(

@@ -11,6 +11,16 @@ import eu.kanade.domain.extension.interactor.GetAnimeExtensionsByType
 import eu.kanade.domain.extension.interactor.TrustExtension
 import eu.kanade.domain.anime.interactor.SetAnimeViewerFlags
 import eu.kanade.tachiyomi.ui.player.domain.TrackSelect
+import eu.kanade.domain.manga.MangaChapterSettings
+import eu.kanade.domain.manga.MangaGroupCategories
+import eu.kanade.domain.manga.MangaGroupStitcher
+import eu.kanade.domain.manga.MangaMergeManager
+import eu.kanade.domain.manga.MergedChapterProvider
+import eu.kanade.domain.merge.ReconcileMergedChapters
+import tachiyomi.data.merge.MergeGroupRepositoryImpl
+import tachiyomi.data.merge.MergedChapterUnitRepositoryImpl
+import tachiyomi.domain.merge.MergeGroupRepository
+import tachiyomi.domain.merge.MergedChapterUnitRepository
 import eu.kanade.domain.manga.interactor.GetExcludedScanlators
 import eu.kanade.domain.manga.interactor.SetExcludedScanlators
 import eu.kanade.domain.manga.interactor.SetMangaViewerFlags
@@ -216,5 +226,26 @@ class DomainModule : InjektModule {
         addFactory { GetIncognitoState(get(), get(), get()) }
 
         addFactory { UpdateMangaFromRemote(get(), get(), get(), get(), get(), get(), get()) }
+
+        addSingletonFactory<MergeGroupRepository> { MergeGroupRepositoryImpl(get()) }
+        addSingletonFactory<MergedChapterUnitRepository> { MergedChapterUnitRepositoryImpl(get()) }
+        addSingletonFactory { MangaChapterSettings(get()) }
+        addSingletonFactory { MangaGroupCategories(get(), get()) }
+        addSingletonFactory {
+            val chapterSettings = get<MangaChapterSettings>()
+            val groupCategories = get<MangaGroupCategories>()
+            MangaMergeManager(
+                repository = get(),
+                preferences = get(),
+                onMerged = {
+                    chapterSettings.adoptOwnerSetting(it)
+                    groupCategories.adoptOwnerCategories(it)
+                },
+                onBeforeDissolve = { },
+            )
+        }
+        addSingletonFactory { MangaGroupStitcher(get(), get(), get(), get(), get()) }
+        addSingletonFactory { ReconcileMergedChapters(get(), setOf(get<MangaGroupStitcher>())) }
+        addSingletonFactory { MergedChapterProvider(get(), get(), get(), get(), get()) }
     }
 }

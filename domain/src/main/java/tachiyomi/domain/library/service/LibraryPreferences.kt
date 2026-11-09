@@ -4,6 +4,7 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getEnum
+import tachiyomi.core.common.preference.getLongArray
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.manga.model.Manga
@@ -64,6 +65,17 @@ class LibraryPreferences(
     val markDuplicateReadChapterAsRead: Preference<Set<String>> = preferenceStore.getStringSet(
         "mark_duplicate_read_chapter_read",
         emptySet(),
+    )
+
+    val seriesMergingEnabled: Preference<Boolean> = preferenceStore.getBoolean("pref_series_merging_enabled", true)
+
+    val autoMergeSameTitle: Preference<Boolean> = preferenceStore.getBoolean("auto_merge_same_title", false)
+
+    val showMergeSourceIcons: Preference<Boolean> = preferenceStore.getBoolean("merge_source_icons", true)
+
+    val preferredMangaSources: Preference<List<Long>> = preferenceStore.getLongArray(
+        "preferred_manga_sources",
+        emptyList(),
     )
 
     // region Filter

@@ -1,0 +1,117 @@
+CREATE TABLE merge_group (
+    _id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    content_type INTEGER NOT NULL,
+    title_override TEXT,
+    cover_override TEXT,
+    override_source_ranking INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE merge_group_manga (
+    _id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,
+    manga_id INTEGER NOT NULL,
+    source_priority INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(group_id) REFERENCES merge_group (_id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    ON DELETE CASCADE,
+    UNIQUE(manga_id)
+);
+
+CREATE INDEX idx_merge_group_manga_group_id ON merge_group_manga(group_id);
+
+insertGroup:
+INSERT INTO merge_group(content_type)
+VALUES (:contentType);
+
+selectLastInsertedRowId:
+SELECT last_insert_rowid();
+
+getGroup:
+SELECT _id, content_type, override_source_ranking
+FROM merge_group
+WHERE _id = :groupId;
+
+deleteGroup:
+DELETE FROM merge_group
+WHERE _id = :groupId;
+
+insertMangaMember:
+INSERT INTO merge_group_manga(group_id, manga_id, source_priority)
+VALUES (:groupId, :mangaId, :sourcePriority);
+
+mangaGroupId:
+SELECT group_id
+FROM merge_group_manga
+WHERE manga_id = :mangaId;
+
+mangaMembers:
+SELECT manga_id
+FROM merge_group_manga
+WHERE group_id = :groupId
+ORDER BY source_priority, _id;
+
+mangaFavoriteMembers:
+SELECT MGM.manga_id
+FROM merge_group_manga MGM
+JOIN mangas M
+ON M._id = MGM.manga_id
+WHERE MGM.group_id = :groupId
+AND M.favorite = 1
+ORDER BY MGM.source_priority, MGM._id;
+
+deleteMangaMember:
+DELETE FROM merge_group_manga
+WHERE manga_id = :mangaId;
+
+mangaGroupIdsForMembers:
+SELECT DISTINCT group_id
+FROM merge_group_manga
+WHERE manga_id IN :mangaIds;
+
+allMangaMemberships:
+SELECT manga_id, group_id
+FROM merge_group_manga;
+
+libraryMangaMemberships:
+SELECT MGM.manga_id, MGM.group_id
+FROM merge_group_manga MGM
+CROSS JOIN mangas M
+ON M._id = MGM.manga_id
+WHERE M.favorite = 1;
+
+libraryMangaMemberCovers:
+SELECT MGM.manga_id, MGM.group_id, M.source, M.thumbnail_url, M.cover_last_modified
+FROM merge_group_manga MGM
+CROSS JOIN mangas M
+ON M._id = MGM.manga_id
+WHERE M.favorite = 1
+ORDER BY MGM.group_id, MGM.source_priority, MGM._id;
+
+mangaOverrideRankings:
+SELECT mgm.group_id, mgm.manga_id
+FROM merge_group_manga AS mgm
+JOIN merge_group AS mg ON mg._id = mgm.group_id
+WHERE mg.override_source_ranking = 1
+ORDER BY mgm.group_id, mgm.source_priority, mgm._id;
+
+rankedMangaMembers:
+SELECT MGM.group_id, MGM.manga_id, M.source AS source, MG.override_source_ranking
+FROM merge_group_manga MGM
+JOIN merge_group MG ON MG._id = MGM.group_id
+JOIN mangas M ON M._id = MGM.manga_id AND M.favorite = 1
+ORDER BY MGM.group_id, MGM.source_priority, MGM._id;
+
+deleteGroupsByContentType:
+DELETE FROM merge_group
+WHERE content_type = :contentType;
+
+setOverrideSourceRanking:
+UPDATE merge_group
+SET override_source_ranking = :override
+WHERE _id = :groupId;
+
+setMangaMemberPriority:
+UPDATE merge_group_manga
+SET source_priority = :sourcePriority
+WHERE manga_id = :mangaId;

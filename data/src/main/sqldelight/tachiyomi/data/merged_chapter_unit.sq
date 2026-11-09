@@ -1,0 +1,288 @@
+CREATE TABLE merged_chapter_unit (
+    chapter_id INTEGER NOT NULL PRIMARY KEY,
+    group_id INTEGER NOT NULL,
+    unit INTEGER,
+    copy_order INTEGER NOT NULL,
+    derived_number REAL NOT NULL,
+    derived_order INTEGER NOT NULL DEFAULT -1,
+    FOREIGN KEY(chapter_id) REFERENCES chapters (_id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(group_id) REFERENCES merge_group (_id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX merged_chapter_unit_group_index ON merged_chapter_unit(group_id, unit, copy_order);
+
+CREATE TABLE merged_group_ranking (
+    group_id INTEGER NOT NULL PRIMARY KEY,
+    ranking TEXT NOT NULL,
+    chapter_count INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(group_id) REFERENCES merge_group (_id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE merged_member_count (
+    manga_id INTEGER NOT NULL PRIMARY KEY,
+    group_id INTEGER NOT NULL,
+    recognized_count INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(group_id) REFERENCES merge_group (_id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE merged_group_pending (
+    group_id INTEGER NOT NULL,
+    claimed INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(group_id, claimed),
+    FOREIGN KEY(group_id) REFERENCES merge_group (_id)
+    ON DELETE CASCADE
+);
+
+CREATE TRIGGER merged_pending_chapter_insert AFTER INSERT ON chapters
+BEGIN
+    INSERT INTO merged_group_pending(group_id)
+    SELECT group_id FROM merge_group_manga
+    WHERE manga_id = new.manga_id
+    AND group_id NOT IN (SELECT group_id FROM merged_group_pending WHERE claimed = 0);
+END;
+
+CREATE TRIGGER merged_pending_chapter_delete AFTER DELETE ON chapters
+BEGIN
+    INSERT INTO merged_group_pending(group_id)
+    SELECT group_id FROM merge_group_manga
+    WHERE manga_id = old.manga_id
+    AND group_id NOT IN (SELECT group_id FROM merged_group_pending WHERE claimed = 0);
+END;
+
+CREATE TRIGGER merged_pending_chapter_update
+AFTER UPDATE OF chapter_number, source_order, manga_id ON chapters
+WHEN old.chapter_number IS NOT new.chapter_number
+OR old.source_order IS NOT new.source_order
+OR old.manga_id IS NOT new.manga_id
+BEGIN
+    INSERT INTO merged_group_pending(group_id)
+    SELECT DISTINCT group_id FROM merge_group_manga
+    WHERE manga_id IN (old.manga_id, new.manga_id)
+    AND group_id NOT IN (SELECT group_id FROM merged_group_pending WHERE claimed = 0);
+END;
+
+CREATE TRIGGER merged_pending_manga_favorite AFTER UPDATE OF favorite ON mangas
+WHEN old.favorite != new.favorite
+BEGIN
+    INSERT INTO merged_group_pending(group_id)
+    SELECT group_id FROM merge_group_manga
+    WHERE manga_id = new._id
+    AND group_id NOT IN (SELECT group_id FROM merged_group_pending WHERE claimed = 0);
+END;
+
+CREATE TRIGGER merged_pending_member_insert AFTER INSERT ON merge_group_manga
+BEGIN
+    INSERT INTO merged_group_pending(group_id)
+    SELECT new.group_id
+    WHERE new.group_id NOT IN (SELECT group_id FROM merged_group_pending WHERE claimed = 0);
+END;
+
+CREATE TRIGGER merged_pending_member_delete AFTER DELETE ON merge_group_manga
+BEGIN
+    INSERT INTO merged_group_pending(group_id)
+    SELECT _id FROM merge_group
+    WHERE _id = old.group_id
+    AND _id NOT IN (SELECT group_id FROM merged_group_pending WHERE claimed = 0);
+END;
+
+CREATE TRIGGER merged_pending_member_update AFTER UPDATE OF group_id, manga_id ON merge_group_manga
+WHEN old.group_id IS NOT new.group_id OR old.manga_id IS NOT new.manga_id
+BEGIN
+    INSERT INTO merged_group_pending(group_id)
+    SELECT _id FROM merge_group
+    WHERE _id IN (old.group_id, new.group_id)
+    AND _id NOT IN (SELECT group_id FROM merged_group_pending WHERE claimed = 0);
+END;
+
+CREATE VIEW mergedChapterStaleView AS
+SELECT MGM.group_id AS groupId
+FROM merge_group_manga MGM
+JOIN mangas M
+ON M._id = MGM.manga_id
+AND M.favorite = 1
+JOIN chapters C
+ON C.manga_id = MGM.manga_id
+LEFT JOIN merged_chapter_unit U
+ON U.chapter_id = C._id
+AND U.group_id = MGM.group_id
+WHERE U.chapter_id IS NULL OR U.derived_number != C.chapter_number
+OR U.derived_order != C.source_order
+UNION ALL
+SELECT U.group_id AS groupId
+FROM merged_chapter_unit U
+LEFT JOIN chapters C
+ON C._id = U.chapter_id
+LEFT JOIN merge_group_manga MGM
+ON MGM.manga_id = C.manga_id
+AND MGM.group_id = U.group_id
+LEFT JOIN mangas M
+ON M._id = MGM.manga_id
+AND M.favorite = 1
+WHERE M._id IS NULL
+UNION ALL
+SELECT R.group_id AS groupId
+FROM merged_group_ranking R
+WHERE EXISTS (SELECT 1 FROM merge_group_manga MGM WHERE MGM.group_id = R.group_id)
+AND R.chapter_count != (SELECT count(*) FROM merged_chapter_unit U WHERE U.group_id = R.group_id);
+
+CREATE VIEW mergedCountedUnitView AS
+SELECT U.group_id AS groupId, U.unit AS unit, U.chapter_id AS chapterId, C.manga_id AS ownerId,
+    C.read AS read, C.bookmark AS bookmark,
+    C.name AS name, C.scanlator AS scanlator, C.url AS url
+FROM merged_chapter_unit U
+JOIN chapters C
+ON C._id = U.chapter_id
+JOIN mangas M
+ON M._id = C.manga_id
+AND M.favorite = 1
+LEFT JOIN excluded_scanlators ES
+ON C.manga_id = ES.manga_id
+AND C.scanlator = ES.scanlator
+WHERE U.unit IS NOT NULL
+AND ES.scanlator IS NULL;
+
+CREATE VIEW mergedUnitCopiesView AS
+SELECT groupId, unit,
+    sum(CASE WHEN read = 1 THEN 1 ELSE 0 END) AS readCopies,
+    sum(CASE WHEN bookmark = 1 THEN 1 ELSE 0 END) AS bookmarkedCopies
+FROM mergedCountedUnitView
+GROUP BY groupId, unit;
+
+staleMergedGroup:
+SELECT groupId FROM mergedChapterStaleView WHERE groupId = :groupId LIMIT 1;
+
+dropSupersededClaims:
+DELETE FROM merged_group_pending
+WHERE claimed = 1
+AND group_id IN (SELECT group_id FROM merged_group_pending WHERE claimed = 0)
+AND group_id IN (SELECT _id FROM merge_group WHERE content_type = :contentType);
+
+claimPending:
+UPDATE merged_group_pending SET claimed = 1
+WHERE claimed = 0
+AND group_id IN (SELECT _id FROM merge_group WHERE content_type = :contentType);
+
+claimedGroups:
+SELECT group_id FROM merged_group_pending
+WHERE claimed = 1
+AND group_id IN (SELECT _id FROM merge_group WHERE content_type = :contentType);
+
+deleteClaim:
+DELETE FROM merged_group_pending
+WHERE group_id = :groupId
+AND claimed = 1;
+
+storedRankings:
+SELECT group_id, ranking FROM merged_group_ranking;
+
+insertRanking:
+INSERT OR REPLACE INTO merged_group_ranking(group_id, ranking, chapter_count)
+SELECT :groupId, :ranking, (SELECT count(*) FROM merged_chapter_unit WHERE group_id = :groupId)
+WHERE EXISTS (SELECT 1 FROM merge_group WHERE _id = :groupId);
+
+deleteRanking:
+DELETE FROM merged_group_ranking
+WHERE group_id = :groupId;
+
+deleteGroup:
+DELETE FROM merged_chapter_unit
+WHERE group_id = :groupId
+OR chapter_id IN (
+    SELECT C._id FROM merge_group_manga MGM
+    JOIN chapters C ON C.manga_id = MGM.manga_id
+    WHERE MGM.group_id = :groupId
+);
+
+insert:
+INSERT OR REPLACE INTO merged_chapter_unit(chapter_id, group_id, unit, copy_order, derived_number, derived_order)
+SELECT :chapterId, :groupId, :unit, :copyOrder, :derivedNumber, :derivedOrder
+WHERE EXISTS (SELECT 1 FROM chapters WHERE _id = :chapterId);
+
+stitchOfGroup:
+SELECT chapter_id AS chapterId, unit, copy_order AS copyOrder
+FROM merged_chapter_unit
+WHERE group_id = :groupId
+AND unit IS NOT NULL
+ORDER BY unit, copy_order;
+
+countsByGroup:
+SELECT
+    groupId,
+    count(*) AS totalCount,
+    coalesce(sum(CASE WHEN readCopies > 0 THEN 1 ELSE 0 END), 0) AS readCount,
+    coalesce(sum(CASE WHEN bookmarkedCopies > 0 THEN 1 ELSE 0 END), 0) AS bookmarkCount
+FROM mergedUnitCopiesView
+GROUP BY groupId;
+
+savedRecognizedCounts:
+SELECT S.manga_id AS mangaId, S.recognized_count AS recognizedCount
+FROM merged_member_count S
+JOIN merge_group_manga MGM
+ON MGM.manga_id = S.manga_id
+AND MGM.group_id = S.group_id;
+
+unsavedRecognizedChapterNumbers:
+SELECT DISTINCT C.manga_id AS mangaId, C.chapter_number AS chapterNumber
+FROM chapters C
+WHERE C.chapter_number >= 0
+AND C.manga_id IN (
+    SELECT MGM.manga_id
+    FROM merge_group_manga MGM
+    JOIN mangas M
+    ON M._id = MGM.manga_id
+    AND M.favorite = 1
+    WHERE NOT EXISTS (
+        SELECT 1 FROM merged_member_count S
+        WHERE S.manga_id = MGM.manga_id AND S.group_id = MGM.group_id
+    )
+);
+
+insertMemberCount:
+INSERT OR REPLACE INTO merged_member_count(manga_id, group_id, recognized_count)
+SELECT :mangaId, :groupId, :recognizedCount
+WHERE EXISTS (SELECT 1 FROM mangas WHERE _id = :mangaId)
+AND EXISTS (SELECT 1 FROM merge_group WHERE _id = :groupId);
+
+deleteMemberCounts:
+DELETE FROM merged_member_count
+WHERE group_id = :groupId;
+
+downloadUnitsByGroup:
+SELECT groupId, unit, ownerId, name, scanlator, url
+FROM mergedCountedUnitView;
+
+downloadUnitsOfOwners:
+SELECT groupId, unit, ownerId, name, scanlator, url
+FROM mergedCountedUnitView
+WHERE ownerId IN :ownerIds;
+
+mergedLibraryMemberCount:
+SELECT count(*)
+FROM merge_group_manga MGM
+JOIN mangas M
+ON M._id = MGM.manga_id
+AND M.favorite = 1;
+
+copiesOfChapters:
+SELECT U1.chapter_id AS namedId, U2.chapter_id AS copyId, U2.unit AS unit, U2.copy_order AS copyOrder,
+    C.manga_id AS ownerId, M.title AS ownerTitle, M.source AS ownerSource,
+    C.name AS name, C.scanlator AS scanlator, C.url AS url
+FROM merged_chapter_unit U1
+JOIN merged_chapter_unit U2
+ON U2.group_id = U1.group_id
+AND U2.unit = U1.unit
+JOIN chapters C
+ON C._id = U2.chapter_id
+JOIN mangas M
+ON M._id = C.manga_id
+WHERE U1.chapter_id IN :chapterIds
+AND (
+    U2.chapter_id = U1.chapter_id
+    OR EXISTS (SELECT 1 FROM mergedCountedUnitView V WHERE V.chapterId = U2.chapter_id)
+);

@@ -57,6 +57,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.DownloadDropdownMenu
 import eu.kanade.presentation.components.DropdownMenu
+import eu.kanade.presentation.icons.CallSplit
+import eu.kanade.presentation.icons.Merge
+import eu.kanade.presentation.icons.MergeIcons
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.tachiyomi.R
 import kotlinx.coroutines.Job
@@ -248,7 +251,9 @@ fun LibraryBottomActionMenu(
     onMarkAsUnreadClicked: () -> Unit,
     onDownloadClicked: ((DownloadAction) -> Unit)?,
     onDeleteClicked: () -> Unit,
-    onMigrateClicked: () -> Unit,
+    onMigrateClicked: (() -> Unit)? = null,
+    onMergeClicked: (() -> Unit)? = null,
+    onUnmergeClicked: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
@@ -263,7 +268,7 @@ fun LibraryBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            val confirm = remember { mutableStateListOf(false, false, false, false, false, false) }
+            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false) }
             var resetJob by remember { mutableStateOf<Job?>(null) }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -304,6 +309,24 @@ fun LibraryBottomActionMenu(
                     onLongClick = { onLongClickItem(2) },
                     onClick = onMarkAsUnreadClicked,
                 )
+                if (onMergeClicked != null) {
+                    Button(
+                        title = stringResource(MR.strings.action_merge),
+                        icon = MergeIcons.Merge,
+                        toConfirm = confirm[6],
+                        onLongClick = { onLongClickItem(6) },
+                        onClick = onMergeClicked,
+                    )
+                }
+                if (onUnmergeClicked != null) {
+                    Button(
+                        title = stringResource(MR.strings.action_unmerge),
+                        icon = MergeIcons.CallSplit,
+                        toConfirm = confirm[7],
+                        onLongClick = { onLongClickItem(7) },
+                        onClick = onUnmergeClicked,
+                    )
+                }
                 if (onDownloadClicked != null) {
                     var downloadExpanded by remember { mutableStateOf(false) }
                     Button(
@@ -322,13 +345,15 @@ fun LibraryBottomActionMenu(
                     }
                 }
                 if (!itemOverflow) {
-                    Button(
-                        title = stringResource(MR.strings.migrate),
-                        icon = Icons.Outlined.SwapCalls,
-                        toConfirm = confirm[4],
-                        onLongClick = { onLongClickItem(4) },
-                        onClick = onMigrateClicked,
-                    )
+                    if (onMigrateClicked != null) {
+                        Button(
+                            title = stringResource(MR.strings.migrate),
+                            icon = Icons.Outlined.SwapCalls,
+                            toConfirm = confirm[4],
+                            onLongClick = { onLongClickItem(4) },
+                            onClick = onMigrateClicked,
+                        )
+                    }
                     Button(
                         title = stringResource(MR.strings.action_delete),
                         icon = Icons.Outlined.Delete,
@@ -350,10 +375,12 @@ fun LibraryBottomActionMenu(
                             onDismissRequest = { overflowMenuOpen = false },
                             offset = BottomBarMenuDpOffset,
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(MR.strings.migrate)) },
-                                onClick = onMigrateClicked,
-                            )
+                            if (onMigrateClicked != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(MR.strings.migrate)) },
+                                    onClick = onMigrateClicked,
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(MR.strings.action_delete)) },
                                 onClick = onDeleteClicked,

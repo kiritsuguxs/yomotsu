@@ -63,6 +63,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.model.LibraryManga
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -101,7 +102,9 @@ data object LibraryTab : Tab {
         val haptic = LocalHapticFeedback.current
 
         val uiPreferences = remember { Injekt.get<eu.kanade.domain.ui.UiPreferences>() }
+        val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
         val selectedMedia by uiPreferences.lastUsedLibraryMedia.collectAsState()
+        val seriesMergingEnabled by libraryPreferences.seriesMergingEnabled.collectAsState()
 
         val viewModel = viewModel<LibraryViewModel>()
         val settingsViewModel = viewModel<LibrarySettingsViewModel>()
@@ -200,6 +203,10 @@ data object LibraryTab : Tab {
                         viewModel.clearSelection()
                         navigator.push(MigrationConfigScreen(selection))
                     },
+                    onMergeClicked = viewModel::mergeSelection
+                        .takeIf { seriesMergingEnabled && state.canMergeSelection },
+                    onUnmergeClicked = viewModel::unmergeSelection
+                        .takeIf { seriesMergingEnabled && state.selectionContainsMerged },
                 )
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },

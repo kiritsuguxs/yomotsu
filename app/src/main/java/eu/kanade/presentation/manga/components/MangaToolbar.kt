@@ -50,6 +50,7 @@ fun MangaToolbar(
     onClickEditCategory: (() -> Unit)?,
     onClickRefresh: () -> Unit,
     onClickMigrate: (() -> Unit)?,
+    onClickManageMergeSources: (() -> Unit)? = null,
     onClickEditNotes: () -> Unit,
     automaticTranslationEnabled: Boolean,
     onClickToggleAutomaticTranslation: (() -> Unit)? = null,
@@ -155,6 +156,14 @@ fun MangaToolbar(
                             AppBar.OverflowAction(
                                 title = stringResource(MR.strings.action_edit_categories),
                                 onClick = onClickEditCategory,
+                            ),
+                        )
+                    }
+                    if (onClickManageMergeSources != null) {
+                        add(
+                            AppBar.OverflowAction(
+                                title = stringResource(MR.strings.action_manage_sources),
+                                onClick = onClickManageMergeSources,
                             ),
                         )
                     }

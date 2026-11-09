@@ -11,6 +11,7 @@ import eu.kanade.core.util.fastFilterNot
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.chapter.interactor.SetReadStatus
 import eu.kanade.domain.manga.interactor.UpdateManga
+import eu.kanade.domain.merge.dedupeByMergeGroup
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.tachiyomi.data.cache.CoverCache
@@ -86,6 +87,7 @@ class LibraryViewModel(
     private val animeDownloadManager: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager = Injekt.get(),
     private val downloadCache: DownloadCache = Injekt.get(),
     private val trackerManager: TrackerManager = Injekt.get(),
+    private val mangaMergeManager: eu.kanade.domain.manga.MangaMergeManager = Injekt.get(),
 ) : StateViewModel<LibraryViewModel.State>(State()) {
 
     init {
@@ -126,8 +128,12 @@ class LibraryViewModel(
                     }
                 },
                 combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
-                getLibraryItemPreferencesFlow(),
-            ) { searchQuery, categories, favorites, (tracksMap, trackingFilters), itemPreferences ->
+                combine(
+                    getLibraryItemPreferencesFlow(),
+                    mangaMergeManager.membershipChanges(),
+                    libraryPreferences.seriesMergingEnabled.changes(),
+                ) { prefs, memberships, enabled -> Triple(prefs, memberships, enabled) },
+            ) { searchQuery, categories, favorites, (tracksMap, trackingFilters), (itemPreferences, memberships, mergingEnabled) ->
                 val showSystemCategory = favorites.isEmpty() || favorites.any { it.libraryManga.categories.contains(0) }
                 val filteredFavorites = favorites
                     .applyFilters(tracksMap, trackingFilters, itemPreferences)
@@ -139,6 +145,13 @@ class LibraryViewModel(
                             libraryItems.filter { queryNode.matches(it) }
                         }
                     }
+                    .let { items ->
+                        if (mergingEnabled) {
+                            items.dedupeByMergeGroup(memberships) { it.id }
+                        } else {
+                            items
+                        }
+                    }
 
                 LibraryData(
                     isInitialized = true,
@@ -147,12 +160,15 @@ class LibraryViewModel(
                     favorites = filteredFavorites,
                     tracksMap = tracksMap,
                     loggedInTrackerIds = trackingFilters.keys,
-                )
+                ) to memberships
             }
                 .distinctUntilChanged()
-                .collectLatest { libraryData ->
+                .collectLatest { (libraryData, memberships) ->
                     mutableState.update { state ->
-                        state.copy(libraryData = libraryData)
+                        state.copy(
+                            libraryData = libraryData,
+                            memberships = memberships,
+                        )
                     }
                 }
         }
@@ -694,6 +710,24 @@ class LibraryViewModel(
         mutableState.update { it.copy(selection = setOf()) }
     }
 
+    fun mergeSelection() {
+        val ids = state.value.selection.toList()
+        if (ids.size < 2) return
+        viewModelScope.launchIO {
+            mangaMergeManager.merge(ids)
+            clearSelection()
+        }
+    }
+
+    fun unmergeSelection() {
+        val ids = state.value.selection.toList()
+        if (ids.isEmpty()) return
+        viewModelScope.launchIO {
+            mangaMergeManager.unmerge(ids)
+            clearSelection()
+        }
+    }
+
     fun toggleSelection(category: Category, manga: LibraryManga) {
         mutableState.update { state ->
             val newSelection = state.selection.mutate { set ->
@@ -859,6 +893,7 @@ class LibraryViewModel(
         val showMangaContinueButton: Boolean = false,
         val dialog: Dialog? = null,
         val libraryData: LibraryData = LibraryData(),
+        val memberships: Map<Long, Long> = emptyMap(),
         private val activeCategoryIndex: Int = 0,
         private val groupedFavorites: Map<Category, List</* LibraryItem */ Long>> = emptyMap(),
     ) {
@@ -874,6 +909,10 @@ class LibraryViewModel(
         val isLibraryEmpty = libraryData.favorites.isEmpty()
 
         val selectionMode = selection.isNotEmpty()
+
+        val canMergeSelection: Boolean get() = selection.size >= 2
+
+        val selectionContainsMerged: Boolean get() = selection.any { it in memberships }
 
         val selectedManga by lazy { selection.mapNotNull { libraryData.favoritesById[it]?.libraryManga?.manga } }
 

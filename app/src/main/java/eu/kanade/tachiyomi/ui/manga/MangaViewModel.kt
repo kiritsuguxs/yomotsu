@@ -47,12 +47,16 @@ import eu.kanade.translation.TranslationCandidatePolicy
 import eu.kanade.translation.TranslationManager
 import eu.kanade.translation.TranslationRequestOrigin
 import eu.kanade.translation.model.Translation
+import eu.kanade.presentation.components.ManageMergeSourceRow
+import eu.kanade.presentation.details.EntryMergeGroupHost
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -127,8 +131,28 @@ class MangaViewModel(
     private val filterChaptersForDownload: FilterChaptersForDownload = Injekt.get(),
     private val updateMangaFromRemote: UpdateMangaFromRemote = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
+    private val mergeManager: eu.kanade.domain.manga.MangaMergeManager = Injekt.get(),
+    private val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get(),
+    private val getManga: tachiyomi.domain.manga.interactor.GetManga = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateViewModel<MangaViewModel.State>(State.Loading) {
+
+    val mergeGroup = EntryMergeGroupHost(
+        mergeManager = mergeManager,
+        initialIds = longArrayOf(mangaId),
+        anchorChanges = flowOf(mangaId),
+        onSourceChange = { _, _ -> },
+        resolveSources = { ids -> buildMergeSources(ids) },
+    )
+
+    private suspend fun buildMergeSources(ids: LongArray): List<ManageMergeSourceRow> {
+        if (ids.size <= 1) return emptyList()
+        return ids.map { id ->
+            val m = getManga.await(id)
+            val srcName = if (m != null) sourceManager.getOrStub(m.source).name else "Source $id"
+            ManageMergeSourceRow(id = id, sourceName = srcName)
+        }
+    }
 
     companion object {
         val MANGA_ID_KEY = CreationExtras.Key<Long>()
@@ -194,6 +218,24 @@ class MangaViewModel(
     }
 
     init {
+        mergeGroup.observe(viewModelScope)
+
+        viewModelScope.launchIO {
+            combine(
+                mergeGroup.chips,
+                mergeGroup.selectedSourceChanges,
+            ) { chips, selected ->
+                chips to selected
+            }.collectLatest { (chips, selected) ->
+                updateSuccessState { state ->
+                    state.copy(
+                        mergeSources = chips,
+                        selectedMergeSource = selected,
+                    )
+                }
+            }
+        }
+
         viewModelScope.launchIO {
             autoTranslationPreference.changes()
                 .distinctUntilChanged()
@@ -204,11 +246,35 @@ class MangaViewModel(
 
         viewModelScope.launchIO {
             combine(
+                mergeGroup.state,
                 getMangaAndChapters.subscribe(mangaId, applyScanlatorFilter = true).distinctUntilChanged(),
                 downloadCache.changes,
                 downloadManager.queueState,
                 translationManager.queueState,
-            ) { mangaAndChapters, _, _, _ -> mangaAndChapters }
+            ) { groupState, mangaAndChapters, _, _, _ -> groupState to mangaAndChapters }
+                .flatMapLatest { (groupState, mangaAndChapters) ->
+                    val (manga, ownChapters) = mangaAndChapters
+                    if (!libraryPreferences.seriesMergingEnabled.get() || groupState.ids.size <= 1) {
+                        flowOf(manga to ownChapters)
+                    } else if (groupState.selected != null) {
+                        val selectedId = groupState.selected
+                        if (selectedId == mangaId) {
+                            flowOf(manga to ownChapters)
+                        } else {
+                            getMangaAndChapters.subscribe(selectedId, applyScanlatorFilter = true)
+                        }
+                    } else {
+                        val flows = groupState.ids.map { id ->
+                            getMangaAndChapters.subscribe(id, applyScanlatorFilter = true)
+                        }
+                        combine(flows) { pairs ->
+                            val pooledChapters = pairs.flatMap { it.second }
+                            val stitch = mergedChapterProvider.stitchOf(mangaId)
+                            val mergedChapters = mergedChapterProvider.merged(pooledChapters, stitch).chapters
+                            manga to mergedChapters
+                        }
+                    }
+                }
                 .collectLatest { (manga, chapters) ->
                     updateSuccessState {
                         it.copy(
@@ -1352,6 +1418,52 @@ class MangaViewModel(
         data object SettingsSheet : Dialog
         data object TrackSheet : Dialog
         data object FullCover : Dialog
+        data object ManageSources : Dialog
+    }
+
+    fun showManageSourcesDialog() {
+        updateSuccessState { it.copy(dialog = Dialog.ManageSources) }
+    }
+
+    fun selectMergeSource(sourceId: Long?) {
+        mergeGroup.selectSource(sourceId)
+    }
+
+    fun splitMergeSources(sourceIds: List<Long>) {
+        viewModelScope.launchIO {
+            mergeManager.removeFromGroup(mergeGroup.relatedIds, sourceIds)
+        }
+    }
+
+    fun removeMergeSourcesFromLibrary(sourceIds: List<Long>) {
+        viewModelScope.launchIO {
+            val toRemove = sourceIds.mapNotNull { getManga.await(it) }
+            val nonFavorite = toRemove.map { it.copy(favorite = false) }
+            nonFavorite.forEach { updateManga.await(tachiyomi.domain.manga.model.MangaUpdate(it.id, favorite = false)) }
+            mergeManager.removeFromGroup(mergeGroup.relatedIds, sourceIds)
+        }
+    }
+
+    fun removeAllMergeSourcesFromLibrary() {
+        viewModelScope.launchIO {
+            val toRemove = mergeGroup.relatedIds.mapNotNull { getManga.await(it) }
+            val nonFavorite = toRemove.map { it.copy(favorite = false) }
+            nonFavorite.forEach { updateManga.await(tachiyomi.domain.manga.model.MangaUpdate(it.id, favorite = false)) }
+            mergeManager.clearSourceOrder(mangaId)
+            mergeManager.removeFromGroup(mergeGroup.relatedIds, mergeGroup.relatedIds.toList())
+        }
+    }
+
+    fun reorderMergeSources(orderedIds: List<Long>) {
+        viewModelScope.launchIO {
+            mergeManager.setSourceOrder(orderedIds)
+        }
+    }
+
+    fun resetMergeSourceOrder() {
+        viewModelScope.launchIO {
+            mergeManager.clearSourceOrder(mangaId)
+        }
     }
 
     fun dismissDialog() {
@@ -1404,7 +1516,11 @@ class MangaViewModel(
             val hasPromptedToAddBefore: Boolean = false,
             val hideMissingChapters: Boolean = false,
             val autoTranslateEnabled: Boolean = false,
+            val mergeSources: List<ManageMergeSourceRow> = emptyList(),
+            val selectedMergeSource: Long? = null,
         ) : State {
+            val isMerged: Boolean get() = mergeSources.size > 1
+
             val processedChapters by lazy {
                 chapters.applyFilters(manga).toList()
             }
