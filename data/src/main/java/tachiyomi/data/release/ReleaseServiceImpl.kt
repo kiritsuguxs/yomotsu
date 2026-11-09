@@ -41,9 +41,12 @@ class ReleaseServiceImpl(
         }
 
         return if (!isFoss) {
-            map[Build.SUPPORTED_ABIS[0]] ?: map[null]
+            map[Build.SUPPORTED_ABIS[0]]
+                ?: (if (Build.SUPPORTED_ABIS.contains("arm64-v8a")) map["arm64-v8a"] else null)
+                ?: map[null]
+                ?: release.assets.firstOrNull { it.name.endsWith(".apk") }?.downloadLink
         } else {
-            map[FOSS]
+            map[FOSS] ?: release.assets.firstOrNull { it.name.endsWith(".apk") }?.downloadLink
         }
     }
 

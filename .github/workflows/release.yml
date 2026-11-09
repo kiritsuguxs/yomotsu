@@ -81,6 +81,7 @@ jobs:
       - name: Preparar APKs da Release
         run: |
           set -e
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk Yomotsu-arm64-v8a-${{ needs.get_tag.outputs.version }}.apk
           mv app/build/outputs/apk/release/app-arm64-v8a-release.apk Yomotsu-${{ needs.get_tag.outputs.version }}.apk
           mv app/build/outputs/apk/release/app-armeabi-v7a-release.apk Yomotsu-armeabi-v7a-${{ needs.get_tag.outputs.version }}.apk
           mv app/build/outputs/apk/release/app-x86-release.apk Yomotsu-x86-${{ needs.get_tag.outputs.version }}.apk

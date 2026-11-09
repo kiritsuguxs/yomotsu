@@ -45,13 +45,15 @@ class NewUpdateScreenModel(
                     workInfo.progress.getString(AppUpdateDownloadJob.EXTRA_DOWNLOAD_URL)
                 }
 
-                if (url != downloadLink) {
+                if (url != null && url != downloadLink) {
                     return@map 0 to Stage.Available
                 }
 
                 val stage = when {
-                    workInfo.state == WorkInfo.State.FAILED -> Stage.Failed
-                    workInfo.state.isFinished && progress == 100 -> {
+                    workInfo.state == WorkInfo.State.FAILED -> {
+                        if (url == null || url == downloadLink) Stage.Failed else Stage.Available
+                    }
+                    workInfo.state.isFinished && progress == 100 && url == downloadLink -> {
                         if (AppUpdateDownloadJob.updateApk(context).exists()) {
                             Stage.Downloaded
                         } else {
@@ -92,10 +94,6 @@ class NewUpdateScreenModel(
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
         }
         context.startActivity(intent)
-    }
-
-    override fun onCleared() {
-        AppUpdateDownloadJob.stop(context)
     }
 
     @Immutable

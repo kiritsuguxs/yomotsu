@@ -22,11 +22,15 @@ import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.CancellationException
+import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.injectLazy
 import java.io.File
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerParameters) :
     CoroutineWorker(context, workerParams) {
@@ -40,6 +44,8 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
             return Result.failure()
         }
 
+        setProgress(workDataOf(PROGRESS to 0, EXTRA_DOWNLOAD_URL to url))
+
         setForegroundSafely()
 
         return try {
@@ -47,8 +53,9 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
             Result.success(workDataOf(PROGRESS to 100, EXTRA_DOWNLOAD_URL to url))
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            Result.failure()
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Failed to download app update" }
+            Result.failure(workDataOf(EXTRA_DOWNLOAD_URL to url))
         }
     }
 
@@ -85,7 +92,11 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
             var lastTick = 0L
 
             override fun update(bytesRead: Long, contentLength: Long, done: Boolean) {
-                val progress = (100 * (bytesRead.toFloat() / contentLength)).toInt()
+                val progress = if (contentLength > 0) {
+                    (100 * (bytesRead.toFloat() / contentLength)).toInt().coerceIn(0, 100)
+                } else {
+                    -1
+                }
                 val currentTime = System.currentTimeMillis()
                 if (progress > savedProgress && currentTime - 200 > lastTick) {
                     savedProgress = progress
@@ -95,9 +106,18 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
             }
         }
 
-        val response = network.client.newCachelessCallWithProgress(GET(url), progressListener).awaitSuccess()
+        val downloadClient = network.client.newBuilder()
+            .callTimeout(0.seconds)
+            .connectTimeout(30.seconds)
+            .readTimeout(2.minutes)
+            .build()
+
+        val response = downloadClient.newCachelessCallWithProgress(GET(url), progressListener).awaitSuccess()
 
         val apkFile = updateApk(context)
+        if (apkFile.exists()) {
+            apkFile.delete()
+        }
         response.body.source().saveTo(apkFile)
     }
 
@@ -108,7 +128,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
 
         const val EXTRA_DOWNLOAD_URL = "DOWNLOAD_URL"
 
-        fun updateApk(context: Context): File = File(context.externalCacheDir, "update.apk")
+        fun updateApk(context: Context): File = File(context.externalCacheDir ?: context.cacheDir, "update.apk")
 
         fun start(context: Context, url: String) {
             val constraints = Constraints(
