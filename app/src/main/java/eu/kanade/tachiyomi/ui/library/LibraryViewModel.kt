@@ -713,8 +713,16 @@ class LibraryViewModel(
     fun mergeSelection() {
         val ids = state.value.selection.toList()
         if (ids.size < 2) return
+        val selected = state.value.selectedManga
+        val first = selected.firstOrNull() ?: return
+        val src = sourceManager.get(first.source)
+        val contentType = when {
+            src is eu.kanade.tachiyomi.animesource.AnimeSource || src?.isAnime == true -> tachiyomi.domain.merge.model.ContentType.ANIME
+            src is eu.kanade.tachiyomi.source.INovelSource || src?.isNovel == true -> tachiyomi.domain.merge.model.ContentType.NOVEL
+            else -> tachiyomi.domain.merge.model.ContentType.MANGA
+        }
         viewModelScope.launchIO {
-            mangaMergeManager.merge(ids)
+            mangaMergeManager.merge(contentType, ids)
             clearSelection()
         }
     }
@@ -722,8 +730,16 @@ class LibraryViewModel(
     fun unmergeSelection() {
         val ids = state.value.selection.toList()
         if (ids.isEmpty()) return
+        val selected = state.value.selectedManga
+        val first = selected.firstOrNull() ?: return
+        val src = sourceManager.get(first.source)
+        val contentType = when {
+            src is eu.kanade.tachiyomi.animesource.AnimeSource || src?.isAnime == true -> tachiyomi.domain.merge.model.ContentType.ANIME
+            src is eu.kanade.tachiyomi.source.INovelSource || src?.isNovel == true -> tachiyomi.domain.merge.model.ContentType.NOVEL
+            else -> tachiyomi.domain.merge.model.ContentType.MANGA
+        }
         viewModelScope.launchIO {
-            mangaMergeManager.unmerge(ids)
+            mangaMergeManager.unmerge(contentType, ids)
             clearSelection()
         }
     }
@@ -910,7 +926,28 @@ class LibraryViewModel(
 
         val selectionMode = selection.isNotEmpty()
 
-        val canMergeSelection: Boolean get() = selection.size >= 2
+        val canMergeSelection: Boolean
+            get() {
+                if (selection.size < 2) return false
+                val mangas = selectedManga
+                if (mangas.size < 2) return false
+                val sourceManager = Injekt.get<SourceManager>()
+                val firstSrc = sourceManager.get(mangas.first().source)
+                val firstType = when {
+                    firstSrc is eu.kanade.tachiyomi.animesource.AnimeSource || firstSrc?.isAnime == true -> 2
+                    firstSrc is eu.kanade.tachiyomi.source.INovelSource || firstSrc?.isNovel == true -> 1
+                    else -> 0
+                }
+                return mangas.all { m ->
+                    val src = sourceManager.get(m.source)
+                    val type = when {
+                        src is eu.kanade.tachiyomi.animesource.AnimeSource || src?.isAnime == true -> 2
+                        src is eu.kanade.tachiyomi.source.INovelSource || src?.isNovel == true -> 1
+                        else -> 0
+                    }
+                    type == firstType
+                }
+            }
 
         val selectionContainsMerged: Boolean get() = selection.any { it in memberships }
 

@@ -244,8 +244,19 @@ class DomainModule : InjektModule {
                 onBeforeDissolve = { },
             )
         }
-        addSingletonFactory { MangaGroupStitcher(get(), get(), get(), get(), get()) }
-        addSingletonFactory { ReconcileMergedChapters(get(), setOf(get<MangaGroupStitcher>())) }
+        addSingletonFactory { MangaGroupStitcher(get(), get(), get(), get(), get(), tachiyomi.domain.merge.model.ContentType.MANGA) }
+        addSingletonFactory { NovelGroupStitcher(get(), get(), get(), get(), get()) }
+        addSingletonFactory { AnimeGroupStitcher(get(), get(), get(), get(), get()) }
+        addSingletonFactory {
+            ReconcileMergedChapters(
+                get(),
+                setOf(
+                    get<MangaGroupStitcher>(),
+                    get<NovelGroupStitcher>(),
+                    get<AnimeGroupStitcher>(),
+                ),
+            )
+        }
         addSingletonFactory { MergedChapterProvider(get(), get(), get(), get(), get()) }
     }
 }

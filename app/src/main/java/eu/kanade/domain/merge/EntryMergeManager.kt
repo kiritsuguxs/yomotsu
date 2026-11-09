@@ -50,9 +50,18 @@ open class EntryMergeManager(
         if (preferences.seriesMergingEnabled.get()) repository.getGroupId(contentType, targetId) else null
 
     override suspend fun merge(ids: List<Long>) {
+        merge(contentType, ids)
+    }
+
+    suspend fun merge(targetContentType: ContentType, ids: List<Long>) {
         if (!preferences.seriesMergingEnabled.get()) return
-        val groupId = repository.merge(contentType, ids) ?: return
-        onMerged(repository.getFavoriteMembers(contentType, groupId))
+        val groupId = repository.merge(targetContentType, ids) ?: return
+        onMerged(repository.getFavoriteMembers(targetContentType, groupId))
+    }
+
+    suspend fun unmerge(targetContentType: ContentType = contentType, ids: List<Long>) {
+        if (!preferences.seriesMergingEnabled.get()) return
+        ids.forEach { repository.dissolve(targetContentType, it) }
     }
 
     suspend fun replaceInGroup(oldId: Long, newId: Long) {

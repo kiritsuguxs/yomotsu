@@ -55,8 +55,16 @@ class MergedChapterProvider(
         )
     }
 
-    suspend fun stitchOf(anchorId: Long): List<ChapterUnit> =
-        mergeManager.groupIdOf(anchorId)?.let { reconcile.currentStitch(ContentType.MANGA, it) }.orEmpty()
+    suspend fun stitchOf(anchorId: Long): List<ChapterUnit> {
+        val manga = getMangaWithChapters.awaitManga(anchorId)
+        val source = sourceManager.get(manga.source)
+        val contentType = when {
+            source is eu.kanade.tachiyomi.animesource.AnimeSource || source?.isAnime == true -> ContentType.ANIME
+            source is eu.kanade.tachiyomi.source.INovelSource || source?.isNovel == true -> ContentType.NOVEL
+            else -> ContentType.MANGA
+        }
+        return mergeManager.groupIdOf(anchorId)?.let { reconcile.currentStitch(contentType, it) }.orEmpty()
+    }
 
     fun merged(chapters: List<Chapter>, stitch: List<ChapterUnit>): List<Chapter> =
         renderMergedReadingOrder(chapters, stitch, { it.id }) { chapter, order -> chapter.copy(sourceOrder = order) }

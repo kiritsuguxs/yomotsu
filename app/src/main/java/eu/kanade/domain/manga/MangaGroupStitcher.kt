@@ -12,15 +12,14 @@ import tachiyomi.domain.merge.MergedChapterUnitRepository.GroupStitch
 import tachiyomi.domain.merge.model.ContentType
 import tachiyomi.domain.source.service.SourceManager
 
-class MangaGroupStitcher(
+open class MangaGroupStitcher(
     private val mergeGroupRepository: MergeGroupRepository,
     private val getMangaWithChapters: GetMangaWithChapters,
     private val mergeManager: MangaMergeManager,
     private val sourceManager: SourceManager,
     private val libraryPreferences: LibraryPreferences,
+    override val contentType: ContentType = ContentType.MANGA,
 ) : MergedGroupStitcher {
-
-    override val contentType = ContentType.MANGA
 
     override suspend fun stitch(groupId: Long): GroupStitch {
         val group = load(groupId) ?: return GroupStitch(emptyList(), emptyMap())
@@ -78,3 +77,33 @@ class MangaGroupStitcher(
         )
     }
 }
+
+class NovelGroupStitcher(
+    mergeGroupRepository: MergeGroupRepository,
+    getMangaWithChapters: GetMangaWithChapters,
+    mergeManager: MangaMergeManager,
+    sourceManager: SourceManager,
+    libraryPreferences: LibraryPreferences,
+) : MangaGroupStitcher(
+    mergeGroupRepository,
+    getMangaWithChapters,
+    mergeManager,
+    sourceManager,
+    libraryPreferences,
+    ContentType.NOVEL,
+)
+
+class AnimeGroupStitcher(
+    mergeGroupRepository: MergeGroupRepository,
+    getMangaWithChapters: GetMangaWithChapters,
+    mergeManager: MangaMergeManager,
+    sourceManager: SourceManager,
+    libraryPreferences: LibraryPreferences,
+) : MangaGroupStitcher(
+    mergeGroupRepository,
+    getMangaWithChapters,
+    mergeManager,
+    sourceManager,
+    libraryPreferences,
+    ContentType.ANIME,
+)
