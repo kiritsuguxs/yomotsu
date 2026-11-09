@@ -3,6 +3,28 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y12
+
+🇧🇷 **Português (Brasil)**
+
+### 🛠️ Correções & Melhorias
+- **Correção Crítica no Atualizador Interno do Aplicativo:**
+  - **Prevenção de Reset Instantâneo:** Corrigida a condição de corrida no `NewUpdateScreenModel` onde emissões preliminares do WorkManager sem URL mapeavam indevidamente o estado para `Stage.Available`, fazendo o botão de download piscar ou voltar imediatamente para "Atualizar" logo após o clique.
+  - **Persistência de Download em Segundo Plano:** Removido o cancelamento forçado do download em `onCleared()` ao navegar para fora da tela de atualização ou alternar de aplicativo, permitindo que a atualização continue baixando normalmente em segundo plano via serviço em primeiro plano com notificação.
+  - **Extensão de Timeout para Arquivos Grandes:** Removido o limite rígido de 2 minutos (`callTimeout`) na requisição de download do APK, permitindo que conexões mais lentas ou downloads de pacotes completos sejam concluídos com sucesso e sem interrupção de timeout do OkHttp.
+  - **Tratamento Resiliente de Falhas:** O job de atualização agora propaga metadados de saída mesmo em caso de erro, garantindo que falhas sejam exibidas com a opção de tentar novamente em vez de reiniciar silenciosamente.
+  - **Compatibilidade Aprimorada de Arquitetura (ABI):** No serviço de consulta de versões (`ReleaseServiceImpl`), adicionada resolução inteligente de fallback para arquiteturas compatíveis (`arm64-v8a`) e variantes universais de APK, assegurando que o link de download direto correto seja sempre selecionado para o dispositivo.
+
+🇺🇸 **English**
+
+### 🛠️ Bug Fixes & Improvements
+- **Critical Fix for In-App Application Updater:**
+  - **Prevent Instant Download Reset:** Fixed a race condition in `NewUpdateScreenModel` where initial WorkManager emissions with unpopulated progress metadata prematurely mapped state back to `Stage.Available`, causing the download button to flicker or immediately revert to "Update".
+  - **Background Download Persistence:** Removed the aggressive job cancellation in `onCleared()` triggered when navigating away from the update screen or switching apps, ensuring APK downloads continue uninterrupted in the background via foreground notifications.
+  - **Extended Timeout for Large APK Downloads:** Removed the hard 2-minute `callTimeout` cutoff in OkHttp for update downloads, allowing users on slower networks or mobile data to finish complete package downloads without socket timeout interruptions.
+  - **Resilient Error Reporting:** The download worker now propagates output metadata on failures, properly transitioning the UI to a retry state instead of silently swallowing exceptions.
+  - **Enhanced ABI Architecture Resolution:** Added intelligent fallback resolution in `ReleaseServiceImpl` for compatible device architectures (`arm64-v8a`) and universal APK assets, ensuring the appropriate binary is reliably chosen for each device.
+
 ## 0.21.4-Y11
 
 🇧🇷 **Português (Brasil)**
