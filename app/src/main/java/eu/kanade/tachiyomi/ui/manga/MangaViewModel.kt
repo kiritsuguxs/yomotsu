@@ -270,7 +270,7 @@ class MangaViewModel(
                         combine(flows) { pairs ->
                             val pooledChapters = pairs.flatMap { it.second }
                             val stitch = mergedChapterProvider.stitchOf(mangaId)
-                            val mergedChapters = mergedChapterProvider.merged(pooledChapters, stitch).chapters
+                            val mergedChapters = mergedChapterProvider.merged(pooledChapters, stitch)
                             manga to mergedChapters
                         }
                     }
@@ -1437,18 +1437,18 @@ class MangaViewModel(
 
     fun removeMergeSourcesFromLibrary(sourceIds: List<Long>) {
         viewModelScope.launchIO {
-            val toRemove = sourceIds.mapNotNull { getManga.await(it) }
-            val nonFavorite = toRemove.map { it.copy(favorite = false) }
-            nonFavorite.forEach { updateManga.await(tachiyomi.domain.manga.model.MangaUpdate(it.id, favorite = false)) }
+            sourceIds.forEach { id ->
+                updateManga.awaitUpdateFavorite(id, false)
+            }
             mergeManager.removeFromGroup(mergeGroup.relatedIds, sourceIds)
         }
     }
 
     fun removeAllMergeSourcesFromLibrary() {
         viewModelScope.launchIO {
-            val toRemove = mergeGroup.relatedIds.mapNotNull { getManga.await(it) }
-            val nonFavorite = toRemove.map { it.copy(favorite = false) }
-            nonFavorite.forEach { updateManga.await(tachiyomi.domain.manga.model.MangaUpdate(it.id, favorite = false)) }
+            mergeGroup.relatedIds.forEach { id ->
+                updateManga.awaitUpdateFavorite(id, false)
+            }
             mergeManager.clearSourceOrder(mangaId)
             mergeManager.removeFromGroup(mergeGroup.relatedIds, mergeGroup.relatedIds.toList())
         }

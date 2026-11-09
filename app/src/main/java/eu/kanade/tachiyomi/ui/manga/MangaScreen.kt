@@ -236,7 +236,7 @@ class MangaScreen(
             onToggleAutomaticTranslation = viewModel::toggleAutomaticTranslation.takeIf { !isNovel && !isAnime },
             onClickManageMergeSources = viewModel::showManageSourcesDialog.takeIf { successState.isMerged },
             onSelectMergeSource = viewModel::selectMergeSource.takeIf { successState.isMerged },
-            onSplitMergeSource = { sourceId -> viewModel.splitMergeSources(listOf(sourceId)) }.takeIf { successState.isMerged },
+            onSplitMergeSource = { sourceId: Long -> viewModel.splitMergeSources(listOf(sourceId)) }.takeIf { successState.isMerged },
             onExportEpubClicked = if (isNovel) {
                 {
                     context.toast("Gerando EPUB...")

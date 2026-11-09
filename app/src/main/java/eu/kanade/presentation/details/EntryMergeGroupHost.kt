@@ -14,6 +14,7 @@ import eu.kanade.domain.merge.EntryMergeManager
 import eu.kanade.domain.merge.GroupChapterFlags
 import eu.kanade.domain.merge.MergeScope
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.domain.merge.ChapterUnit
 import eu.kanade.presentation.components.ManageMergeSourceRow
 
 typealias EntryMergeSource = ManageMergeSourceRow

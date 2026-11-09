@@ -1,8 +1,8 @@
 package eu.kanade.domain.manga
 
 import eu.kanade.domain.merge.MergedGroupStitcher
-import eu.kanade.domain.merge.rankingStamps
 import eu.kanade.domain.merge.storedUnitsOf
+import tachiyomi.domain.merge.rankingStamps
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.ChapterAggregation
