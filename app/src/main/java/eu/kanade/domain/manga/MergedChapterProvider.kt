@@ -59,8 +59,8 @@ class MergedChapterProvider(
         val manga = getMangaWithChapters.awaitManga(anchorId)
         val source = sourceManager.get(manga.source)
         val contentType = when {
-            source is eu.kanade.tachiyomi.animesource.AnimeSource || source?.isAnime == true -> ContentType.ANIME
-            source is eu.kanade.tachiyomi.source.INovelSource || source?.isNovel == true -> ContentType.NOVEL
+            source is eu.kanade.tachiyomi.animesource.AnimeSource -> ContentType.ANIME
+            source is eu.kanade.tachiyomi.novelsource.NovelSource || source is eu.kanade.tachiyomi.source.INovelSource -> ContentType.NOVEL
             else -> ContentType.MANGA
         }
         return mergeManager.groupIdOf(anchorId)?.let { reconcile.currentStitch(contentType, it) }.orEmpty()

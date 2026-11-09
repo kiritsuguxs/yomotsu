@@ -11,11 +11,14 @@ import eu.kanade.domain.extension.interactor.GetAnimeExtensionsByType
 import eu.kanade.domain.extension.interactor.TrustExtension
 import eu.kanade.domain.anime.interactor.SetAnimeViewerFlags
 import eu.kanade.tachiyomi.ui.player.domain.TrackSelect
+import eu.kanade.domain.manga.AnimeGroupStitcher
 import eu.kanade.domain.manga.MangaChapterSettings
 import eu.kanade.domain.manga.MangaGroupCategories
 import eu.kanade.domain.manga.MangaGroupStitcher
 import eu.kanade.domain.manga.MangaMergeManager
 import eu.kanade.domain.manga.MergedChapterProvider
+import eu.kanade.domain.manga.NovelGroupStitcher
+import eu.kanade.domain.merge.MergedGroupStitcher
 import eu.kanade.domain.merge.ReconcileMergedChapters
 import tachiyomi.data.merge.MergeGroupRepositoryImpl
 import tachiyomi.data.merge.MergedChapterUnitRepositoryImpl
@@ -250,7 +253,7 @@ class DomainModule : InjektModule {
         addSingletonFactory {
             ReconcileMergedChapters(
                 get(),
-                setOf(
+                setOf<MergedGroupStitcher>(
                     get<MangaGroupStitcher>(),
                     get<NovelGroupStitcher>(),
                     get<AnimeGroupStitcher>(),
