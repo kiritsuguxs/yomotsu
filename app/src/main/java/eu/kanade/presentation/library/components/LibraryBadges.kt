@@ -94,17 +94,13 @@ internal fun LanguageBadge(
             val flag = getFlagEmoji(sourceLanguage)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f))
-                    .padding(horizontal = 3.dp, vertical = 2.dp)
             ) {
                 Image(
                     bitmap = icon,
                     contentDescription = null,
                     modifier = Modifier
                         .size(20.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(4.dp)),
                 )
                 if (flag.isNotEmpty()) {
                     Text(
@@ -119,10 +115,6 @@ internal fun LanguageBadge(
                 Text(
                     text = flag,
                     fontSize = 13.sp,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f))
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
             }
         }
