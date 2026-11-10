@@ -18,6 +18,7 @@ Cada pasta de extensão é um projeto Android totalmente independente e possui s
 | **Blackout Comics** | `extension-blackoutcomics/` | `.github/workflows/build-blackoutcomics-extension.yml` |
 | **Project Nox** | `extension-projectnox/` | `.github/workflows/build-projectnox-extension.yml` |
 | **Anime Hentai** | `extension-animeshentai/` | `.github/workflows/build-animeshentai-extension.yml` |
+| **Watch Anime Hentai** | `extension-watchanimehentai/` | `.github/workflows/build-watchanimehentai-extension.yml` |
 
 ---
 
