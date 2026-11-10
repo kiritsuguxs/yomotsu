@@ -4,7 +4,7 @@ plugins {
     kotlin("plugin.serialization") version "2.0.21"
 }
 
-val extVersionCode = 1
+val extVersionCode = 2
 val libVersion = "1.6"
 
 val calculatedVersionCode = libVersion.split(".")
