@@ -4,12 +4,10 @@ plugins {
     kotlin("plugin.serialization") version "2.0.21"
 }
 
-val extVersionCode = 4
-val libVersion = "1.6"
+val extVersionCode = 5
+val libVersion = "14"
 
-val calculatedVersionCode = libVersion.split(".")
-    .joinToString("") { it.padStart(2, '0') }
-    .toInt() * 1000 + extVersionCode
+val calculatedVersionCode = 140000 + extVersionCode
 
 android {
     namespace = "eu.kanade.tachiyomi.animeextension.pt.watchanimehentai"
@@ -48,7 +46,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

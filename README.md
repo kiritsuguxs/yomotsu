@@ -57,18 +57,28 @@ Ao criar uma nova extensão ou atualizar uma existente, siga rigorosamente as di
 
 ---
 
-### 2. 🔢 Controle de Versão (`extVersionCode`) e Cache do Android
+### 2. 🔢 Controle de Versão, `libVersion` e Cache do Android
 
 > [!WARNING]
 > O Android e o Instalador de Pacotes do sistema realizam **cache agressivo** do ícone e metadados dos APKs por nome de pacote (`applicationId`).
 
-No arquivo `build.gradle.kts`:
+#### Regra Obrigatória da `libVersion` (Anime vs. Mangá):
+- **Extensões de Anime (Vídeo / Streaming no Yomotsu, Anikku e Aniyomi):**
+  - **DEVE utilizar:** `val libVersion = "14"`
+  - `calculatedVersionCode = 140000 + extVersionCode`
+  - `versionName = "$libVersion.$extVersionCode"` (ex: `14.5`)
+  - *Por que?* Forks focados em anime como o **Anikku** exigem estritamente `LIB_VERSION_MIN = 12` e `LIB_VERSION_MAX = 16` no seu `ExtensionLoader`. Se uma extensão de anime usar `1.6`, o Anikku rejeita o pacote com `LoadResult.Error` e **a extensão desaparece completamente após ser confiada**! O Yomotsu aceita `libVersion = 14` nativamente (`if (isAnime) true`).
+  - **Minificação:** Defina `isMinifyEnabled = false` no `buildTypes.release` para evitar problemas de reflexão no ClassLoader dos forks.
+- **Extensões de Mangá (Leitura no Yomotsu, Mihon e Tachiyomi):**
+  - Utilizam `val libVersion = "1.6"`.
+
+#### Controle de Versão (`extVersionCode`):
 - **Nova extensão criada:** Inicialize com `val extVersionCode = 1`.
-- **Qualquer alteração ou correção (ícone, scraper, extrator, seletor):** É **terminantemente obrigatório** incrementar o `extVersionCode` (`2`, `3`, `4`, etc.).
+- **Qualquer alteração ou correção (ícone, scraper, extrator, seletor):** É **terminantemente obrigatório** incrementar o `extVersionCode` (`2`, `3`, `4`, `5`, etc.).
 - **Se o ícone antigo continuar aparecendo após instalar:**
   1. Desinstale a versão antiga da extensão no seu Android antes de instalar a nova (Configurações > Aplicativos > Extensão > Desinstalar).
   2. Apague o arquivo `.apk` antigo que estava na sua pasta `Download/` para evitar que o gerenciador de arquivos do celular abra o APK de cache anterior.
-  3. No workflow do GitHub Actions, configure o nome do artefato e do arquivo final com o número da versão (ex: `watchanimehentai-v4-apk` e `watchanimehentai-v4.apk`) para impossibilitar colisões de arquivos no celular do usuário.
+  3. No workflow do GitHub Actions, configure o nome do artefato e do arquivo final com o número da versão (ex: `watchanimehentai-v5-apk` e `watchanimehentai-v5.apk`) para impossibilitar colisões de arquivos no celular do usuário.
 
 ---
 
