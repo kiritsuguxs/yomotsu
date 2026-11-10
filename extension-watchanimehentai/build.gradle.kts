@@ -4,7 +4,7 @@ plugins {
     kotlin("plugin.serialization") version "2.0.21"
 }
 
-val extVersionCode = 5
+val extVersionCode = 6
 val libVersion = "14"
 
 val calculatedVersionCode = 140000 + extVersionCode
@@ -46,7 +46,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature android:name="tachiyomi.animeextension" />
-    <uses-feature android:name="tachiyomi.extension" />
 
     <application
         android:label="${appName}"
@@ -13,19 +12,10 @@
             android:name="tachiyomi.animeextension.class"
             android:value="${extClass}" />
         <meta-data
-            android:name="tachiyomi.extension.class"
-            android:value="${extClass}" />
-        <meta-data
             android:name="tachiyomi.animeextension.factory"
             android:value="${extFactory}" />
         <meta-data
-            android:name="tachiyomi.extension.factory"
-            android:value="${extFactory}" />
-        <meta-data
             android:name="tachiyomi.animeextension.nsfw"
-            android:value="${nsfw}" />
-        <meta-data
-            android:name="tachiyomi.extension.nsfw"
             android:value="${nsfw}" />
         <meta-data
             android:name="tachiyomi.animeextension.libVersion"

@@ -68,17 +68,17 @@ Ao criar uma nova extensão ou atualizar uma existente, siga rigorosamente as di
   - `calculatedVersionCode = 140000 + extVersionCode`
   - `versionName = "$libVersion.$extVersionCode"` (ex: `14.5`)
   - *Por que?* Forks focados em anime como o **Anikku** exigem estritamente `LIB_VERSION_MIN = 12` e `LIB_VERSION_MAX = 16` no seu `ExtensionLoader`. Se uma extensão de anime usar `1.6`, o Anikku rejeita o pacote com `LoadResult.Error` e **a extensão desaparece completamente após ser confiada**! O Yomotsu aceita `libVersion = 14` nativamente (`if (isAnime) true`).
-  - **Minificação:** Defina `isMinifyEnabled = false` no `buildTypes.release` para evitar problemas de reflexão no ClassLoader dos forks.
+  - **Minificação e Otimização de Tamanho:** Defina `isMinifyEnabled = true` no `buildTypes.release` com a regra `-keep class eu.kanade.tachiyomi.animeextension.** { *; }` em `proguard-rules.pro`. Isso ativa a poda de código morto (*tree-shaking*) das dependências do Kotlin, reduzindo o tamanho do APK de ~900 KB para **~140 KB**, sem quebrar o carregamento dinâmico.
 - **Extensões de Mangá (Leitura no Yomotsu, Mihon e Tachiyomi):**
   - Utilizam `val libVersion = "1.6"`.
 
 #### Controle de Versão (`extVersionCode`):
 - **Nova extensão criada:** Inicialize com `val extVersionCode = 1`.
-- **Qualquer alteração ou correção (ícone, scraper, extrator, seletor):** É **terminantemente obrigatório** incrementar o `extVersionCode` (`2`, `3`, `4`, `5`, etc.).
+- **Qualquer alteração ou correção (ícone, scraper, extrator, seletor):** É **terminantemente obrigatório** incrementar o `extVersionCode` (`2`, `3`, `4`, `5`, `6`, etc.).
 - **Se o ícone antigo continuar aparecendo após instalar:**
   1. Desinstale a versão antiga da extensão no seu Android antes de instalar a nova (Configurações > Aplicativos > Extensão > Desinstalar).
   2. Apague o arquivo `.apk` antigo que estava na sua pasta `Download/` para evitar que o gerenciador de arquivos do celular abra o APK de cache anterior.
-  3. No workflow do GitHub Actions, configure o nome do artefato e do arquivo final com o número da versão (ex: `watchanimehentai-v5-apk` e `watchanimehentai-v5.apk`) para impossibilitar colisões de arquivos no celular do usuário.
+  3. No workflow do GitHub Actions, configure o nome do artefato e do arquivo final com o número da versão (ex: `watchanimehentai-v6-apk` e `watchanimehentai-v6.apk`) para impossibilitar colisões de arquivos no celular do usuário.
 
 ---
 
@@ -108,11 +108,15 @@ Ao criar uma nova extensão ou atualizar uma existente, siga rigorosamente as di
 
 ---
 
-### 4. 🔗 Metadados do Manifesto & Deep Linking
-O `AndroidManifest.xml` de cada extensão deve conter:
-- As tags de recursos: `<uses-feature android:name="tachiyomi.animeextension" />` (ou `tachiyomi.extension`).
-- Metadados `${appName}`, `${extClass}`, `${nsfw}` (valor `"1"` para conteúdo adulto, `"0"` para convencional).
-- `DeepLinkActivity`: Registre os domínios do site no `intent-filter` (`android:host` e `android:pathPattern`) para que links clicados no navegador abram direto no Yomotsu.
+### 4. 🔗 Metadados do Manifesto & Isolamento de Forks
+O `AndroidManifest.xml` de cada extensão deve conter **apenas** a feature correspondente:
+- **Para Extensões de Anime:**
+  - Use **apenas** `<uses-feature android:name="tachiyomi.animeextension" />`.
+  - ❌ **NUNCA inclua `tachiyomi.extension`:** Isso garante que aplicativos exclusivos de mangá (Mihon, Tachiyomi original, TachiyomiJ2K) **ignorem o APK completamente**, e a extensão apareça somente em forks com suporte a anime (Yomotsu, Anikku, Aniyomi, Animiru).
+  - Use metadados: `tachiyomi.animeextension.class`, `tachiyomi.animeextension.factory`, `tachiyomi.animeextension.nsfw`, `tachiyomi.animeextension.libVersion`.
+- **Para Extensões de Mangá:**
+  - Use `<uses-feature android:name="tachiyomi.extension" />` e metadados `tachiyomi.extension.*`.
+- **DeepLinkActivity:** Registre os domínios do site no `intent-filter` (`android:host` e `android:pathPattern`) para que links clicados no navegador abram direto no Yomotsu.
 
 ---
 
