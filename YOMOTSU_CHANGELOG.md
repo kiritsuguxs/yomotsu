@@ -7,10 +7,10 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 
 🇧🇷 **Português (Brasil)**
 
-> [!IMPORTANT]
-> **Aviso Importante para quem está na versão Y10 ou Y11:**
-> Como a correção do atualizador está incluída **dentro do código da Y12**, quem ainda estiver na Y10 ou Y11 e enfrentar corte de timeout (por volta dos 75%) ou reset ao tentar atualizar por dentro do aplicativo deve **baixar e instalar o APK da Y12 diretamente pelo link oficial do GitHub**.
-> Uma vez instalado o APK da Y12, todas as próximas atualizações (Y12 em diante) funcionarão perfeitamente por dentro do app, sem corte de conexão ou reset!
+⚠️ **AVISO IMPORTANTE (USUÁRIOS NA Y10 E Y11):**
+Como o conserto do atualizador está embutido **no código da versão Y12**, quem está na Y10 ou Y11 e tiver o download interrompido por timeout (aos 75%) ou o botão resetando deve **baixar e instalar o APK da Y12 manualmente** pelo link desta Release. A partir da Y12 instalada, o atualizador interno volta a funcionar 100% liso!
+
+---
 
 ### 🛠️ Correções & Melhorias
 - **Correção Crítica no Atualizador Interno do Aplicativo:**
