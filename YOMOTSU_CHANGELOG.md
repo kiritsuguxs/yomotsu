@@ -7,6 +7,11 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 
 🇧🇷 **Português (Brasil)**
 
+> [!IMPORTANT]
+> **Aviso Importante para quem está na versão Y10 ou Y11:**
+> Como a correção do atualizador está incluída **dentro do código da Y12**, quem ainda estiver na Y10 ou Y11 e enfrentar corte de timeout (por volta dos 75%) ou reset ao tentar atualizar por dentro do aplicativo deve **baixar e instalar o APK da Y12 diretamente pelo link oficial do GitHub**.
+> Uma vez instalado o APK da Y12, todas as próximas atualizações (Y12 em diante) funcionarão perfeitamente por dentro do app, sem corte de conexão ou reset!
+
 ### 🛠️ Correções & Melhorias
 - **Correção Crítica no Atualizador Interno do Aplicativo:**
   - **Prevenção de Reset Instantâneo:** Corrigida a condição de corrida no `NewUpdateScreenModel` onde emissões preliminares do WorkManager sem URL mapeavam indevidamente o estado para `Stage.Available`, fazendo o botão de download piscar ou voltar imediatamente para "Atualizar" logo após o clique.
@@ -16,6 +21,11 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
   - **Compatibilidade Aprimorada de Arquitetura (ABI):** No serviço de consulta de versões (`ReleaseServiceImpl`), adicionada resolução inteligente de fallback para arquiteturas compatíveis (`arm64-v8a`) e variantes universais de APK, assegurando que o link de download direto correto seja sempre selecionado para o dispositivo.
 
 🇺🇸 **English**
+
+> [!IMPORTANT]
+> **Important Notice for Users on Y10 or Y11:**
+> Since the updater fix is compiled **inside Y12**, users currently on Y10 or Y11 experiencing a 2-minute timeout cut-off or reset when updating inside the app should **download and install the Y12 APK directly from the official GitHub Release page**.
+> Once Y12 is installed, all future updates (from Y12 onwards) will download smoothly and seamlessly directly inside the application!
 
 ### 🛠️ Bug Fixes & Improvements
 - **Critical Fix for In-App Application Updater:**
