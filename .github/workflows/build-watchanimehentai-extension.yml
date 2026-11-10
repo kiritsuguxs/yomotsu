@@ -42,10 +42,12 @@ jobs:
           STOREPASSWORD: ${{ secrets.STOREPASSWORD }}
           KEYALIAS: ${{ secrets.KEYALIAS }}
           KEYPASSWORD: ${{ secrets.KEYPASSWORD }}
-        run: gradle assembleRelease
+        run: |
+          gradle assembleRelease
+          cp build/outputs/apk/release/*.apk build/outputs/apk/release/watchanimehentai-v4.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: watchanimehentai-extension-apk
-          path: extension-watchanimehentai/build/outputs/apk/release/*.apk
+          name: watchanimehentai-v4-apk
+          path: extension-watchanimehentai/build/outputs/apk/release/watchanimehentai-v4.apk
