@@ -27,23 +27,48 @@ Esta branch é dedicada exclusivamente ao desenvolvimento, manutenção e compil
 
 Ao criar uma nova extensão ou atualizar uma existente, siga rigorosamente as diretrizes abaixo:
 
-### 1. 🎨 Regra de Ouro dos Ícones e Logotipos
-- **Nunca use ícones genéricos ou de outros sites:** A extensão deve usar a identidade visual oficial do site que está sendo indexado.
-- **Formato Quadrado (1:1):** Extraia a logo oficial (ou favicon de alta qualidade) do site. Caso a logo seja horizontal, enquadre-a em um squircle (fundo arredondado) estilizado com as cores da identidade visual do site, garantindo excelente contraste tanto no tema escuro quanto no tema claro do Yomotsu.
-- **Densidades Mipmap Obrigatórias:** Gere o arquivo `ic_launcher.png` em todas as 5 pastas de resolução com amostragem de alta qualidade (Lanczos):
-  - `src/main/res/mipmap-mdpi/ic_launcher.png` (48 × 48 px)
-  - `src/main/res/mipmap-hdpi/ic_launcher.png` (72 × 72 px)
-  - `src/main/res/mipmap-xhdpi/ic_launcher.png` (96 × 96 px)
-  - `src/main/res/mipmap-xxhdpi/ic_launcher.png` (144 × 144 px)
-  - `src/main/res/mipmap-xxxhdpi/ic_launcher.png` (192 × 192 px)
+### 1. 🎨 Regra de Ouro dos Ícones e Logotipos (Obrigatório para Qualquer Extensão)
+
+> [!IMPORTANT]
+> **Identidade Visual Oficial do Site:**
+> Toda e qualquer extensão futura desenvolvida para o Yomotsu — seja ela de **Manhwa/Mangá** (leitura) ou de **Anime/+18/Hentai** (vídeo) — **DEVE OBRIGATORIAMENTE utilizar o logotipo ou ícone oficial do próprio site indexado**.
+>
+> ❌ **O que NUNCA fazer:**
+> - Nunca reutilize ícones provisórios de outras extensões (ex: nunca copiar o círculo rosa com "H" de `extension-animeshentai` ou o ícone de livro de `extension-toonlivre`).
+> - Nunca use ícones genéricos ou inventados.
+>
+> ✔️ **Como extrair e aplicar a identidade visual oficial do site:**
+> 1. **Favicon e App Icon:** Inspecione o HTML do site e verifique as tags `<link rel="icon">`, `<link rel="apple-touch-icon">` ou os arquivos `/favicon.png` e `/favicon.ico` na raiz. A maioria dos sites modernos já possui ícones quadrados em alta resolução (192x192 ou 256x256).
+> 2. **Logo do Cabeçalho:** Inspecione a tag `<header>` / `<div class="logo">` do site para extrair a logo oficial em alta resolução (`.png` ou `.svg`).
+> 3. **Composição em Squircle (1:1):** Como os ícones de aplicativos e extensões no Android são exibidos em formato quadrado ou circular, quando a logo do site for horizontal tipo banner, monte uma composição profissional em um *squircle* (retângulo arredondado com fundo escuro e contorno néon na cor de destaque do site), combinando o mascote/ícone do site com a logo para garantir legibilidade perfeita tanto no modo escuro quanto no modo claro do Yomotsu.
+> 4. **Geração das 5 Densidades Mipmap Obrigatórias:**
+>    Gere o arquivo `ic_launcher.png` em todas as 5 pastas de resolução utilizando amostragem Lanczos:
+>    - `src/main/res/mipmap-mdpi/ic_launcher.png` (48 × 48 px)
+>    - `src/main/res/mipmap-hdpi/ic_launcher.png` (72 × 72 px)
+>    - `src/main/res/mipmap-xhdpi/ic_launcher.png` (96 × 96 px)
+>    - `src/main/res/mipmap-xxhdpi/ic_launcher.png` (144 × 144 px)
+>    - `src/main/res/mipmap-xxxhdpi/ic_launcher.png` (192 × 192 px)
+> 5. **Configuração no `AndroidManifest.xml`:**
+>    Configure ambos os atributos no nó `<application>` para total compatibilidade com todos os launchers do Android:
+>    ```xml
+>    android:icon="@mipmap/ic_launcher"
+>    android:roundIcon="@mipmap/ic_launcher"
+>    ```
 
 ---
 
-### 2. 🔢 Controle de Versão (`extVersionCode`)
+### 2. 🔢 Controle de Versão (`extVersionCode`) e Cache do Android
+
+> [!WARNING]
+> O Android e o Instalador de Pacotes do sistema realizam **cache agressivo** do ícone e metadados dos APKs por nome de pacote (`applicationId`).
+
 No arquivo `build.gradle.kts`:
-- **Nova extensão:** Inicialize sempre com `val extVersionCode = 1`.
-- **Qualquer alteração ou correção (ícone, scraper, extractor):** É **obrigatório** incrementar o `extVersionCode` (`2`, `3`, etc.).
-- *Por que?* O Android e o Yomotsu comparam o `versionCode` do pacote. Se você reinstalar um APK com o mesmo código de versão anterior, o Android ignora a atualização de recursos e os ícones/código antigos continuam aparecendo em cache.
+- **Nova extensão criada:** Inicialize com `val extVersionCode = 1`.
+- **Qualquer alteração ou correção (ícone, scraper, extrator, seletor):** É **terminantemente obrigatório** incrementar o `extVersionCode` (`2`, `3`, `4`, etc.).
+- **Se o ícone antigo continuar aparecendo após instalar:**
+  1. Desinstale a versão antiga da extensão no seu Android antes de instalar a nova (Configurações > Aplicativos > Extensão > Desinstalar).
+  2. Apague o arquivo `.apk` antigo que estava na sua pasta `Download/` para evitar que o gerenciador de arquivos do celular abra o APK de cache anterior.
+  3. No workflow do GitHub Actions, configure o nome do artefato e do arquivo final com o número da versão (ex: `watchanimehentai-v4-apk` e `watchanimehentai-v4.apk`) para impossibilitar colisões de arquivos no celular do usuário.
 
 ---
 
