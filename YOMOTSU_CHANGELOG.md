@@ -7,26 +7,57 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 
 🇧🇷 **Português (Brasil)**
 
-### 🚀 Otimizações & Nova Identidade
-- **Otimização de Inicialização (Fim do engasgo na abertura):**
-  - **Cálculo Sob Demanda na Biblioteca:** Otimizada a geração da lista de favoritos para checar contagens de download de mídia apenas quando filtros ou selos de download estiverem ativos, evitando consultas desnecessárias no primeiro segundo de abertura.
-  - **Indexação de Disco Diferida:** Adiado o escaneamento inicial de armazenamento dos caches de download (`DownloadCache` e `AnimeDownloadCache`) na inicialização fria para garantir que a interface do usuário renderize com máxima fluidez e responsividade imediata ao toque.
-- **Identidade Própria e Limpeza Visual:**
-  - **Application ID Oficial (`app.yomotsu`):** Transição de identificador de pacote para `app.yomotsu`.
-  - **Ícones de Notificação:** Atualizados os avisos de backup, atualizações de biblioteca e conquistas para utilizarem o ícone oficial do Yomotsu.
-  - **Deep Links Nativos:** Suporte direto ao esquema `yomotsu://extension-store` e autenticação com scheme `yomotsu://` e `app.yomotsu://`.
-  - **User-Agents e Telas de Apoio:** Atualizados rastreadores (AniList, Shikimori, Comick, etc.) e tela de apoio para a identidade Yomotsu.
+### 🚀 Otimizações de Desempenho
+- **Fim do Engasgo e Travamento na Inicialização:**
+  - **Indexação Diferida de Armazenamento:** Adiado de forma não-bloqueante o escaneamento pesado inicial dos discos em `DownloadCache` e `AnimeDownloadCache` durante a abertura a frio do aplicativo. A interface agora carrega de forma instantânea, permitindo interação imediata sem congelamentos.
+  - **Cálculo Sob Demanda na Biblioteca:** A checagem de contagem de downloads de mídias no `LibraryViewModel` agora ocorre exclusivamente se selos de download ou filtros ativos exigirem esse dado, eliminando centenas de chamadas desnecessárias a disco no primeiro segundo de uso.
+
+### ✨ Identidade Própria & Novo Application ID
+- **Migração Oficial para `app.yomotsu`:**
+  - O aplicativo agora adota oficialmente o identificador definitivo `app.yomotsu` no Android, separando-se completamente de pacotes legados e permitindo coexistência limpa e isolada no sistema.
+- **Deep Links Nativos do Ecossistema:**
+  - Suporte completo aos esquemas de deep link `yomotsu://` e `yomotsu://extension-store` para importação direta de repositórios e repositórios de extensões com um único toque, mantendo compatibilidade com links antigos.
+  - Autenticação e redirecionamentos externos atualizados para esquemas nativos `app.yomotsu://`.
+- **Limpeza Visual e Rastreamento:**
+  - Atualizados os User-Agents dos 9 rastreadores integrados (AniList, Shikimori, Bangumi, Kitsu, Comick, Kavita, Komga, MangaBaka, MangaUpdates) para a assinatura oficial do Yomotsu.
+  - Telas de suporte, doações e créditos em *Configurações > Sobre* limpas e alinhadas 100% à identidade do Yomotsu.
+
+### 🛠️ Correções no Sistema de Notificações
+- **Silhueta Vetorial Nativa do Yomotsu nas Notificações:**
+  - Adicionado o vetor oficial [`ic_yomotsu.xml`](file:///home/antigravity/kiritsuguxs/yomotsu/app/src/main/res/drawable/ic_yomotsu.xml) em alta resolução e fundo 100% transparente com a silhueta do Torii Gate + Livro.
+  - Corrigido o bug onde notificações de restauração, backup e atualizações exibiam círculos sólidos ou formas opacas em sistemas Xiaomi (HyperOS / MIUI) e Android 13+.
+- **Camada Monocromática e Ícone Adaptativo Transparentes:**
+  - A camada `<monochrome>` de todos os ícones adaptativos do aplicativo (`ic_launcher.xml` e `ic_launcher_round.xml`) agora aponta diretamente para o vetor oficial do Yomotsu.
+  - Convertidas todas as densidades de `ic_launcher_foreground.png` para utilizarem canal alfa transparente real, corrigindo de vez o ícone de aplicativo nos cabeçalhos de grupos de notificações.
+
+---
 
 🇺🇸 **English**
 
-### 🚀 Optimizations & New Identity
-- **Startup Performance Boost:**
-  - **On-Demand Library Calculations:** Avoids redundant download cache checks on cold launch when download badges or filters are disabled.
-  - **Deferred Disk Indexing:** Postpones initial storage scanning by 2.5 seconds to provide immediate, stutter-free UI responsiveness.
-- **Identity Cleanup & Official Application ID:**
-  - Transitioned package ID to `app.yomotsu`.
-  - Updated notification icons and deep links (`yomotsu://`).
-  - Standardized tracker user-agents and support screens under Yomotsu.
+### 🚀 Performance Boost & Instant Startup
+- **Eliminated Cold-Start Lag & UI Freezing:**
+  - **Deferred Disk Indexing:** Postponed heavy initial storage scanning in `DownloadCache` and `AnimeDownloadCache` on cold app launch by 2.5 seconds, ensuring the Compose UI renders immediately with instant touch responsiveness.
+  - **On-Demand Library Calculations:** Optimized `LibraryViewModel` favorites flow to only query media download counts if active filters or cover badges explicitly require them, saving hundreds of redundant I/O disk queries during launch.
+
+### ✨ New Identity & Official Application ID
+- **Transition to `app.yomotsu`:**
+  - The application officially transitions to the standalone package ID `app.yomotsu`, completely separating it from legacy packages and enabling clean side-by-side installations.
+- **Native Ecosystem Deep Links:**
+  - Full support for `yomotsu://` and `yomotsu://extension-store` deep link schemes for one-click repository adding, while retaining backward compatibility with legacy intents.
+  - Updated tracker callbacks and third-party authentication to `app.yomotsu://`.
+- **Branding & Tracker Cleanup:**
+  - Standardized User-Agent headers across all 9 built-in tracking services (AniList, Shikimori, Bangumi, Kitsu, Comick, Kavita, Komga, MangaBaka, MangaUpdates) to Yomotsu.
+  - Overhauled donation and support strings under *Settings > About* to reflect Yomotsu.
+
+### 🛠️ Notification System Bug Fixes
+- **Official Yomotsu Vector Silhouette in Notifications:**
+  - Introduced high-resolution vector drawable [`ic_yomotsu.xml`](file:///home/antigravity/kiritsuguxs/yomotsu/app/src/main/res/drawable/ic_yomotsu.xml) with 100% transparent background for clean status bar rendering.
+  - Resolved the issue where backup, restore, and library notifications displayed hollow blue disks or solid shapes on Xiaomi (HyperOS / MIUI) and Android 13+ devices.
+- **Transparent Adaptive Icon Foreground & Monochrome Layer:**
+  - Linked `<monochrome>` in all adaptive launcher icon configurations directly to `@drawable/ic_yomotsu`.
+  - Re-encoded all `ic_launcher_foreground.png` densities with true alpha transparency, permanently fixing app header icons in grouped notification cards.
+
+---
 
 ## 0.21.4-Y12
 
