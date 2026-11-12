@@ -35,20 +35,24 @@ class GetApplicationRelease(
             // tagged as something like "r1234"
             newVersion.toInt() > commitCount
         } else {
-            // Release builds: based on releases in "mihonapp/mihon" repo
-            // tagged as something like "v0.1.2"
-            val oldVersion = versionName.replace("[^\\d.]".toRegex(), "")
+            // Release builds: tagged as something like "v0.1.2" or "v0.21.5"
+            val cleanOldVersion = versionName.substringBefore('-').replace("[^\\d.]".toRegex(), "")
+            val cleanNewVersion = versionTag.substringBefore('-').replace("[^\\d.]".toRegex(), "")
 
-            val newSemVer = newVersion.split(".").map { it.toInt() }
-            val oldSemVer = oldVersion.split(".").map { it.toInt() }
+            val newSemVer = cleanNewVersion.split(".").filter { it.isNotEmpty() }.mapNotNull { it.toIntOrNull() }
+            val oldSemVer = cleanOldVersion.split(".").filter { it.isNotEmpty() }.mapNotNull { it.toIntOrNull() }
 
-            oldSemVer.mapIndexed { index, i ->
-                if (newSemVer[index] > i) {
+            val minSize = minOf(oldSemVer.size, newSemVer.size)
+            for (index in 0 until minSize) {
+                if (newSemVer[index] > oldSemVer[index]) {
                     return true
+                }
+                if (newSemVer[index] < oldSemVer[index]) {
+                    return false
                 }
             }
 
-            false
+            newSemVer.size > oldSemVer.size
         }
     }
 

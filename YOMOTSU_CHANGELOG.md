@@ -3,9 +3,18 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
-## 0.21.4-Y13-TEST
+## 0.21.5
 
 🇧🇷 **Português (Brasil)**
+
+⚠️ **AVISO IMPORTANTE — MIGRAÇÃO PARA O NOVO YOMOTSU (LEIA ANTES DE INSTALAR):**
+Como esta versão migra oficialmente para o identificador definitivo **`app.yomotsu`**, o Android a reconhece como um aplicativo novo e independente. Para manter todos os seus mangás, animes, light novels e conquistas do Perfil Yomotsu 100% intactos, siga estes 4 passos simples:
+1. **Crie um Backup no App Atual:** No seu Yomotsu atual, vá em *Mais > Dados e Armazenamento > Criar Backup* e salve o arquivo gerado em uma pasta segura (ex.: pasta Downloads ou Google Drive).
+2. **Instale o Yomotsu v0.21.5:** Baixe o arquivo `Yomotsu-0.21.5.apk` desta Release e realize a instalação no seu aparelho.
+3. **Restaure seus Dados:** Abra o novo Yomotsu v0.21.5, vá em *Mais > Dados e Armazenamento > Restaurar Backup* e selecione o arquivo salvo no passo 1. Toda a sua biblioteca, histórico de leitura/reprodução e configurações serão restaurados instantaneamente!
+4. **Desinstale a Versão Antiga:** Após conferir que sua biblioteca está restaurada com sucesso, você já pode desinstalar o aplicativo antigo para liberar espaço na memória do celular.
+
+---
 
 ### 🚀 Otimizações de Desempenho
 - **Fim do Engasgo e Travamento na Inicialização:**
@@ -33,6 +42,16 @@ O workflow de lançamento lê automaticamente a seção correspondente à versã
 ---
 
 🇺🇸 **English**
+
+> [!IMPORTANT]
+> **IMPORTANT NOTICE — MIGRATION TO NEW YOMOTSU (READ BEFORE INSTALLING):**
+> Because this release officially transitions to the standalone package ID **`app.yomotsu`**, Android recognizes it as a new, standalone application. To preserve all your manga, anime, light novels, and Yomotsu Profile achievements 100% intact, follow these 4 simple steps:
+> 1. **Create a Backup in Current App:** In your current Yomotsu app, navigate to *More > Data and storage > Create backup* and save the generated backup file safely (e.g. Downloads folder or Google Drive).
+> 2. **Install Yomotsu v0.21.5:** Download and install `Yomotsu-0.21.5.apk` from this official Release page.
+> 3. **Restore Your Data:** Open the new Yomotsu v0.21.5, go to *More > Data and storage > Restore backup*, and pick the file created in Step 1. All your library, progress, and settings will be restored instantly!
+> 4. **Uninstall the Old Version:** After verifying that your library is restored, you can safely uninstall the previous app to free up device storage.
+
+---
 
 ### 🚀 Performance Boost & Instant Startup
 - **Eliminated Cold-Start Lag & UI Freezing:**
