@@ -31,7 +31,7 @@ class ProfileNotifier(private val context: Context) {
         )
 
         val builder = NotificationCompat.Builder(context, Notifications.CHANNEL_COMMON)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_yomotsu)
             .setContentTitle("🏆 Conquista Desbloqueada!")
             .setContentText("${achievement.name}: ${achievement.description}")
             .setPriority(NotificationCompat.PRIORITY_HIGH)

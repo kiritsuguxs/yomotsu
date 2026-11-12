@@ -156,7 +156,7 @@ class LibraryUpdateNotifier(
         ) {
             setContentTitle(context.pluralStringResource(MR.plurals.notification_update_error, failed, failed))
             setContentText(context.stringResource(MR.strings.action_show_errors))
-            setSmallIcon(R.mipmap.ic_launcher)
+            setSmallIcon(R.drawable.ic_yomotsu)
 
             setContentIntent(NotificationReceiver.openErrorLogPendingActivity(context, uri))
         }
@@ -215,7 +215,7 @@ class LibraryUpdateNotifier(
                 }
             }
 
-            setSmallIcon(R.mipmap.ic_launcher)
+            setSmallIcon(R.drawable.ic_yomotsu)
             setLargeIcon(notificationBitmap)
 
             setGroup(Notifications.GROUP_NEW_CHAPTERS)
@@ -254,7 +254,7 @@ class LibraryUpdateNotifier(
             setContentText(description)
             setStyle(NotificationCompat.BigTextStyle().bigText(description))
 
-            setSmallIcon(R.mipmap.ic_launcher)
+            setSmallIcon(R.drawable.ic_yomotsu)
 
             if (icon != null) {
                 setLargeIcon(icon)
