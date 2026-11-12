@@ -3,6 +3,31 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.4-Y13-TEST
+
+🇧🇷 **Português (Brasil)**
+
+### 🚀 Otimizações & Nova Identidade
+- **Otimização de Inicialização (Fim do engasgo na abertura):**
+  - **Cálculo Sob Demanda na Biblioteca:** Otimizada a geração da lista de favoritos para checar contagens de download de mídia apenas quando filtros ou selos de download estiverem ativos, evitando consultas desnecessárias no primeiro segundo de abertura.
+  - **Indexação de Disco Diferida:** Adiado o escaneamento inicial de armazenamento dos caches de download (`DownloadCache` e `AnimeDownloadCache`) na inicialização fria para garantir que a interface do usuário renderize com máxima fluidez e responsividade imediata ao toque.
+- **Identidade Própria e Limpeza Visual:**
+  - **Application ID Oficial (`app.yomotsu`):** Transição de identificador de pacote para `app.yomotsu`.
+  - **Ícones de Notificação:** Atualizados os avisos de backup, atualizações de biblioteca e conquistas para utilizarem o ícone oficial do Yomotsu.
+  - **Deep Links Nativos:** Suporte direto ao esquema `yomotsu://extension-store` e autenticação com scheme `yomotsu://` e `app.yomotsu://`.
+  - **User-Agents e Telas de Apoio:** Atualizados rastreadores (AniList, Shikimori, Comick, etc.) e tela de apoio para a identidade Yomotsu.
+
+🇺🇸 **English**
+
+### 🚀 Optimizations & New Identity
+- **Startup Performance Boost:**
+  - **On-Demand Library Calculations:** Avoids redundant download cache checks on cold launch when download badges or filters are disabled.
+  - **Deferred Disk Indexing:** Postpones initial storage scanning by 2.5 seconds to provide immediate, stutter-free UI responsiveness.
+- **Identity Cleanup & Official Application ID:**
+  - Transitioned package ID to `app.yomotsu`.
+  - Updated notification icons and deep links (`yomotsu://`).
+  - Standardized tracker user-agents and support screens under Yomotsu.
+
 ## 0.21.4-Y12
 
 🇧🇷 **Português (Brasil)**

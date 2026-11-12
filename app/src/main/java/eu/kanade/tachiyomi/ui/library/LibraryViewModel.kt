@@ -450,8 +450,11 @@ class LibraryViewModel(
             downloadCache.changes,
             eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadedChapters,
         ) { libraryManga, preferences, _, _ ->
+            val needsDownloadCount = preferences.downloadBadge ||
+                preferences.filterDownloaded != TriState.DISABLED ||
+                preferences.globalFilterDownloaded
             libraryManga.map { manga ->
-                val dlCount = getMediaDownloadCount(manga.manga)
+                val dlCount = if (needsDownloadCount) getMediaDownloadCount(manga.manga) else 0
                 LibraryItem(
                     libraryManga = manga,
                     downloadCount = dlCount,

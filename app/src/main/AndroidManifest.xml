@@ -109,6 +109,17 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
+                <data android:scheme="yomotsu" />
+                <data android:host="extension-store" />
+            </intent-filter>
+
+            <!-- Deeplink to add extension store (legacy mihon) -->
+            <intent-filter android:label="@string/action_addExtensionStore">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
                 <data android:scheme="mihon" />
                 <data android:host="extension-store" />
             </intent-filter>
@@ -243,6 +254,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
+                <data android:scheme="yomotsu" />
                 <data android:scheme="mihon" />
 
                 <data android:host="anilist-auth" />
@@ -260,6 +272,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <!-- Comick requires native reverse-domain schemes  -->
+                <data android:scheme="app.yomotsu" />
                 <data android:scheme="app.mihon" />
                 <data android:host="comick-auth" />
             </intent-filter>

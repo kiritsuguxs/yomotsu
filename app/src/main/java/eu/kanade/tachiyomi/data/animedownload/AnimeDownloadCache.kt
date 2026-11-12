@@ -439,6 +439,8 @@ class AnimeDownloadCache(
 
         renewalJob = scope.launchIO {
             if (lastRenew == 0L) {
+                // Defer disk scanning briefly on cold start so the UI renders smoothly without I/O stutter
+                delay(2500L)
                 _isInitializing.emit(true)
             }
 

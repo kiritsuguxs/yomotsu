@@ -606,6 +606,7 @@ class MainActivity : BaseActivity() {
 
     private fun Intent.isAddExtensionStoreIntent(): Boolean {
         return (scheme == "tachiyomi" && data?.host == "add-repo") ||
+            (scheme == "yomotsu" && data?.host == "extension-store") ||
             (scheme == "mihon" && data?.host == "extension-store")
     }
 

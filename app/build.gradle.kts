@@ -30,10 +30,10 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.mihon.tachiyomiat"
+        applicationId = "app.yomotsu"
 
-        versionCode = 126
-        versionName = "0.21.4-Y12"
+        versionCode = 127
+        versionName = "0.21.4-Y13-TEST"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
