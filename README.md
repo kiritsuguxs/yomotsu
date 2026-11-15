@@ -198,6 +198,12 @@ Yomotsu is an open-source, non-profit software developed exclusively as a local 
 
 ---
 
+## 🤖 AI Disclosure
+
+AI-assisted development tools were used as a productivity aid for code implementation, refactoring, testing, and documentation. All architectural decisions and final changes are reviewed and maintained by the developer.
+
+---
+
 ## 🤝 Credits and Acknowledgments
 
 Yomotsu is the result of the open-source community's effort:
