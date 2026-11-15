@@ -140,11 +140,13 @@ class BackupRestorer(
         }
 
         if (options.libraryEntries && backup.backupMergeGroups.isNotEmpty()) {
-            restoreMergeGroups(backup.backupMergeGroups)
+            coroutineScope {
+                restoreMergeGroups(backup.backupMergeGroups)
+            }
         }
     }
 
-    private suspend fun restoreMergeGroups(backupMergeGroups: List<BackupMergeGroup>) {
+    private suspend fun CoroutineScope.restoreMergeGroups(backupMergeGroups: List<BackupMergeGroup>) {
         backupMergeGroups.forEach { group ->
             ensureActive()
             try {

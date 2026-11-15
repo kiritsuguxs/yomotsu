@@ -395,7 +395,7 @@ class MangaViewModel(
                 mergeGroup.selectedSource == null &&
                 mergeGroup.relatedIds.size > 1
             ) {
-                mergeGroup.relatedIds.mapNotNull { resolveMangaFor(it) }.ifEmpty { listOf(state.manga) }
+                mergeGroup.relatedIds.toList().mapNotNull { resolveMangaFor(it) }.ifEmpty { listOf(state.manga) }
             } else {
                 listOf(state.manga)
             }
