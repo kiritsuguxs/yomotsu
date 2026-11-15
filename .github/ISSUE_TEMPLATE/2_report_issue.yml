@@ -52,7 +52,7 @@ body:
       label: Yomotsu version
       description: You can find your Yomotsu version in **More → About**.
       placeholder: |
-        Example: "0.21.6"
+        Example: "0.21.7"
     validations:
       required: true
 
@@ -95,7 +95,7 @@ body:
           required: true
         - label: I have gone through the [Help & FAQ](https://kiritsuguxs.github.io/yomotsu/help.html).
           required: true
-        - label: I have updated the app to version **[0.21.6](https://github.com/kiritsuguxs/yomotsu/releases/latest)**.
+        - label: I have updated the app to version **[0.21.7](https://github.com/kiritsuguxs/yomotsu/releases/latest)**.
           required: true
         - label: I have filled out all of the requested information in this form, including specific version numbers.
           required: true

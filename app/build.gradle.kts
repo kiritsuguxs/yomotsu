@@ -32,8 +32,8 @@ android {
     defaultConfig {
         applicationId = "app.yomotsu"
 
-        versionCode = 131
-        versionName = "0.21.6"
+        versionCode = 132
+        versionName = "0.21.7"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")

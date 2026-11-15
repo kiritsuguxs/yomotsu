@@ -5,12 +5,13 @@ Este arquivo registra o contexto completo das melhorias implementadas, do estado
 ---
 
 ## 1. Estado Atual do Repositório & Git
-- **Branch Principal (`main`):** Release oficial `v0.21.6` (versionCode 131, versionName `0.21.6`, Application ID oficial `app.yomotsu`).
+- **Branch Principal (`main`):** Release oficial `v0.21.7` (versionCode 132, versionName `0.21.7`, Application ID oficial `app.yomotsu`).
 - **Histórico de Versões Recentes:**
   - **Versão 125 (`0.21.4-Y11`):** Expansão do Series Merging para Light Novels e Animes, atualização de subtítulos na tela de detalhes e correções em merge/stitcher.
   - **Versão 126 (`0.21.4-Y12`):** Correções de download/reset de estado no atualizador in-app e ajustes de changelog.
   - **Versão 129 (`0.21.5`):** Transição definitiva para o Application ID próprio **`app.yomotsu`** (abandono do sufixo `-Y`), deep links `yomotsu://`, ícone monocromático oficial (`ic_yomotsu.xml`), otimização de cold start (indexação diferida em `DownloadCache`/`AnimeDownloadCache` e cálculo sob demanda em `LibraryViewModel`) e melhoria na comparação SemVer em `GetApplicationRelease.kt`.
   - **Versão 131 (`0.21.6`):** Consolidação completa do Series Merging (`MangaViewModel`, `ReaderViewModel` com `MergedChapterProvider`/`MergedChapterLoader`, `NovelReaderActivity`, `PlayerViewModel`, `LibraryViewModel` com agregação e `AnimeDownloadCache.changes`, sincronização de lido/marcador/categorias/configurações de capítulo via `GroupMarks`/`expandToUnits`/`MangaGroupCategories`/`MangaChapterSettings`, backup/restauração de grupos via `BackupMergeGroup`), remoção de `ic_mihon_splash.xml` e atualização dos templates de issue. Tag `v0.21.6` publicada oficialmente.
+  - **Versão 132 (`0.21.7`):** Correções da auditoria pós-`v0.21.6` em grupos mesclados (`merge_group.sq`, `MangaGroupStitcher`, `EntryMergeManager`, `MangaViewModel`, `MangaScreen`, `ManageMergeSourcesDialog`, `BrowseSourceDialogs`), download antecipado e resolução por fonte membro em `ReaderViewModel`, `NovelEpubExporter`, `NovelReaderActivity` e `PlayerViewModel`, ações em lote e badges na Biblioteca (`LibraryViewModel`, `LibraryTab`, `ChapterFilter`, `ChapterGetNextUnread`), backup/restauração completa em `BackupCreator`/`BackupRestorer` e validação via CI (`build.yml`). Tag `v0.21.7` publicada oficialmente.
 - **Histórico de Versões do Ciclo Y7/Y8/Y9/Y10:**
   - `2a8c98a`: Implementação inicial da UI moderna (Floating Dock, capas arredondadas 12dp, badges translúcidos, perfil e itens com borda sutil).
   - `92cf4c1`: Correção de erro de compilação Compose em `HomeScreen.kt`. Build CI `#41856513392` passou com sucesso.

@@ -3,6 +3,40 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.7
+
+🇧🇷 **Português (Brasil)**
+
+### 🛠️ Correções e Estabilidade na Mesclagem de Séries (Mangá, Novel e Anime)
+- **Gerenciamento de Grupos e Remoção Segura:**
+  - Adicionada a opção de remover o grupo mesclado completo no diálogo de exclusão, garantindo limpeza correta de vínculos, capas e downloads.
+  - Corrigida a exibição e recomposição do estado de prioridade personalizada de fontes (`ManageMergeSourcesDialog`) e o ranking por tipo de conteúdo (`MangaGroupStitcher` / `EntryMergeManager`).
+  - Melhorada a resposta de atualização em lote das fontes do grupo (`fetchAllFromSource` em I/O) e o acompanhamento de trackers, scanlators e marcação de capítulos lidos conforme a fonte selecionada.
+- **Leitor, Light Novel, EPUB e Player de Anime:**
+  - **Download Antecipado no Leitor e Player:** `ReaderViewModel` (`downloadNextChapters`) e `PlayerViewModel` (`downloadNextEpisodes`) agora filtram corretamente itens lidos/duplicados/em fila/baixados em grupos mesclados e enfileiram cada item na sua fonte de origem.
+  - **Light Novels e EPUB:** Corrigida a resolução de fonte e obra por capítulo na tradução do leitor de novels (`NovelReaderActivity`) e na exportação EPUB (`NovelEpubExporter`).
+  - **Player de Anime (`PlayerViewModel`):** Preservada a obra âncora durante a reprodução de playlists mescladas, garantindo carregamento de hosters, AniSkip e sincronização de trackers com fallback para os membros do grupo.
+- **Biblioteca e Backup:**
+  - Corrigidos os contadores e badges em grupos mesclados, o atalho "Continuar lendo" por fonte de origem e as ações em lote na seleção da biblioteca (marcar como lido, baixar e remover).
+  - **Backup e Restauração:** `BackupCreator` agora exporta grupos de todos os tipos de conteúdo (mangá, anime e novel), e `BackupRestorer` invalida corretamente o `AnimeDownloadCache`, registra eventuais falhas de restauração de grupos e reconcilia capítulos mesclados automaticamente após restaurar.
+
+---
+
+🇺🇸 **English**
+
+### 🛠️ Series Merging Fixes & Stability (Manga, Light Novel & Anime)
+- **Group Management & Safe Removal:**
+  - Added a whole-group confirmation option to the removal dialog, ensuring proper cleanup of merge links, covers, and downloads.
+  - Fixed source-priority override state and recomposition keys (`ManageMergeSourcesDialog`) as well as content-type-scoped ranking (`MangaGroupStitcher` / `EntryMergeManager`).
+  - Moved batch `fetchAllFromSource` updates to `withIOContext` and aligned tracker, scanlator, and mark-chapters-read observers with the selected merge source.
+- **Reader, Light Novel, EPUB & Anime Player:**
+  - **Read-Ahead / Download-Ahead:** `ReaderViewModel` (`downloadNextChapters`) and `PlayerViewModel` (`downloadNextEpisodes`) now properly filter read, duplicate, queued, and downloaded items across merged groups and enqueue downloads per member source.
+  - **Light Novels & EPUB:** Fixed per-chapter `Manga` and `NovelSourceWrapper` resolution in `NovelReaderActivity` translation and `NovelEpubExporter`.
+  - **Anime Player (`PlayerViewModel`):** Preserved the anchor anime across playback transitions in merged playlists while resolving episode hosters, AniSkip, and tracker sync with group member fallbacks.
+- **Library & Backup:**
+  - Fixed merged group badge counts, per-chapter source resolution in "Continue Reading", and group expansion/deduplication for bulk library selection actions (mark read, download, remove).
+  - **Backup & Restore:** `BackupCreator` now exports merge groups across all content types (manga, anime, and novel), while `BackupRestorer` invalidates `AnimeDownloadCache`, logs unresolved/failed merge groups, and runs `ReconcileMergedChapters` after restoring groups.
+
 ## 0.21.6
 
 🇧🇷 **Português (Brasil)**
