@@ -14,5 +14,4 @@ Ao publicar uma nova versão oficial:
    - `---`
    - `🇺🇸 **English**`
 3. Atualizar a versão nos templates `.github/ISSUE_TEMPLATE/1_request_feature.yml` e `2_report_issue.yml`.
-4. Registrar a nova versão em `MEMORIA_PROJETO.md`.
-5. Commitar na `main`, criar a tag `vX.Y.Z` correspondente, enviar `main` e a tag para o `origin` e acompanhar o workflow `Release oficial do Yomotsu` até a publicação dos APKs.
+4. Commitar na `main`, criar a tag `vX.Y.Z` correspondente, enviar `main` e a tag para o `origin` e acompanhar o workflow `Release oficial do Yomotsu` até a publicação dos APKs.
