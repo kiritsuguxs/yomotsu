@@ -153,7 +153,7 @@ class BackupRestorer(
             try {
                 Injekt.get<ReconcileMergedChapters>().await()
             } catch (e: Exception) {
-                ensureActive()
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 logcat(LogPriority.ERROR, e) { "Failed to reconcile merged chapters after restore" }
             }
         }
