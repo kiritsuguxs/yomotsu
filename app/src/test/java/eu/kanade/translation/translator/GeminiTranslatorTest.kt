@@ -21,7 +21,18 @@ class GeminiTranslatorTest {
     fun `chunkPages splits 40 page chapter safely without dropping any page or block`() {
         val pages = (1..40).associate { pageNum ->
             val key = "%03d.jpg".format(pageNum)
-            val blocks = (1..3).map { b -> TranslationBlock(text = "Dialogue $pageNum-$b") }.toMutableList()
+            val blocks = (1..3).map { b ->
+                TranslationBlock(
+                    text = "Dialogue $pageNum-$b",
+                    width = 100f,
+                    height = 40f,
+                    x = 10f,
+                    y = b * 50f,
+                    symHeight = 16f,
+                    symWidth = 12f,
+                    angle = 0f,
+                )
+            }.toMutableList()
             key to PageTranslation(blocks = blocks)
         }
 
