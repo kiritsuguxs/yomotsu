@@ -288,6 +288,7 @@ class NovelReaderActivity : ComponentActivity() {
         val upsertHistory: UpsertHistory = Injekt.get()
         val trackChapter: TrackChapter = Injekt.get()
         val downloadPreferences: tachiyomi.domain.download.service.DownloadPreferences = Injekt.get()
+        val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get()
         val appContext: Application = Injekt.get()
 
         val prefs = getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
@@ -295,6 +296,8 @@ class NovelReaderActivity : ComponentActivity() {
         setContent {
             val scope = rememberCoroutineScope()
             var manga by remember { mutableStateOf<Manga?>(null) }
+            var mangaById by remember { mutableStateOf<Map<Long, Manga>>(emptyMap()) }
+            var currentStitch by remember { mutableStateOf<List<tachiyomi.domain.merge.ChapterUnit>>(emptyList()) }
             var allChapters by remember { mutableStateOf<List<Chapter>>(emptyList()) }
             val loadedChapters = remember { mutableStateListOf<ChapterItemState>() }
             var isTranslated by remember { mutableStateOf(translationPreferences.autoTranslateNovels().get()) }
@@ -366,9 +369,12 @@ class NovelReaderActivity : ComponentActivity() {
             fun loadChapterContent(state: ChapterItemState, autoPlayTtsWhenReady: Boolean = false) {
                 scope.launch(Dispatchers.IO) {
                     try {
-                        val m = manga ?: getManga.await(mangaId)
+                        val m = mangaById[state.chapter.mangaId]
+                            ?: getManga.await(state.chapter.mangaId)
+                            ?: manga
+                            ?: getManga.await(mangaId)
                         val novelSource = m?.let { sourceManager.get(it.source) as? NovelSourceWrapper }
-                        val localText = NovelDownloadManager.getDownloadedChapterText(mangaId, state.chapter.id)
+                        val localText = NovelDownloadManager.getDownloadedChapterText(state.chapter.mangaId, state.chapter.id)
                         val rawText = if (localText != null) {
                             localText
                         } else {
@@ -510,8 +516,21 @@ class NovelReaderActivity : ComponentActivity() {
             // Initial load of chapters and target chapter
             LaunchedEffect(mangaId, initialChapterId) {
                 withContext(Dispatchers.IO) {
-                    manga = getManga.await(mangaId)
-                    val chapters = getChaptersByMangaId.await(mangaId).sortedBy { it.sourceOrder }
+                    val loadedManga = getManga.await(mangaId)
+                    manga = loadedManga
+                    val chapters = if (loadedManga != null) {
+                        val group = mergedChapterProvider.load(loadedManga)
+                        mangaById = group.mangaById
+                        currentStitch = group.stitch
+                        val sourceList = if (group.chapters.any { it.id == initialChapterId } || group.pooledChapters.none { it.id == initialChapterId }) {
+                            group.chapters
+                        } else {
+                            group.pooledChapters
+                        }
+                        sourceList.sortedBy { it.sourceOrder }
+                    } else {
+                        getChaptersByMangaId.await(mangaId).sortedBy { it.sourceOrder }
+                    }
                     allChapters = chapters
 
                     val initial = chapters.firstOrNull { it.id == initialChapterId }
@@ -578,11 +597,17 @@ class NovelReaderActivity : ComponentActivity() {
                                     lastPageRead = if (reachedEnd) 0L else scrollOffset.toLong(),
                                 ),
                             )
+                            if (markAsRead && currentStitch.isNotEmpty()) {
+                                val siblingIds = eu.kanade.domain.merge.expandToUnits(setOf(item.chapter.id), currentStitch) - item.chapter.id
+                                if (siblingIds.isNotEmpty()) {
+                                    updateChapter.awaitAll(siblingIds.map { ChapterUpdate(id = it, read = true) })
+                                }
+                            }
                             upsertHistory.await(HistoryUpdate(item.chapter.id, Date(), 0L))
                             if (markAsRead && !item.chapter.read) {
                                 trackChapter.await(appContext, mangaId, item.chapter.chapterNumber.toDouble())
                                 if (downloadPreferences.removeAfterReadSlots.get() != -1) {
-                                    eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.deleteChapter(mangaId, item.chapter.id)
+                                    eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.deleteChapter(item.chapter.mangaId, item.chapter.id)
                                 }
                             }
                         }

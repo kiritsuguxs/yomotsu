@@ -186,6 +186,7 @@ class PlayerViewModel @JvmOverloads constructor(
     uiPreferences: UiPreferences = Injekt.get(),
     private val getIncognitoState: GetIncognitoState = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    private val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get(),
 ) : AndroidViewModel(context) {
 
     val cachePath: String = context.applicationContext.cacheDir.path
@@ -358,13 +359,20 @@ class PlayerViewModel @JvmOverloads constructor(
     private val _fontList = MutableStateFlow<ImmutableList<String>>(persistentListOf())
     val fontList = _fontList.asStateFlow()
 
+    private var mergedAnimeById: Map<Long, Anime> = emptyMap()
+    private var currentStitch: List<tachiyomi.domain.merge.ChapterUnit> = emptyList()
+
     // ANK -->
     private val unfilteredEpisodeList by lazy {
         val anime = anime!!
         runBlocking {
-            // KMK -->
-                            getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = false)
-            // KMK <--
+            if (mergedAnimeById.size > 1) {
+                mergedAnimeById.keys.flatMap { getEpisodesByAnimeId.await(it, applyScanlatorFilter = false) }
+            } else {
+                // KMK -->
+                getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = false)
+                // KMK <--
+            }
         }
     }
     // ANK <--
@@ -1476,7 +1484,6 @@ class PlayerViewModel @JvmOverloads constructor(
             if (anime != null) {
                 // SY -->
                 sourceManager.isInitialized.first { it }
-                val source = sourceManager.getOrStub(anime.source)
                 _currentAnime.update { _ -> anime }
                 animeTitle.update { _ -> anime.title }
                 sourceManager.isInitialized.first { it }
@@ -1485,7 +1492,10 @@ class PlayerViewModel @JvmOverloads constructor(
                 updateEpisodeList(initEpisodeList(anime))
 
                 val episode = currentPlaylist.value.first { it.id == episodeId }
+                val episodeAnime = episode.manga_id?.let { mergedAnimeById[it] } ?: anime
+                val source = sourceManager.getOrStub(episodeAnime.source)
 
+                _currentAnime.update { _ -> episodeAnime }
                 _currentEpisode.update { _ -> episode }
                 _currentSource.update { _ -> source }
 
@@ -1564,9 +1574,48 @@ class PlayerViewModel @JvmOverloads constructor(
     private fun initEpisodeList(anime: Anime): List<Episode> {
         // ANK -->
         val (episodes, animeMap) = runBlocking {
-            val list = getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = true)
-            val fullList = if (list.any { it.id == episodeId }) list else getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = false)
-            fullList to null
+            val group = mergedChapterProvider.load(anime)
+            mergedAnimeById = group.mangaById
+            currentStitch = group.stitch
+            if (group.isMerged) {
+                val baseList = if (group.chapters.any { it.id == episodeId }) {
+                    val marks = eu.kanade.domain.merge.GroupMarks.of(
+                        pooled = group.pooledChapters,
+                        shown = group.chapters,
+                        stitch = group.stitch,
+                        id = { it.id },
+                        read = { it.read },
+                        bookmark = { it.bookmark },
+                    )
+                    group.chapters.map { ch ->
+                        val effectiveRead = marks.isRead(ch.id, ch.read)
+                        val effectiveBookmark = marks.isBookmarked(ch.id, ch.bookmark)
+                        if (effectiveRead == ch.read && effectiveBookmark == ch.bookmark) {
+                            ch
+                        } else {
+                            ch.copy(read = effectiveRead, bookmark = effectiveBookmark)
+                        }
+                    }
+                } else if (group.pooledChapters.any { it.id == episodeId }) {
+                    val requested = group.pooledChapters.first { it.id == episodeId }
+                    val unitOfRequested = group.stitch.firstOrNull { it.chapterId == episodeId }?.unit
+                    if (unitOfRequested != null) {
+                        val sameUnitIds = group.stitch.filter { it.unit == unitOfRequested }.mapTo(HashSet()) { it.chapterId }
+                        group.chapters.map {
+                            if (it.id in sameUnitIds) requested.copy(sourceOrder = it.sourceOrder) else it
+                        }.let { list -> if (list.any { it.id == episodeId }) list else list + requested }
+                    } else {
+                        group.chapters + requested
+                    }
+                } else {
+                    group.mangaById.keys.flatMap { getEpisodesByAnimeId.await(it, applyScanlatorFilter = false) }
+                }
+                baseList to group.mangaById
+            } else {
+                val list = group.chapters
+                val fullList = if (list.any { it.id == episodeId }) list else getEpisodesByAnimeId.await(anime.id, applyScanlatorFilter = false)
+                fullList to null
+            }
         }
 
         val selectedEpisode = episodes.find { it.id == episodeId }
@@ -1588,7 +1637,15 @@ class PlayerViewModel @JvmOverloads constructor(
             // ANK <--
             .run {
                 if (basePreferences.downloadedOnly.get()) {
-                    filterDownloaded(anime)
+                    if (animeMap != null && animeMap.size > 1) {
+                        val downloadedByAnime = groupBy { it.animeId }.mapValues { (aId, aEpisodes) ->
+                            aEpisodes.filterDownloaded(animeMap[aId] ?: anime)
+                                .mapTo(HashSet()) { it.id }
+                        }
+                        filter { it.id in downloadedByAnime[it.animeId].orEmpty() }
+                    } else {
+                        filterDownloaded(anime)
+                    }
                 } else {
                     this
                 }
@@ -1978,11 +2035,16 @@ class PlayerViewModel @JvmOverloads constructor(
     )
 
     suspend fun loadEpisode(episodeId: Long?): EpisodeLoadResult? {
-        val anime = anime ?: return null
-        val source = sourceManager.getOrStub(anime.source)
+        val baseAnime = anime ?: return null
 
         val chosenEpisode = currentPlaylist.value.firstOrNull { ep -> ep.id == episodeId } ?: return null
+        val episodeAnime = chosenEpisode.manga_id?.let {
+            mergedAnimeById[it] ?: getAnime.await(it)
+        } ?: baseAnime
+        val source = sourceManager.getOrStub(episodeAnime.source)
 
+        _currentAnime.update { _ -> episodeAnime }
+        _currentSource.update { _ -> source }
         _currentEpisode.update { _ -> chosenEpisode }
         updateEpisode(chosenEpisode)
 
@@ -1993,7 +2055,7 @@ class PlayerViewModel @JvmOverloads constructor(
                         ?: throw ExceptionWithStringResource("No episode loaded", AYMR.strings.no_episode_loaded)
                 currentHosterList = EpisodeLoader.getHosters(
                     currentEpisode.toDomainEpisode()!!,
-                    anime,
+                    episodeAnime,
                     source,
                 )
 
@@ -2004,7 +2066,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
             EpisodeLoadResult(
                 hosterList = currentHosterList,
-                episodeTitle = anime.title + " - " + chosenEpisode.name,
+                episodeTitle = episodeAnime.title + " - " + chosenEpisode.name,
                 source = source,
             )
         }
@@ -2290,6 +2352,17 @@ class PlayerViewModel @JvmOverloads constructor(
         _currentEpisode.update { updatedEp }
         updateTrackEpisodeSeen(updatedEp)
         deleteEpisodeIfNeeded(updatedEp)
+
+        val currentEpId = updatedEp.id
+        if (currentEpId != null && mergedAnimeById.size > 1 && currentStitch.isNotEmpty()) {
+            val siblingIds = eu.kanade.domain.merge.expandToUnits(setOf(currentEpId), currentStitch) - currentEpId
+            if (siblingIds.isNotEmpty()) {
+                val siblingUpdates = siblingIds.map { EpisodeUpdate(id = it, read = true) }
+                viewModelScope.launchNonCancellable {
+                    updateEpisode.awaitAll(siblingUpdates)
+                }
+            }
+        }
 
         val markDuplicateAsSeen = libraryPreferences.markDuplicateReadChapterAsRead.get()
             .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
@@ -2617,9 +2690,10 @@ class PlayerViewModel @JvmOverloads constructor(
      */
     private fun enqueueDeleteSeenEpisodes(episode: Episode) {
         if (!episode.read) return
-        val anime = anime ?: return
+        val baseAnime = anime ?: return
+        val episodeAnime = episode.manga_id?.let { mergedAnimeById[it] } ?: baseAnime
         viewModelScope.launchNonCancellable {
-            downloadManager.enqueueChaptersToDelete(listOf(episode.toDomainEpisode()!!), anime)
+            downloadManager.enqueueChaptersToDelete(listOf(episode.toDomainEpisode()!!), episodeAnime)
         }
     }
 

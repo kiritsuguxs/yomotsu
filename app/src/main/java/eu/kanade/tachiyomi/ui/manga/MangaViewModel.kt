@@ -135,6 +135,8 @@ class MangaViewModel(
     private val mergeManager: eu.kanade.domain.manga.MangaMergeManager = Injekt.get(),
     private val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get(),
     private val getManga: tachiyomi.domain.manga.interactor.GetManga = Injekt.get(),
+    private val mangaChapterSettings: eu.kanade.domain.manga.MangaChapterSettings = Injekt.get(),
+    private val mangaGroupCategories: eu.kanade.domain.manga.MangaGroupCategories = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateViewModel<MangaViewModel.State>(State.Loading) {
 
@@ -147,6 +149,25 @@ class MangaViewModel(
     )
 
     private var mergedMangasById: Map<Long, Manga> = emptyMap()
+    private var pooledMergedChapters: List<Chapter> = emptyList()
+    private var currentStitch: List<tachiyomi.domain.merge.ChapterUnit> = emptyList()
+
+    private suspend fun expandChaptersForMergeGroup(chapters: List<Chapter>): List<Chapter> {
+        if (!libraryPreferences.seriesMergingEnabled.get() || mergeGroup.relatedIds.size <= 1) return chapters
+        val stitch = currentStitch.ifEmpty { mergedChapterProvider.stitchOf(mangaId) }
+        val expandedIds = eu.kanade.domain.merge.expandToUnits(chapters.mapTo(HashSet()) { it.id }, stitch)
+        if (expandedIds.size <= chapters.size) return chapters
+        val poolById = (pooledMergedChapters + chapters).associateBy { it.id }.toMutableMap()
+        val missingIds = expandedIds - poolById.keys
+        if (missingIds.isNotEmpty()) {
+            mergeGroup.relatedIds.toList().forEach { memberId ->
+                getMangaAndChapters.awaitChapters(memberId, applyScanlatorFilter = false).forEach { ch ->
+                    if (ch.id in missingIds) poolById[ch.id] = ch
+                }
+            }
+        }
+        return expandedIds.mapNotNull { poolById[it] }
+    }
 
     private suspend fun resolveMangaFor(targetMangaId: Long): Manga? {
         return mergedMangasById[targetMangaId]
@@ -265,9 +286,13 @@ class MangaViewModel(
                     val (manga, ownChapters) = mangaAndChapters
                     if (!libraryPreferences.seriesMergingEnabled.get() || groupState.ids.size <= 1) {
                         mergedMangasById = mapOf(manga.id to manga)
+                        pooledMergedChapters = emptyList()
+                        currentStitch = emptyList()
                         flowOf(manga to ownChapters)
                     } else if (groupState.selected != null) {
                         val selectedId = groupState.selected
+                        pooledMergedChapters = emptyList()
+                        currentStitch = emptyList()
                         if (selectedId == mangaId) {
                             mergedMangasById = mapOf(manga.id to manga)
                             flowOf(manga to ownChapters)
@@ -286,8 +311,27 @@ class MangaViewModel(
                             mergedMangasById = pairs.associate { it.first.id to it.first }
                             val pooledChapters = pairs.flatMap { it.second }
                             val stitch = mergedChapterProvider.stitchOf(mangaId)
+                            pooledMergedChapters = pooledChapters
+                            currentStitch = stitch
                             val mergedChapters = mergedChapterProvider.merged(pooledChapters, stitch)
-                            manga to mergedChapters
+                            val marks = eu.kanade.domain.merge.GroupMarks.of(
+                                pooled = pooledChapters,
+                                shown = mergedChapters,
+                                stitch = stitch,
+                                id = { it.id },
+                                read = { it.read },
+                                bookmark = { it.bookmark },
+                            )
+                            val markedChapters = mergedChapters.map { ch ->
+                                val effectiveRead = marks.isRead(ch.id, ch.read)
+                                val effectiveBookmark = marks.isBookmarked(ch.id, ch.bookmark)
+                                if (effectiveRead == ch.read && effectiveBookmark == ch.bookmark) {
+                                    ch
+                                } else {
+                                    ch.copy(read = effectiveRead, bookmark = effectiveBookmark)
+                                }
+                            }
+                            manga to markedChapters
                         }
                     }
                 }
@@ -644,7 +688,11 @@ class MangaViewModel(
 
     private fun moveMangaToCategory(categoryIds: List<Long>) {
         viewModelScope.launchIO {
-            setMangaCategories.await(mangaId, categoryIds)
+            if (libraryPreferences.seriesMergingEnabled.get() && mergeGroup.relatedIds.size > 1) {
+                mangaGroupCategories.set(mangaId, categoryIds, mergeManager)
+            } else {
+                setMangaCategories.await(mangaId, categoryIds)
+            }
         }
     }
 
@@ -1125,9 +1173,10 @@ class MangaViewModel(
         toggleAllSelection(false)
         if (chapters.isEmpty()) return
         viewModelScope.launchIO {
+            val targetChapters = expandChaptersForMergeGroup(chapters)
             setReadStatus.await(
                 read = read,
-                chapters = chapters.toTypedArray(),
+                chapters = targetChapters.toTypedArray(),
             )
 
             if (!read || successState?.hasLoggedInTrackers == false || autoTrackState == AutoTrackState.NEVER) {
@@ -1219,7 +1268,8 @@ class MangaViewModel(
      */
     fun bookmarkChapters(chapters: List<Chapter>, bookmarked: Boolean) {
         viewModelScope.launchIO {
-            chapters
+            val targetChapters = expandChaptersForMergeGroup(chapters)
+            targetChapters
                 .filterNot { it.bookmark == bookmarked }
                 .map { ChapterUpdate(id = it.id, bookmark = bookmarked) }
                 .let { updateChapter.awaitAll(it) }
@@ -1290,7 +1340,9 @@ class MangaViewModel(
             TriState.ENABLED_NOT -> Manga.CHAPTER_SHOW_READ
         }
         viewModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetUnreadFilter(manga, flag)
+            mangaChapterSettings.change(manga.id, mergeGroup.relatedIds.toList()) {
+                setMangaChapterFlags.awaitSetUnreadFilter(manga, flag)
+            }
         }
     }
 
@@ -1308,7 +1360,9 @@ class MangaViewModel(
         }
 
         viewModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetDownloadedFilter(manga, flag)
+            mangaChapterSettings.change(manga.id, mergeGroup.relatedIds.toList()) {
+                setMangaChapterFlags.awaitSetDownloadedFilter(manga, flag)
+            }
         }
     }
 
@@ -1326,7 +1380,9 @@ class MangaViewModel(
         }
 
         viewModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetBookmarkFilter(manga, flag)
+            mangaChapterSettings.change(manga.id, mergeGroup.relatedIds.toList()) {
+                setMangaChapterFlags.awaitSetBookmarkFilter(manga, flag)
+            }
         }
     }
 
@@ -1338,7 +1394,9 @@ class MangaViewModel(
         val manga = successState?.manga ?: return
 
         viewModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetDisplayMode(manga, mode)
+            mangaChapterSettings.change(manga.id, mergeGroup.relatedIds.toList()) {
+                setMangaChapterFlags.awaitSetDisplayMode(manga, mode)
+            }
         }
     }
 
@@ -1350,7 +1408,9 @@ class MangaViewModel(
         val manga = successState?.manga ?: return
 
         viewModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetSortingModeOrFlipOrder(manga, sort)
+            mangaChapterSettings.change(manga.id, mergeGroup.relatedIds.toList()) {
+                setMangaChapterFlags.awaitSetSortingModeOrFlipOrder(manga, sort)
+            }
         }
     }
 
@@ -1368,7 +1428,9 @@ class MangaViewModel(
     fun resetToDefaultSettings() {
         val manga = successState?.manga ?: return
         viewModelScope.launchNonCancellable {
-            setMangaDefaultChapterFlags.await(manga)
+            mangaChapterSettings.change(manga.id, mergeGroup.relatedIds.toList()) {
+                setMangaDefaultChapterFlags.await(manga)
+            }
         }
     }
 

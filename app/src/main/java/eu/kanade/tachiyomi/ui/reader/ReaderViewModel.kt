@@ -643,6 +643,14 @@ class ReaderViewModel @JvmOverloads constructor(
         updateTrackChapterRead(readerChapter)
         deleteChapterIfNeeded(readerChapter)
 
+        val currentChapterId = readerChapter.chapter.id
+        if (currentChapterId != null && mergedGroup.isMerged) {
+            val unitSiblingIds = eu.kanade.domain.merge.expandToUnits(setOf(currentChapterId), mergedGroup.stitch) - currentChapterId
+            if (unitSiblingIds.isNotEmpty()) {
+                updateChapter.awaitAll(unitSiblingIds.map { ChapterUpdate(id = it, read = true) })
+            }
+        }
+
         val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead.get()
             .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
         if (!markDuplicateAsRead) return
@@ -734,11 +742,18 @@ class ReaderViewModel @JvmOverloads constructor(
         chapter.bookmark = bookmarked
 
         viewModelScope.launchNonCancellable {
-            updateChapter.await(
-                ChapterUpdate(
-                    id = chapter.id!!,
-                    bookmark = bookmarked,
-                ),
+            val targetIds = if (mergedGroup.isMerged) {
+                eu.kanade.domain.merge.expandToUnits(setOf(chapter.id!!), mergedGroup.stitch)
+            } else {
+                setOf(chapter.id!!)
+            }
+            updateChapter.awaitAll(
+                targetIds.map { id ->
+                    ChapterUpdate(
+                        id = id,
+                        bookmark = bookmarked,
+                    )
+                },
             )
         }
 

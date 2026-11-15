@@ -89,6 +89,8 @@ class LibraryViewModel(
     private val animeDownloadCache: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadCache = Injekt.get(),
     private val trackerManager: TrackerManager = Injekt.get(),
     private val mangaMergeManager: eu.kanade.domain.manga.MangaMergeManager = Injekt.get(),
+    private val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get(),
+    private val mangaGroupCategories: eu.kanade.domain.manga.MangaGroupCategories = Injekt.get(),
 ) : StateViewModel<LibraryViewModel.State>(State()) {
 
     init {
@@ -555,7 +557,23 @@ class LibraryViewModel(
     }
 
     suspend fun getNextUnreadChapter(manga: Manga): Chapter? {
-        return getChaptersByMangaId.await(manga.id, applyScanlatorFilter = true).getNextUnread(manga, downloadManager)
+        val group = mergedChapterProvider.load(manga)
+        if (!group.isMerged) {
+            return group.chapters.getNextUnread(manga, downloadManager)
+        }
+        val marks = eu.kanade.domain.merge.GroupMarks.of(
+            pooled = group.pooledChapters,
+            shown = group.chapters,
+            stitch = group.stitch,
+            id = { it.id },
+            read = { it.read },
+            bookmark = { it.bookmark },
+        )
+        val markedChapters = group.chapters.map { ch ->
+            val effectiveRead = marks.isRead(ch.id, ch.read)
+            if (effectiveRead == ch.read) ch else ch.copy(read = effectiveRead)
+        }
+        return markedChapters.getNextUnread(manga, downloadManager)
     }
 
     /**
@@ -711,14 +729,19 @@ class LibraryViewModel(
      */
     fun setMangaCategories(mangaList: List<Manga>, addCategories: List<Long>, removeCategories: List<Long>) {
         viewModelScope.launchNonCancellable {
+            val mergingEnabled = libraryPreferences.seriesMergingEnabled.get()
             mangaList.forEach { manga ->
-                val categoryIds = getCategories.await(manga.id)
-                    .map { it.id }
-                    .subtract(removeCategories.toSet())
-                    .plus(addCategories)
-                    .toList()
+                if (mergingEnabled) {
+                    mangaGroupCategories.change(manga.id, addCategories, removeCategories, mangaMergeManager)
+                } else {
+                    val categoryIds = getCategories.await(manga.id)
+                        .map { it.id }
+                        .subtract(removeCategories.toSet())
+                        .plus(addCategories)
+                        .toList()
 
-                setMangaCategories.await(manga.id, categoryIds)
+                    setMangaCategories.await(manga.id, categoryIds)
+                }
             }
         }
     }
