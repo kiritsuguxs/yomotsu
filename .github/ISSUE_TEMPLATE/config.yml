@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: ❌ Help with Extensions
-    url: https://mihon.app/docs/faq/browse/extensions
-    about: For extension-related questions/issues
-  - name: 🖥️ Mihon website
-    url: https://mihon.app/
-    about: Guides, troubleshooting, and answers to common questions
+  - name: ❌ Help & Troubleshooting
+    url: https://kiritsuguxs.github.io/yomotsu/help.html
+    about: For guides, setup instructions, and troubleshooting
+  - name: 🖥️ Yomotsu website
+    url: https://kiritsuguxs.github.io/yomotsu/
+    about: Features, releases, and answers to common questions

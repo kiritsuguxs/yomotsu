@@ -14,4 +14,5 @@ data class Backup(
     @ProtoNumber(106) var backupExtensionStores: List<BackupExtensionStore> = emptyList(),
     @ProtoNumber(107) var backupPrivateExtensions: List<BackupPrivateExtension> = emptyList(),
     @ProtoNumber(108) var backupNovelPlugins: List<BackupNovelPlugin> = emptyList(),
+    @ProtoNumber(109) var backupMergeGroups: List<BackupMergeGroup> = emptyList(),
 )

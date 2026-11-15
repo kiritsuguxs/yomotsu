@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -144,6 +145,14 @@ class MangaViewModel(
         onSourceChange = { _, _ -> },
         resolveSources = { ids -> buildMergeSources(ids) },
     )
+
+    private var mergedMangasById: Map<Long, Manga> = emptyMap()
+
+    private suspend fun resolveMangaFor(targetMangaId: Long): Manga? {
+        return mergedMangasById[targetMangaId]
+            ?: successState?.manga?.takeIf { it.id == targetMangaId }
+            ?: getManga.await(targetMangaId)
+    }
 
     private suspend fun buildMergeSources(ids: LongArray): List<ManageMergeSourceRow> {
         if (ids.size <= 1) return emptyList()
@@ -255,19 +264,26 @@ class MangaViewModel(
                 .flatMapLatest { (groupState, mangaAndChapters) ->
                     val (manga, ownChapters) = mangaAndChapters
                     if (!libraryPreferences.seriesMergingEnabled.get() || groupState.ids.size <= 1) {
+                        mergedMangasById = mapOf(manga.id to manga)
                         flowOf(manga to ownChapters)
                     } else if (groupState.selected != null) {
                         val selectedId = groupState.selected
                         if (selectedId == mangaId) {
+                            mergedMangasById = mapOf(manga.id to manga)
                             flowOf(manga to ownChapters)
                         } else {
                             getMangaAndChapters.subscribe(selectedId, applyScanlatorFilter = true)
+                                .map { pair ->
+                                    mergedMangasById = mapOf(pair.first.id to pair.first)
+                                    pair
+                                }
                         }
                     } else {
                         val flows = groupState.ids.map { id ->
                             getMangaAndChapters.subscribe(id, applyScanlatorFilter = true)
                         }
                         combine(flows) { pairs ->
+                            mergedMangasById = pairs.associate { it.first.id to it.first }
                             val pooledChapters = pairs.flatMap { it.second }
                             val stitch = mergedChapterProvider.stitchOf(mangaId)
                             val mergedChapters = mergedChapterProvider.merged(pooledChapters, stitch)
@@ -311,6 +327,7 @@ class MangaViewModel(
 
         viewModelScope.launchIO {
             val manga = getMangaAndChapters.awaitManga(mangaId)
+            mergedMangasById = mapOf(manga.id to manga)
             val chapters = getMangaAndChapters.awaitChapters(mangaId, applyScanlatorFilter = true)
                 .toChapterListItems(manga)
 
@@ -373,20 +390,45 @@ class MangaViewModel(
     ) {
         val state = successState ?: return
         try {
-            withUIContext {
-                val update = updateMangaFromRemote(
-                    source = state.source,
-                    manga = state.manga,
-                    fetchDetails = fetchDetails,
-                    fetchChapters = fetchChapters,
-                    manualFetch = manualFetch,
-                )
-                    .getOrThrow()
+            val targetMangas = if (
+                libraryPreferences.seriesMergingEnabled.get() &&
+                mergeGroup.selectedSource == null &&
+                mergeGroup.relatedIds.size > 1
+            ) {
+                mergeGroup.relatedIds.mapNotNull { resolveMangaFor(it) }.ifEmpty { listOf(state.manga) }
+            } else {
+                listOf(state.manga)
+            }
 
-                if (manualFetch) {
-                    downloadNewChapters(update.newChapters)
+            var lastError: Exception? = null
+            withUIContext {
+                targetMangas.forEach { targetManga ->
+                    val targetSource = if (targetManga.id == state.manga.id) {
+                        state.source
+                    } else {
+                        sourceManager.getOrStub(targetManga.source)
+                    }
+                    try {
+                        val update = updateMangaFromRemote(
+                            source = targetSource,
+                            manga = targetManga,
+                            fetchDetails = fetchDetails,
+                            fetchChapters = fetchChapters,
+                            manualFetch = manualFetch,
+                        )
+                            .getOrThrow()
+
+                        if (manualFetch) {
+                            downloadNewChapters(update.newChapters, targetManga)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        lastError = e
+                    }
                 }
             }
+            lastError?.let { throw it }
         } catch (_: CancellationException) {
             // ignore
         } catch (e: Exception) {
@@ -622,7 +664,7 @@ class MangaViewModel(
     private fun observeDownloads() {
         viewModelScope.launchIO {
             downloadManager.statusFlow()
-                .filter { it.manga.id == successState?.manga?.id }
+                .filter { it.manga.id == successState?.manga?.id || it.manga.id in mergeGroup.relatedIds }
                 .catch { error -> logcat(LogPriority.ERROR, error) }
                 .collect {
                     withUIContext {
@@ -633,7 +675,7 @@ class MangaViewModel(
 
         viewModelScope.launchIO {
             downloadManager.progressFlow()
-                .filter { it.manga.id == successState?.manga?.id }
+                .filter { it.manga.id == successState?.manga?.id || it.manga.id in mergeGroup.relatedIds }
                 .catch { error -> logcat(LogPriority.ERROR, error) }
                 .collect {
                     withUIContext {
@@ -644,7 +686,7 @@ class MangaViewModel(
 
         viewModelScope.launchIO {
             animeDownloadManager.statusFlow()
-                .filter { it.manga.id == successState?.manga?.id }
+                .filter { it.manga.id == successState?.manga?.id || it.manga.id in mergeGroup.relatedIds }
                 .catch { error -> logcat(LogPriority.ERROR, error) }
                 .collect {
                     withUIContext {
@@ -655,7 +697,7 @@ class MangaViewModel(
 
         viewModelScope.launchIO {
             animeDownloadManager.progressFlow()
-                .filter { it.manga.id == successState?.manga?.id }
+                .filter { it.manga.id == successState?.manga?.id || it.manga.id in mergeGroup.relatedIds }
                 .catch { error -> logcat(LogPriority.ERROR, error) }
                 .collect {
                     withUIContext {
@@ -676,7 +718,7 @@ class MangaViewModel(
                     updateSuccessState { state ->
                         val newChapters = state.chapters.map { item ->
                             val isDl = downloaded.contains(item.chapter.id) ||
-                                NovelDownloadManager.isChapterDownloaded(mangaId, item.chapter.id)
+                                NovelDownloadManager.isChapterDownloaded(item.chapter.mangaId, item.chapter.id)
                             val isDling = downloading.contains(item.chapter.id)
                             val newState = when {
                                 isDling -> Download.State.DOWNLOADING
@@ -724,7 +766,7 @@ class MangaViewModel(
         if (isAnime) return
         viewModelScope.launchIO {
             translationManager.statusFlow()
-                .filter { it.manga.id == successState?.manga?.id }
+                .filter { it.manga.id == successState?.manga?.id || it.manga.id in mergeGroup.relatedIds }
                 .catch { error -> logcat(LogPriority.ERROR, error) }
                 .collect { translation ->
                     if (isAnime) return@collect
@@ -753,19 +795,26 @@ class MangaViewModel(
         val isAnime = (source is eu.kanade.tachiyomi.animesource.AnimeSource) || (sourceManager.get(manga.source) is eu.kanade.tachiyomi.animesource.AnimeSource)
         val isNovel = (source is eu.kanade.tachiyomi.source.INovelSource) || (sourceManager.get(manga.source) is eu.kanade.tachiyomi.source.INovelSource)
         val queuedDownloads = if (isLocal || isAnime) emptyMap() else downloadManager.getQueuedDownloadsByChapterId()
-        val downloadedChapterIds = if (isLocal || isAnime || isNovel) emptySet() else downloadManager.getDownloadedChapterIds(this, manga)
+        val downloadedChapterIdsByManga = if (isLocal || isAnime || isNovel) {
+            emptyMap()
+        } else {
+            groupBy { it.mangaId }.mapValues { (mId, mChapters) ->
+                downloadManager.getDownloadedChapterIds(mChapters, mergedMangasById[mId] ?: manga)
+            }
+        }
         return map { chapter ->
+            val chapterManga = mergedMangasById[chapter.mangaId] ?: manga
             val activeAnimeDownload = if (isAnime) animeDownloadManager.getQueuedDownloadOrNull(chapter.id) else null
             val activeDownload = if (!isAnime) queuedDownloads[chapter.id] else null
-            val isNovelDownloaded = NovelDownloadManager.isChapterDownloaded(manga.id, chapter.id)
+            val isNovelDownloaded = NovelDownloadManager.isChapterDownloaded(chapter.mangaId, chapter.id)
             val isNovelDownloading = NovelDownloadManager.isChapterDownloading(chapter.id)
-            val isAnimeDownloaded = if (isAnime) animeDownloadManager.isChapterDownloaded(chapter.name, chapter.scanlator, manga.title, manga.source) else false
+            val isAnimeDownloaded = if (isAnime) animeDownloadManager.isChapterDownloaded(chapter.name, chapter.scanlator, chapterManga.title, chapterManga.source) else false
             val downloaded = if (isLocal || isNovelDownloaded || isAnimeDownloaded) {
                 true
             } else if (isAnime) {
                 false
             } else {
-                chapter.id in downloadedChapterIds
+                chapter.id in downloadedChapterIdsByManga[chapter.mangaId].orEmpty()
             }
             val downloadState = when {
                 isNovelDownloading -> Download.State.DOWNLOADING
@@ -779,8 +828,8 @@ class MangaViewModel(
                     chapter.id,
                     chapter.name,
                     chapter.scanlator,
-                    manga.title,
-                    manga.source,
+                    chapterManga.title,
+                    chapterManga.source,
                 )
             } else {
                 Translation.State.NOT_TRANSLATED
@@ -875,20 +924,21 @@ class MangaViewModel(
 
         viewModelScope.launchNonCancellable {
             if (successState.source is eu.kanade.tachiyomi.source.INovelSource) {
-                NovelDownloadManager.downloadChapters(successState.manga, chapters)
+                enqueueChaptersDownload(chapters)
             } else if (successState.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
                 if (startNow) {
                     val chapterId = chapters.single().id
                     animeDownloadManager.startDownloadNow(chapterId)
                 } else {
-                    animeDownloadManager.downloadChapters(successState.manga, chapters)
+                    enqueueChaptersDownload(chapters)
                 }
             } else {
                 if (startNow) {
                     val chapterId = chapters.singleOrNull()?.id ?: return@launchNonCancellable
                     downloadManager.startDownloadNow(chapterId)
                 } else {
-                    downloadChapters(chapters)
+                    enqueueChaptersDownload(chapters)
+                    toggleAllSelection(false)
                 }
             }
 
@@ -925,7 +975,13 @@ class MangaViewModel(
                 val chapter = items.singleOrNull()?.chapter ?: return
                 val state = successState ?: return
                 if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
-                    updateSuccessState { it.copy(dialog = Dialog.ShowQualities(chapter, state.manga, state.source)) }
+                    val episodeManga = mergedMangasById[chapter.mangaId] ?: state.manga
+                    val episodeSource = if (episodeManga.id == state.manga.id) {
+                        state.source
+                    } else {
+                        sourceManager.getOrStub(episodeManga.source)
+                    }
+                    updateSuccessState { it.copy(dialog = Dialog.ShowQualities(chapter, episodeManga, episodeSource)) }
                 } else {
                     startDownload(listOf(chapter), true)
                 }
@@ -949,8 +1005,9 @@ class MangaViewModel(
                 if (item.downloadState != Download.State.DOWNLOADED) return
                 val manga = successState?.manga ?: return
                 viewModelScope.launchNonCancellable {
+                    val targetManga = resolveMangaFor(item.chapter.mangaId) ?: manga
                     translationManager.translateChapter(
-                        manga,
+                        targetManga,
                         item.chapter,
                         TranslationRequestOrigin.USER_ACTION,
                     )
@@ -965,7 +1022,13 @@ class MangaViewModel(
                 viewModelScope.launchNonCancellable {
                     try {
                         successState?.let { state ->
-                            translationManager.deleteTranslation(item.chapter, state.manga, state.source)
+                            val targetManga = resolveMangaFor(item.chapter.mangaId) ?: state.manga
+                            val targetSource = if (targetManga.id == state.manga.id) {
+                                state.source
+                            } else {
+                                sourceManager.getOrStub(targetManga.source)
+                            }
+                            translationManager.deleteTranslation(item.chapter, targetManga, targetSource)
                             updateSuccessState { currentState ->
                                 val modifiedIndex = currentState.chapters.indexOfFirst { it.id == item.chapter.id }
                                 if (modifiedIndex < 0) return@updateSuccessState currentState
@@ -1003,11 +1066,16 @@ class MangaViewModel(
         if (chapters.isEmpty()) return
 
         viewModelScope.launchNonCancellable {
-            translationManager.translateChapters(
-                manga = state.manga,
-                chapters = chapters,
-                origin = TranslationRequestOrigin.USER_ACTION,
-            )
+            chapters.groupBy { it.mangaId }.forEach { (targetMangaId, targetChapters) ->
+                val targetManga = resolveMangaFor(targetMangaId) ?: state.manga
+                if (!targetManga.isLocal()) {
+                    translationManager.translateChapters(
+                        manga = targetManga,
+                        chapters = targetChapters,
+                        origin = TranslationRequestOrigin.USER_ACTION,
+                    )
+                }
+            }
         }
     }
 
@@ -1119,14 +1187,28 @@ class MangaViewModel(
      * Downloads the given list of chapters with the manager.
      * @param chapters the list of chapters to download.
      */
+    private suspend fun enqueueChaptersDownload(chapters: List<Chapter>) {
+        val state = successState ?: return
+        chapters.groupBy { it.mangaId }.forEach { (targetMangaId, targetChapters) ->
+            val targetManga = resolveMangaFor(targetMangaId) ?: state.manga
+            val targetSource = if (targetManga.id == state.manga.id) {
+                state.source
+            } else {
+                sourceManager.getOrStub(targetManga.source)
+            }
+            if (targetSource is eu.kanade.tachiyomi.source.INovelSource) {
+                NovelDownloadManager.downloadChapters(targetManga, targetChapters)
+            } else if (targetSource is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
+                animeDownloadManager.downloadChapters(targetManga, targetChapters)
+            } else {
+                downloadManager.downloadChapters(targetManga, targetChapters)
+            }
+        }
+    }
+
     private fun downloadChapters(chapters: List<Chapter>) {
-        val manga = successState?.manga ?: return
-        if (successState?.source is eu.kanade.tachiyomi.source.INovelSource) {
-            NovelDownloadManager.downloadChapters(manga, chapters)
-        } else if (successState?.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
-            animeDownloadManager.downloadChapters(manga, chapters)
-        } else {
-            downloadManager.downloadChapters(manga, chapters)
+        viewModelScope.launchNonCancellable {
+            enqueueChaptersDownload(chapters)
         }
         toggleAllSelection(false)
     }
@@ -1154,20 +1236,28 @@ class MangaViewModel(
         viewModelScope.launchNonCancellable {
             try {
                 successState?.let { state ->
-                    if (state.source is eu.kanade.tachiyomi.source.INovelSource) {
-                        chapters.forEach { NovelDownloadManager.deleteChapter(state.manga.id, it.id) }
-                    } else if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
-                        animeDownloadManager.deleteChapters(
-                            chapters,
-                            state.manga,
-                            state.source,
-                        )
-                    } else {
-                        downloadManager.deleteChapters(
-                            chapters,
-                            state.manga,
-                            state.source,
-                        )
+                    chapters.groupBy { it.mangaId }.forEach { (targetMangaId, targetChapters) ->
+                        val targetManga = resolveMangaFor(targetMangaId) ?: state.manga
+                        val targetSource = if (targetManga.id == state.manga.id) {
+                            state.source
+                        } else {
+                            sourceManager.getOrStub(targetManga.source)
+                        }
+                        if (targetSource is eu.kanade.tachiyomi.source.INovelSource) {
+                            targetChapters.forEach { NovelDownloadManager.deleteChapter(targetManga.id, it.id) }
+                        } else if (targetSource is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
+                            animeDownloadManager.deleteChapters(
+                                targetChapters,
+                                targetManga,
+                                targetSource,
+                            )
+                        } else {
+                            downloadManager.deleteChapters(
+                                targetChapters,
+                                targetManga,
+                                targetSource,
+                            )
+                        }
                     }
                 }
             } catch (e: Throwable) {
@@ -1176,9 +1266,9 @@ class MangaViewModel(
         }
     }
 
-    private fun downloadNewChapters(chapters: List<Chapter>) {
+    private fun downloadNewChapters(chapters: List<Chapter>, targetManga: Manga? = null) {
         viewModelScope.launchNonCancellable {
-            val manga = successState?.manga ?: return@launchNonCancellable
+            val manga = targetManga ?: successState?.manga ?: return@launchNonCancellable
             val chaptersToDownload = filterChaptersForDownload.await(manga, chapters)
 
             if (chaptersToDownload.isNotEmpty()) {

@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.chapter.model.toDbChapter
+import eu.kanade.domain.manga.MergedChapterProvider
 import eu.kanade.domain.manga.interactor.SetMangaViewerFlags
 import eu.kanade.domain.manga.model.readerOrientation
 import eu.kanade.domain.manga.model.readingMode
@@ -24,9 +25,9 @@ import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.ui.reader.loader.ChapterLoader
 import eu.kanade.tachiyomi.ui.reader.loader.DownloadPageLoader
 import eu.kanade.tachiyomi.ui.reader.loader.HttpPageLoader
+import eu.kanade.tachiyomi.ui.reader.loader.MergedChapterLoader
 import eu.kanade.tachiyomi.util.system.activeNetworkState
 import kotlinx.coroutines.Job
 import eu.kanade.tachiyomi.ui.reader.model.InsertPage
@@ -110,6 +111,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private val setMangaViewerFlags: SetMangaViewerFlags = Injekt.get(),
     private val getIncognitoState: GetIncognitoState = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    private val mergedChapterProvider: MergedChapterProvider = Injekt.get(),
 ) : ViewModel() {
 
     private val mutableState = MutableStateFlow(State())
@@ -153,7 +155,7 @@ class ReaderViewModel @JvmOverloads constructor(
     /**
      * The chapter loader for the loaded manga. It'll be null until [manga] is set.
      */
-    private var loader: ChapterLoader? = null
+    private var loader: MergedChapterLoader? = null
 
     /**
      * The time the chapter was started reading
@@ -162,9 +164,13 @@ class ReaderViewModel @JvmOverloads constructor(
 
     private var chapterToDownload: Download? = null
 
-    private val unfilteredChapterList by lazy {
+    private val mergedGroup by lazy {
         val manga = manga!!
-        runBlocking { getChaptersByMangaId.await(manga.id, applyScanlatorFilter = false) }
+        runBlocking { mergedChapterProvider.load(manga) }
+    }
+
+    private val unfilteredChapterList by lazy {
+        mergedGroup.pooledChapters
     }
 
     /**
@@ -173,7 +179,27 @@ class ReaderViewModel @JvmOverloads constructor(
      */
     private val chapterList by lazy {
         val manga = manga!!
-        val chapters = runBlocking { getChaptersByMangaId.await(manga.id, applyScanlatorFilter = true) }
+        val group = mergedGroup
+        val chapters = if (group.chapters.any { it.id == chapterId }) {
+            group.chapters
+        } else {
+            val requested = group.pooledChapters.find { it.id == chapterId }
+            if (requested != null) {
+                val unitOfRequested = group.stitch.firstOrNull { it.chapterId == chapterId }?.unit
+                if (unitOfRequested != null) {
+                    val sameUnitIds = group.stitch
+                        .filter { it.unit == unitOfRequested }
+                        .mapTo(HashSet()) { it.chapterId }
+                    group.chapters.map {
+                        if (it.id in sameUnitIds) requested.copy(sourceOrder = it.sourceOrder) else it
+                    }.let { list -> if (list.any { it.id == chapterId }) list else list + requested }
+                } else {
+                    group.chapters + requested
+                }
+            } else {
+                runBlocking { getChaptersByMangaId.await(manga.id, applyScanlatorFilter = true) }
+            }
+        }
 
         val selectedChapter = chapters.find { it.id == chapterId }
             ?: error("Requested chapter of id $chapterId not found in chapter list")
@@ -181,6 +207,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val chaptersForReader = when {
             (readerPreferences.skipRead.get() || readerPreferences.skipFiltered.get()) -> {
                 val filteredChapters = chapters.filterNot {
+                    val chapterManga = group.mangaById[it.mangaId] ?: manga
                     when {
                         readerPreferences.skipRead.get() && it.read -> true
                         readerPreferences.skipFiltered.get() -> {
@@ -192,8 +219,8 @@ class ReaderViewModel @JvmOverloads constructor(
                                             it.name,
                                             it.scanlator,
                                             it.url,
-                                            manga.title,
-                                            manga.source,
+                                            chapterManga.title,
+                                            chapterManga.source,
                                         )
                                     ) ||
                                 (
@@ -202,8 +229,8 @@ class ReaderViewModel @JvmOverloads constructor(
                                             it.name,
                                             it.scanlator,
                                             it.url,
-                                            manga.title,
-                                            manga.source,
+                                            chapterManga.title,
+                                            chapterManga.source,
                                         )
                                     ) ||
                                 (manga.bookmarkedFilterRaw == Manga.CHAPTER_SHOW_BOOKMARKED && !it.bookmark) ||
@@ -233,7 +260,15 @@ class ReaderViewModel @JvmOverloads constructor(
             }
             .run {
                 if (basePreferences.downloadedOnly.get()) {
-                    filterDownloaded(manga)
+                    if (group.isMerged) {
+                        val downloadedByManga = groupBy { it.mangaId }.mapValues { (mId, mChapters) ->
+                            mChapters.filterDownloaded(group.mangaById[mId] ?: manga)
+                                .mapTo(HashSet()) { it.id }
+                        }
+                        filter { it.id in downloadedByManga[it.mangaId].orEmpty() }
+                    } else {
+                        filterDownloaded(manga)
+                    }
                 } else {
                     this
                 }
@@ -298,14 +333,14 @@ class ReaderViewModel @JvmOverloads constructor(
                 if (chapterId == -1L) chapterId = initialChapterId
 
                 val context = Injekt.get<Application>()
-                val source = sourceManager.getOrStub(manga.source)
-                loader = ChapterLoader(
-                    context,
-                    downloadManager,
-                    downloadProvider,
-                    manga,
-                    source,
+                val group = mergedGroup
+                loader = MergedChapterLoader(
+                    context = context,
+                    downloadManager = downloadManager,
+                    downloadProvider = downloadProvider,
                     canLoadAhead = ::canLoadAhead,
+                    mangaById = group.mangaById.ifEmpty { mapOf(manga.id to manga) },
+                    sourceManager = sourceManager,
                 )
 
                 loadChapter(loader!!, chapterList.first { chapterId == it.chapter.id })
@@ -323,7 +358,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * Callers must handle errors.
      */
     private suspend fun loadChapter(
-        loader: ChapterLoader,
+        loader: MergedChapterLoader,
         chapter: ReaderChapter,
     ): ViewerChapters {
         loader.loadChapter(chapter)
@@ -437,14 +472,15 @@ class ReaderViewModel @JvmOverloads constructor(
         }
 
         if (chapter.pageLoader?.isLocal == false) {
-            val manga = manga ?: return
+            val baseManga = manga ?: return
             val dbChapter = chapter.chapter
+            val chapterManga = dbChapter.manga_id?.let { mergedGroup.mangaById[it] } ?: baseManga
             val isDownloaded = downloadManager.isChapterDownloaded(
                 dbChapter.name,
                 dbChapter.scanlator,
                 dbChapter.url,
-                manga.title,
-                manga.source,
+                chapterManga.title,
+                chapterManga.source,
                 skipCache = true,
             )
             if (isDownloaded) {
@@ -516,16 +552,17 @@ class ReaderViewModel @JvmOverloads constructor(
         val nextChapter = state.value.viewerChapters?.nextChapter?.chapter ?: return
 
         viewModelScope.launchIO {
+            val nextChapterManga = nextChapter.manga_id?.let { mergedGroup.mangaById[it] } ?: manga
             val isNextChapterDownloaded = downloadManager.isChapterDownloaded(
                 nextChapter.name,
                 nextChapter.scanlator,
                 nextChapter.url,
-                manga.title,
-                manga.source,
+                nextChapterManga.title,
+                nextChapterManga.source,
             )
             if (!isNextChapterDownloaded) return@launchIO
 
-            val chaptersToDownload = getNextChapters.await(manga.id, nextChapter.id!!).run {
+            val chaptersToDownload = getNextChapters.await(nextChapterManga.id, nextChapter.id!!).run {
                 if (readerPreferences.skipDupe.get()) {
                     removeDuplicates(nextChapter.toDomainChapter()!!)
                 } else {
@@ -534,7 +571,7 @@ class ReaderViewModel @JvmOverloads constructor(
             }.take(downloadAheadAmount)
 
             downloadManager.downloadChapters(
-                manga,
+                nextChapterManga,
                 chaptersToDownload,
             )
         }
@@ -669,7 +706,12 @@ class ReaderViewModel @JvmOverloads constructor(
         return state.value.currentChapter
     }
 
-    fun getSource() = manga?.source?.let { sourceManager.getOrStub(it) } as? HttpSource
+    fun getSource(): HttpSource? {
+        val baseManga = manga ?: return null
+        val activeMangaId = getCurrentChapter()?.chapter?.manga_id ?: baseManga.id
+        val activeManga = mergedGroup.mangaById[activeMangaId] ?: baseManga
+        return sourceManager.getOrStub(activeManga.source) as? HttpSource
+    }
 
     fun getChapterUrl(): String? {
         val sChapter = getCurrentChapter()?.chapter ?: return null
@@ -1009,10 +1051,11 @@ class ReaderViewModel @JvmOverloads constructor(
      */
     private fun enqueueDeleteReadChapters(chapter: ReaderChapter) {
         if (!chapter.chapter.read) return
-        val manga = manga ?: return
+        val baseManga = manga ?: return
+        val chapterManga = chapter.chapter.manga_id?.let { mergedGroup.mangaById[it] } ?: baseManga
 
         viewModelScope.launchNonCancellable {
-            downloadManager.enqueueChaptersToDelete(listOf(chapter.chapter.toDomainChapter()!!), manga)
+            downloadManager.enqueueChaptersToDelete(listOf(chapter.chapter.toDomainChapter()!!), chapterManga)
         }
     }
 

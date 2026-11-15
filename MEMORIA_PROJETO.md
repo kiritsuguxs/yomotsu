@@ -5,7 +5,13 @@ Este arquivo registra o contexto completo das melhorias implementadas, do estado
 ---
 
 ## 1. Estado Atual do Repositório & Git
-- **Branch Principal (`main`):** Release oficial `v0.21.4-Y10` (versionCode 124, versionName `0.21.4-Y10`).
+- **Branch Principal (`main`):** Release oficial `v0.21.5` (versionCode 129, versionName `0.21.5`, Application ID oficial `app.yomotsu`).
+- **Branch Temporária de Melhorias (`temp/melhorias-v0.21.6`):** `0.21.6-TEST` (versionCode 130) — consolidando correções completas de Series Merging (downloads/exclusões/qualidades/progresso/refresh/tradução por fonte membro, leitor contínuo com `MergedChapterLoader`, contagem agregada e badge em tempo real de animes na biblioteca, backup/restauração dos grupos mesclados) e limpeza final de identidade.
+- **Histórico de Versões Recentes:**
+  - **Versão 125 (`0.21.4-Y11`):** Expansão do Series Merging para Light Novels e Animes, atualização de subtítulos na tela de detalhes e correções em merge/stitcher.
+  - **Versão 126 (`0.21.4-Y12`):** Correções de download/reset de estado no atualizador in-app e ajustes de changelog.
+  - **Versão 129 (`0.21.5`):** Transição definitiva para o Application ID próprio **`app.yomotsu`** (abandono do sufixo `-Y`), deep links `yomotsu://`, ícone monocromático oficial (`ic_yomotsu.xml`), otimização de cold start (indexação diferida em `DownloadCache`/`AnimeDownloadCache` e cálculo sob demanda em `LibraryViewModel`) e melhoria na comparação SemVer em `GetApplicationRelease.kt`.
+  - **Versão 130 (`0.21.6-TEST`):** Correção de downloads/traduções/qualidades/refresh por fonte membro no `MangaViewModel`, leitura contínua entre fontes mescladas no `ReaderViewModel` via `MergedChapterProvider`/`MergedChapterLoader`, observação de `animeDownloadCache.changes` e agregação de contagens de grupos mesclados no `LibraryViewModel`, backup/restauração de grupos mesclados (`BackupMergeGroup`), remoção de `ic_mihon_splash.xml` e atualização dos templates de issue.
 - **Histórico de Versões do Ciclo Y7/Y8/Y9/Y10:**
   - `2a8c98a`: Implementação inicial da UI moderna (Floating Dock, capas arredondadas 12dp, badges translúcidos, perfil e itens com borda sutil).
   - `92cf4c1`: Correção de erro de compilação Compose em `HomeScreen.kt`. Build CI `#41856513392` passou com sucesso.

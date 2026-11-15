@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import eu.kanade.tachiyomi.data.backup.models.BackupMergeGroup
 import eu.kanade.tachiyomi.data.backup.models.BackupNovelPlugin
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupPrivateExtension
@@ -27,6 +28,9 @@ import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Database
+import tachiyomi.domain.manga.interactor.GetMangaByUrlAndSourceId
+import tachiyomi.domain.merge.MergeGroupRepository
+import tachiyomi.domain.merge.model.ContentType
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -50,6 +54,8 @@ class BackupRestorer(
     private val preferenceRestorer: PreferenceRestorer = PreferenceRestorer(context),
     private val extensionStoreRestorer: ExtensionStoreRestorer = ExtensionStoreRestorer(),
     private val mangaRestorer: MangaRestorer = MangaRestorer(),
+    private val mergeGroupRepository: MergeGroupRepository = Injekt.get(),
+    private val getMangaByUrlAndSourceId: GetMangaByUrlAndSourceId = Injekt.get(),
 ) {
 
     private var restoreAmount = 0
@@ -130,6 +136,34 @@ class BackupRestorer(
             }
             if (options.libraryEntries) {
                 restoreManga(backup.backupManga, if (options.categories) backup.backupCategories else emptyList())
+            }
+        }
+
+        if (options.libraryEntries && backup.backupMergeGroups.isNotEmpty()) {
+            restoreMergeGroups(backup.backupMergeGroups)
+        }
+    }
+
+    private suspend fun restoreMergeGroups(backupMergeGroups: List<BackupMergeGroup>) {
+        backupMergeGroups.forEach { group ->
+            ensureActive()
+            try {
+                val orderedIds = group.members
+                    .sortedBy { it.priority }
+                    .mapNotNull { member ->
+                        getMangaByUrlAndSourceId.await(member.url, member.source)?.id
+                    }
+                    .distinct()
+                if (orderedIds.size >= 2) {
+                    mergeGroupRepository.materializeGroup(
+                        contentType = ContentType.fromId(group.contentType),
+                        orderedMemberIds = orderedIds,
+                        overrideSourceRanking = group.overrideSourceRanking,
+                    )
+                }
+            } catch (e: Exception) {
+                ensureActive()
+                logcat(LogPriority.ERROR, e) { "Failed to restore merge group" }
             }
         }
     }

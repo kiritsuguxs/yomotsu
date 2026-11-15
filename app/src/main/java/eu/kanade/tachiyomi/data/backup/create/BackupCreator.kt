@@ -14,6 +14,8 @@ import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import eu.kanade.tachiyomi.data.backup.models.BackupMergeGroup
+import eu.kanade.tachiyomi.data.backup.models.BackupMergeMember
 import eu.kanade.tachiyomi.data.backup.models.BackupNovelPlugin
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupPrivateExtension
@@ -31,6 +33,8 @@ import tachiyomi.domain.backup.service.BackupPreferences
 import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaRepository
+import tachiyomi.domain.merge.MergeGroupRepository
+import tachiyomi.domain.merge.model.ContentType
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -48,6 +52,7 @@ class BackupCreator(
     private val getFavorites: GetFavorites = Injekt.get(),
     private val backupPreferences: BackupPreferences = Injekt.get(),
     private val mangaRepository: MangaRepository = Injekt.get(),
+    private val mergeGroupRepository: MergeGroupRepository = Injekt.get(),
 
     private val categoriesBackupCreator: CategoriesBackupCreator = CategoriesBackupCreator(),
     private val mangaBackupCreator: MangaBackupCreator = MangaBackupCreator(),
@@ -97,6 +102,7 @@ class BackupCreator(
                 backupSourcePreferences = backupSourcePreferences(options),
                 backupPrivateExtensions = backupPrivateExtensions(options),
                 backupNovelPlugins = backupNovelPlugins(options),
+                backupMergeGroups = backupMergeGroups(options),
             )
 
             val byteArray = parser.encodeToByteArray(Backup.serializer(), backup)
@@ -202,6 +208,25 @@ class BackupCreator(
                     null
                 }
             } else null
+        }
+    }
+
+    private suspend fun backupMergeGroups(options: BackupOptions): List<BackupMergeGroup> {
+        if (!options.libraryEntries) return emptyList()
+        val groupIds = mergeGroupRepository.getAllMemberships(ContentType.MANGA).values.distinct()
+        return groupIds.mapNotNull { groupId ->
+            val group = mergeGroupRepository.getGroup(groupId) ?: return@mapNotNull null
+            val memberIds = mergeGroupRepository.getMembers(group.contentType, groupId)
+            val members = memberIds.mapIndexedNotNull { index, mangaId ->
+                val manga = runCatching { mangaRepository.getMangaById(mangaId) }.getOrNull() ?: return@mapIndexedNotNull null
+                BackupMergeMember(source = manga.source, url = manga.url, priority = index.toLong())
+            }
+            if (members.size < 2) return@mapNotNull null
+            BackupMergeGroup(
+                contentType = group.contentType.id,
+                overrideSourceRanking = group.overrideSourceRanking,
+                members = members,
+            )
         }
     }
 

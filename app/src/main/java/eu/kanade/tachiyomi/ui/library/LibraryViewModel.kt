@@ -86,6 +86,7 @@ class LibraryViewModel(
     private val downloadManager: DownloadManager = Injekt.get(),
     private val animeDownloadManager: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager = Injekt.get(),
     private val downloadCache: DownloadCache = Injekt.get(),
+    private val animeDownloadCache: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadCache = Injekt.get(),
     private val trackerManager: TrackerManager = Injekt.get(),
     private val mangaMergeManager: eu.kanade.domain.manga.MangaMergeManager = Injekt.get(),
 ) : StateViewModel<LibraryViewModel.State>(State()) {
@@ -135,7 +136,40 @@ class LibraryViewModel(
                 ) { prefs, memberships, enabled -> Triple(prefs, memberships, enabled) },
             ) { searchQuery, categories, favorites, (tracksMap, trackingFilters), (itemPreferences, memberships, mergingEnabled) ->
                 val showSystemCategory = favorites.isEmpty() || favorites.any { it.libraryManga.categories.contains(0) }
-                val filteredFavorites = favorites
+                val mergedAwareFavorites = if (mergingEnabled && memberships.isNotEmpty()) {
+                    val itemsByGroup = favorites.filter { it.id in memberships }.groupBy { memberships[it.id]!! }
+                    favorites.map { item ->
+                        val groupId = memberships[item.id] ?: return@map item
+                        val groupMembers = itemsByGroup[groupId] ?: return@map item
+                        if (groupMembers.size <= 1) return@map item
+                        val maxUnread = groupMembers.maxOf { it.unreadCount }
+                        val maxReadCount = groupMembers.maxOf { it.libraryManga.readCount }
+                        val aggTotal = maxOf(groupMembers.maxOf { it.libraryManga.totalChapters }, maxReadCount + maxUnread)
+                        val aggRead = aggTotal - maxUnread
+                        val totalDl = groupMembers.sumOf { it.downloadCount }
+                        val mergedCategories = groupMembers.flatMap { it.libraryManga.categories }.distinct()
+                        item.copy(
+                            libraryManga = item.libraryManga.copy(
+                                categories = mergedCategories,
+                                totalChapters = aggTotal,
+                                readCount = aggRead,
+                                bookmarkCount = groupMembers.maxOf { it.libraryManga.bookmarkCount },
+                                latestUpload = groupMembers.maxOf { it.libraryManga.latestUpload },
+                                chapterFetchedAt = groupMembers.maxOf { it.libraryManga.chapterFetchedAt },
+                                lastRead = groupMembers.maxOf { it.libraryManga.lastRead },
+                            ),
+                            downloadCount = totalDl,
+                            unreadCount = maxUnread,
+                            badges = item.badges.copy(
+                                downloadCount = if (itemPreferences.downloadBadge) totalDl else 0,
+                                unreadCount = if (itemPreferences.unreadBadge) maxUnread else 0,
+                            ),
+                        )
+                    }
+                } else {
+                    favorites
+                }
+                val filteredFavorites = mergedAwareFavorites
                     .applyFilters(tracksMap, trackingFilters, itemPreferences)
                     .let { libraryItems ->
                         if (searchQuery.isNullOrEmpty()) {
@@ -448,8 +482,9 @@ class LibraryViewModel(
             getLibraryManga.subscribe(),
             getLibraryItemPreferencesFlow(),
             downloadCache.changes,
+            animeDownloadCache.changes,
             eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadedChapters,
-        ) { libraryManga, preferences, _, _ ->
+        ) { libraryManga, preferences, _, _, _ ->
             val needsDownloadCount = preferences.downloadBadge ||
                 preferences.filterDownloaded != TriState.DISABLED ||
                 preferences.globalFilterDownloaded

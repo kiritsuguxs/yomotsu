@@ -28,7 +28,7 @@ class MergedChapterLoader(
     }
 
     private fun loaderFor(mangaId: Long): ChapterLoader = loaders.getOrPut(mangaId) {
-        val manga = mangaById.getValue(mangaId)
+        val manga = mangaById[mangaId] ?: mangaById.values.first()
         ChapterLoader(
             context = context,
             downloadManager = downloadManager,
