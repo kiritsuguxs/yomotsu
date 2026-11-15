@@ -11,6 +11,7 @@ import eu.kanade.core.util.fastFilterNot
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.chapter.interactor.SetReadStatus
 import eu.kanade.domain.manga.interactor.UpdateManga
+import eu.kanade.domain.merge.GroupMarks
 import eu.kanade.domain.merge.dedupeByMergeGroup
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
@@ -50,6 +51,7 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryManga
@@ -57,9 +59,13 @@ import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetLibraryManga
+import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.applyFilter
+import tachiyomi.domain.merge.MergedChapterUnitRepository
+import tachiyomi.domain.merge.MergedGroupCounts
+import tachiyomi.domain.merge.model.ContentType
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.GetTracksPerManga
 import tachiyomi.domain.track.model.Track
@@ -91,6 +97,8 @@ class LibraryViewModel(
     private val mangaMergeManager: eu.kanade.domain.manga.MangaMergeManager = Injekt.get(),
     private val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get(),
     private val mangaGroupCategories: eu.kanade.domain.manga.MangaGroupCategories = Injekt.get(),
+    private val mergedChapterUnitRepository: MergedChapterUnitRepository = Injekt.get(),
+    private val getManga: GetManga = Injekt.get(),
 ) : StateViewModel<LibraryViewModel.State>(State()) {
 
     init {
@@ -135,8 +143,10 @@ class LibraryViewModel(
                     getLibraryItemPreferencesFlow(),
                     mangaMergeManager.membershipChanges(),
                     libraryPreferences.seriesMergingEnabled.changes(),
-                ) { prefs, memberships, enabled -> Triple(prefs, memberships, enabled) },
-            ) { searchQuery, categories, favorites, (tracksMap, trackingFilters), (itemPreferences, memberships, mergingEnabled) ->
+                    mergedChapterUnitRepository.getGroupCountsAsFlow(ContentType.MANGA),
+                ) { prefs, memberships, enabled, groupCounts -> MergeFlowInputs(prefs, memberships, enabled, groupCounts) },
+            ) { searchQuery, categories, favorites, (tracksMap, trackingFilters), mergeInputs ->
+                val (itemPreferences, memberships, mergingEnabled, groupCounts) = mergeInputs
                 val showSystemCategory = favorites.isEmpty() || favorites.any { it.libraryManga.categories.contains(0) }
                 val mergedAwareFavorites = if (mergingEnabled && memberships.isNotEmpty()) {
                     val itemsByGroup = favorites.filter { it.id in memberships }.groupBy { memberships[it.id]!! }
@@ -144,10 +154,13 @@ class LibraryViewModel(
                         val groupId = memberships[item.id] ?: return@map item
                         val groupMembers = itemsByGroup[groupId] ?: return@map item
                         if (groupMembers.size <= 1) return@map item
+                        val counts = groupCounts[groupId]
                         val maxUnread = groupMembers.maxOf { it.unreadCount }
                         val maxReadCount = groupMembers.maxOf { it.libraryManga.readCount }
-                        val aggTotal = maxOf(groupMembers.maxOf { it.libraryManga.totalChapters }, maxReadCount + maxUnread)
-                        val aggRead = aggTotal - maxUnread
+                        val aggTotal = counts?.total ?: maxOf(groupMembers.maxOf { it.libraryManga.totalChapters }, maxReadCount + maxUnread)
+                        val aggUnread = counts?.unread ?: maxUnread
+                        val aggRead = counts?.read ?: (aggTotal - aggUnread)
+                        val aggBookmarks = counts?.bookmarked ?: groupMembers.maxOf { it.libraryManga.bookmarkCount }
                         val totalDl = groupMembers.sumOf { it.downloadCount }
                         val mergedCategories = groupMembers.flatMap { it.libraryManga.categories }.distinct()
                         item.copy(
@@ -155,16 +168,16 @@ class LibraryViewModel(
                                 categories = mergedCategories,
                                 totalChapters = aggTotal,
                                 readCount = aggRead,
-                                bookmarkCount = groupMembers.maxOf { it.libraryManga.bookmarkCount },
+                                bookmarkCount = aggBookmarks,
                                 latestUpload = groupMembers.maxOf { it.libraryManga.latestUpload },
                                 chapterFetchedAt = groupMembers.maxOf { it.libraryManga.chapterFetchedAt },
                                 lastRead = groupMembers.maxOf { it.libraryManga.lastRead },
                             ),
                             downloadCount = totalDl,
-                            unreadCount = maxUnread,
+                            unreadCount = aggUnread,
                             badges = item.badges.copy(
                                 downloadCount = if (itemPreferences.downloadBadge) totalDl else 0,
-                                unreadCount = if (itemPreferences.unreadBadge) maxUnread else 0,
+                                unreadCount = if (itemPreferences.unreadBadge) aggUnread else 0,
                             ),
                         )
                     }
@@ -561,7 +574,7 @@ class LibraryViewModel(
         if (!group.isMerged) {
             return group.chapters.getNextUnread(manga, downloadManager)
         }
-        val marks = eu.kanade.domain.merge.GroupMarks.of(
+        val marks = GroupMarks.of(
             pooled = group.pooledChapters,
             shown = group.chapters,
             stitch = group.stitch,
@@ -573,7 +586,7 @@ class LibraryViewModel(
             val effectiveRead = marks.isRead(ch.id, ch.read)
             if (effectiveRead == ch.read) ch else ch.copy(read = effectiveRead)
         }
-        return markedChapters.getNextUnread(manga, downloadManager)
+        return markedChapters.getNextUnread(manga, downloadManager, group.mangaById)
     }
 
     /**
@@ -607,11 +620,36 @@ class LibraryViewModel(
         val mangas = state.value.selectedManga
         viewModelScope.launchNonCancellable {
             mangas.forEach { manga ->
-                val chapters = getNextChapters.await(manga.id)
-                    .filterNotQueuedOrDownloaded(manga)
-                    .let { if (amount != null) it.take(amount) else it }
+                val group = mergedChapterProvider.load(manga)
+                if (!group.isMerged) {
+                    val chapters = getNextChapters.await(manga.id)
+                        .filterNotQueuedOrDownloaded(manga, emptyMap())
+                        .let { if (amount != null) it.take(amount) else it }
 
-                enqueueDownloadsForMedia(manga, chapters)
+                    enqueueDownloadsForMedia(manga, chapters)
+                } else {
+                    val marks = GroupMarks.of(
+                        pooled = group.pooledChapters,
+                        shown = group.chapters,
+                        stitch = group.stitch,
+                        id = { it.id },
+                        read = { it.read },
+                        bookmark = { it.bookmark },
+                    )
+                    val isNovel = sourceManager.get(manga.source) is eu.kanade.tachiyomi.source.INovelSource
+                    val sortedChapters = if (isNovel) {
+                        group.chapters.sortedBy { it.sourceOrder }
+                    } else {
+                        group.chapters.sortedWith(getChapterSort(manga, sortDescending = false))
+                    }
+                    val toDownload = sortedChapters
+                        .filterNot { marks.isRead(it.id, it.read) }
+                        .filterNotQueuedOrDownloaded(manga, group.mangaById)
+                        .let { if (amount != null) it.take(amount) else it }
+                    toDownload.groupBy { it.mangaId }.forEach { (mId, mChapters) ->
+                        enqueueDownloadsForMedia(group.mangaById[mId] ?: manga, mChapters)
+                    }
+                }
             }
         }
     }
@@ -620,9 +658,27 @@ class LibraryViewModel(
         val mangas = state.value.selectedManga
         viewModelScope.launchNonCancellable {
             mangas.forEach { manga ->
-                val chapters = getBookmarkedChaptersByMangaId.await(manga.id)
-                    .filterNotQueuedOrDownloaded(manga)
-                enqueueDownloadsForMedia(manga, chapters)
+                val group = mergedChapterProvider.load(manga)
+                if (!group.isMerged) {
+                    val chapters = getBookmarkedChaptersByMangaId.await(manga.id)
+                        .filterNotQueuedOrDownloaded(manga, emptyMap())
+                    enqueueDownloadsForMedia(manga, chapters)
+                } else {
+                    val marks = GroupMarks.of(
+                        pooled = group.pooledChapters,
+                        shown = group.chapters,
+                        stitch = group.stitch,
+                        id = { it.id },
+                        read = { it.read },
+                        bookmark = { it.bookmark },
+                    )
+                    val toDownload = group.chapters
+                        .filter { marks.isBookmarked(it.id, it.bookmark) }
+                        .filterNotQueuedOrDownloaded(manga, group.mangaById)
+                    toDownload.groupBy { it.mangaId }.forEach { (mId, mChapters) ->
+                        enqueueDownloadsForMedia(group.mangaById[mId] ?: manga, mChapters)
+                    }
+                }
             }
         }
     }
@@ -640,28 +696,64 @@ class LibraryViewModel(
         }
     }
 
-    private fun List<Chapter>.filterNotQueuedOrDownloaded(manga: Manga): List<Chapter> {
-        val source = sourceManager.getOrStub(manga.source)
-        return when {
-            source is eu.kanade.tachiyomi.source.INovelSource -> {
-                val downloading = eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadingChapters.value
-                fastFilterNot {
-                    it.id in downloading ||
-                        eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.isChapterDownloaded(manga.id, it.id)
+    private fun List<Chapter>.filterNotQueuedOrDownloaded(
+        fallbackManga: Manga,
+        mangaById: Map<Long, Manga>,
+    ): List<Chapter> {
+        if (isEmpty()) return emptyList()
+        val queuedMangaDownloads by lazy { downloadManager.getQueuedDownloadsByChapterId() }
+        val novelDownloading by lazy { eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadingChapters.value }
+        val skipIds = HashSet<Long>()
+        groupBy { it.mangaId }.forEach { (mId, mChapters) ->
+            val targetManga = mangaById[mId] ?: fallbackManga
+            val source = sourceManager.getOrStub(targetManga.source)
+            when {
+                source is eu.kanade.tachiyomi.source.INovelSource -> {
+                    mChapters.forEach {
+                        if (it.id in novelDownloading ||
+                            eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.isChapterDownloaded(targetManga.id, it.id)
+                        ) {
+                            skipIds.add(it.id)
+                        }
+                    }
                 }
-            }
-            source is eu.kanade.tachiyomi.animesource.AnimeSource -> {
-                fastFilterNot {
-                    animeDownloadManager.getQueuedDownloadOrNull(it.id) != null ||
-                        animeDownloadManager.isChapterDownloaded(it.name, it.scanlator, manga.title, manga.source)
+                source is eu.kanade.tachiyomi.animesource.AnimeSource -> {
+                    mChapters.forEach {
+                        if (animeDownloadManager.getQueuedDownloadOrNull(it.id) != null ||
+                            animeDownloadManager.isChapterDownloaded(it.name, it.scanlator, targetManga.title, targetManga.source)
+                        ) {
+                            skipIds.add(it.id)
+                        }
+                    }
                 }
-            }
-            else -> {
-                val queuedDownloads = downloadManager.getQueuedDownloadsByChapterId()
-                val downloadedChapterIds = downloadManager.getDownloadedChapterIds(this, manga)
-                fastFilterNot { it.id in queuedDownloads || it.id in downloadedChapterIds }
+                else -> {
+                    val downloadedIds = downloadManager.getDownloadedChapterIds(mChapters, targetManga)
+                    mChapters.forEach {
+                        if (it.id in queuedMangaDownloads || it.id in downloadedIds) {
+                            skipIds.add(it.id)
+                        }
+                    }
+                }
             }
         }
+        return fastFilterNot { it.id in skipIds }
+    }
+
+    private suspend fun expandSelectionWithMergedMembers(mangas: List<Manga>): List<Manga> {
+        if (!libraryPreferences.seriesMergingEnabled.get()) return mangas
+        val seen = LinkedHashMap<Long, Manga>(mangas.size)
+        mangas.forEach { manga ->
+            seen[manga.id] = manga
+            val memberIds = mangaMergeManager.computeRelatedIds(manga.id)
+            if (memberIds.size > 1) {
+                memberIds.forEach { memberId ->
+                    if (memberId !in seen) {
+                        getManga.await(memberId)?.let { seen[memberId] = it }
+                    }
+                }
+            }
+        }
+        return seen.values.toList()
     }
 
     /**
@@ -670,7 +762,7 @@ class LibraryViewModel(
     fun markReadSelection(read: Boolean) {
         val selection = state.value.selectedManga
         viewModelScope.launchNonCancellable {
-            selection.forEach { manga ->
+            expandSelectionWithMergedMembers(selection).forEach { manga ->
                 setReadStatus.await(
                     manga = manga,
                     read = read,
@@ -689,8 +781,12 @@ class LibraryViewModel(
      */
     fun removeMangas(mangas: List<Manga>, deleteFromLibrary: Boolean, deleteChapters: Boolean) {
         viewModelScope.launchNonCancellable {
+            val targetMangas = expandSelectionWithMergedMembers(mangas)
             if (deleteFromLibrary) {
-                val toDelete = mangas.map {
+                if (libraryPreferences.seriesMergingEnabled.get()) {
+                    mangaMergeManager.unmerge(targetMangas.map { it.id })
+                }
+                val toDelete = targetMangas.map {
                     it.removeCovers(coverCache)
                     MangaUpdate(
                         favorite = false,
@@ -701,7 +797,7 @@ class LibraryViewModel(
             }
 
             if (deleteChapters) {
-                mangas.forEach { manga ->
+                targetMangas.forEach { manga ->
                     val rawSource = sourceManager.get(manga.source)
                     if (rawSource is eu.kanade.tachiyomi.source.INovelSource) {
                         eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.deleteManga(manga.id)
@@ -928,6 +1024,13 @@ class LibraryViewModel(
 
         data class DeleteManga(val manga: List<Manga>) : Dialog
     }
+
+    private data class MergeFlowInputs(
+        val itemPreferences: ItemPreferences,
+        val memberships: Map<Long, Long>,
+        val mergingEnabled: Boolean,
+        val groupCounts: Map<Long, MergedGroupCounts>,
+    )
 
     @Immutable
     private data class ItemPreferences(

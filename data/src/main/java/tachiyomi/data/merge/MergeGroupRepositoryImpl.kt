@@ -22,6 +22,9 @@ class MergeGroupRepositoryImpl(
     override suspend fun getGroup(groupId: Long): MergeGroup? =
         queries.getGroup(groupId, ::mapGroup).awaitAsOneOrNull()
 
+    override suspend fun getAllGroups(): List<MergeGroup> =
+        queries.allGroups(::mapGroup).awaitAsList()
+
     override suspend fun getGroupId(contentType: ContentType, entryId: Long): Long? =
         queries.mangaGroupId(entryId).awaitAsOneOrNull()
 
@@ -59,6 +62,11 @@ class MergeGroupRepositoryImpl(
 
     override suspend fun getRankedMangaMembers(): List<RankedMember<Long>> =
         queries.rankedMangaMembers { groupId, mangaId, source, override ->
+            RankedMember(groupId, mangaId, source, override == 1L)
+        }.awaitAsList()
+
+    override suspend fun getRankedMangaMembers(contentType: ContentType): List<RankedMember<Long>> =
+        queries.rankedMangaMembersByType(contentType.id) { groupId, mangaId, source, override ->
             RankedMember(groupId, mangaId, source, override == 1L)
         }.awaitAsList()
 

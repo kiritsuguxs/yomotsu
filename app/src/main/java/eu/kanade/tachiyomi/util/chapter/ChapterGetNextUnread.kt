@@ -12,13 +12,17 @@ import uy.kohesive.injekt.api.get
 /**
  * Gets next unread chapter with filters and sorting applied
  */
-fun List<Chapter>.getNextUnread(manga: Manga, downloadManager: DownloadManager): Chapter? {
+fun List<Chapter>.getNextUnread(
+    manga: Manga,
+    downloadManager: DownloadManager,
+    mangaById: Map<Long, Manga> = emptyMap(),
+): Chapter? {
     val sourceManager: SourceManager = Injekt.get()
     val isNovel = sourceManager.get(manga.source) is eu.kanade.tachiyomi.source.INovelSource
     if (isNovel) {
         return this.sortedBy { it.sourceOrder }.find { !it.read }
     }
-    return applyFilters(manga, downloadManager).let { chapters ->
+    return applyFilters(manga, downloadManager, mangaById).let { chapters ->
         if (manga.sortDescending()) {
             chapters.findLast { !it.read }
         } else {

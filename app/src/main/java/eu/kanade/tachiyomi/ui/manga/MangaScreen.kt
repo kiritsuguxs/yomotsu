@@ -280,6 +280,9 @@ class MangaScreen(
                         if (successState.manga.favorite) viewModel.toggleFavorite()
                     },
                     mangaToRemove = successState.manga,
+                    onConfirmGroup = viewModel::removeAllMergeSourcesFromLibrary.takeIf {
+                        successState.isMerged && successState.selectedMergeSource == null
+                    },
                 )
             }
             is MangaViewModel.Dialog.ChangeCategory -> {
@@ -325,7 +328,7 @@ class MangaScreen(
             MangaViewModel.Dialog.ManageSources -> {
                 ManageMergeSourcesDialog(
                     sources = successState.mergeSources,
-                    isOverridden = false,
+                    isOverridden = successState.isMergeRankingOverridden,
                     onDismissRequest = onDismissRequest,
                     onReorder = viewModel::reorderMergeSources,
                     onResetOrder = viewModel::resetMergeSourceOrder,

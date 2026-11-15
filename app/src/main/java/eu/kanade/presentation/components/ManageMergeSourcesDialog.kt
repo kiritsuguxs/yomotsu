@@ -57,12 +57,12 @@ fun ManageMergeSourcesDialog(
     onRemoveFromLibrary: (List<Long>) -> Unit,
     onRemoveAll: () -> Unit,
 ) {
-    val items = remember { sources.toMutableStateList() }
+    val items = remember(sources) { sources.toMutableStateList() }
     val listState = rememberLazyListState()
     var selectionMode by remember { mutableStateOf(false) }
     var picked by remember { mutableStateOf(SelectionState<Long>()) }
     val selection = picked.selection
-    var overridden by remember { mutableStateOf(isOverridden) }
+    var overridden by remember(isOverridden) { mutableStateOf(isOverridden) }
 
     val reorderState = rememberSettledReorder(items, listState, keyOf = { it.id }) { settled ->
         overridden = true

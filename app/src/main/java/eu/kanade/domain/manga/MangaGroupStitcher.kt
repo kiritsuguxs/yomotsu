@@ -57,7 +57,7 @@ open class MangaGroupStitcher(
 
     override suspend fun rankings(): Map<Long, String> =
         rankingStamps(
-            mergeGroupRepository.getRankedMangaMembers(),
+            mergeGroupRepository.getRankedMangaMembers(contentType),
             libraryPreferences.preferredMangaSources.get(),
         )
 

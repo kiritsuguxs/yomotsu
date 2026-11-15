@@ -562,18 +562,49 @@ class ReaderViewModel @JvmOverloads constructor(
             )
             if (!isNextChapterDownloaded) return@launchIO
 
-            val chaptersToDownload = getNextChapters.await(nextChapterManga.id, nextChapter.id!!).run {
-                if (readerPreferences.skipDupe.get()) {
-                    removeDuplicates(nextChapter.toDomainChapter()!!)
-                } else {
-                    this
+            if (mergedGroup.isMerged) {
+                val nextIdx = chapterList.indexOfFirst { it.chapter.id == nextChapter.id }
+                val candidates = if (nextIdx >= 0) chapterList.drop(nextIdx) else emptyList()
+                val chaptersToDownload = candidates
+                    .mapNotNull { it.chapter.toDomainChapter() }
+                    .filterNot { it.read }
+                    .run {
+                        if (readerPreferences.skipDupe.get()) {
+                            removeDuplicates(nextChapter.toDomainChapter()!!)
+                        } else {
+                            this
+                        }
+                    }
+                    .filterNot { ch ->
+                        val chManga = mergedGroup.mangaById[ch.mangaId] ?: manga
+                        downloadManager.getQueuedDownloadOrNull(ch.id) != null ||
+                            downloadManager.isChapterDownloaded(
+                                ch.name,
+                                ch.scanlator,
+                                ch.url,
+                                chManga.title,
+                                chManga.source,
+                            )
+                    }
+                    .take(downloadAheadAmount)
+                chaptersToDownload.groupBy { it.mangaId }.forEach { (targetMangaId, targetChapters) ->
+                    val targetManga = mergedGroup.mangaById[targetMangaId] ?: manga
+                    downloadManager.downloadChapters(targetManga, targetChapters)
                 }
-            }.take(downloadAheadAmount)
+            } else {
+                val chaptersToDownload = getNextChapters.await(nextChapterManga.id, nextChapter.id!!).run {
+                    if (readerPreferences.skipDupe.get()) {
+                        removeDuplicates(nextChapter.toDomainChapter()!!)
+                    } else {
+                        this
+                    }
+                }.take(downloadAheadAmount)
 
-            downloadManager.downloadChapters(
-                nextChapterManga,
-                chaptersToDownload,
-            )
+                downloadManager.downloadChapters(
+                    nextChapterManga,
+                    chaptersToDownload,
+                )
+            }
         }
     }
 

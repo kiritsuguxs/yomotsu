@@ -49,7 +49,7 @@ object NovelEpubExporter {
                 }
             }
 
-            val rawDownloaded = NovelDownloadManager.getDownloadedChapterText(manga.id, chapter.id)
+            val rawDownloaded = NovelDownloadManager.getDownloadedChapterText(chapter.mangaId, chapter.id)
                 ?: fallbackChaptersContent[chapter.id]
 
             if (!rawDownloaded.isNullOrBlank()) {

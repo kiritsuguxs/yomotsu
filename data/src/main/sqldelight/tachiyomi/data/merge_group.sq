@@ -95,11 +95,23 @@ JOIN merge_group AS mg ON mg._id = mgm.group_id
 WHERE mg.override_source_ranking = 1
 ORDER BY mgm.group_id, mgm.source_priority, mgm._id;
 
+allGroups:
+SELECT _id, content_type, override_source_ranking
+FROM merge_group;
+
 rankedMangaMembers:
 SELECT MGM.group_id, MGM.manga_id, M.source AS source, MG.override_source_ranking
 FROM merge_group_manga MGM
 JOIN merge_group MG ON MG._id = MGM.group_id
 JOIN mangas M ON M._id = MGM.manga_id AND M.favorite = 1
+ORDER BY MGM.group_id, MGM.source_priority, MGM._id;
+
+rankedMangaMembersByType:
+SELECT MGM.group_id, MGM.manga_id, M.source AS source, MG.override_source_ranking
+FROM merge_group_manga MGM
+JOIN merge_group MG ON MG._id = MGM.group_id
+JOIN mangas M ON M._id = MGM.manga_id AND M.favorite = 1
+WHERE MG.content_type = :contentType
 ORDER BY MGM.group_id, MGM.source_priority, MGM._id;
 
 deleteGroupsByContentType:

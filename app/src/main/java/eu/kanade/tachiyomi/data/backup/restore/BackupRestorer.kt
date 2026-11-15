@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.data.backup.restore
 
 import android.content.Context
 import android.net.Uri
+import eu.kanade.domain.merge.ReconcileMergedChapters
+import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadCache
 import eu.kanade.tachiyomi.data.backup.BackupDecoder
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
@@ -79,6 +81,11 @@ class BackupRestorer(
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Failed to invalidate download cache after restore" }
             }
+            try {
+                Injekt.get<AnimeDownloadCache>().invalidateCache()
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to invalidate anime download cache after restore" }
+            }
         }
 
         val time = System.currentTimeMillis() - startTime
@@ -143,6 +150,12 @@ class BackupRestorer(
             coroutineScope {
                 restoreMergeGroups(backup.backupMergeGroups)
             }
+            try {
+                Injekt.get<ReconcileMergedChapters>().await()
+            } catch (e: Exception) {
+                ensureActive()
+                logcat(LogPriority.ERROR, e) { "Failed to reconcile merged chapters after restore" }
+            }
         }
     }
 
@@ -162,10 +175,15 @@ class BackupRestorer(
                         orderedMemberIds = orderedIds,
                         overrideSourceRanking = group.overrideSourceRanking,
                     )
+                } else {
+                    errors.add(
+                        Date() to "Skipped merge group (${ContentType.fromId(group.contentType)}): resolved ${orderedIds.size}/${group.members.size} members",
+                    )
                 }
             } catch (e: Exception) {
                 ensureActive()
                 logcat(LogPriority.ERROR, e) { "Failed to restore merge group" }
+                errors.add(Date() to "Failed to restore merge group: ${e.message}")
             }
         }
     }

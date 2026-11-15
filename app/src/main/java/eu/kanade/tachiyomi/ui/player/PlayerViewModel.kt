@@ -494,13 +494,14 @@ class PlayerViewModel @JvmOverloads constructor(
 
     
     fun isEpisodeOnline(): Boolean? {
-        val anime = anime ?: return null
+        val baseAnime = anime ?: return null
         val episode = currentEpisode.value ?: return null
+        val episodeAnime = episode.manga_id?.let { mergedAnimeById[it] } ?: baseAnime
         val source = currentSource.value ?: return null
         return (source is AnimeHttpSource || source is HttpSource) &&
             !EpisodeLoader.isDownload(
                 episode.toDomainEpisode()!!,
-                anime,
+                episodeAnime,
             )
     }
 
@@ -1495,7 +1496,6 @@ class PlayerViewModel @JvmOverloads constructor(
                 val episodeAnime = episode.manga_id?.let { mergedAnimeById[it] } ?: anime
                 val source = sourceManager.getOrStub(episodeAnime.source)
 
-                _currentAnime.update { _ -> episodeAnime }
                 _currentEpisode.update { _ -> episode }
                 _currentSource.update { _ -> source }
 
@@ -1532,7 +1532,7 @@ class PlayerViewModel @JvmOverloads constructor(
                 } else {
                     EpisodeLoader.getHosters(
                         episode = currentEp.toDomainEpisode()!!,
-                        anime = anime,
+                        anime = episodeAnime,
                         source = source,
                         sourceManager = sourceManager,
                     )
@@ -2043,7 +2043,6 @@ class PlayerViewModel @JvmOverloads constructor(
         } ?: baseAnime
         val source = sourceManager.getOrStub(episodeAnime.source)
 
-        _currentAnime.update { _ -> episodeAnime }
         _currentSource.update { _ -> source }
         _currentEpisode.update { _ -> chosenEpisode }
         updateEpisode(chosenEpisode)
@@ -2066,7 +2065,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
             EpisodeLoadResult(
                 hosterList = currentHosterList,
-                episodeTitle = episodeAnime.title + " - " + chosenEpisode.name,
+                episodeTitle = baseAnime.title + " - " + chosenEpisode.name,
                 source = source,
             )
         }
@@ -2393,31 +2392,58 @@ class PlayerViewModel @JvmOverloads constructor(
 
     private fun downloadNextEpisodes() {
         if (downloadAheadAmount == 0) return
-        val anime = anime ?: return
+        val baseAnime = anime ?: return
 
         // Only download ahead if current + next episode is already downloaded too to avoid jank
-        if (getCurrentEpisodeIndex() == currentPlaylist.value.lastIndex) return
+        val currentIndex = getCurrentEpisodeIndex()
+        if (currentIndex == -1 || currentIndex == currentPlaylist.value.lastIndex) return
         val currentEpisode = currentEpisode.value ?: return
 
-        val nextEpisode = currentPlaylist.value[getCurrentEpisodeIndex() + 1]
+        val nextEpisode = currentPlaylist.value[currentIndex + 1]
 
         viewModelScope.launchIO {
+            val currentEpAnime = currentEpisode.manga_id?.let { mergedAnimeById[it] } ?: baseAnime
+            val nextEpAnime = nextEpisode.manga_id?.let { mergedAnimeById[it] } ?: baseAnime
             val episodesAreDownloaded =
-                EpisodeLoader.isDownload(currentEpisode.toDomainEpisode()!!, anime) &&
-                    EpisodeLoader.isDownload(nextEpisode.toDomainEpisode()!!, anime)
+                EpisodeLoader.isDownload(currentEpisode.toDomainEpisode()!!, currentEpAnime) &&
+                    EpisodeLoader.isDownload(nextEpisode.toDomainEpisode()!!, nextEpAnime)
 
             if (!episodesAreDownloaded) return@launchIO
 
-            val episodesToDownload = getNextChapters.await(anime.id, nextEpisode.id!!)
-                .run {
-                    if (playerPreferences.skipDupe().get()) {
-                        removeDuplicates(nextEpisode.toDomainEpisode()!!)
-                    } else {
-                        this
+            if (mergedAnimeById.size > 1) {
+                val episodesToDownload = currentPlaylist.value
+                    .drop(currentIndex + 1)
+                    .mapNotNull { it.toDomainEpisode() }
+                    .filterNot { it.read }
+                    .run {
+                        if (playerPreferences.skipDupe().get()) {
+                            removeDuplicates(nextEpisode.toDomainEpisode()!!)
+                        } else {
+                            this
+                        }
                     }
+                    .filterNot { ep ->
+                        val epAnime = mergedAnimeById[ep.mangaId] ?: baseAnime
+                        downloadManager.getQueuedDownloadOrNull(ep.id) != null ||
+                            EpisodeLoader.isDownload(ep, epAnime)
+                    }
+                    .take(downloadAheadAmount)
+                episodesToDownload.groupBy { it.mangaId }.forEach { (targetAnimeId, targetEpisodes) ->
+                    val targetAnime = mergedAnimeById[targetAnimeId] ?: baseAnime
+                    downloadManager.downloadChapters(targetAnime, targetEpisodes)
                 }
-                .take(downloadAheadAmount)
-            downloadManager.downloadChapters(anime, episodesToDownload)
+            } else {
+                val episodesToDownload = getNextChapters.await(nextEpAnime.id, nextEpisode.id!!)
+                    .run {
+                        if (playerPreferences.skipDupe().get()) {
+                            removeDuplicates(nextEpisode.toDomainEpisode()!!)
+                        } else {
+                            this
+                        }
+                    }
+                    .take(downloadAheadAmount)
+                downloadManager.downloadChapters(nextEpAnime, episodesToDownload)
+            }
         }
     }
 
@@ -2680,7 +2706,12 @@ class PlayerViewModel @JvmOverloads constructor(
         val context = Injekt.get<Application>()
 
         viewModelScope.launchNonCancellable {
-            trackEpisode.await(context, anime.id, episode.chapter_number.toDouble())
+            val trackAnimeId = if (mergedAnimeById.size > 1 && getTracks.await(anime.id).isEmpty()) {
+                mergedAnimeById.keys.firstOrNull { id -> getTracks.await(id).isNotEmpty() } ?: anime.id
+            } else {
+                anime.id
+            }
+            trackEpisode.await(context, trackAnimeId, episode.chapter_number.toDouble())
         }
     }
 
@@ -2759,14 +2790,23 @@ class PlayerViewModel @JvmOverloads constructor(
         val trackerManager = Injekt.get<TrackerManager>()
         var malId: Long?
         val episodeNumber = currentEpisode.value?.chapter_number?.toInt() ?: return null
-        if (getTracks.await(animeId).isEmpty()) {
+        val tracks = getTracks.await(animeId).ifEmpty {
+            if (mergedAnimeById.size > 1) {
+                mergedAnimeById.keys.firstNotNullOfOrNull { id ->
+                    getTracks.await(id).takeIf { it.isNotEmpty() }
+                }.orEmpty()
+            } else {
+                emptyList()
+            }
+        }
+        if (tracks.isEmpty()) {
             logcat { "AniSkip: No tracks found for anime $animeId" }
             return null
         }
 
         val duration = playerDuration ?: return null
         val api = AniSkipApi()
-        for (track in getTracks.await(animeId)) {
+        for (track in tracks) {
             val tracker = trackerManager.get(track.trackerId)
             malId = when (tracker) {
                 is MyAnimeList -> track.remoteId

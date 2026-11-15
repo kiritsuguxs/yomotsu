@@ -114,6 +114,11 @@ open class EntryMergeManager(
         MergeBucket(bucket.groupId, rank(bucket.members, overrideRankingMemberIds(id(bucket.members.first()))))
     }
 
+    suspend fun isRankingOverridden(targetId: Long): Boolean {
+        val groupId = repository.getGroupId(contentType, targetId) ?: return false
+        return repository.getGroup(groupId)?.overrideSourceRanking == true
+    }
+
     suspend fun overrideRankingMemberIds(anchorId: Long): List<Long> {
         val groupId = repository.getGroupId(contentType, anchorId) ?: return emptyList()
         if (repository.getGroup(groupId)?.overrideSourceRanking != true) return emptyList()

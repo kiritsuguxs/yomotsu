@@ -908,16 +908,17 @@ class NovelReaderActivity : ComponentActivity() {
                                 IconButton(onClick = {
                                     isTranslated = !isTranslated
                                     if (isTranslated) {
-                                        val novelSource = manga?.let { sourceManager.get(it.source) as? NovelSourceWrapper }
                                         loadedChapters.forEach { item ->
                                             if (item.translatedText == null && item.originalText != null) {
+                                                val itemManga = mangaById[item.chapter.mangaId] ?: manga
+                                                val novelSource = itemManga?.let { sourceManager.get(it.source) as? NovelSourceWrapper }
                                                 scope.launch(Dispatchers.IO) {
                                                     item.isTranslating = true
                                                     item.translatedText = formatNovelText(
                                                         NovelTranslator.translate(
                                                             chapterId = item.chapter.id,
                                                             text = item.originalText!!,
-                                                            seriesTitle = manga?.title.orEmpty(),
+                                                            seriesTitle = itemManga?.title.orEmpty(),
                                                         ),
                                                         novelSource?.baseUrl,
                                                     )

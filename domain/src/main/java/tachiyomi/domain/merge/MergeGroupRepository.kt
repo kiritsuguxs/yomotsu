@@ -9,6 +9,8 @@ interface MergeGroupRepository {
 
     suspend fun getGroup(groupId: Long): MergeGroup?
 
+    suspend fun getAllGroups(): List<MergeGroup>
+
     suspend fun getGroupId(contentType: ContentType, entryId: Long): Long?
 
     suspend fun getMembers(contentType: ContentType, groupId: Long): List<Long>
@@ -26,6 +28,8 @@ interface MergeGroupRepository {
     fun getOverrideRankingsAsFlow(contentType: ContentType): Flow<Map<Long, List<Long>>>
 
     suspend fun getRankedMangaMembers(): List<RankedMember<Long>>
+
+    suspend fun getRankedMangaMembers(contentType: ContentType): List<RankedMember<Long>>
 
     fun getMangaMemberCoversAsFlow(): Flow<List<MemberCover<Long>>>
 

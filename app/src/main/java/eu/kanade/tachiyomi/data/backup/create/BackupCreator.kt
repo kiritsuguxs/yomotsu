@@ -34,7 +34,6 @@ import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.merge.MergeGroupRepository
-import tachiyomi.domain.merge.model.ContentType
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -213,10 +212,8 @@ class BackupCreator(
 
     private suspend fun backupMergeGroups(options: BackupOptions): List<BackupMergeGroup> {
         if (!options.libraryEntries) return emptyList()
-        val groupIds = mergeGroupRepository.getAllMemberships(ContentType.MANGA).values.distinct()
-        return groupIds.mapNotNull { groupId ->
-            val group = mergeGroupRepository.getGroup(groupId) ?: return@mapNotNull null
-            val memberIds = mergeGroupRepository.getMembers(group.contentType, groupId)
+        return mergeGroupRepository.getAllGroups().mapNotNull { group ->
+            val memberIds = mergeGroupRepository.getMembers(group.contentType, group.id)
             val members = memberIds.mapIndexedNotNull { index, mangaId ->
                 val manga = runCatching { mangaRepository.getMangaById(mangaId) }.getOrNull() ?: return@mapIndexedNotNull null
                 BackupMergeMember(source = manga.source, url = manga.url, priority = index.toLong())

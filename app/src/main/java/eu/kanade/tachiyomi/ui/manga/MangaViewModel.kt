@@ -71,6 +71,7 @@ import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
@@ -254,13 +255,15 @@ class MangaViewModel(
             combine(
                 mergeGroup.chips,
                 mergeGroup.selectedSourceChanges,
-            ) { chips, selected ->
-                chips to selected
-            }.collectLatest { (chips, selected) ->
+                mergeGroup.state,
+            ) { chips, selected, _ ->
+                Triple(chips, selected, mergeManager.isRankingOverridden(mangaId))
+            }.collectLatest { (chips, selected, overridden) ->
                 updateSuccessState { state ->
                     state.copy(
                         mergeSources = chips,
                         selectedMergeSource = selected,
+                        isMergeRankingOverridden = overridden,
                     )
                 }
             }
@@ -347,7 +350,10 @@ class MangaViewModel(
         }
 
         viewModelScope.launchIO {
-            getExcludedScanlators.subscribe(mangaId)
+            mergeGroup.selectedSourceChanges
+                .flatMapLatest { selectedId ->
+                    getExcludedScanlators.subscribe(selectedId ?: mangaId)
+                }
                 .distinctUntilChanged()
                 .collectLatest { excludedScanlators ->
                     updateSuccessState {
@@ -357,7 +363,20 @@ class MangaViewModel(
         }
 
         viewModelScope.launchIO {
-            getAvailableScanlators.subscribe(mangaId)
+            combine(
+                mergeGroup.state,
+                libraryPreferences.seriesMergingEnabled.changes(),
+            ) { groupState, mergingEnabled -> groupState to mergingEnabled }
+                .flatMapLatest { (groupState, mergingEnabled) ->
+                    val targetIds = if (groupState.selected == null && mergingEnabled && groupState.ids.size > 1) {
+                        groupState.ids.toList()
+                    } else {
+                        listOf(groupState.selected ?: mangaId)
+                    }
+                    combine(targetIds.map { getAvailableScanlators.subscribe(it) }) { sets ->
+                        sets.flatMapTo(LinkedHashSet()) { it }
+                    }
+                }
                 .distinctUntilChanged()
                 .collectLatest { availableScanlators ->
                     updateSuccessState {
@@ -395,6 +414,7 @@ class MangaViewModel(
                     dialog = null,
                     hideMissingChapters = libraryPreferences.hideMissingChapters.get(),
                     autoTranslateEnabled = autoTranslationPreference.get(),
+                    isMergeRankingOverridden = mergeManager.isRankingOverridden(mangaId),
                 )
             }
 
@@ -445,7 +465,7 @@ class MangaViewModel(
             }
 
             var lastError: Exception? = null
-            withUIContext {
+            withIOContext {
                 targetMangas.forEach { targetManga ->
                     val targetSource = if (targetManga.id == state.manga.id) {
                         state.source
@@ -522,6 +542,9 @@ class MangaViewModel(
 
             if (isFavorited) {
                 // Remove from library
+                if (mergeGroup.relatedIds.size > 1) {
+                    mergeManager.removeFromGroup(mergeGroup.relatedIds, listOf(manga.id))
+                }
                 if (updateManga.awaitUpdateFavorite(manga.id, false)) {
                     // Remove covers and update last modified in db
                     if (manga.removeCovers() != manga) {
@@ -618,11 +641,15 @@ class MangaViewModel(
      * Returns true if the manga has any downloads.
      */
     private fun hasDownloads(): Boolean {
-        val manga = successState?.manga ?: return false
-        if (isAnime) {
-            return animeDownloadManager.getDownloadCount(manga) > 0
+        val state = successState ?: return false
+        return hasDownloadsFor(state.manga, state.source)
+    }
+
+    private fun hasDownloadsFor(targetManga: Manga, targetSource: Source = sourceManager.getOrStub(targetManga.source)): Boolean {
+        if (targetSource is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
+            return animeDownloadManager.getDownloadCount(targetManga) > 0
         }
-        return downloadManager.getDownloadCount(manga) > 0
+        return downloadManager.getDownloadCount(targetManga) > 0
     }
 
     /**
@@ -630,10 +657,14 @@ class MangaViewModel(
      */
     private fun deleteDownloads() {
         val state = successState ?: return
-        if (state.source is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
-            animeDownloadManager.deleteManga(state.manga, state.source)
+        deleteDownloadsFor(state.manga, state.source)
+    }
+
+    private fun deleteDownloadsFor(targetManga: Manga, targetSource: Source = sourceManager.getOrStub(targetManga.source)) {
+        if (targetSource is eu.kanade.tachiyomi.animesource.AnimeSource || isAnime) {
+            animeDownloadManager.deleteManga(targetManga, targetSource)
         } else {
-            downloadManager.deleteManga(state.manga, state.source)
+            downloadManager.deleteManga(targetManga, targetSource)
         }
     }
 
@@ -1183,15 +1214,16 @@ class MangaViewModel(
                 return@launchIO
             }
 
-            refreshTrackers()
+            val trackTargetId = successState?.manga?.id ?: mangaId
+            refreshTrackers(trackTargetId)
 
-            val tracks = getTracks.await(mangaId)
+            val tracks = getTracks.await(trackTargetId)
             val maxChapterNumber = chapters.maxOf { it.chapterNumber }
             val shouldPromptTrackingUpdate = tracks.any { track -> maxChapterNumber > track.lastChapterRead }
 
             if (!shouldPromptTrackingUpdate) return@launchIO
             if (autoTrackState == AutoTrackState.ALWAYS) {
-                trackChapter.await(context, mangaId, maxChapterNumber)
+                trackChapter.await(context, trackTargetId, maxChapterNumber)
                 withUIContext {
                     context.toast(context.stringResource(MR.strings.trackers_updated_summary, maxChapterNumber.toInt()))
                 }
@@ -1206,19 +1238,20 @@ class MangaViewModel(
             )
 
             if (result == SnackbarResult.ActionPerformed) {
-                trackChapter.await(context, mangaId, maxChapterNumber)
+                trackChapter.await(context, trackTargetId, maxChapterNumber)
             }
         }
     }
 
     private suspend fun refreshTrackers(
+        targetMangaId: Long = mangaId,
         refreshTracks: RefreshTracks = Injekt.get(),
     ) {
-        refreshTracks.await(mangaId)
+        refreshTracks.await(targetMangaId)
             .filter { it.first != null }
             .forEach { (track, e) ->
                 logcat(LogPriority.ERROR, e) {
-                    "Failed to refresh track data mangaId=$mangaId for service ${track!!.id}"
+                    "Failed to refresh track data mangaId=$targetMangaId for service ${track!!.id}"
                 }
                 withUIContext {
                     context.toast(
@@ -1526,19 +1559,25 @@ class MangaViewModel(
     // Track sheet - start
 
     private fun observeTrackers() {
-        val manga = successState?.manga ?: return
-
         viewModelScope.launchIO {
-            combine(
-                getTracks.subscribe(manga.id).catch { logcat(LogPriority.ERROR, it) },
-                trackerManager.loggedInTrackersFlow(),
-            ) { mangaTracks, loggedInTrackers ->
-                // Show only if the service supports this manga's source
-                val supportedTrackers = loggedInTrackers.filter { (it as? EnhancedTracker)?.accept(source!!) ?: true }
-                val supportedTrackerIds = supportedTrackers.map { it.id }.toHashSet()
-                val supportedTrackerTracks = mangaTracks.filter { it.trackerId in supportedTrackerIds }
-                supportedTrackerTracks.size to supportedTrackers.isNotEmpty()
-            }
+            mergeGroup.selectedSourceChanges
+                .flatMapLatest { selectedId ->
+                    val targetId = selectedId ?: mangaId
+                    val targetManga = resolveMangaFor(targetId)
+                    val targetSource = targetManga?.let { sourceManager.getOrStub(it.source) } ?: source
+                    combine(
+                        getTracks.subscribe(targetId).catch { logcat(LogPriority.ERROR, it) },
+                        trackerManager.loggedInTrackersFlow(),
+                    ) { mangaTracks, loggedInTrackers ->
+                        // Show only if the service supports this manga's source
+                        val supportedTrackers = loggedInTrackers.filter { tracker ->
+                            targetSource?.let { (tracker as? EnhancedTracker)?.accept(it) } ?: true
+                        }
+                        val supportedTrackerIds = supportedTrackers.map { it.id }.toHashSet()
+                        val supportedTrackerTracks = mangaTracks.filter { it.trackerId in supportedTrackerIds }
+                        supportedTrackerTracks.size to supportedTrackers.isNotEmpty()
+                    }
+                }
                 .distinctUntilChanged()
                 .collectLatest { (trackingCount, hasLoggedInTrackers) ->
                     updateSuccessState {
@@ -1584,38 +1623,81 @@ class MangaViewModel(
 
     fun splitMergeSources(sourceIds: List<Long>) {
         viewModelScope.launchIO {
-            mergeManager.removeFromGroup(mergeGroup.relatedIds, sourceIds)
+            val remaining = mergeManager.removeFromGroup(mergeGroup.relatedIds, sourceIds)
+            if (remaining.size < 2 || mangaId in sourceIds) {
+                withUIContext { dismissDialog() }
+            }
         }
     }
 
     fun removeMergeSourcesFromLibrary(sourceIds: List<Long>) {
         viewModelScope.launchIO {
-            sourceIds.forEach { id ->
-                updateManga.awaitUpdateFavorite(id, false)
+            val remaining = mergeManager.removeFromGroup(mergeGroup.relatedIds, sourceIds)
+            val removedWithDownloads = removeEntriesFromLibrary(sourceIds)
+            if (remaining.size < 2 || mangaId in sourceIds) {
+                withUIContext { dismissDialog() }
             }
-            mergeManager.removeFromGroup(mergeGroup.relatedIds, sourceIds)
+            promptDownloadDeletion(removedWithDownloads)
         }
     }
 
     fun removeAllMergeSourcesFromLibrary() {
         viewModelScope.launchIO {
-            mergeGroup.relatedIds.forEach { id ->
-                updateManga.awaitUpdateFavorite(id, false)
-            }
+            val allIds = mergeGroup.relatedIds.toList()
             mergeManager.clearSourceOrder(mangaId)
-            mergeManager.removeFromGroup(mergeGroup.relatedIds, mergeGroup.relatedIds.toList())
+            mergeManager.removeFromGroup(mergeGroup.relatedIds, allIds)
+            val removedWithDownloads = removeEntriesFromLibrary(allIds)
+            withUIContext { dismissDialog() }
+            promptDownloadDeletion(removedWithDownloads)
+        }
+    }
+
+    private suspend fun removeEntriesFromLibrary(entryIds: List<Long>): List<Pair<Manga, Source>> {
+        val removedWithDownloads = mutableListOf<Pair<Manga, Source>>()
+        entryIds.distinct().forEach { id ->
+            val entry = resolveMangaFor(id) ?: return@forEach
+            if (updateManga.awaitUpdateFavorite(entry.id, false)) {
+                if (entry.removeCovers() != entry) {
+                    updateManga.awaitUpdateCoverLastModified(entry.id)
+                }
+                val entrySource = sourceManager.getOrStub(entry.source)
+                if (hasDownloadsFor(entry, entrySource)) {
+                    removedWithDownloads.add(entry to entrySource)
+                }
+            }
+        }
+        return removedWithDownloads
+    }
+
+    private fun promptDownloadDeletion(entries: List<Pair<Manga, Source>>) {
+        if (entries.isEmpty()) return
+        viewModelScope.launch {
+            val result = snackbarHostState.showSnackbar(
+                message = context.stringResource(MR.strings.delete_downloads_for_manga),
+                actionLabel = context.stringResource(MR.strings.action_delete),
+                withDismissAction = true,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                entries.forEach { (entry, entrySource) ->
+                    deleteDownloadsFor(entry, entrySource)
+                }
+            }
         }
     }
 
     fun reorderMergeSources(orderedIds: List<Long>) {
         viewModelScope.launchIO {
             mergeManager.setSourceOrder(orderedIds)
+            mergeGroup.refresh(mangaId)
+            updateSuccessState { it.copy(isMergeRankingOverridden = true) }
         }
     }
 
     fun resetMergeSourceOrder() {
         viewModelScope.launchIO {
             mergeManager.clearSourceOrder(mangaId)
+            mergeGroup.refresh(mangaId)
+            updateSuccessState { it.copy(isMergeRankingOverridden = false) }
         }
     }
 
@@ -1645,8 +1727,20 @@ class MangaViewModel(
     }
 
     fun setExcludedScanlators(excludedScanlators: Set<String>) {
+        val selectedId = mergeGroup.selectedSource
+        val targetIds = if (
+            selectedId == null &&
+            libraryPreferences.seriesMergingEnabled.get() &&
+            mergeGroup.relatedIds.size > 1
+        ) {
+            mergeGroup.relatedIds.toList()
+        } else {
+            listOf(selectedId ?: mangaId)
+        }
         viewModelScope.launchIO {
-            setExcludedScanlators.await(mangaId, excludedScanlators)
+            targetIds.forEach { targetId ->
+                setExcludedScanlators.await(targetId, excludedScanlators)
+            }
         }
     }
 
@@ -1671,6 +1765,7 @@ class MangaViewModel(
             val autoTranslateEnabled: Boolean = false,
             val mergeSources: List<ManageMergeSourceRow> = emptyList(),
             val selectedMergeSource: Long? = null,
+            val isMergeRankingOverridden: Boolean = false,
         ) : State {
             val isMerged: Boolean get() = mergeSources.size > 1
 
