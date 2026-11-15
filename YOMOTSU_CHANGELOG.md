@@ -3,6 +3,54 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.6
+
+🇧🇷 **Português (Brasil)**
+
+### ✨ Evolução Completa da Mesclagem de Séries (Mangá, Novel e Anime)
+- **Transição Contínua entre Fontes na Leitura e Reprodução:**
+  - **Leitor de Mangá (`MergedChapterLoader`):** Conectado o carregamento dinâmico por fonte em grupos mesclados, permitindo avançar ou retroceder capítulos continuamente mesmo quando o capítulo seguinte pertence a outra extensão/fonte.
+  - **Leitor de Light Novel & Player de Anime:** O scroll infinito de Novels e a playlist do Player de Animes agora carregam a lista unificada do grupo mesclado, trocando automaticamente para a fonte correspondente de cada capítulo/episódio.
+- **Sincronização Inteligente entre Fontes do Grupo:**
+  - **Progresso de Leitura e Favoritos Unificados:** Ler ou marcar um capítulo/episódio como lido ou favoritado (bookmark) propaga e reflete o estado automaticamente entre cópias equivalentes do mesmo capítulo nas demais fontes do grupo (`GroupMarks` / `expandToUnits`).
+  - **Categorias e Filtros Sincronizados:** Alterar categorias, ordenação ou filtros de capítulos de uma obra mesclada mantém todos os membros do grupo alinhados (`MangaGroupCategories` e `MangaChapterSettings`).
+  - **Botão "Continuar Lendo" na Biblioteca:** O atalho rápido nos cards da Biblioteca agora consulta a lista unificada do grupo mesclado.
+- **Backup e Restauração de Grupos Mesclados:**
+  - Os arquivos de backup (`.tachibk`) agora salvam e restauram automaticamente todos os grupos mesclados, preservando a ordem de prioridade das fontes configurada pelo usuário (`BackupMergeGroup`).
+
+### 🛠️ Correções de Bugs & Biblioteca
+- **Downloads, Exclusões, Qualidades e Tradução por Fonte Membro:**
+  - Corrigido o gerenciamento de capítulos em obras mescladas no `MangaViewModel`: downloads, exclusão de arquivos, seletor de qualidade de vídeo em animes (`ShowQualities`), tradução de capítulos e *pull-to-refresh* agora operam diretamente na fonte dona de cada capítulo/episódio.
+- **Contadores e Badges em Tempo Real na Biblioteca:**
+  - Os cards de obras mescladas na Biblioteca agora agregam corretamente o total de capítulos não lidos, baixados, categorias e histórico entre as fontes do grupo.
+  - Adicionada escuta reativa ao `AnimeDownloadCache` na Biblioteca para atualizar o selo (badge) de episódios baixados instantaneamente após concluir ou remover downloads.
+- **Limpeza de Resquícios Legados:**
+  - Removido recurso órfão de splash legado e padronizados os templates do repositório para a identidade oficial do Yomotsu (`app.yomotsu`).
+
+---
+
+🇺🇸 **English**
+
+### ✨ Full Series Merging Evolution (Manga, Light Novel & Anime)
+- **Seamless Cross-Source Reading & Playback:**
+  - **Manga Reader (`MergedChapterLoader`):** Wired per-member source loading so transitioning to the next or previous chapter works seamlessly across different sources in a merged group.
+  - **Light Novel Reader & Anime Player:** Infinite scroll in `NovelReaderActivity` and the playlist in `PlayerViewModel` now load the unified merged chapter/episode list and resolve each item's source automatically.
+- **Smart Group Synchronization:**
+  - **Unified Read & Bookmark Status:** Reading or bookmarking a chapter/episode automatically syncs across equivalent stitched copies from other sources in the merge group (`GroupMarks` / `expandToUnits`).
+  - **Synced Categories & Chapter Filters:** Updating categories, sorting, or chapter filters on a merged entry keeps all group members synchronized (`MangaGroupCategories` & `MangaChapterSettings`).
+  - **Library "Continue Reading" Shortcut:** The quick-resume button on Library cards now resolves the next unread chapter/episode from the unified merge group.
+- **Backup & Restore Support for Merge Groups:**
+  - `.tachibk` backups now export and restore merged series groups along with their custom source priority order (`BackupMergeGroup`).
+
+### 🛠️ Bug Fixes & Library Improvements
+- **Per-Source Downloads, Deletions, Video Qualities & Translations:**
+  - Fixed `MangaViewModel` actions on merged entries so downloading, deleting files, selecting anime video qualities (`ShowQualities`), translating chapters, and pull-to-refresh target the exact member source that owns each chapter/episode.
+- **Real-Time Library Badges & Aggregated Counts:**
+  - Merged cards in the Library now aggregate unread counts, download counts, categories, and timestamps across all group members.
+  - Subscribed `LibraryViewModel` to `AnimeDownloadCache.changes` so anime download badges update immediately when episodes are downloaded or deleted.
+- **Legacy Cleanup:**
+  - Removed unused legacy splash drawable and updated repository issue templates to Yomotsu (`app.yomotsu`).
+
 ## 0.21.5
 
 🇧🇷 **Português (Brasil)**
