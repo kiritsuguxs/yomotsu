@@ -42,9 +42,10 @@ object TranslationBlockGrouper {
         if (a.translation.isBlank() != b.translation.isBlank()) return false
         if (abs(a.angle - b.angle) > MAX_ANGLE_DIFFERENCE) return false
         val visualSizeCompatible = visualTextSizeSimilar(a, b)
+        val diagonallySeparated = areDiagonallySeparatedSources(a, b)
         val paragraphGlyphGap = if (strict) MAX_PADDLE_PARAGRAPH_GLYPH_GAP else MAX_COMIC_PARAGRAPH_GLYPH_GAP
-        val continuousParagraph = visualSizeCompatible && isOpenEndedContinuation(a, b) && shouldMergeByProximity(a, b, paragraphGlyphGap)
-        val connectorContinuation = visualSizeCompatible && !strict && endsWithConnector(a, b) && shouldMergeByProximity(a, b, MAX_CONNECTOR_GLYPH_GAP)
+        val continuousParagraph = visualSizeCompatible && !diagonallySeparated && isOpenEndedContinuation(a, b) && shouldMergeByProximity(a, b, paragraphGlyphGap)
+        val connectorContinuation = visualSizeCompatible && !diagonallySeparated && !strict && endsWithConnector(a, b) && shouldMergeByProximity(a, b, MAX_CONNECTOR_GLYPH_GAP)
 
         if (a.balloonDetected || b.balloonDetected) {
             if (a.balloonDetected && b.balloonDetected) {
@@ -54,18 +55,25 @@ object TranslationBlockGrouper {
                 if (firstLayout != null && secondLayout != null) {
                     val sharedArea = intersectionArea(firstLayout, secondLayout)
                     val smallerArea = minOf(firstLayout.area(), secondLayout.area()).coerceAtLeast(1f)
-                    if (sharedArea / smallerArea >= MIN_SHARED_BALLOON_RATIO) return true
+                    val sharedRatio = sharedArea / smallerArea
+                    val minSharedRatio = if (diagonallySeparated) DIAGONAL_SHARED_BALLOON_RATIO else MIN_SHARED_BALLOON_RATIO
+                    if (sharedRatio >= minSharedRatio) return true
                     val layoutsClearlySeparated = detectedLayoutsClearlySeparated(a, b, firstLayout, secondLayout)
                     if (a.translation.isNotBlank() && b.translation.isNotBlank()) {
                         // After translation, source OCR punctuation must not pull two detached
                         // balloon regions back together. A connector may join only a very close
                         // split region; clearly separated detected balloons always stay apart.
-                        if (layoutsClearlySeparated) return false
+                        if (layoutsClearlySeparated || diagonallySeparated) return false
                         return connectorContinuation
                     }
                     if (continuousParagraph) return true
                     // Inside the same balloon area or proximity, allow dialogue sentences to merge
-                    if (!layoutsClearlySeparated && (visualSizeCompatible || shouldMergeByProximity(a, b, paragraphGlyphGap * 1.5f))) return true
+                    // unless they belong to diagonally separate figure-8 lobes or merely kiss at edges.
+                    if (!layoutsClearlySeparated && !diagonallySeparated &&
+                        (isOpenEndedContinuation(a, b) || sharedRatio >= 0.25f || shouldMergeByProximity(a, b, paragraphGlyphGap))
+                    ) {
+                        return true
+                    }
                     if (connectorContinuation && layoutsClearlySeparated) return false
                 }
                 return continuousParagraph || connectorContinuation
@@ -78,10 +86,11 @@ object TranslationBlockGrouper {
                 val candidateCenterY = candidate.y + candidate.height / 2f
                 val centerIsInside = candidateCenterX in detectedLayout.x..(detectedLayout.x + detectedLayout.width) && candidateCenterY in detectedLayout.y..(detectedLayout.y + detectedLayout.height)
                 val overlapsDetected = intersectionArea(candidate.sourceRegion(), detectedLayout) > 0f
-                if (centerIsInside || overlapsDetected) return true
+                if (centerIsInside || (!diagonallySeparated && overlapsDetected)) return true
                 // A line near a spiky/jagged balloon tail can sit just outside the inset safeLayout
                 // and pick up dark border pixels on its outer ring while belonging to the same bubble.
                 if (a.translation.isBlank() && b.translation.isBlank() &&
+                    !diagonallySeparated &&
                     isAdjacentToDetectedBalloon(candidate, detected, detectedLayout, paragraphGlyphGap) &&
                     (isOpenEndedContinuation(a, b) || colorsAreCompatible(a.backgroundColor, b.backgroundColor))
                 ) {
@@ -91,7 +100,16 @@ object TranslationBlockGrouper {
             if (!colorsAreCompatible(a.backgroundColor, b.backgroundColor)) return false
             return continuousParagraph || connectorContinuation
         }
-        return visualSizeCompatible && (continuousParagraph || connectorContinuation || shouldMergeByProximity(a, b, paragraphGlyphGap))
+        return visualSizeCompatible && !diagonallySeparated && (continuousParagraph || connectorContinuation || shouldMergeByProximity(a, b, paragraphGlyphGap))
+    }
+
+    private fun areDiagonallySeparatedSources(a: TranslationBlock, b: TranslationBlock): Boolean {
+        val horizontalOverlap = (minOf(a.x + a.width, b.x + b.width) - maxOf(a.x, b.x)).coerceAtLeast(0f)
+        val minWidth = minOf(a.width, b.width).coerceAtLeast(1f)
+        val maxWidth = maxOf(a.width, b.width).coerceAtLeast(1f)
+        val overlapRatio = horizontalOverlap / minWidth
+        val centerDiffX = abs((a.x + a.width / 2f) - (b.x + b.width / 2f))
+        return overlapRatio < MAX_DIAGONAL_LOBE_OVERLAP && centerDiffX > maxWidth * MIN_DIAGONAL_CENTER_SHIFT_RATIO
     }
 
     private fun detectedLayoutsClearlySeparated(a: TranslationBlock, b: TranslationBlock, first: TranslationRegion, second: TranslationRegion): Boolean {
@@ -223,6 +241,6 @@ object TranslationBlockGrouper {
     private fun enclosingNullable(first: TranslationRegion?, second: TranslationRegion?): TranslationRegion? = when { first == null -> second; second == null -> first; else -> enclosing(first, second) }
     private fun enclosing(first: TranslationRegion, second: TranslationRegion): TranslationRegion { val l = minOf(first.x, second.x); val t = minOf(first.y, second.y); val r = maxOf(first.x + first.width, second.x + second.width); val b = maxOf(first.y + first.height, second.y + second.height); return TranslationRegion(l, t, r - l, b - t) }
     private val readingOrder = compareBy<TranslationBlock> { it.y }.thenBy { it.x }
-    private const val MAX_ANGLE_DIFFERENCE = 12f; private const val MIN_SHARED_BALLOON_RATIO = 0.15f; private const val MAX_CENTER_OFFSET_RATIO = 0.65f; private const val MAX_GLYPH_GAP = 2.0f; private const val MAX_COMIC_PARAGRAPH_GLYPH_GAP = 2.8f; private const val MAX_PADDLE_PARAGRAPH_GLYPH_GAP = 2.6f; private const val MAX_CONNECTOR_GLYPH_GAP = 3.8f; private const val MAX_DETECTED_LAYOUT_GLYPH_GAP = 0.85f; private const val MIN_HORIZONTAL_OVERLAP = 0.15f; private const val MAX_COLOR_DISTANCE_SQUARED = 4_900; private const val MAX_VISUAL_SIZE_RATIO = 2.2f
+    private const val MAX_ANGLE_DIFFERENCE = 12f; private const val MIN_SHARED_BALLOON_RATIO = 0.15f; private const val DIAGONAL_SHARED_BALLOON_RATIO = 0.55f; private const val MAX_DIAGONAL_LOBE_OVERLAP = 0.25f; private const val MIN_DIAGONAL_CENTER_SHIFT_RATIO = 0.55f; private const val MAX_CENTER_OFFSET_RATIO = 0.65f; private const val MAX_GLYPH_GAP = 2.0f; private const val MAX_COMIC_PARAGRAPH_GLYPH_GAP = 2.8f; private const val MAX_PADDLE_PARAGRAPH_GLYPH_GAP = 2.6f; private const val MAX_CONNECTOR_GLYPH_GAP = 3.8f; private const val MAX_DETECTED_LAYOUT_GLYPH_GAP = 0.85f; private const val MIN_HORIZONTAL_OVERLAP = 0.15f; private const val MAX_COLOR_DISTANCE_SQUARED = 4_900; private const val MAX_VISUAL_SIZE_RATIO = 2.2f
     private val continuationConnectors = setOf("a", "an", "the", "of", "to", "in", "on", "at", "from", "for", "with", "by", "and", "or", "but", "my", "your", "his", "her", "our", "their", "this", "that", "o", "os", "as", "um", "uma", "uns", "umas", "de", "do", "da", "dos", "das", "em", "no", "na", "nos", "nas", "ao", "aos", "à", "às", "para", "por", "com", "sem", "pelo", "pela", "num", "numa", "e", "ou", "mas", "meu", "minha", "seu", "sua", "nosso", "nossa", "que")
 }

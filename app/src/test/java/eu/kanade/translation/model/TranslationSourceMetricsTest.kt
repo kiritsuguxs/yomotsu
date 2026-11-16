@@ -35,6 +35,7 @@ class TranslationSourceMetricsTest {
         for (source in listOf(
             block("A normal line", 20f, 18f),
             block("A normal\nparagraph.", 44f, 18f),
+            block("Spaced\nlines", 76f, 16f),
             block("Rotated lettering", 44f, 2f).copy(angle = 35f),
             block("Vertical", 160f, 2f).copy(width = 20f),
         )) {

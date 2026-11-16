@@ -185,6 +185,25 @@ class TranslationBlockGrouperTest {
         assertEquals(2, TranslationBlockGrouper.group(listOf(first, second)).size)
     }
 
+    @Test
+    fun `diagonal figure-8 balloon lobes stay separate even with kissing bounding boxes`() {
+        val topRight = block(
+            text = "I can't...",
+            x = 240f,
+            y = 100f,
+            layout = TranslationRegion(210f, 70f, 140f, 95f),
+        )
+        val bottomLeft = block(
+            text = "You say you can't tell me.",
+            x = 60f,
+            y = 148f,
+            layout = TranslationRegion(35f, 125f, 195f, 110f),
+        )
+
+        assertEquals(2, TranslationBlockGrouper.group(listOf(topRight, bottomLeft), strict = false).size)
+        assertEquals(2, TranslationBlockGrouper.group(listOf(topRight, bottomLeft), strict = true).size)
+    }
+
     private fun block(text: String, translation: String = "", x: Float, y: Float, detected: Boolean = true, layout: TranslationRegion?) = TranslationBlock(
         text = text, translation = translation, width = 100f, height = 45f, x = x, y = y,
         symHeight = 20f, symWidth = 12f, angle = 0f,

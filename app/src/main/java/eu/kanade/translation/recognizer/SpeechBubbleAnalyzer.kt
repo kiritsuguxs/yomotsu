@@ -48,11 +48,17 @@ class SpeechBubbleAnalyzer(
         val backgroundSample = sampleBackgroundColor(block)
         val detectedLayout = backgroundSample?.takeIf { it.confidence >= MIN_DETECTION_CONFIDENCE }?.let { detectBalloonInterior(block, it.color) }
         val overlayColor = backgroundSample?.takeIf { it.confidence >= MIN_OVERLAY_CONFIDENCE }?.color
+        val originalSources = block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }
+        val resolvedFallbackLayout = if (detectedLayout == null && overlayColor != null) {
+            constrainToVisibleBoundary(fallbackLayout, block.sourceRegion(), overlayColor, originalSources)
+        } else {
+            fallbackLayout
+        }
         return SpeechBubbleAnalysis(
             cleanupRegion = overlayColor?.let {
                 constrainToVisibleBoundary(cleanup, block.sourceRegion(), it, containSource = true)
             } ?: cleanup,
-            layoutRegion = (detectedLayout ?: fallbackLayout).clamped(pageWidth.toFloat(), pageHeight.toFloat()),
+            layoutRegion = (detectedLayout ?: resolvedFallbackLayout).clamped(pageWidth.toFloat(), pageHeight.toFloat()),
             backgroundColor = overlayColor,
             foregroundColor = overlayColor?.let(TranslationColors::contrastingForeground) ?: Color.BLACK,
             balloonDetected = detectedLayout != null,
@@ -192,6 +198,43 @@ class SpeechBubbleAnalyzer(
         return constrainedLayout
     }
 
+    private fun hasCurvedOuterCorners(
+        left: Int,
+        right: Int,
+        top: Int,
+        bottom: Int,
+        backgroundColor: Int,
+    ): Boolean {
+        val w = right - left
+        val h = bottom - top
+        if (w < 10 || h < 10) return false
+        val cornerSigns = arrayOf(
+            intArrayOf(1, 1, left, top),
+            intArrayOf(-1, 1, right, top),
+            intArrayOf(1, -1, left, bottom),
+            intArrayOf(-1, -1, right, bottom),
+        )
+        var curvedCorners = 0
+        for (corner in cornerSigns) {
+            val sx = corner[0]
+            val sy = corner[1]
+            val ox = corner[2]
+            val oy = corner[3]
+            var blocked = false
+            for (step in 0..5) {
+                val frac = 0.03f + step * 0.022f
+                val cx = (ox + sx * (w * frac).roundToInt()).coerceIn(0, bitmap.width - 1)
+                val cy = (oy + sy * (h * frac).roundToInt()).coerceIn(0, bitmap.height - 1)
+                if (!isTextPixel(cx, cy, backgroundColor) && !colorsMatch(getPixel(cx, cy), backgroundColor)) {
+                    blocked = true
+                    break
+                }
+            }
+            if (blocked) curvedCorners++
+        }
+        return curvedCorners >= 2
+    }
+
     /**
      * Rejects gradient, speed-line, or glowing skill/aura bubbles from being treated as flat
      * solid-color speech balloons so opaque rectangular fills never destroy gradient effects.
@@ -323,6 +366,44 @@ class SpeechBubbleAnalyzer(
         // center (layout) or its whole box (cleanup), without shrinking every side.
         val anchorX = (toBitmapX(source.x + source.width / 2f) - left).coerceIn(0, width - 1)
         val anchorY = (toBitmapY(source.y + source.height / 2f) - top).coerceIn(0, height - 1)
+        if (!containSource) {
+            val visited = BooleanArray(background.size)
+            var bfsHead = 0
+            var bfsTail = 0
+            fun visit(x: Int, y: Int) {
+                val index = y * width + x
+                if (!boundary[index] && !visited[index]) {
+                    visited[index] = true
+                    queue[bfsTail++] = index
+                }
+            }
+            visit(anchorX, anchorY)
+            if (bfsTail == 0) {
+                for (bounds in originalBounds) {
+                    val bx0 = (bounds[0] - left).coerceIn(0, width - 1)
+                    val bx1 = (bounds[2] - left).coerceIn(0, width - 1)
+                    val by0 = (bounds[1] - top).coerceIn(0, height - 1)
+                    val by1 = (bounds[3] - top).coerceIn(0, height - 1)
+                    for (by in by0..by1) {
+                        for (bx in bx0..bx1) visit(bx, by)
+                    }
+                }
+            }
+            if (bfsTail > 0) {
+                while (bfsHead < bfsTail) {
+                    val index = queue[bfsHead++]
+                    val x = index % width
+                    val y = index / width
+                    if (x > 0) visit(x - 1, y)
+                    if (x + 1 < width) visit(x + 1, y)
+                    if (y > 0) visit(x, y - 1)
+                    if (y + 1 < height) visit(x, y + 1)
+                }
+                for (index in boundary.indices) {
+                    if (!visited[index]) boundary[index] = true
+                }
+            }
+        }
         val heights = IntArray(width)
         val stack = IntArray(width)
         var bestArea = 0

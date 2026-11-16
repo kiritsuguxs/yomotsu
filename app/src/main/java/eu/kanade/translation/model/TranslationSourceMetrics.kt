@@ -9,7 +9,7 @@ internal fun TranslationBlock.withReliableSourceMetrics(): TranslationBlock {
     val lines = text.lineSequence().filter { it.isNotBlank() }.toList()
     if (lines.isEmpty() || width <= 0f || height <= 0f || (lines.size == 1 && height > width)) return this
     val lineHeight = height / lines.size
-    if (symHeight.isFinite() && symHeight >= lineHeight * 0.5f) return this
+    if (symHeight.isFinite() && symHeight >= lineHeight * 0.35f) return this
 
     // Multi-line bounds include leading. Keep a conservative glyph estimate;
     // a single horizontal line already provides its actual glyph height.

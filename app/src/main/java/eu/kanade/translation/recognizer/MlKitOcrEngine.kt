@@ -178,8 +178,28 @@ class MlKitOcrEngine(
     }
 
     private fun extractBlocks(result: Text, offsetY: Float): List<OcrTextBlock> {
-        return result.textBlocks.mapNotNull { block ->
-            val bounds = block.boundingBox ?: return@mapNotNull null
+        return result.textBlocks.flatMap { block ->
+            val bounds = block.boundingBox ?: return@flatMap emptyList()
+            val lineInputs = block.lines.mapNotNull { line ->
+                val lineBounds = line.boundingBox ?: return@mapNotNull null
+                val symbols = line.elements
+                    .flatMap { it.symbols }
+                    .mapNotNull { it.boundingBox }
+                    .filter { it.width() > 0 && it.height() > 0 }
+                MlKitLineInput(
+                    text = line.text,
+                    x = lineBounds.left.toFloat(),
+                    y = lineBounds.top.toFloat(),
+                    width = lineBounds.width().toFloat(),
+                    height = lineBounds.height().toFloat(),
+                    symbolWidths = symbols.map { it.width().toFloat() },
+                    symbolHeights = symbols.map { it.height().toFloat() },
+                    angle = line.angle,
+                )
+            }
+            val clustered = MlKitLineClusterer.clusterLines(lineInputs, offsetY)
+            if (clustered.isNotEmpty()) return@flatMap clustered
+
             val symbolBounds = block.lines
                 .flatMap { it.elements }
                 .flatMap { it.symbols }
@@ -198,15 +218,17 @@ class MlKitOcrEngine(
                 1f
             }
 
-            OcrTextBlock(
-                text = block.text,
-                x = bounds.left.toFloat(),
-                y = bounds.top.toFloat() + offsetY,
-                width = bounds.width().toFloat(),
-                height = bounds.height().toFloat(),
-                symbolWidth = medianSymbolWidth,
-                symbolHeight = medianSymbolHeight,
-                angle = block.lines.firstOrNull()?.angle ?: 0f,
+            listOf(
+                OcrTextBlock(
+                    text = block.text,
+                    x = bounds.left.toFloat(),
+                    y = bounds.top.toFloat() + offsetY,
+                    width = bounds.width().toFloat(),
+                    height = bounds.height().toFloat(),
+                    symbolWidth = medianSymbolWidth,
+                    symbolHeight = medianSymbolHeight,
+                    angle = block.lines.firstOrNull()?.angle ?: 0f,
+                ),
             )
         }
     }
