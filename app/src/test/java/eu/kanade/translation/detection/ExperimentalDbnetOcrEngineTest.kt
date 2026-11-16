@@ -117,11 +117,11 @@ class ExperimentalDbnetOcrEngineTest {
             assertEquals(1, clientCreations)
             assertEquals(1, client.closeCalls)
             assertEquals(1, selected.recognizeCalls)
-            assertEquals(1, ownedMlKit.recognizeCalls)
-            assertEquals(1, ownedMlKit.releaseCalls)
+            assertEquals(0, ownedMlKit.recognizeCalls)
+            assertEquals(0, ownedMlKit.releaseCalls)
             assertEquals(1, notifications)
             assertEquals(
-                listOf("experimental", "owned-recognize", "client-close", "selected-recognize", "owned-release"),
+                listOf("experimental", "selected-recognize", "client-close"),
                 events,
             )
 
@@ -155,14 +155,15 @@ class ExperimentalDbnetOcrEngineTest {
         assertThrows(CancellationException::class.java) { runBlocking { engine.recognize(image()) } }
         assertEquals(1, experimentalCalls)
         assertEquals(0, client.closeCalls)
-        assertEquals(0, selected.recognizeCalls)
-        assertEquals(1, ownedMlKit.recognizeCalls)
+        assertEquals(1, selected.recognizeCalls)
+        assertEquals(0, ownedMlKit.recognizeCalls)
         assertEquals(0, ownedMlKit.releaseCalls)
         assertEquals(0, notifications)
 
         assertThrows(CancellationException::class.java) { runBlocking { engine.recognize(image()) } }
         assertEquals(2, experimentalCalls, "cancellation must not disable the DBNet route")
-        assertEquals(2, ownedMlKit.recognizeCalls)
+        assertEquals(2, selected.recognizeCalls)
+        assertEquals(0, ownedMlKit.recognizeCalls)
         assertEquals(0, ownedMlKit.releaseCalls)
     }
 

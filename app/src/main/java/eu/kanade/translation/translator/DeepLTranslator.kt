@@ -18,7 +18,7 @@ class DeepLTranslator(
     private val apiKey: String,
 ) : TextTranslator {
 
-    private val okHttpClient = TranslationNetworkHelper.sharedClient
+    private val okHttpClient by lazy { TranslationNetworkHelper.sharedClient }
 
     override suspend fun translate(
         pages: MutableMap<String, PageTranslation>,

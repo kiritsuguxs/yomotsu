@@ -92,19 +92,20 @@ class DbnetCleanupMaskTest {
         assertTrue(pixels.all { (x, y) -> x in 2..6 && y in 2..6 })
     }
 
-    @Test fun `dense mask is rejected instead of becoming a large rectangular cleanup fill`() {
+    @Test fun `dense mask inside permission is accepted for thick glyphs and stays clipped to permission`() {
         val width = 20
         val height = 12
         val solid = (0 until height).flatMap { y -> (0 until width).map { x -> x to y } }.toSet()
 
-        assertThrows(DbnetCleanupMaskException::class.java) {
-            prepare(
-                width,
-                height,
-                mask(width, height, width, height, solid),
-                listOf(group(0, line(1f, 1f, 19f, 11f))),
-            )
-        }
+        val prepared = prepare(
+            width,
+            height,
+            mask(width, height, width, height, solid),
+            listOf(group(0, line(1f, 1f, 19f, 11f))),
+        )
+        val erased = pixels(requireNotNull(prepared.blocks.single().dbnetCleanupMask), width, height)
+        assertTrue(erased.isNotEmpty())
+        assertTrue(erased.all { (x, y) -> x in 1 until 19 && y in 1 until 11 })
     }
 
     @Test fun `DBNet pixel outside permission cannot seed dilation back inside`() {

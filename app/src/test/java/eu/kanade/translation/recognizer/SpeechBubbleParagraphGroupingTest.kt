@@ -52,16 +52,31 @@ class SpeechBubbleParagraphGroupingTest {
         assertEquals("ESTA CERTO. E ASSIM QUE DEVE SER.", result.single().text)
     }
 
-    private fun largeWhiteBalloonBitmap(): Bitmap = mockk {
-        every { width } returns PAGE_SIZE
-        every { height } returns PAGE_SIZE
-        every { getPixel(any(), any()) } answers {
-            val x = firstArg<Int>()
-            val y = secondArg<Int>()
+    private fun largeWhiteBalloonBitmap(): Bitmap {
+        val samplePixel: (Int, Int) -> Int = { x, y ->
             if (x in BALLOON_START..BALLOON_END && y in BALLOON_START..BALLOON_END) {
                 0xffffffff.toInt()
             } else {
                 0xff000000.toInt()
+            }
+        }
+        return mockk {
+            every { width } returns PAGE_SIZE
+            every { height } returns PAGE_SIZE
+            every { getPixel(any(), any()) } answers { samplePixel(firstArg(), secondArg()) }
+            every { getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+                val out = firstArg<IntArray>()
+                val offset = secondArg<Int>()
+                val stride = thirdArg<Int>()
+                val x0 = arg<Int>(3)
+                val y0 = arg<Int>(4)
+                val w = arg<Int>(5)
+                val h = arg<Int>(6)
+                for (row in 0 until h) {
+                    for (col in 0 until w) {
+                        out[offset + row * stride + col] = samplePixel(x0 + col, y0 + row)
+                    }
+                }
             }
         }
     }

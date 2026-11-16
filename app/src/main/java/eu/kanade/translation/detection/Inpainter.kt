@@ -24,7 +24,7 @@ import kotlin.math.sqrt
 class Inpainter(
     modelPath: String? = null,
     val cfg: InpainterConfig = InpainterConfig(),
-    private val backend: DbnetBackend = DbnetNativeBackend,
+    private var backend: DbnetBackend? = null,
 ) : AutoCloseable {
 
     private var handle: Long = 0L
@@ -36,7 +36,8 @@ class Inpainter(
         if (!modelPath.isNullOrBlank() && cfg.method == InpainterConfig.METHOD_AOT) {
             check(modelPath.endsWith(".param")) { "AOT Inpainter requires an NCNN .param model: $modelPath" }
             val bin = modelPath.removeSuffix(".param") + ".bin"
-            handle = backend.create(modelPath, bin)
+            val activeBackend = backend ?: DbnetNativeBackend.also { backend = it }
+            handle = activeBackend.create(modelPath, bin)
             if (handle == 0L) {
                 Log.w(TAG, "Failed to initialize native NCNN AOT model from $modelPath; falling back to boxfill")
             }
@@ -243,7 +244,8 @@ class Inpainter(
             val maskArr = maskArrFromPixels(mp, t)
             val out = FloatArray(3 * t * t)
 
-            val rc = backend.inpaintAot(handle, imgChw, maskArr, t, out)
+            val activeBackend = requireNotNull(backend) { "NCNN backend is not initialized" }
+            val rc = activeBackend.inpaintAot(handle, imgChw, maskArr, t, out)
             check(rc == 0) { "NCNN AOT inference failed with status code $rc" }
 
             val resScaledPixels = aotArrToPixels(out, t)
@@ -303,7 +305,8 @@ class Inpainter(
             val maskArr = maskArrFromPixels(mp, tileSize)
             val out = FloatArray(3 * tileSize * tileSize)
 
-            val rc = backend.inpaintAot(handle, imgChw, maskArr, tileSize, out)
+            val activeBackend = requireNotNull(backend) { "NCNN backend is not initialized" }
+            val rc = activeBackend.inpaintAot(handle, imgChw, maskArr, tileSize, out)
             check(rc == 0) { "NCNN AOT window inference failed with status code $rc" }
 
             val resScaledPixels = aotArrToPixels(out, tileSize)
@@ -421,7 +424,7 @@ class Inpainter(
         if (handle != 0L) {
             val owned = handle
             handle = 0L
-            backend.release(owned)
+            backend?.release(owned)
         }
     }
 

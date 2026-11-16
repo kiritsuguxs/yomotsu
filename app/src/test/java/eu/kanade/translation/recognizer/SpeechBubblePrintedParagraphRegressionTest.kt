@@ -207,18 +207,38 @@ class SpeechBubblePrintedParagraphRegressionTest {
         val dx = (x - 200f) / 118f
         val dy = (y - 180f) / 88f
         dx * dx + dy * dy <= 1f
-    }): Bitmap = mockk<Bitmap> {
-        every { width } returns 400
-        every { height } returns 400
-        every { getPixel(any(), any()) } answers {
-            val x = firstArg<Int>()
-            val y = secondArg<Int>()
+    }): Bitmap {
+        val samplePixel: (Int, Int) -> Int = { x, y ->
             val letter = ink.any { x >= it.x && x <= it.x + it.width && y >= it.y && y <= it.y + it.height } &&
                 x % 12 < 8 && y % 14 < 10
             if (insideBalloon(x, y) && !letter) 0xffffffff.toInt() else 0xff000000.toInt()
         }
-    }.also {
-        bitmaps += it
-        excludeRecords { it.width; it.height; it.getPixel(any(), any()) }
+        return mockk<Bitmap> {
+            every { width } returns 400
+            every { height } returns 400
+            every { getPixel(any(), any()) } answers { samplePixel(firstArg(), secondArg()) }
+            every { getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+                val out = firstArg<IntArray>()
+                val offset = secondArg<Int>()
+                val stride = thirdArg<Int>()
+                val x0 = arg<Int>(3)
+                val y0 = arg<Int>(4)
+                val w = arg<Int>(5)
+                val h = arg<Int>(6)
+                for (row in 0 until h) {
+                    for (col in 0 until w) {
+                        out[offset + row * stride + col] = samplePixel(x0 + col, y0 + row)
+                    }
+                }
+            }
+        }.also {
+            bitmaps += it
+            excludeRecords {
+                it.width
+                it.height
+                it.getPixel(any(), any())
+                it.getPixels(any(), any(), any(), any(), any(), any(), any())
+            }
+        }
     }
 }

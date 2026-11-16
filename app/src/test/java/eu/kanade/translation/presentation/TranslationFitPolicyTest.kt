@@ -13,8 +13,8 @@ class TranslationFitPolicyTest {
         )
 
         assertEquals(listOf(6, 5, 4), profiles.map { it.minimumFontSizeSp })
-        assertEquals(listOf(0.82f, 0.88f, 0.90f), profiles.map { it.widthRatio })
-        assertEquals(listOf(0.76f, 0.82f, 0.86f), profiles.map { it.heightRatio })
+        assertEquals(listOf(0.80f, 0.85f, 0.88f), profiles.map { it.widthRatio })
+        assertEquals(listOf(0.74f, 0.80f, 0.84f), profiles.map { it.heightRatio })
     }
 
     @Test

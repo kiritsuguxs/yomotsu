@@ -54,8 +54,8 @@ fun TranslationBlock.defaultLayoutRegion(
     val sourceLen = text.count { !it.isWhitespace() }.coerceAtLeast(1)
     val transLen = translation.count { !it.isWhitespace() }
     val lengthFactor = if (transLen > 0) (transLen.toFloat() / sourceLen).coerceIn(1.0f, 1.6f) else 1.15f
-    val horizontalPadding = max(symWidth * 4.0f, width * 0.22f)
-    val verticalPadding = max(symHeight * (2.8f * lengthFactor), height * (0.22f * lengthFactor))
+    val horizontalPadding = max(symWidth * 4.4f, width * 0.28f)
+    val verticalPadding = max(symHeight * (3.2f * lengthFactor), height * (0.26f * lengthFactor))
     return sourceRegion().expanded(horizontalPadding, verticalPadding, pageWidth, pageHeight)
 }
 

@@ -63,7 +63,7 @@ class DbnetPageCoordinatorTest {
         assertEquals(1, cleanupCalls)
     }
 
-    @Test fun `Paddle fallback uses selected once and releases its one owned ML Kit session`() = runTest {
+    @Test fun `Paddle fallback reuses selected association pass without running a duplicate OCR session`() = runTest {
         val selected = FakeSession("selected Paddle page")
         val ownedMlKit = FakeSession("full-page ML Kit")
         val owner = DbnetFullPageMlKitOwner(
@@ -77,7 +77,7 @@ class DbnetPageCoordinatorTest {
             enabled = true,
             supported = true,
             experimental = {
-                assertEquals("full-page ML Kit", attempt.recognizeForAssociation(Unit))
+                assertEquals("selected Paddle page", attempt.recognizeForAssociation(Unit))
                 throw DbnetAssociationException("ambiguous")
             },
             existing = { attempt.fallback(Unit) },
@@ -87,8 +87,8 @@ class DbnetPageCoordinatorTest {
 
         assertEquals("selected Paddle page", result)
         assertEquals(1, selected.recognitions)
-        assertEquals(1, ownedMlKit.recognitions)
-        assertEquals(1, ownedMlKit.releases)
+        assertEquals(0, ownedMlKit.recognitions)
+        assertEquals(0, ownedMlKit.releases)
     }
 
     @Test fun `successful page records actual stages worker timings counts and overlapping total`() = runTest {

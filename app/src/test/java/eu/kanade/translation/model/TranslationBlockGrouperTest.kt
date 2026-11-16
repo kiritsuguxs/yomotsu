@@ -23,7 +23,7 @@ class TranslationBlockGrouperTest {
     @Test
     fun `nearby fragments from separate detected balloons remain separate`() {
         val first = block(text = "First balloon", x = 100f, y = 100f, layout = TranslationRegion(60f, 60f, 180f, 130f))
-        val second = block(text = "Second balloon", x = 105f, y = 175f, layout = TranslationRegion(60f, 195f, 180f, 130f))
+        val second = block(text = "Second balloon", x = 105f, y = 225f, layout = TranslationRegion(60f, 215f, 180f, 130f))
         val result = TranslationBlockGrouper.group(listOf(first, second))
         assertEquals(2, result.size)
         assertTrue(result.all(TranslationBlock::balloonDetected))
@@ -80,7 +80,7 @@ class TranslationBlockGrouperTest {
     @Test
     fun `finished sentences in separate detected regions remain separate`() {
         val first = block(text = "One sentence.", x = 100f, y = 100f, layout = TranslationRegion(60f, 60f, 180f, 100f))
-        val second = block(text = "Another sentence.", x = 102f, y = 146f, layout = TranslationRegion(60f, 170f, 180f, 100f))
+        val second = block(text = "Another sentence.", x = 102f, y = 200f, layout = TranslationRegion(60f, 185f, 180f, 100f))
         assertEquals(2, TranslationBlockGrouper.group(listOf(first, second)).size)
     }
 
@@ -116,7 +116,7 @@ class TranslationBlockGrouperTest {
     @Test
     fun `strict mode does not bridge separate detected regions through connector`() {
         val first = block(text = "I can hear my mother's knife on the", x = 100f, y = 100f, layout = TranslationRegion(60f, 60f, 180f, 120f))
-        val second = block(text = "watermark", x = 102f, y = 206f, layout = TranslationRegion(60f, 190f, 180f, 120f))
+        val second = block(text = "watermark", x = 102f, y = 220f, layout = TranslationRegion(60f, 205f, 180f, 120f))
         assertEquals(2, TranslationBlockGrouper.group(listOf(first, second), strict = true).size)
     }
 

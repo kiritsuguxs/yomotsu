@@ -34,15 +34,28 @@ class SpeechBubbleSeparationRegressionTest {
 
     @Test
     fun `nearby white balloons keep non overlapping layout regions`() {
+        val samplePixel: (Int, Int) -> Int = { x, y ->
+            val firstBalloon = x in 45..195 && y in 25..105
+            val secondBalloon = x in 45..195 && y in 115..205
+            if (firstBalloon || secondBalloon) 0xffffffff.toInt() else 0xff000000.toInt()
+        }
         val bitmap: Bitmap = mockk {
             every { width } returns 240
             every { height } returns 240
-            every { getPixel(any(), any()) } answers {
-                val x = firstArg<Int>()
-                val y = secondArg<Int>()
-                val firstBalloon = x in 45..195 && y in 25..105
-                val secondBalloon = x in 45..195 && y in 115..205
-                if (firstBalloon || secondBalloon) 0xffffffff.toInt() else 0xff000000.toInt()
+            every { getPixel(any(), any()) } answers { samplePixel(firstArg(), secondArg()) }
+            every { getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+                val out = firstArg<IntArray>()
+                val offset = secondArg<Int>()
+                val stride = thirdArg<Int>()
+                val x0 = arg<Int>(3)
+                val y0 = arg<Int>(4)
+                val w = arg<Int>(5)
+                val h = arg<Int>(6)
+                for (row in 0 until h) {
+                    for (col in 0 until w) {
+                        out[offset + row * stride + col] = samplePixel(x0 + col, y0 + row)
+                    }
+                }
             }
         }
         val analyzer = SpeechBubbleAnalyzer(bitmap, 240, 240)

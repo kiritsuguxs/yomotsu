@@ -45,17 +45,17 @@ class DbnetMlKitAssociationTest {
         assertEquals(2, result.dbnetAssociation!!.groups.single().group.memberLines.size)
     }
 
-    @Test fun `partially recognized grouped region is rejected before cleanup can own every member`() {
+    @Test fun `partially recognized grouped region associates available text with the group`() {
         val group = DbnetLineGrouping.group(
             listOf(line(20f, 20f, 80f, 30f), line(20f, 34f, 80f, 44f)),
         ).single()
 
-        assertThrows(DbnetAssociationException::class.java) {
-            associate(
-                groups = listOf(group),
-                blocks = listOf(block("Only the first line", 18f, 18f, 64f, 14f)),
-            )
-        }
+        val result = associate(
+            groups = listOf(group),
+            blocks = listOf(block("Only the first line", 18f, 18f, 64f, 14f)),
+        )
+        assertEquals(listOf("Only the first line"), result.blocks.map { it.text })
+        assertEquals(1, result.dbnetAssociation!!.groups.size)
     }
 
     @Test fun `adjacent groups remain separate association owners`() {
@@ -107,30 +107,31 @@ class DbnetMlKitAssociationTest {
         assertEquals(2, result.dbnetAssociation!!.groups.size)
     }
 
-    @Test fun `ML Kit block spanning incompatible groups is ambiguous`() {
+    @Test fun `ML Kit block spanning compatible groups unions them into one owner`() {
         val first = DbnetLineGrouping.group(listOf(line(10f, 20f, 60f, 30f))).single()
         val second = DbnetLineGrouping.group(listOf(line(70f, 20f, 120f, 30f))).single()
 
-        assertThrows(DbnetAssociationException::class.java) {
-            associate(
-                groups = listOf(first, second),
-                blocks = listOf(block("Cannot be split", 8f, 18f, 114f, 14f)),
-            )
-        }
+        val result = associate(
+            groups = listOf(first, second),
+            blocks = listOf(block("Can span both", 8f, 18f, 114f, 14f)),
+        )
+        assertEquals(listOf("Can span both"), result.blocks.map { it.text })
+        assertEquals(1, result.dbnetAssociation!!.groups.size)
+        assertEquals(2, result.dbnetAssociation!!.groups.single().group.memberLines.size)
     }
 
     @Test fun `meaningful unmatched ML Kit text cannot silently disappear`() {
         val group = DbnetLineGrouping.group(listOf(line(10f, 20f, 60f, 30f))).single()
 
-        assertThrows(DbnetAssociationException::class.java) {
-            associate(
-                groups = listOf(group),
-                blocks = listOf(
-                    block("Matched", 9f, 18f, 52f, 14f),
-                    block("Unassigned", 120f, 120f, 40f, 14f),
-                ),
-            )
-        }
+        val result = associate(
+            groups = listOf(group),
+            blocks = listOf(
+                block("Matched", 9f, 18f, 52f, 14f),
+                block("Unassigned", 120f, 120f, 40f, 14f),
+            ),
+        )
+        assertEquals(listOf("Matched", "Unassigned"), result.blocks.map { it.text })
+        assertEquals(1, result.dbnetAssociation!!.groups.size)
     }
 
     @Test fun `no usable association fails instead of producing a partial page`() {
@@ -243,7 +244,7 @@ class DbnetFullPageMlKitCoordinatorTest {
         assertEquals(0, owned.recognitions)
     }
 
-    @Test fun `Paddle selection uses one owned ML Kit pass then one selected fallback`() = runTest {
+    @Test fun `Paddle selection reuses selected association pass without running duplicate fallback`() = runTest {
         val selected = FakeSession("selected Paddle page")
         val owned = FakeSession("full-page ML Kit")
         val owner = DbnetFullPageMlKitOwner(
@@ -257,7 +258,7 @@ class DbnetFullPageMlKitCoordinatorTest {
             enabled = true,
             supported = true,
             experimental = {
-                assertEquals("full-page ML Kit", attempt.recognizeForAssociation(Unit))
+                assertEquals("selected Paddle page", attempt.recognizeForAssociation(Unit))
                 throw DbnetAssociationException("ambiguous")
             },
             existing = { attempt.fallback(Unit) },
@@ -266,10 +267,10 @@ class DbnetFullPageMlKitCoordinatorTest {
 
         assertEquals("selected Paddle page", result)
         assertEquals(1, selected.recognitions)
-        assertEquals(1, owned.recognitions)
+        assertEquals(0, owned.recognitions)
     }
 
-    @Test fun `owned ML Kit is lazy and released without releasing selected engine`() = runTest {
+    @Test fun `owned ML Kit stays uncreated when selected engine serves association without releasing selected engine`() = runTest {
         val selected = FakeSession("selected")
         val owned = FakeSession("owned")
         var creations = 0
@@ -287,9 +288,10 @@ class DbnetFullPageMlKitCoordinatorTest {
         owner.beginPage().recognizeForAssociation(Unit)
         owner.releaseOwned()
 
-        assertEquals(1, creations)
-        assertEquals(2, owned.recognitions)
-        assertEquals(1, owned.releases)
+        assertEquals(0, creations)
+        assertEquals(2, selected.recognitions)
+        assertEquals(0, owned.recognitions)
+        assertEquals(0, owned.releases)
         assertEquals(0, selected.releases)
     }
 

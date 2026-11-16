@@ -31,15 +31,28 @@ class SpeechBubbleOvalLayoutRegressionTest {
 
     @Test
     fun `narrow oval balloon keeps detected layout inside curved shoulders`() {
+        val samplePixel: (Int, Int) -> Int = { x, y ->
+            val dx = (x - CENTER_X) / RADIUS_X.toFloat()
+            val dy = (y - CENTER_Y) / RADIUS_Y.toFloat()
+            if (dx * dx + dy * dy <= 1f) 0xffffffff.toInt() else 0xff000000.toInt()
+        }
         val bitmap: Bitmap = mockk {
             every { width } returns PAGE_SIZE
             every { height } returns PAGE_SIZE
-            every { getPixel(any(), any()) } answers {
-                val x = firstArg<Int>()
-                val y = secondArg<Int>()
-                val dx = (x - CENTER_X) / RADIUS_X.toFloat()
-                val dy = (y - CENTER_Y) / RADIUS_Y.toFloat()
-                if (dx * dx + dy * dy <= 1f) 0xffffffff.toInt() else 0xff000000.toInt()
+            every { getPixel(any(), any()) } answers { samplePixel(firstArg(), secondArg()) }
+            every { getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+                val out = firstArg<IntArray>()
+                val offset = secondArg<Int>()
+                val stride = thirdArg<Int>()
+                val x0 = arg<Int>(3)
+                val y0 = arg<Int>(4)
+                val w = arg<Int>(5)
+                val h = arg<Int>(6)
+                for (row in 0 until h) {
+                    for (col in 0 until w) {
+                        out[offset + row * stride + col] = samplePixel(x0 + col, y0 + row)
+                    }
+                }
             }
         }
         val block = TranslationBlock(

@@ -15,7 +15,7 @@ class NovelSpeechSanitizerTest {
     @Test
     fun `collapses repeated dots to single ellipsis`() {
         val input = "Esperem por mim........ não me deixem aqui......"
-        val expected = "Esperem por mim... não me deixem aqui... "
+        val expected = "Esperem por mim... não me deixem aqui..."
         assertEquals(expected, NovelSpeechSanitizer.sanitize(input).trim())
     }
 

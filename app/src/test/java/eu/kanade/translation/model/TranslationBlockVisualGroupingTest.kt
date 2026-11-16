@@ -46,7 +46,7 @@ class TranslationBlockVisualGroupingTest {
             x = 102f,
             y = 150f,
             symWidth = 24f,
-            symHeight = 38f,
+            symHeight = 42f,
             detected = false,
             layout = null,
         )

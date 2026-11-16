@@ -83,20 +83,40 @@ class SpeechBubbleCornerBoundaryRegressionTest {
         assertTrue(r.x + r.width + r.y + r.height <= 381f)
     }
 
-    private fun pageBitmap(cutCorner: Boolean, cornerCut: Int = 382): Bitmap = mockk<Bitmap> {
-        every { width } returns 400
-        every { height } returns 400
-        every { getPixel(any(), any()) } answers {
-            val x = firstArg<Int>()
-            val y = secondArg<Int>()
+    private fun pageBitmap(cutCorner: Boolean, cornerCut: Int = 382): Bitmap {
+        val samplePixel: (Int, Int) -> Int = { x, y ->
             val first = x in 30..300 && y in 30..120 && (!cutCorner || x + y <= cornerCut)
             val neighbor = cutCorner && x in 230..340 && y in 80..200 && x + y >= cornerCut + 4
             val sourceInk = x in 110..210 && y in 68..81 && x % 9 < 4
             if ((first || neighbor) && !sourceInk) 0xffffffff.toInt() else 0xff000000.toInt()
         }
-    }.also { bitmap ->
-        bitmaps += bitmap
-        excludeRecords { bitmap.getPixel(any(), any()); bitmap.width; bitmap.height }
+        return mockk<Bitmap> {
+            every { width } returns 400
+            every { height } returns 400
+            every { getPixel(any(), any()) } answers { samplePixel(firstArg(), secondArg()) }
+            every { getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+                val out = firstArg<IntArray>()
+                val offset = secondArg<Int>()
+                val stride = thirdArg<Int>()
+                val x0 = arg<Int>(3)
+                val y0 = arg<Int>(4)
+                val w = arg<Int>(5)
+                val h = arg<Int>(6)
+                for (row in 0 until h) {
+                    for (col in 0 until w) {
+                        out[offset + row * stride + col] = samplePixel(x0 + col, y0 + row)
+                    }
+                }
+            }
+        }.also { bitmap ->
+            bitmaps += bitmap
+            excludeRecords {
+                bitmap.getPixel(any(), any())
+                bitmap.getPixels(any(), any(), any(), any(), any(), any(), any())
+                bitmap.width
+                bitmap.height
+            }
+        }
     }
 
     private fun block(scale: Float) = TranslationBlock(

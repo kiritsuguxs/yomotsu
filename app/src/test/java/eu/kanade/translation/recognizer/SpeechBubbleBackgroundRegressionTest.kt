@@ -156,9 +156,28 @@ class SpeechBubbleBackgroundRegressionTest {
         every { width } returns 400
         every { height } returns 400
         every { getPixel(any(), any()) } answers { pixel(firstArg(), secondArg()) }
+        every { getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+            val out = firstArg<IntArray>()
+            val offset = secondArg<Int>()
+            val stride = thirdArg<Int>()
+            val x0 = arg<Int>(3)
+            val y0 = arg<Int>(4)
+            val w = arg<Int>(5)
+            val h = arg<Int>(6)
+            for (row in 0 until h) {
+                for (col in 0 until w) {
+                    out[offset + row * stride + col] = pixel(x0 + col, y0 + row)
+                }
+            }
+        }
     }.also {
         bitmaps += it
-        excludeRecords { it.width; it.height; it.getPixel(any(), any()) }
+        excludeRecords {
+            it.width
+            it.height
+            it.getPixel(any(), any())
+            it.getPixels(any(), any(), any(), any(), any(), any(), any())
+        }
     }
 
     private companion object {
