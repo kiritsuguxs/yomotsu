@@ -133,13 +133,25 @@ object SettingsTranslationScreen : SearchableSettings {
             }
             if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
                 val modelPreference = translationPreferences.novelLlmModel(requireNotNull(llmProvider))
+                val isOpenRouter = llmProvider == TranslationLlmProvider.OPENROUTER
+                val openRouterActionLabel = if (isOpenRouter) {
+                    stringResource(ATMR.strings.pref_openrouter_free_models)
+                } else {
+                    null
+                }
                 add(
                     Preference.PreferenceItem.EditTextPreference(
                         preference = modelPreference,
                         title = "${stringResource(ATMR.strings.pref_engine_model)} (Novel)",
+                        secondaryActionLabel = openRouterActionLabel,
+                        onSecondaryAction = if (isOpenRouter) {
+                            { onOpenRouterModelPicker(modelPreference) }
+                        } else {
+                            null
+                        },
                     ),
                 )
-                if (llmProvider == TranslationLlmProvider.OPENROUTER) {
+                if (isOpenRouter) {
                     add(
                         Preference.PreferenceItem.TextPreference(
                             title = stringResource(ATMR.strings.pref_openrouter_free_models),
@@ -259,13 +271,25 @@ object SettingsTranslationScreen : SearchableSettings {
             }
             if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
                 val modelPreference = translationPreferences.llmModel(requireNotNull(llmProvider))
+                val isOpenRouter = llmProvider == TranslationLlmProvider.OPENROUTER
+                val openRouterActionLabel = if (isOpenRouter) {
+                    stringResource(ATMR.strings.pref_openrouter_free_models)
+                } else {
+                    null
+                }
                 add(
                     Preference.PreferenceItem.EditTextPreference(
                         preference = modelPreference,
                         title = stringResource(ATMR.strings.pref_engine_model),
+                        secondaryActionLabel = openRouterActionLabel,
+                        onSecondaryAction = if (isOpenRouter) {
+                            { onOpenRouterModelPicker(modelPreference) }
+                        } else {
+                            null
+                        },
                     ),
                 )
-                if (llmProvider == TranslationLlmProvider.OPENROUTER) {
+                if (isOpenRouter) {
                     add(
                         Preference.PreferenceItem.TextPreference(
                             title = stringResource(ATMR.strings.pref_openrouter_free_models),

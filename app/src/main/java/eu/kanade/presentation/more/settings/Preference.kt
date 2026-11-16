@@ -140,6 +140,8 @@ sealed class Preference {
             override val subtitle: String? = "%s",
             override val enabled: Boolean = true,
             override val onValueChanged: suspend (value: String) -> Boolean = { true },
+            val secondaryActionLabel: String? = null,
+            val onSecondaryAction: (() -> Unit)? = null,
         ) : PreferenceItem<String, Boolean>() {
             override val icon: ImageVector? = null
         }
