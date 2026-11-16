@@ -180,7 +180,14 @@ class SpeechBubbleAnalyzer(
         // the established conservative inset so existing paragraph fit is not
         // globally reduced.
         val aspect = detected.width / detected.height.coerceAtLeast(1f)
-        val rounded = aspect in ROUNDED_SAFE_LAYOUT_MIN_ASPECT..ROUNDED_SAFE_LAYOUT_MAX_ASPECT
+        val rounded = aspect in ROUNDED_SAFE_LAYOUT_MIN_ASPECT..ROUNDED_SAFE_LAYOUT_MAX_ASPECT ||
+            hasCurvedOuterCorners(
+                left = detectedLeft,
+                right = detectedRight,
+                top = detectedTop,
+                bottom = detectedBottom,
+                backgroundColor = backgroundColor,
+            )
         val horizontalRatio = if (rounded) ROUNDED_SAFE_LAYOUT_INSET_RATIO else BALLOON_HORIZONTAL_INSET_RATIO
         val verticalRatio = if (rounded) ROUNDED_SAFE_LAYOUT_INSET_RATIO else BALLOON_VERTICAL_INSET_RATIO
         val safeLayout = detected.inset(
@@ -221,8 +228,8 @@ class SpeechBubbleAnalyzer(
             val ox = corner[2]
             val oy = corner[3]
             var blocked = false
-            for (step in 0..5) {
-                val frac = 0.03f + step * 0.022f
+            for (step in 0..10) {
+                val frac = 0.025f + step * 0.015f
                 val cx = (ox + sx * (w * frac).roundToInt()).coerceIn(0, bitmap.width - 1)
                 val cy = (oy + sy * (h * frac).roundToInt()).coerceIn(0, bitmap.height - 1)
                 if (!isTextPixel(cx, cy, backgroundColor) && !colorsMatch(getPixel(cx, cy), backgroundColor)) {

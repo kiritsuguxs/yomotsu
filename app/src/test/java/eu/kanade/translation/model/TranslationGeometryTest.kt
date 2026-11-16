@@ -236,6 +236,27 @@ class TranslationGeometryTest {
         assertTrue(customized.resolveCleanup(500f, 500f) is DbnetMaskCleanup)
     }
 
+    @Test
+    fun `resolvedLayoutRegion does not expand downward when balloon background color exists`() {
+        val baseRegion = TranslationRegion(80f, 80f, 120f, 60f)
+        val longTranslation = "Esta tradução é bem maior do que o texto original para testar a expansão"
+        val freeTextBlock = translationBlock().copy(
+            text = "Hello",
+            translation = longTranslation,
+            layoutRegion = baseRegion,
+            geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION,
+            balloonDetected = false,
+            backgroundColor = null,
+        )
+        val balloonBackgroundBlock = freeTextBlock.copy(backgroundColor = 0xffffffff.toInt())
+
+        val freeResolved = freeTextBlock.resolvedLayoutRegion(500f, 500f)
+        val balloonResolved = balloonBackgroundBlock.resolvedLayoutRegion(500f, 500f)
+
+        assertTrue(freeResolved.height > baseRegion.height)
+        assertEquals(baseRegion, balloonResolved)
+    }
+
     private fun translationBlock(
         x: Float = 100f,
         y: Float = 100f,

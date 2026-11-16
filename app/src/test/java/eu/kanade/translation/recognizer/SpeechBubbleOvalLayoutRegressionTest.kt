@@ -141,6 +141,62 @@ class SpeechBubbleOvalLayoutRegressionTest {
         }
     }
 
+    @Test
+    fun `tall narrow manhwa oval keeps layout corners inside curved border`() {
+        val pageWidth = 240
+        val pageHeight = 320
+        val cx = 120f
+        val cy = 160f
+        val rx = 50f
+        val ry = 100f
+        val samplePixel: (Int, Int) -> Int = { x, y ->
+            val dx = (x - cx) / rx
+            val dy = (y - cy) / ry
+            if (dx * dx + dy * dy <= 1f) 0xffffffff.toInt() else 0xff000000.toInt()
+        }
+        val bitmap: Bitmap = mockk {
+            every { width } returns pageWidth
+            every { height } returns pageHeight
+            every { getPixel(any(), any()) } answers { samplePixel(firstArg(), secondArg()) }
+            every { getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+                val out = firstArg<IntArray>()
+                val offset = secondArg<Int>()
+                val stride = thirdArg<Int>()
+                val x0 = arg<Int>(3)
+                val y0 = arg<Int>(4)
+                val w = arg<Int>(5)
+                val h = arg<Int>(6)
+                for (row in 0 until h) {
+                    for (col in 0 until w) {
+                        out[offset + row * stride + col] = samplePixel(x0 + col, y0 + row)
+                    }
+                }
+            }
+        }
+        val block = TranslationBlock(
+            text = "WHY ARE YOU HERE",
+            translation = "POR QUE VOCÊ ESTÁ AQUI",
+            width = 48f,
+            height = 48f,
+            x = 96f,
+            y = 136f,
+            symHeight = 10f,
+            symWidth = 6f,
+            angle = 0f,
+        )
+
+        val analysis = SpeechBubbleAnalyzer(bitmap, pageWidth, pageHeight).analyze(block)
+
+        assertTrue(analysis.balloonDetected)
+        val r = analysis.layoutRegion
+        for (px in listOf(r.x, r.x + r.width)) {
+            for (py in listOf(r.y, r.y + r.height)) {
+                val norm = ((px - cx) / rx) * ((px - cx) / rx) + ((py - cy) / ry) * ((py - cy) / ry)
+                assertTrue(norm <= 1.02f, "Tall narrow oval corner ($px, $py) spilled outside balloon border: $r")
+            }
+        }
+    }
+
     private fun ellipseHalfWidthAtY(y: Float): Float {
         val dy = ((y - CENTER_Y) / RADIUS_Y).coerceIn(-1f, 1f)
         return RADIUS_X * kotlin.math.sqrt(1f - dy * dy)

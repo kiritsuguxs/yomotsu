@@ -71,8 +71,8 @@ fun TranslationBlock.resolvedLayoutRegion(pageWidth: Float, pageHeight: Float): 
 
     // For rectangular narration boxes or free-form text where Portuguese translation is significantly
     // longer than the English source, expand downward slightly within page bounds to prevent clipping
-    // unless the user has explicitly customized the text box geometry.
-    if (!balloonDetected && !layoutCustomized && translation.isNotBlank()) {
+    // unless the user has explicitly customized the text box geometry or a balloon background exists.
+    if (!balloonDetected && backgroundColor == null && !layoutCustomized && translation.isNotBlank()) {
         val sourceLen = text.count { !it.isWhitespace() }.coerceAtLeast(1)
         val transLen = translation.count { !it.isWhitespace() }
         if (transLen > sourceLen * 1.15f) {

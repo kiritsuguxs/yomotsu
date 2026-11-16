@@ -156,7 +156,46 @@ fun SmartTranslationBlock(
                 }
             }
 
-            val selected = fitted ?: splitWordFallback ?: requireNotNull(readableFloorFallback)
+            val selected = fitted ?: splitWordFallback ?: run {
+                val floorFallback = requireNotNull(readableFloorFallback)
+                val emergencyMax = (floorFallback.fontSizeSp - 1).coerceAtLeast(EMERGENCY_MIN_FONT_SIZE_SP)
+                val widestProfile = profiles.last()
+                val envelopeWidthPx = (outerWidthPx * widestProfile.widthRatio).toInt().coerceAtLeast(1)
+                val envelopeHeightPx = (outerHeightPx * widestProfile.heightRatio).toInt().coerceAtLeast(1)
+                val rotationScale = TranslationRotationFit.scaleToFit(
+                    outerWidth = envelopeWidthPx.toFloat(),
+                    outerHeight = envelopeHeightPx.toFloat(),
+                    contentWidth = envelopeWidthPx.toFloat(),
+                    contentHeight = envelopeHeightPx.toFloat(),
+                    angleDegrees = rotation,
+                )
+                val innerWidthPx = (envelopeWidthPx * rotationScale).toInt().coerceAtLeast(1)
+                val innerHeightPx = (envelopeHeightPx * rotationScale).toInt().coerceAtLeast(1)
+                val emergencySelection = TranslationTextFit.select(
+                    minimum = EMERGENCY_MIN_FONT_SIZE_SP,
+                    maximum = emergencyMax,
+                ) { candidate ->
+                    val paragraph = textMeasurer.measure(
+                        text = cleanText,
+                        style = translationTextStyle(baseTextStyle, candidate, fontFamily),
+                        constraints = Constraints(minWidth = innerWidthPx, maxWidth = innerWidthPx),
+                        softWrap = true,
+                        overflow = TextOverflow.Clip,
+                    )
+                    TranslationTextFit.Measurement(
+                        fits = !paragraph.hasVisualOverflow && paragraph.size.height <= innerHeightPx,
+                        keepsWords = TranslationTextFit.keepsWords(
+                            cleanText,
+                            (0 until paragraph.lineCount - 1).map { paragraph.getLineEnd(it, visibleEnd = true) },
+                        ),
+                    )
+                }
+                if (emergencySelection.fits) {
+                    FittedTranslationText(innerWidthPx, innerHeightPx, emergencySelection.fontSizeSp)
+                } else {
+                    floorFallback
+                }
+            }
             val innerWidth = with(density) { selected.widthPx.toDp() }
 
             val placeable = subcompose("final") {
@@ -262,4 +301,5 @@ private data class FittedTranslationText(
 
 private const val MAX_FONT_SIZE_SP = 48
 private const val ABSOLUTE_MIN_FONT_SIZE_SP = 4
+private const val EMERGENCY_MIN_FONT_SIZE_SP = 2
 private const val SOURCE_FONT_SIZE_MULTIPLIER = 1.45f
