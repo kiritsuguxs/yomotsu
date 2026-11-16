@@ -34,11 +34,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import eu.kanade.translation.model.CURRENT_TRANSLATION_GEOMETRY_VERSION
 import eu.kanade.translation.model.TranslationBlock
 import eu.kanade.translation.model.TranslationPageEditor
-import eu.kanade.translation.model.TranslationRegion
-import eu.kanade.translation.model.sourceRegion
+import eu.kanade.translation.model.applyCustomizationGeometry
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.at.ATMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -166,25 +164,7 @@ fun TranslationBlockEditorDialog(
                 block.translation = storedTranslation
                 block.backgroundColor = newBgColor
                 block.foregroundColor = newFgColor
-                if (wScale != 1.0f || hScale != 1.0f || offX != 0f || offY != 0f) {
-                    val currentLayout = block.layoutRegion ?: block.sourceRegion()
-                    val newWidth = (currentLayout.width * wScale).coerceAtLeast(10f)
-                    val newHeight = (currentLayout.height * hScale).coerceAtLeast(10f)
-                    val diffX = (newWidth - currentLayout.width) / 2f
-                    val diffY = (newHeight - currentLayout.height) / 2f
-                    val deltaX = currentLayout.width * offX
-                    val deltaY = currentLayout.height * offY
-                    val newX = (currentLayout.x - diffX + deltaX).coerceAtLeast(0f)
-                    val newY = (currentLayout.y - diffY + deltaY).coerceAtLeast(0f)
-                    val newRegion = TranslationRegion(newX, newY, newWidth, newHeight)
-                    block.x = (block.x + deltaX).coerceAtLeast(0f)
-                    block.y = (block.y + deltaY).coerceAtLeast(0f)
-                    block.layoutRegion = newRegion
-                    if (block.aotPatchBase64.isNullOrBlank()) {
-                        block.cleanupRegion = newRegion
-                    }
-                    block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
-                }
+                block.applyCustomizationGeometry(wScale, hScale, offX, offY)
                 onTranslationChanged(storedTranslation)
                 onDismissRequest()
             }.onFailure { error ->

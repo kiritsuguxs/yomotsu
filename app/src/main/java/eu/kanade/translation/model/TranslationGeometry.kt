@@ -90,6 +90,33 @@ fun TranslationBlock.sourceRegion(): TranslationRegion = TranslationRegion(
     height = height.coerceAtLeast(1f),
 )
 
+/**
+ * Applies user size and position adjustments solely to the translated text box
+ * ([layoutRegion]) while keeping original OCR bounds ([x], [y]), [cleanupRegion],
+ * [sourceCleanupRegions], [dbnetCleanupMask], and [aotPatchRegion] anchored
+ * to the original printed text so the cleanup background never inflates.
+ */
+fun TranslationBlock.applyCustomizationGeometry(
+    widthScale: Float,
+    heightScale: Float,
+    offsetX: Float,
+    offsetY: Float,
+) {
+    if (widthScale == 1.0f && heightScale == 1.0f && offsetX == 0f && offsetY == 0f) return
+    val currentLayout = layoutRegion ?: defaultLayoutRegion()
+    val newWidth = (currentLayout.width * widthScale).coerceAtLeast(10f)
+    val newHeight = (currentLayout.height * heightScale).coerceAtLeast(10f)
+    val diffX = (newWidth - currentLayout.width) / 2f
+    val diffY = (newHeight - currentLayout.height) / 2f
+    val deltaX = currentLayout.width * offsetX
+    val deltaY = currentLayout.height * offsetY
+    val newX = (currentLayout.x - diffX + deltaX).coerceAtLeast(0f)
+    val newY = (currentLayout.y - diffY + deltaY).coerceAtLeast(0f)
+    layoutRegion = TranslationRegion(newX, newY, newWidth, newHeight)
+    layoutCustomized = true
+    geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
+}
+
 fun TranslationRegion.expanded(
     horizontalPadding: Float,
     verticalPadding: Float,

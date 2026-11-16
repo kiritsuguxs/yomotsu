@@ -161,7 +161,7 @@ object TranslationLayoutCollisionResolver {
     }
 
     private fun isCustomSized(block: TranslationBlock): Boolean =
-        block.layoutRegion != null && block.cleanupRegion == block.layoutRegion
+        block.layoutCustomized || (block.layoutRegion != null && block.cleanupRegion == block.layoutRegion)
 
     private fun minReadableHeight(block: TranslationBlock, region: TranslationRegion): Float =
         min(region.height * 0.45f, max(block.symHeight * 1.25f, 14f)).coerceAtLeast(1f)

@@ -1,7 +1,9 @@
 package eu.kanade.translation.model
 
+import eu.kanade.translation.detection.DbnetCleanupMask
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -164,7 +166,74 @@ class TranslationGeometryTest {
         assertNull(block.backgroundColor)
         assertNull(block.foregroundColor)
         assertEquals(false, block.balloonDetected)
+        assertEquals(false, block.layoutCustomized)
         assertEquals(1, block.geometryVersion)
+    }
+
+    @Test
+    fun `applyCustomizationGeometry updates layout without expanding cleanup regions`() {
+        val originalLayout = TranslationRegion(80f, 80f, 120f, 70f)
+        val originalCleanup = TranslationRegion(96f, 96f, 88f, 38f)
+        val sourcePatch = TranslationRegion(98f, 98f, 84f, 34f)
+        val aotRegion = TranslationRegion(95f, 95f, 90f, 40f)
+        val mask = DbnetCleanupMask.fromRuns(500, 500, intArrayOf(100, 100, 20))
+        val block = translationBlock(x = 100f, y = 100f).copy(
+            layoutRegion = originalLayout,
+            cleanupRegion = originalCleanup,
+            sourceCleanupRegions = listOf(sourcePatch),
+            dbnetCleanupMask = mask,
+            aotPatchRegion = aotRegion,
+            balloonDetected = true,
+            geometryVersion = 1,
+        )
+
+        block.applyCustomizationGeometry(
+            widthScale = 1.5f,
+            heightScale = 1.2f,
+            offsetX = 0.25f,
+            offsetY = -0.10f,
+        )
+
+        val updatedLayout = requireNotNull(block.layoutRegion)
+        assertEquals(180f, updatedLayout.width, 0.001f)
+        assertEquals(84f, updatedLayout.height, 0.001f)
+        assertEquals(80f, updatedLayout.x, 0.001f) // - (180-120)/2 + 120*0.25 = -30 + 30 = 0 delta
+        assertEquals(66f, updatedLayout.y, 0.001f) // - (84-70)/2 - 70*0.10 = -7 - 7 = -14 delta
+        assertTrue(block.layoutCustomized)
+        assertEquals(CURRENT_TRANSLATION_GEOMETRY_VERSION, block.geometryVersion)
+        assertEquals(100f, block.x)
+        assertEquals(100f, block.y)
+        assertEquals(originalCleanup, block.cleanupRegion)
+        assertEquals(listOf(sourcePatch), block.sourceCleanupRegions)
+        assertEquals(mask, block.dbnetCleanupMask)
+        assertEquals(aotRegion, block.aotPatchRegion)
+    }
+
+    @Test
+    fun `applyCustomizationGeometry with neutral scale and zero offset is a no-op`() {
+        val originalLayout = TranslationRegion(80f, 80f, 120f, 70f)
+        val block = translationBlock().copy(layoutRegion = originalLayout)
+
+        block.applyCustomizationGeometry(1.0f, 1.0f, 0f, 0f)
+
+        assertFalse(block.layoutCustomized)
+        assertEquals(originalLayout, block.layoutRegion)
+    }
+
+    @Test
+    fun `resolveCleanup keeps DbnetMaskCleanup when layoutCustomized is true`() {
+        val region = TranslationRegion(80f, 80f, 120f, 70f)
+        val mask = DbnetCleanupMask.fromRuns(500, 500, intArrayOf(100, 100, 20))
+        val uncustomized = translationBlock().copy(
+            layoutRegion = region,
+            cleanupRegion = region,
+            dbnetCleanupMask = mask,
+            layoutCustomized = false,
+        )
+        val customized = uncustomized.copy(layoutCustomized = true)
+
+        assertTrue(uncustomized.resolveCleanup(500f, 500f) is LegacyCleanup)
+        assertTrue(customized.resolveCleanup(500f, 500f) is DbnetMaskCleanup)
     }
 
     private fun translationBlock(

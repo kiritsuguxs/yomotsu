@@ -39,6 +39,7 @@ data class TranslationBlock(
     val dbnetCleanupMask: DbnetCleanupMask? = null,
     var aotPatchBase64: String? = null,
     var aotPatchRegion: TranslationRegion? = null,
+    var layoutCustomized: Boolean = false,
 )
 
 /**

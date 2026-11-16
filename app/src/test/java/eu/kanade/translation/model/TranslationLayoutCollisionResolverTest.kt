@@ -88,4 +88,44 @@ class TranslationLayoutCollisionResolverTest {
             "Translated layout must not cover untranslated text: $clampedTranslated vs untranslated Y=${untranslated.y + untranslated.height}",
         )
     }
+
+    @Test
+    fun `layoutCustomized block keeps user layout even when cleanupRegion stays anchored`() {
+        val customized = TranslationBlock(
+            text = "EDITED",
+            translation = "EDITADO",
+            x = 100f,
+            y = 100f,
+            width = 80f,
+            height = 25f,
+            symWidth = 10f,
+            symHeight = 16f,
+            angle = 0f,
+            layoutRegion = TranslationRegion(60f, 70f, 200f, 140f),
+            cleanupRegion = TranslationRegion(96f, 96f, 88f, 33f),
+            layoutCustomized = true,
+            geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION,
+        )
+        val neighbor = TranslationBlock(
+            text = "NEIGHBOR",
+            translation = "VIZINHO",
+            x = 100f,
+            y = 170f,
+            width = 100f,
+            height = 25f,
+            symWidth = 10f,
+            symHeight = 16f,
+            angle = 0f,
+            layoutRegion = TranslationRegion(80f, 150f, 140f, 70f),
+            geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION,
+        )
+
+        val resolved = TranslationLayoutCollisionResolver.computeNonOverlappingLayouts(
+            listOf(customized, neighbor),
+            pageWidth = 400f,
+            pageHeight = 600f,
+        )
+
+        assertEquals(customized.layoutRegion, resolved[0])
+    }
 }

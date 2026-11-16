@@ -15,10 +15,9 @@ import eu.kanade.translation.model.PageTranslation
 import eu.kanade.translation.model.Translation
 import eu.kanade.translation.model.TranslationBlock
 import eu.kanade.translation.model.TranslationPageEditor
-import eu.kanade.translation.model.TranslationRegion
+import eu.kanade.translation.model.applyCustomizationGeometry
 import eu.kanade.translation.model.defaultCleanupRegion
 import eu.kanade.translation.model.defaultLayoutRegion
-import eu.kanade.translation.model.sourceRegion
 import eu.kanade.translation.recognizer.TextRecognizerLanguage
 import eu.kanade.translation.translator.ComicTranslationContext
 import eu.kanade.translation.translator.TextTranslatorLanguage
@@ -522,7 +521,6 @@ class TranslationManager(
                         blockIndex = blockIndex,
                     ) { block ->
                         val bgChanged = backgroundColor != block.backgroundColor
-                        val geometryChanged = widthScale != 1.0f || heightScale != 1.0f || offsetX != 0f || offsetY != 0f
                         if (bgChanged) {
                             block.aotPatchBase64 = null
                             block.aotPatchRegion = null
@@ -530,25 +528,7 @@ class TranslationManager(
                         block.translation = cleanTranslation
                         block.backgroundColor = backgroundColor
                         block.foregroundColor = foregroundColor
-                        if (geometryChanged) {
-                            val currentLayout = block.layoutRegion ?: block.sourceRegion()
-                            val newWidth = (currentLayout.width * widthScale).coerceAtLeast(10f)
-                            val newHeight = (currentLayout.height * heightScale).coerceAtLeast(10f)
-                            val diffX = (newWidth - currentLayout.width) / 2f
-                            val diffY = (newHeight - currentLayout.height) / 2f
-                            val deltaX = currentLayout.width * offsetX
-                            val deltaY = currentLayout.height * offsetY
-                            val newX = (currentLayout.x - diffX + deltaX).coerceAtLeast(0f)
-                            val newY = (currentLayout.y - diffY + deltaY).coerceAtLeast(0f)
-                            val newRegion = TranslationRegion(newX, newY, newWidth, newHeight)
-                            block.x = (block.x + deltaX).coerceAtLeast(0f)
-                            block.y = (block.y + deltaY).coerceAtLeast(0f)
-                            block.layoutRegion = newRegion
-                            if (block.aotPatchBase64.isNullOrBlank()) {
-                                block.cleanupRegion = newRegion
-                            }
-                            block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
-                        }
+                        block.applyCustomizationGeometry(widthScale, heightScale, offsetX, offsetY)
                         block.text
                     }
                 }

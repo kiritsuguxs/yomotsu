@@ -42,16 +42,12 @@ fun TranslationCleanupBlock(
             val color = block.backgroundColor?.let { Color(it) } ?: Color.White
             if (color.alpha == 0f) return
 
-            val customSizedRegion = block.layoutRegion?.takeIf {
-                block.cleanupRegion == it
-            }
-
-            // When a speech balloon is detected or manually customized/resized, clean its safe inner
-            // layout region to erase any un-OCR'd lines or line gaps completely.
-            if ((block.balloonDetected && block.layoutRegion != null) || customSizedRegion != null) {
-                val layout = (customSizedRegion ?: block.layoutRegion!!).clamped(pageWidth, pageHeight)
-                val cornerRatio = if (block.balloonDetected) 0.35f else 0.15f
-                val safeCornerRadius = minOf(layout.width, layout.height) * cornerRatio
+            // When an unedited speech balloon is detected, clean its safe inner layout region
+            // to erase any un-OCR'd lines or line gaps. Once the user moves/resizes the text box,
+            // keep cleanup strictly anchored to the original text patches so white background never grows.
+            if (block.balloonDetected && !block.layoutCustomized && block.layoutRegion != null) {
+                val layout = block.layoutRegion!!.clamped(pageWidth, pageHeight)
+                val safeCornerRadius = minOf(layout.width, layout.height) * 0.35f
                 val shape = RoundedCornerShape((safeCornerRadius * scaleFactor).pxToDp())
                 Box(
                     modifier = Modifier
@@ -110,10 +106,12 @@ fun TranslationCleanupBlock(
             }
         }
         is DbnetMaskCleanup -> {
+            val maskColor = block.backgroundColor?.let { Color(it) } ?: Color.White
+            if (maskColor.alpha == 0f) return
             val width = cleanup.mask.pageWidth
             val height = cleanup.mask.pageHeight
             val paint = Paint().apply {
-                color = block.backgroundColor?.let { Color(it) } ?: Color.White
+                color = maskColor
                 isAntiAlias = false
             }
             val padding = (width * 0.003f).coerceAtLeast(2f)

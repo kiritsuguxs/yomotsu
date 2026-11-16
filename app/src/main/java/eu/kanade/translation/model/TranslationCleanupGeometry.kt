@@ -28,7 +28,7 @@ fun TranslationBlock.resolveCleanup(
             return AotPatchCleanup(clamped, patchBase64)
         }
     }
-    if (layoutRegion != null && cleanupRegion == layoutRegion) {
+    if (layoutRegion != null && cleanupRegion == layoutRegion && !layoutCustomized) {
         return LegacyCleanup(resolvedCleanupPatches(pageWidth, pageHeight))
     }
     val mask = dbnetCleanupMask ?: return LegacyCleanup(resolvedCleanupPatches(pageWidth, pageHeight))
