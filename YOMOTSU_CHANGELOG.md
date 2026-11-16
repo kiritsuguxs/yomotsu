@@ -3,6 +3,40 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.21.8
+
+🇧🇷 **Português (Brasil)**
+
+### 🛠️ Correções Finais de Mesclagem, Trackers, Tradução e Identidade
+- **Mesclagem na Biblioteca, Atualizações, Histórico e Migração:**
+  - **Atualização da Biblioteca (`LibraryUpdateJob`):** Passa a atualizar também as demais fontes vinculadas aos grupos mesclados e reconciliar corretamente os capítulos após a busca.
+  - **Aba de Atualizações (`UpdatesViewModel` / `UpdatesTab`):** Ações de marcar como lido e favoritar agora se aplicam aos capítulos equivalentes do grupo mesclado; downloads e cancelamentos passam a responder em tempo real também para animes e novels, e a abertura de itens ocorre fora da thread principal.
+  - **Histórico (`HistoryViewModel`) e Migração (`MigrateMangaUseCase`):** O botão de continuar leitura no histórico agora resolve o próximo item em grupos mesclados, e a migração de séries preserva/atualiza corretamente os vínculos de mesclagem.
+- **Sincronização de Trackers e Leitor de Novels:**
+  - **Trackers Unificados:** Filtro de trackers na biblioteca (`LibraryViewModel`) e envio automático de progresso em lote, leitor de mangá, leitor de novel e player (`MangaViewModel`, `ReaderViewModel`, `NovelReaderActivity` e `PlayerViewModel`) passam a considerar todos os trackers vinculados aos membros do grupo mesclado.
+  - **Leitor de Light Novels (`NovelReaderActivity`):** Adicionado suporte a download antecipado (download-ahead), verificação de conquistas e remoção pós-leitura respeitando a fonte de origem no grupo mesclado.
+- **Tradução, Identidade Visual e Estabilidade:**
+  - **Tradução (`TranslationNetworkHelper` / tradutores / `Inpainter`):** Retry com intervalo de espera interrompido imediatamente ao cancelar a requisição, inicialização sob demanda do cliente HTTP/backend e ajuste de margem na região de layout (`TranslationGeometry`).
+  - **Identidade do Yomotsu:** Padronização dos identificadores de backup, notificações, canais e arquivo de logs (`yomotsu_crash_logs.txt`) para o Yomotsu.
+  - **Qualidade e CI:** Todos os testes unitários do módulo `:app` corrigidos e reativados no pipeline de validação contínua.
+
+---
+
+🇺🇸 **English**
+
+### 🛠️ Final Fixes for Series Merging, Trackers, Translation & Branding
+- **Merging in Library, Updates, History & Migration:**
+  - **Library Updates (`LibraryUpdateJob`):** Now updates all member sources in merged groups and reconciles chapters after fetching.
+  - **Updates Tab (`UpdatesViewModel` / `UpdatesTab`):** Mark-as-read and bookmark actions expand across equivalent merged units; anime and novel download states/actions update reactively, and opening entries runs off the main thread.
+  - **History (`HistoryViewModel`) & Migration (`MigrateMangaUseCase`):** History resume/next-chapter playback resolves across merged groups, and migrating entries properly preserves/updates merge memberships.
+- **Unified Tracker Sync & Novel Reader:**
+  - **Merged Tracking:** Library tracking filters (`LibraryViewModel`) and automatic progress sync (`MangaViewModel`, `ReaderViewModel`, `NovelReaderActivity`, and `PlayerViewModel`) now account for trackers across all members of a merged group.
+  - **Light Novel Reader (`NovelReaderActivity`):** Added merged-group-aware download-ahead, achievement checks, and delete-after-read handling.
+- **Translation, Branding & Stability:**
+  - **Translation (`TranslationNetworkHelper` / translators / `Inpainter`):** Retry backoff now exits promptly when requests are canceled, HTTP clients and native backends initialize lazily, and layout region geometry was refined (`TranslationGeometry`).
+  - **Yomotsu Branding:** Standardized remaining backup, notification, channel, and crash log (`yomotsu_crash_logs.txt`) identifiers to Yomotsu.
+  - **Quality & CI:** Fixed and re-enabled the full `:app` unit test suite in CI.
+
 ## 0.21.7
 
 🇧🇷 **Português (Brasil)**
