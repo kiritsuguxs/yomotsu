@@ -130,7 +130,18 @@ class GeminiTranslator(
             return okHttpClient.newCall(request).await().use { it.code to it.body.string() }
         }
 
-        var (statusCode, rawBody) = executeGeminiRequest(visionAttachment)
+        var (statusCode, rawBody) = try {
+            executeGeminiRequest(visionAttachment)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: OutOfMemoryError) {
+            if (visionAttachment != null) {
+                logcat(LogPriority.WARN, error) { "OutOfMemoryError sending Gemini vision bubble grid; retrying text-only" }
+                executeGeminiRequest(null)
+            } else {
+                throw error
+            }
+        }
         if (visionAttachment != null && (statusCode == 400 || statusCode == 422)) {
             logcat(LogPriority.WARN) { "Gemini model rejected multimodal bubble grid (HTTP $statusCode); retrying text-only" }
             val fallbackResult = executeGeminiRequest(null)

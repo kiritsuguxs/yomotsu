@@ -2,6 +2,7 @@ package eu.kanade.translation.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,6 +49,18 @@ private enum class BalloonBgColor {
 
 private enum class BalloonFgColor {
     BLACK, WHITE
+}
+
+internal fun formatHorizontalPositionOffset(offsetPercent: Int): String = when {
+    offsetPercent < 0 -> "$offsetPercent% (←)"
+    offsetPercent > 0 -> "+$offsetPercent% (→)"
+    else -> "0%"
+}
+
+internal fun formatVerticalPositionOffset(offsetPercent: Int): String = when {
+    offsetPercent < 0 -> "$offsetPercent% (↑)"
+    offsetPercent > 0 -> "+$offsetPercent% (↓)"
+    else -> "0%"
 }
 
 @Composable
@@ -264,9 +277,10 @@ fun TranslationBlockEditorDialog(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     FilterChip(
                         selected = selectedBg == BalloonBgColor.WHITE,
@@ -275,7 +289,13 @@ fun TranslationBlockEditorDialog(
                             selectedBg = BalloonBgColor.WHITE
                             selectedFg = BalloonFgColor.BLACK
                         },
-                        label = { Text(stringResource(ATMR.strings.translation_editor_color_white)) },
+                        label = {
+                            Text(
+                                text = stringResource(ATMR.strings.translation_editor_color_white),
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        },
                     )
                     FilterChip(
                         selected = selectedBg == BalloonBgColor.BLACK,
@@ -284,7 +304,13 @@ fun TranslationBlockEditorDialog(
                             selectedBg = BalloonBgColor.BLACK
                             selectedFg = BalloonFgColor.WHITE
                         },
-                        label = { Text(stringResource(ATMR.strings.translation_editor_color_black)) },
+                        label = {
+                            Text(
+                                text = stringResource(ATMR.strings.translation_editor_color_black),
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        },
                     )
                     FilterChip(
                         selected = selectedBg == BalloonBgColor.TRANSPARENT,
@@ -292,7 +318,13 @@ fun TranslationBlockEditorDialog(
                             bgTouched = true
                             selectedBg = BalloonBgColor.TRANSPARENT
                         },
-                        label = { Text(stringResource(ATMR.strings.translation_editor_color_transparent)) },
+                        label = {
+                            Text(
+                                text = stringResource(ATMR.strings.translation_editor_color_transparent),
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        },
                     )
                 }
 
@@ -304,9 +336,10 @@ fun TranslationBlockEditorDialog(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         FilterChip(
                             selected = selectedFg == BalloonFgColor.BLACK,
@@ -314,7 +347,13 @@ fun TranslationBlockEditorDialog(
                                 fgTouched = true
                                 selectedFg = BalloonFgColor.BLACK
                             },
-                            label = { Text(stringResource(ATMR.strings.translation_editor_color_black)) },
+                            label = {
+                                Text(
+                                    text = stringResource(ATMR.strings.translation_editor_color_black),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            },
                         )
                         FilterChip(
                             selected = selectedFg == BalloonFgColor.WHITE,
@@ -322,7 +361,13 @@ fun TranslationBlockEditorDialog(
                                 fgTouched = true
                                 selectedFg = BalloonFgColor.WHITE
                             },
-                            label = { Text(stringResource(ATMR.strings.translation_editor_color_white)) },
+                            label = {
+                                Text(
+                                    text = stringResource(ATMR.strings.translation_editor_color_white),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            },
                         )
                     }
                 }
@@ -342,6 +387,7 @@ fun TranslationBlockEditorDialog(
                     Text(
                         text = stringResource(ATMR.strings.translation_editor_width, widthScalePercent),
                         style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
@@ -366,6 +412,7 @@ fun TranslationBlockEditorDialog(
                     Text(
                         text = stringResource(ATMR.strings.translation_editor_height, heightScalePercent),
                         style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
@@ -382,27 +429,39 @@ fun TranslationBlockEditorDialog(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(ATMR.strings.translation_editor_position),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Posição X: ${if (offsetXPercent > 0) "+$offsetXPercent" else "$offsetXPercent"}%",
+                        text = stringResource(
+                            ATMR.strings.translation_editor_move_horizontal,
+                            formatHorizontalPositionOffset(offsetXPercent),
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
                             onClick = { if (offsetXPercent > -100) offsetXPercent -= 10 },
                             enabled = !isWorking && offsetXPercent > -100,
                         ) {
-                            Icon(Icons.Outlined.Remove, contentDescription = "-")
+                            Icon(Icons.Outlined.Remove, contentDescription = "←")
                         }
                         IconButton(
                             onClick = { if (offsetXPercent < 100) offsetXPercent += 10 },
                             enabled = !isWorking && offsetXPercent < 100,
                         ) {
-                            Icon(Icons.Outlined.Add, contentDescription = "+")
+                            Icon(Icons.Outlined.Add, contentDescription = "→")
                         }
                     }
                 }
@@ -412,21 +471,25 @@ fun TranslationBlockEditorDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Posição Y: ${if (offsetYPercent > 0) "+$offsetYPercent" else "$offsetYPercent"}%",
+                        text = stringResource(
+                            ATMR.strings.translation_editor_move_vertical,
+                            formatVerticalPositionOffset(offsetYPercent),
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
                             onClick = { if (offsetYPercent > -100) offsetYPercent -= 10 },
                             enabled = !isWorking && offsetYPercent > -100,
                         ) {
-                            Icon(Icons.Outlined.Remove, contentDescription = "-")
+                            Icon(Icons.Outlined.Remove, contentDescription = "↑")
                         }
                         IconButton(
                             onClick = { if (offsetYPercent < 100) offsetYPercent += 10 },
                             enabled = !isWorking && offsetYPercent < 100,
                         ) {
-                            Icon(Icons.Outlined.Add, contentDescription = "+")
+                            Icon(Icons.Outlined.Add, contentDescription = "↓")
                         }
                     }
                 }

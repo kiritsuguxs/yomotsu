@@ -52,6 +52,9 @@
     <string name="translation_editor_size">Size</string>
     <string name="translation_editor_width">Width: %1$d%%</string>
     <string name="translation_editor_height">Height: %1$d%%</string>
+    <string name="translation_editor_position">Position</string>
+    <string name="translation_editor_move_horizontal">Left / Right: %1$s</string>
+    <string name="translation_editor_move_vertical">Up / Down: %1$s</string>
     <string name="translation_manual_action">Add manual translation</string>
     <string name="translation_manual_title">Add manual translation</string>
     <string name="translation_manual_hint">The translation will be placed around the point you held.</string>

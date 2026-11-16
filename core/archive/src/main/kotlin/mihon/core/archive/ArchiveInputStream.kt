@@ -31,14 +31,38 @@ internal class ArchiveInputStream(buffer: Long, size: Long) : InputStream() {
     private val oneByteBuffer = ByteBuffer.allocateDirect(1)
 
     override fun read(): Int {
-        read(oneByteBuffer)
-        return if (oneByteBuffer.hasRemaining()) oneByteBuffer.get().toUByte().toInt() else -1
+        synchronized(lock) {
+            if (isClosed) return -1
+            read(oneByteBuffer)
+            return if (oneByteBuffer.hasRemaining()) oneByteBuffer.get().toUByte().toInt() else -1
+        }
     }
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
-        val buffer = ByteBuffer.wrap(b, off, len)
-        read(buffer)
-        return if (buffer.hasRemaining()) buffer.remaining() else -1
+        if (off < 0 || len < 0 || len > b.size - off) {
+            throw IndexOutOfBoundsException()
+        }
+        if (len == 0) return 0
+        synchronized(lock) {
+            if (isClosed) return -1
+            if (off == 0 && len == b.size) {
+                val buffer = ByteBuffer.wrap(b)
+                read(buffer)
+                return if (buffer.hasRemaining()) buffer.remaining() else -1
+            }
+            val scratch = ByteArray(len)
+            val buffer = ByteBuffer.wrap(scratch)
+            read(buffer)
+            val bytesRead = buffer.remaining()
+            if (bytesRead <= 0) return -1
+            scratch.copyInto(
+                destination = b,
+                destinationOffset = off,
+                startIndex = 0,
+                endIndex = bytesRead,
+            )
+            return bytesRead
+        }
     }
 
     private fun read(buffer: ByteBuffer) {
@@ -51,9 +75,8 @@ internal class ArchiveInputStream(buffer: Long, size: Long) : InputStream() {
         synchronized(lock) {
             if (isClosed) return
             isClosed = true
+            Archive.readFree(archive)
         }
-
-        Archive.readFree(archive)
     }
 
     fun getNextEntry(): MihonArchiveEntry? {

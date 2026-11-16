@@ -129,7 +129,18 @@ class OpenRouterTranslator(
                 return okHttpClient.newCall(request).await().use { it.code to it.body.string() }
             }
 
-            var (statusCode, rawBody) = executeOpenRouterRequest(visionAttachment)
+            var (statusCode, rawBody) = try {
+                executeOpenRouterRequest(visionAttachment)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: OutOfMemoryError) {
+                if (visionAttachment != null) {
+                    logcat { "OutOfMemoryError sending OpenRouter vision bubble grid; retrying text-only" }
+                    executeOpenRouterRequest(null)
+                } else {
+                    throw error
+                }
+            }
             if (visionAttachment != null && (statusCode == 400 || statusCode == 422)) {
                 logcat { "OpenRouter model rejected multimodal bubble grid (HTTP $statusCode); retrying text-only" }
                 val fallbackResult = executeOpenRouterRequest(null)

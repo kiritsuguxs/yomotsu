@@ -52,6 +52,9 @@
     <string name="translation_editor_size">Tamanho</string>
     <string name="translation_editor_width">Largura: %1$d%%</string>
     <string name="translation_editor_height">Altura: %1$d%%</string>
+    <string name="translation_editor_position">Posição</string>
+    <string name="translation_editor_move_horizontal">Esquerda / Direita: %1$s</string>
+    <string name="translation_editor_move_vertical">Cima / Baixo: %1$s</string>
     <string name="translation_manual_action">Adicionar tradução manual</string>
     <string name="translation_manual_title">Adicionar tradução manual</string>
     <string name="translation_manual_hint">A tradução será posicionada ao redor do ponto que você segurou.</string>

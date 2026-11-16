@@ -323,11 +323,15 @@ class ChapterTranslator(
                 }
                 val pageStreamByName = chapterPages.pages.toMap()
                 val archiveMutex = Mutex()
+                val visionScratchDir = File(context.cacheDir, "vision-montage")
                 val visionAttachmentBuilder: (suspend (Map<String, PageTranslation>) -> VisionMontageAttachment?)? =
                     if (useVisionBubbleContext && selectedEngine.llmProvider != null) {
                         { chunkPages ->
                             archiveMutex.withLock {
-                                VisionBubbleMontageBuilder.build(chunkPages) { pageKey ->
+                                VisionBubbleMontageBuilder.build(
+                                    pages = chunkPages,
+                                    scratchDir = visionScratchDir,
+                                ) { pageKey ->
                                     pageStreamByName[pageKey]?.invoke()
                                 }
                             }
@@ -386,18 +390,28 @@ class ChapterTranslator(
 
                     if (translationPreferences.inpainterAot().get() && AotInpaintClient.isDeviceSupported()) {
                         val inpaintStart = System.nanoTime()
-                        inpaintedBlocksTotal = applyAotInpaintingToPages(
-                            translation = translation,
-                            chapterPages = chapterPages,
-                            pages = pages,
-                            chapterNumber = chapterNumber,
-                        )
+                        inpaintedBlocksTotal = try {
+                            applyAotInpaintingToPages(
+                                translation = translation,
+                                chapterPages = chapterPages,
+                                pages = pages,
+                                chapterNumber = chapterNumber,
+                            )
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (error: Throwable) {
+                            logcat(LogPriority.WARN, error) {
+                                "AOT-GAN post-processing failed; keeping translated chapter without neural patches"
+                            }
+                            0
+                        } finally {
+                            runCatching { aotInpaintClient.close() }
+                        }
                         accumulatedInpaintTimeMs = elapsedMs(inpaintStart)
                     }
                 }
             }
-            translationMangaDir.findFile(saveFile)?.delete()
-            translationMangaDir.createFile(saveFile)!!.openOutputStream().use { output -> Json.encodeToStream(pages, output) }
+            saveTranslatedPages(translationMangaDir, saveFile, pages)
             translation.status = Translation.State.TRANSLATED
             logcat(LogPriority.INFO) {
                 "OCR chapter engine=$selectedOcrType pages=$processedPages ocrMs=$accumulatedOcrTimeMs " +
@@ -412,6 +426,35 @@ class ChapterTranslator(
                 "OCR chapter failure engine=$selectedOcrType pages=$processedPages ocrMs=$accumulatedOcrTimeMs " +
                     "totalMs=${elapsedMs(pipelineStart)} failures=1 error=${error::class.simpleName}"
             }
+        }
+    }
+
+    private fun saveTranslatedPages(
+        translationMangaDir: UniFile,
+        saveFile: String,
+        pages: Map<String, PageTranslation>,
+    ) {
+        val existing = translationMangaDir.findFile(saveFile)
+        val targetFile = existing
+            ?: translationMangaDir.createFile(saveFile)
+            ?: error("Não foi possível criar o arquivo de tradução.")
+
+        val streamOpened = runCatching {
+            val output = context.contentResolver.openOutputStream(targetFile.uri, "wt")
+                ?: targetFile.openOutputStream()
+            output.buffered().use { buffered ->
+                Json.encodeToStream(pages, buffered)
+                buffered.flush()
+            }
+        }
+        if (streamOpened.isSuccess) return
+
+        existing?.delete()
+        val recreated = translationMangaDir.createFile(saveFile)
+            ?: throw (streamOpened.exceptionOrNull() ?: IllegalStateException("Não foi possível salvar o arquivo de tradução."))
+        recreated.openOutputStream().buffered().use { buffered ->
+            Json.encodeToStream(pages, buffered)
+            buffered.flush()
         }
     }
 

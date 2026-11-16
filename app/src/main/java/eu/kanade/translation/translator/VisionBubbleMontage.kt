@@ -10,11 +10,13 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Build
+import android.os.ParcelFileDescriptor
 import android.util.Base64
 import eu.kanade.translation.model.PageTranslation
 import eu.kanade.translation.model.TranslationRegion
 import eu.kanade.translation.model.sourceRegion
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.InputStream
 import kotlin.math.ceil
 import kotlin.math.max
@@ -198,6 +200,32 @@ internal object VisionBubbleMontagePlanner {
         return MontageLayout(finalW, finalH, scaledPlacements)
     }
 
+    fun mapCropRectToDecoder(
+        crop: CropRect,
+        pageWidth: Int,
+        pageHeight: Int,
+        decoderWidth: Int,
+        decoderHeight: Int,
+    ): CropRect? {
+        if (decoderWidth <= 0 || decoderHeight <= 0) return null
+        val safePageW = pageWidth.coerceAtLeast(1)
+        val safePageH = pageHeight.coerceAtLeast(1)
+        if (safePageW == decoderWidth && safePageH == decoderHeight) {
+            val left = crop.left.coerceIn(0, decoderWidth - 1)
+            val top = crop.top.coerceIn(0, decoderHeight - 1)
+            val right = crop.right.coerceIn(left + 1, decoderWidth)
+            val bottom = crop.bottom.coerceIn(top + 1, decoderHeight)
+            return CropRect(left, top, right, bottom)
+        }
+        val scaleX = decoderWidth.toFloat() / safePageW.toFloat()
+        val scaleY = decoderHeight.toFloat() / safePageH.toFloat()
+        val left = (crop.left * scaleX).roundToInt().coerceIn(0, decoderWidth - 1)
+        val top = (crop.top * scaleY).roundToInt().coerceIn(0, decoderHeight - 1)
+        val right = (crop.right * scaleX).roundToInt().coerceIn(left + 1, decoderWidth)
+        val bottom = (crop.bottom * scaleY).roundToInt().coerceIn(top + 1, decoderHeight)
+        return CropRect(left, top, right, bottom)
+    }
+
     const val DEFAULT_CONTEXT_PADDING_RATIO = 0.28f
     const val DEFAULT_MIN_PADDING_PX = 24
     const val DEFAULT_MAX_PADDING_PX = 180
@@ -213,14 +241,17 @@ internal object VisionBubbleMontageBuilder {
 
     fun build(
         pages: Map<String, PageTranslation>,
+        scratchDir: File? = null,
         openPageStream: (String) -> InputStream?,
     ): VisionMontageAttachment? {
+        val pageSizes = HashMap<String, Pair<Int, Int>>(pages.size)
         val requests = ArrayList<VisionBubbleMontagePlanner.CropRequest>()
         var nextLabel = 1
         for ((pageKey, page) in pages) {
             val pageW = page.imgWidth.roundToInt()
             val pageH = page.imgHeight.roundToInt()
             if (pageW <= 0 || pageH <= 0) continue
+            pageSizes[pageKey] = pageW to pageH
             page.blocks.forEachIndexed { blockIdx, block ->
                 val focusRegion = block.layoutRegion ?: block.sourceRegion()
                 val cropRect = VisionBubbleMontagePlanner.computeBubbleCropRect(
@@ -243,14 +274,22 @@ internal object VisionBubbleMontageBuilder {
         val layout = VisionBubbleMontagePlanner.planMontageGrid(requests)
         if (layout.sheetWidth <= 0 || layout.sheetHeight <= 0 || layout.placements.isEmpty()) return null
 
-        val montageBitmap = Bitmap.createBitmap(
-            layout.sheetWidth,
-            layout.sheetHeight,
-            Bitmap.Config.RGB_565,
-        )
+        var montageBitmap: Bitmap? = null
+        val tempFile = scratchDir?.let { dir ->
+            runCatching {
+                dir.mkdirs()
+                File.createTempFile("vision-page-", ".img", dir)
+            }.getOrNull()
+        }
         val renderedRefs = ArrayList<VisionBubbleReference>(layout.placements.size)
-        try {
-            val canvas = Canvas(montageBitmap)
+        return try {
+            val bitmap = Bitmap.createBitmap(
+                layout.sheetWidth,
+                layout.sheetHeight,
+                Bitmap.Config.RGB_565,
+            )
+            montageBitmap = bitmap
+            val canvas = Canvas(bitmap)
             canvas.drawColor(Color.rgb(24, 24, 24))
 
             val cellBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -271,60 +310,59 @@ internal object VisionBubbleMontageBuilder {
 
             val byPage = layout.placements.groupBy { it.reference.pageKey }
             for ((pageKey, pagePlacements) in byPage) {
-                val stream = openPageStream(pageKey) ?: continue
-                stream.use { input ->
-                    val decoder = runCatching {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            BitmapRegionDecoder.newInstance(input)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            BitmapRegionDecoder.newInstance(input, false)
+                val (pageW, pageH) = pageSizes[pageKey] ?: continue
+                withPageDecoder(
+                    pageKey = pageKey,
+                    tempFile = tempFile,
+                    openPageStream = openPageStream,
+                ) { decoder ->
+                    val decoderW = decoder.width
+                    val decoderH = decoder.height
+                    for (placement in pagePlacements) {
+                        val mappedCrop = VisionBubbleMontagePlanner.mapCropRectToDecoder(
+                            crop = placement.cropRect,
+                            pageWidth = pageW,
+                            pageHeight = pageH,
+                            decoderWidth = decoderW,
+                            decoderHeight = decoderH,
+                        ) ?: continue
+                        val sampleSize = VisionBubbleMontagePlanner.chooseSampleSize(
+                            cropWidth = mappedCrop.width,
+                            cropHeight = mappedCrop.height,
+                            targetWidth = placement.cellWidth,
+                            targetHeight = placement.cellHeight,
+                        )
+                        val opts = BitmapFactory.Options().apply {
+                            inPreferredConfig = Bitmap.Config.RGB_565
+                            inSampleSize = sampleSize
                         }
-                    }.getOrNull() ?: return@use
-
-                    try {
-                        for (placement in pagePlacements) {
-                            val crop = placement.cropRect
-                            val sampleSize = VisionBubbleMontagePlanner.chooseSampleSize(
-                                cropWidth = crop.width,
-                                cropHeight = crop.height,
-                                targetWidth = placement.cellWidth,
-                                targetHeight = placement.cellHeight,
+                        val cropBitmap = runCatching {
+                            decoder.decodeRegion(
+                                Rect(mappedCrop.left, mappedCrop.top, mappedCrop.right, mappedCrop.bottom),
+                                opts,
                             )
-                            val opts = BitmapFactory.Options().apply {
-                                inPreferredConfig = Bitmap.Config.RGB_565
-                                inSampleSize = sampleSize
-                            }
-                            val cropBitmap = runCatching {
-                                decoder.decodeRegion(
-                                    Rect(crop.left, crop.top, crop.right, crop.bottom),
-                                    opts,
-                                )
-                            }.getOrNull() ?: continue
+                        }.getOrNull() ?: continue
 
-                            try {
-                                val dst = RectF(
-                                    placement.cellLeft.toFloat(),
-                                    placement.cellTop.toFloat(),
-                                    (placement.cellLeft + placement.cellWidth).toFloat(),
-                                    (placement.cellTop + placement.cellHeight).toFloat(),
-                                )
-                                canvas.drawBitmap(cropBitmap, null, dst, bitmapPaint)
-                                canvas.drawRect(dst, cellBorderPaint)
-                                drawIndexBadge(
-                                    canvas = canvas,
-                                    cell = dst,
-                                    label = "#${placement.reference.index}",
-                                    bgPaint = badgeBgPaint,
-                                    textPaint = badgeTextPaint,
-                                )
-                                renderedRefs += placement.reference
-                            } finally {
-                                cropBitmap.recycle()
-                            }
+                        try {
+                            val dst = RectF(
+                                placement.cellLeft.toFloat(),
+                                placement.cellTop.toFloat(),
+                                (placement.cellLeft + placement.cellWidth).toFloat(),
+                                (placement.cellTop + placement.cellHeight).toFloat(),
+                            )
+                            canvas.drawBitmap(cropBitmap, null, dst, bitmapPaint)
+                            canvas.drawRect(dst, cellBorderPaint)
+                            drawIndexBadge(
+                                canvas = canvas,
+                                cell = dst,
+                                label = "#${placement.reference.index}",
+                                bgPaint = badgeBgPaint,
+                                textPaint = badgeTextPaint,
+                            )
+                            renderedRefs += placement.reference
+                        } finally {
+                            cropBitmap.recycle()
                         }
-                    } finally {
-                        decoder.recycle()
                     }
                 }
             }
@@ -332,17 +370,76 @@ internal object VisionBubbleMontageBuilder {
             if (renderedRefs.isEmpty()) return null
 
             val output = ByteArrayOutputStream()
-            montageBitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
             val bytes = output.toByteArray()
             if (bytes.isEmpty()) return null
             val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-            return VisionMontageAttachment(
+            VisionMontageAttachment(
                 mimeType = "image/jpeg",
                 base64Data = base64,
                 references = renderedRefs.sortedBy { it.index },
             )
+        } catch (_: Throwable) {
+            null
         } finally {
-            montageBitmap.recycle()
+            montageBitmap?.recycle()
+            tempFile?.delete()
+        }
+    }
+
+    private inline fun withPageDecoder(
+        pageKey: String,
+        tempFile: File?,
+        openPageStream: (String) -> InputStream?,
+        block: (BitmapRegionDecoder) -> Unit,
+    ) {
+        if (tempFile != null) {
+            val copied = runCatching {
+                val stream = openPageStream(pageKey) ?: return@runCatching false
+                stream.use { input ->
+                    tempFile.outputStream().use { out ->
+                        input.copyTo(out)
+                    }
+                }
+                true
+            }.getOrDefault(false)
+            if (!copied) return
+
+            val decoder = runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+                        BitmapRegionDecoder.newInstance(pfd)
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    BitmapRegionDecoder.newInstance(tempFile.absolutePath, false)
+                }
+            }.getOrNull() ?: return
+
+            try {
+                block(decoder)
+            } finally {
+                decoder.recycle()
+            }
+            return
+        }
+
+        val stream = openPageStream(pageKey) ?: return
+        stream.use { input ->
+            val decoder = runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    BitmapRegionDecoder.newInstance(input)
+                } else {
+                    @Suppress("DEPRECATION")
+                    BitmapRegionDecoder.newInstance(input, false)
+                }
+            }.getOrNull() ?: return@use
+
+            try {
+                block(decoder)
+            } finally {
+                decoder.recycle()
+            }
         }
     }
 

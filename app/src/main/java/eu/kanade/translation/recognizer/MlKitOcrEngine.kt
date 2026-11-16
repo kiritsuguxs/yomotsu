@@ -118,8 +118,16 @@ class MlKitOcrEngine(
             }.getOrNull() ?: return@use false
 
             try {
+                val decoderWidth = decoder.width
+                val decoderHeight = decoder.height
+                if (decoderWidth <= 0 || decoderHeight <= 0) return@use false
                 for ((index, tile) in tiles.withIndex()) {
-                    val tileBitmap = decoder.decodeRegion(Rect(0, tile.top, pageWidth, tile.bottom), decodeOpts) ?: continue
+                    val safeTop = tile.top.coerceIn(0, decoderHeight - 1)
+                    val safeBottom = tile.bottom.coerceIn(safeTop + 1, decoderHeight)
+                    val safeRight = pageWidth.coerceIn(1, decoderWidth)
+                    val tileBitmap = runCatching {
+                        decoder.decodeRegion(Rect(0, safeTop, safeRight, safeBottom), decodeOpts)
+                    }.getOrNull() ?: continue
                     val prevTile = tiles.getOrNull(index - 1)
                     val nextTile = tiles.getOrNull(index + 1)
                     val tileResult = try {

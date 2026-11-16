@@ -2,6 +2,7 @@ package eu.kanade.translation.translator
 
 import eu.kanade.translation.model.TranslationRegion
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -64,5 +65,36 @@ class VisionBubbleMontageTest {
                 assertTrue(!(overlapsX && overlapsY), "Cells ${a.reference.index} and ${b.reference.index} overlapped")
             }
         }
+    }
+
+    @Test
+    fun `mapCropRectToDecoder scales mismatched dimensions and clamps strictly inside decoder bounds`() {
+        assertNull(
+            VisionBubbleMontagePlanner.mapCropRectToDecoder(
+                crop = VisionBubbleMontagePlanner.CropRect(0, 0, 100, 100),
+                pageWidth = 800,
+                pageHeight = 1200,
+                decoderWidth = 0,
+                decoderHeight = 1200,
+            ),
+        )
+
+        val same = VisionBubbleMontagePlanner.mapCropRectToDecoder(
+            crop = VisionBubbleMontagePlanner.CropRect(750, 1150, 900, 1300),
+            pageWidth = 800,
+            pageHeight = 1200,
+            decoderWidth = 800,
+            decoderHeight = 1200,
+        )!!
+        assertEquals(VisionBubbleMontagePlanner.CropRect(750, 1150, 800, 1200), same)
+
+        val scaled = VisionBubbleMontagePlanner.mapCropRectToDecoder(
+            crop = VisionBubbleMontagePlanner.CropRect(200, 400, 600, 800),
+            pageWidth = 800,
+            pageHeight = 1200,
+            decoderWidth = 400,
+            decoderHeight = 600,
+        )!!
+        assertEquals(VisionBubbleMontagePlanner.CropRect(100, 200, 300, 400), scaled)
     }
 }
