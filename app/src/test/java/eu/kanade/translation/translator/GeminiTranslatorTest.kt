@@ -57,5 +57,31 @@ class GeminiTranslatorTest {
         val chunks = chunkPages(emptyMap())
         assertTrue(chunks.isEmpty())
     }
+
+    @Test
+    fun `higher Gemini chunk limits reduce 40 page chapter to 3 requests without dropping pages`() {
+        val pages = (1..40).associate { pageNum ->
+            val key = "%03d.jpg".format(pageNum)
+            val blocks = (1..3).map { b ->
+                TranslationBlock(
+                    text = "Dialogue $pageNum-$b",
+                    width = 100f,
+                    height = 40f,
+                    x = 10f,
+                    y = b * 50f,
+                    symHeight = 16f,
+                    symWidth = 12f,
+                    angle = 0f,
+                )
+            }.toMutableList()
+            key to PageTranslation(blocks = blocks)
+        }
+
+        val chunks = chunkPages(pages, maxPages = 16, maxBlocks = 75)
+
+        assertEquals(3, chunks.size)
+        assertEquals(pages.keys.toList(), chunks.flatMap { it.keys })
+        assertTrue(chunks.all { it.size <= 16 && it.values.sumOf { p -> p.blocks.size } <= 75 })
+    }
 }
 

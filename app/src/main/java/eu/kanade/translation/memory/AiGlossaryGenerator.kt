@@ -7,8 +7,9 @@ import eu.kanade.translation.translator.TextTranslators
 import eu.kanade.translation.translator.TranslationNetworkHelper
 import eu.kanade.translation.translator.applyGroqReasoningControls
 import eu.kanade.translation.translator.buildGeminiHttpDiagnostic
-import eu.kanade.translation.translator.buildGeminiRestRequestBody
 import eu.kanade.translation.translator.buildGeminiRestUrl
+import eu.kanade.translation.translator.executeGeminiRequestWithFallback
+import eu.kanade.translation.translator.extractGeminiResponseText
 import eu.kanade.translation.translator.stripGroqThinkingTags
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -133,42 +134,31 @@ object AiGlossaryGenerator {
         userRequest: String,
         maxOutputTokens: Int,
     ): String {
-        val body = buildGeminiRestRequestBody(
+        val url = buildGeminiRestUrl(modelName)
+        val (statusCode, rawBody) = executeGeminiRequestWithFallback(
             systemInstruction = systemInstruction,
             requestText = userRequest,
             maxOutputTokens = maxOutputTokens,
-        )
-        val request = Request.Builder()
-            .url(buildGeminiRestUrl(modelName))
-            .header("x-goog-api-key", apiKey)
-            .header("Content-Type", "application/json")
-            .post(body.toRequestBody(jsonMediaType))
-            .build()
-
-        val response = TranslationNetworkHelper.sharedClient.newCall(request).await()
-        val rawBody = response.use { res ->
-            val text = res.body.string()
-            if (!res.isSuccessful) {
-                throw IllegalStateException(buildGeminiHttpDiagnostic(res.code, text, apiKey))
+            modelName = modelName,
+            temperature = 0.2f,
+            responseMimeType = "application/json",
+        ) { body ->
+            val request = Request.Builder()
+                .url(url)
+                .header("x-goog-api-key", apiKey)
+                .header("Content-Type", "application/json")
+                .post(body.toRequestBody(jsonMediaType))
+                .build()
+            TranslationNetworkHelper.sharedClient.newCall(request).await().use { res ->
+                res.code to res.body.string()
             }
-            text
+        }
+        if (statusCode !in 200..299) {
+            throw IllegalStateException(buildGeminiHttpDiagnostic(statusCode, rawBody, apiKey))
         }
 
         val json = JSONObject(rawBody)
-        val parts = json.optJSONArray("candidates")
-            ?.optJSONObject(0)
-            ?.optJSONObject("content")
-            ?.optJSONArray("parts")
-        val content = buildString {
-            if (parts != null) {
-                for (i in 0 until parts.length()) {
-                    val part = parts.optJSONObject(i) ?: continue
-                    if (!part.optBoolean("thought", false)) {
-                        append(part.optString("text"))
-                    }
-                }
-            }
-        }
+        val content = extractGeminiResponseText(json)
         if (content.isBlank()) {
             val finishReason = json.optJSONArray("candidates")
                 ?.optJSONObject(0)

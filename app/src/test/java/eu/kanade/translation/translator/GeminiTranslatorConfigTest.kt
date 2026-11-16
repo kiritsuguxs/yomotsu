@@ -1,12 +1,15 @@
 package eu.kanade.translation.translator
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.float
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class GeminiTranslatorConfigTest {
@@ -25,6 +28,7 @@ class GeminiTranslatorConfigTest {
         assertFalse("temperature" in generationConfig)
         assertFalse("topP" in generationConfig)
         assertFalse("topK" in generationConfig)
+        assertFalse("thinkingConfig" in generationConfig)
         assertEquals(
             1,
             json.getValue("systemInstruction")
@@ -45,6 +49,115 @@ class GeminiTranslatorConfigTest {
                 .jsonPrimitive
                 .content,
         )
+    }
+
+    @Test
+    fun `builds Gemini REST payload with model-aware thinkingConfig, JSON mode, and temperature`() {
+        val flash25Json = Json.parseToJsonElement(
+            buildGeminiRestRequestBody(
+                systemInstruction = "Translate comics",
+                requestText = "{}",
+                maxOutputTokens = 8192,
+                modelName = "gemini-2.5-flash",
+                temperature = 0.3f,
+                responseMimeType = "application/json",
+                includeThinkingConfig = true,
+            ),
+        ).jsonObject.getValue("generationConfig").jsonObject
+        assertEquals(0, flash25Json.getValue("thinkingConfig").jsonObject.getValue("thinkingBudget").jsonPrimitive.int)
+        assertEquals("application/json", flash25Json.getValue("responseMimeType").jsonPrimitive.content)
+        assertEquals(0.3f, flash25Json.getValue("temperature").jsonPrimitive.float, 0.001f)
+
+        val pro25Json = Json.parseToJsonElement(
+            buildGeminiRestRequestBody(
+                systemInstruction = "Translate comics",
+                requestText = "{}",
+                maxOutputTokens = 8192,
+                modelName = "gemini-2.5-pro",
+                includeThinkingConfig = true,
+            ),
+        ).jsonObject.getValue("generationConfig").jsonObject
+        assertEquals(128, pro25Json.getValue("thinkingConfig").jsonObject.getValue("thinkingBudget").jsonPrimitive.int)
+
+        val flash3Json = Json.parseToJsonElement(
+            buildGeminiRestRequestBody(
+                systemInstruction = "Translate comics",
+                requestText = "{}",
+                maxOutputTokens = 8192,
+                modelName = "gemini-3-flash-preview",
+                includeThinkingConfig = true,
+            ),
+        ).jsonObject.getValue("generationConfig").jsonObject
+        assertEquals("minimal", flash3Json.getValue("thinkingConfig").jsonObject.getValue("thinkingLevel").jsonPrimitive.content)
+
+        val pro3Json = Json.parseToJsonElement(
+            buildGeminiRestRequestBody(
+                systemInstruction = "Translate comics",
+                requestText = "{}",
+                maxOutputTokens = 8192,
+                modelName = "gemini-3.1-pro-preview",
+                includeThinkingConfig = true,
+            ),
+        ).jsonObject.getValue("generationConfig").jsonObject
+        assertEquals("low", pro3Json.getValue("thinkingConfig").jsonObject.getValue("thinkingLevel").jsonPrimitive.content)
+
+        val legacy20Json = Json.parseToJsonElement(
+            buildGeminiRestRequestBody(
+                systemInstruction = "Translate comics",
+                requestText = "{}",
+                maxOutputTokens = 8192,
+                modelName = "gemini-2.0-flash",
+                includeThinkingConfig = true,
+            ),
+        ).jsonObject.getValue("generationConfig").jsonObject
+        assertFalse("thinkingConfig" in legacy20Json)
+    }
+
+    @Test
+    fun `downgrades unsupported Gemini generationConfig options automatically on HTTP 400`() {
+        val payloads = mutableListOf<String>()
+        val result = executeGeminiRequestWithFallback(
+            systemInstruction = "Translate",
+            requestText = "{}",
+            maxOutputTokens = 4096,
+            modelName = "gemini-2.5-flash",
+            temperature = 0.3f,
+            responseMimeType = "application/json",
+        ) { body ->
+            payloads += body
+            when (payloads.size) {
+                1 -> 400 to """{"error":{"message":"thinkingBudget is not supported by this model"}}"""
+                2 -> 400 to """{"error":{"message":"responseMimeType is unsupported"}}"""
+                else -> 200 to """{"candidates":[{"content":{"parts":[{"text":"{\"001.jpg\":[\"Oi\"]}"}]}}]}"""
+            }
+        }
+
+        assertEquals(200, result.first)
+        assertEquals(3, payloads.size)
+        val thirdConfig = Json.parseToJsonElement(payloads[2]).jsonObject.getValue("generationConfig").jsonObject
+        assertFalse("thinkingConfig" in thirdConfig)
+        assertFalse("responseMimeType" in thirdConfig)
+        assertTrue("temperature" in thirdConfig)
+    }
+
+    @Test
+    fun `extractGeminiResponseText ignores thought parts when assembling output`() {
+        val responseJson = JSONObject(
+            """
+            {
+              "candidates": [{
+                "content": {
+                  "parts": [
+                    {"thought": true, "text": "Let me think step by step..."},
+                    {"text": "{\"001.jpg\":[\"E aí!\"]}"}
+                  ]
+                }
+              }]
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals("""{"001.jpg":["E aí!"]}""", extractGeminiResponseText(responseJson))
     }
 
     @Test

@@ -7,6 +7,11 @@ import eu.kanade.translation.translator.ComicTranslationContext
 import eu.kanade.translation.translator.TextTranslatorLanguage
 import eu.kanade.translation.translator.TextTranslators
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaType
@@ -25,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 object NovelTranslator {
 
+    private const val GEMINI_NOVEL_CONCURRENT_CHUNKS = 3
     private val client: OkHttpClient by lazy { Injekt.get<NetworkHelper>().client }
     private val translationCache = ConcurrentHashMap<Long, String>()
     private val translationPreferences: TranslationPreferences by lazy { Injekt.get() }
@@ -82,33 +88,48 @@ object NovelTranslator {
             else -> 3000
         }
         val chunks = chunkText(text, maxChunkLen)
-        var previousChunkContext: String? = null
-        val translatedChunks = chunks.map { chunk ->
-            val translated = if (chunk.isBlank()) {
-                ""
-            } else if (glossaryContext != null) {
-                val prepared = TranslationGlossary.prepare(chunk, glossaryContext)
-                val rawTranslated = translateChunk(
-                    text = prepared.textForTranslation,
-                    sl = sourceLang,
-                    tl = resolvedTargetLang,
-                    engine = selectedEngine,
-                    previousContext = previousChunkContext,
-                )
-                TranslationGlossary.resolve(prepared, rawTranslated, glossaryContext)
-            } else {
-                translateChunk(
-                    text = chunk,
-                    sl = sourceLang,
-                    tl = resolvedTargetLang,
-                    engine = selectedEngine,
-                    previousContext = previousChunkContext,
-                )
+        val translatedChunks = if (selectedEngine == TextTranslators.GEMINI && chunks.size > 1) {
+            val semaphore = Semaphore(GEMINI_NOVEL_CONCURRENT_CHUNKS)
+            coroutineScope {
+                chunks.map { chunk ->
+                    async(Dispatchers.IO) {
+                        if (chunk.isBlank()) {
+                            ""
+                        } else {
+                            semaphore.withPermit {
+                                translateChunkWithGlossary(
+                                    chunk = chunk,
+                                    sourceLang = sourceLang,
+                                    targetLang = resolvedTargetLang,
+                                    engine = selectedEngine,
+                                    glossaryContext = glossaryContext,
+                                    previousContext = null,
+                                )
+                            }
+                        }
+                    }
+                }.awaitAll()
             }
-            if (chunk.isNotBlank()) {
-                previousChunkContext = chunk.trim().takeLast(1000)
+        } else {
+            var previousChunkContext: String? = null
+            chunks.map { chunk ->
+                val translated = if (chunk.isBlank()) {
+                    ""
+                } else {
+                    translateChunkWithGlossary(
+                        chunk = chunk,
+                        sourceLang = sourceLang,
+                        targetLang = resolvedTargetLang,
+                        engine = selectedEngine,
+                        glossaryContext = glossaryContext,
+                        previousContext = previousChunkContext,
+                    )
+                }
+                if (chunk.isNotBlank()) {
+                    previousChunkContext = chunk.trim().takeLast(1000)
+                }
+                translated
             }
-            translated
         }
         val result = translatedChunks.joinToString("\n\n")
 
@@ -119,6 +140,35 @@ object NovelTranslator {
             logcat(throwable = e) { "Failed to write translation cache" }
         }
         result
+    }
+
+    private fun translateChunkWithGlossary(
+        chunk: String,
+        sourceLang: String,
+        targetLang: String,
+        engine: TextTranslators,
+        glossaryContext: ComicTranslationContext?,
+        previousContext: String?,
+    ): String {
+        return if (glossaryContext != null) {
+            val prepared = TranslationGlossary.prepare(chunk, glossaryContext)
+            val rawTranslated = translateChunk(
+                text = prepared.textForTranslation,
+                sl = sourceLang,
+                tl = targetLang,
+                engine = engine,
+                previousContext = previousContext,
+            )
+            TranslationGlossary.resolve(prepared, rawTranslated, glossaryContext)
+        } else {
+            translateChunk(
+                text = chunk,
+                sl = sourceLang,
+                tl = targetLang,
+                engine = engine,
+                previousContext = previousContext,
+            )
+        }
     }
 
     private fun chunkText(text: String, maxLength: Int): List<String> {
@@ -209,47 +259,39 @@ object NovelTranslator {
 
             val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.GEMINI).get()
                 .ifBlank { translationPreferences.llmModel(TranslationLlmProvider.GEMINI).get() }
-                .ifBlank { "gemini-3.8-flash" }
-            val normalizedModel = modelName.trim().removePrefix("models/")
-            val url = "https://generativelanguage.googleapis.com/v1beta/models/$normalizedModel:generateContent?key=$apiKey"
+                .ifBlank { eu.kanade.translation.translator.DEFAULT_GEMINI_MODEL_ID }
+            val url = eu.kanade.translation.translator.buildGeminiRestUrl(modelName)
 
             val targetLanguageName = targetLanguagePromptName(tl)
             val systemInstruction = "You are a professional literary translator for light novels and web novels. Translate the following text into natural $targetLanguageName. Preserve all paragraph breaks, HTML/image tags if any, and protected tokens (such as [[YOMOTSU_TERM_0]]). Output ONLY the translated text without commentary."
-
-            val jsonBody = JSONObject().apply {
-                put("contents", JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("role", "user")
-                        put("parts", JSONArray().apply {
-                            put(JSONObject().apply {
-                                put("text", "$systemInstruction\n\n$text")
-                            })
-                        })
-                    })
-                })
-            }
-
+            val maxTokens = (translationPreferences.translationEngineMaxOutputTokens().get().toIntOrNull() ?: 8192)
+                .coerceIn(2048, 8192)
+            val temperature = translationPreferences.translationEngineTemperature().get().toFloatOrNull()
+                ?.coerceIn(0f, 0.5f)
+                ?: 0.25f
             val mediaType = "application/json; charset=utf-8".toMediaType()
-            val request = Request.Builder()
-                .url(url)
-                .post(jsonBody.toString().toRequestBody(mediaType))
-                .build()
 
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val responseBody = response.body?.string() ?: return null
-                val resObj = JSONObject(responseBody)
-                val parts = resObj.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
-                val candidateText = buildString {
-                    if (parts != null) {
-                        for (i in 0 until parts.length()) {
-                            append(parts.optJSONObject(i)?.optString("text").orEmpty())
-                        }
-                    }
-                }.trim()
-
-                if (candidateText.isNotBlank()) candidateText else null
+            val (statusCode, responseBody) = eu.kanade.translation.translator.executeGeminiRequestWithFallback(
+                systemInstruction = systemInstruction,
+                requestText = text,
+                maxOutputTokens = maxTokens,
+                modelName = modelName,
+                temperature = temperature,
+                responseMimeType = null,
+            ) { requestBody ->
+                val request = Request.Builder()
+                    .url(url)
+                    .header("x-goog-api-key", apiKey)
+                    .header("Content-Type", "application/json")
+                    .post(requestBody.toRequestBody(mediaType))
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    response.code to response.body?.string().orEmpty()
+                }
             }
+            if (statusCode !in 200..299 || responseBody.isBlank()) return null
+            val candidateText = eu.kanade.translation.translator.extractGeminiResponseText(JSONObject(responseBody)).trim()
+            candidateText.ifBlank { null }
         } catch (e: Exception) {
             logcat(throwable = e) { "Failed to translate chunk with Gemini" }
             null
