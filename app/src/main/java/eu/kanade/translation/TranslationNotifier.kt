@@ -105,6 +105,38 @@ internal class TranslationNotifier(private val context: Context) {
         )
     }
 
+    fun onTextTranslationBatchProgress(
+        manga: Manga,
+        chapterName: String,
+        completedPages: Int,
+        totalPages: Int,
+        completedBatches: Int,
+        totalBatches: Int,
+        chapterNumber: Int,
+        chapterTotal: Int,
+    ) {
+        val safeTotalPages = totalPages.coerceAtLeast(1)
+        val safeCompletedPages = completedPages.coerceIn(0, safeTotalPages)
+        val safeTotalBatches = totalBatches.coerceAtLeast(1)
+        val safeCompletedBatches = completedBatches.coerceIn(0, safeTotalBatches)
+        showProgress(
+            manga = manga,
+            chapterName = chapterName,
+            progressText = context.stringResource(
+                ATMR.strings.translation_notification_text_batch_progress,
+                safeCompletedBatches,
+                safeTotalBatches,
+                safeCompletedPages,
+                safeTotalPages,
+            ),
+            chapterNumber = chapterNumber,
+            chapterTotal = chapterTotal,
+            progress = safeCompletedPages,
+            max = safeTotalPages,
+            indeterminate = safeCompletedPages == 0,
+        )
+    }
+
     fun onInpaintingProgress(
         manga: Manga,
         chapterName: String,
@@ -150,6 +182,7 @@ internal class TranslationNotifier(private val context: Context) {
         context.cancelNotification(Notifications.ID_TRANSLATION_PROGRESS)
     }
 
+    @Synchronized
     private fun showProgress(
         manga: Manga,
         chapterName: String,

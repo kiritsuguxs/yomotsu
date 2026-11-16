@@ -79,16 +79,38 @@ class GeminiTranslatorConfigTest {
         ).jsonObject.getValue("generationConfig").jsonObject
         assertEquals(128, pro25Json.getValue("thinkingConfig").jsonObject.getValue("thinkingBudget").jsonPrimitive.int)
 
-        val flash3Json = Json.parseToJsonElement(
+        val flash3LiteJson = Json.parseToJsonElement(
             buildGeminiRestRequestBody(
                 systemInstruction = "Translate comics",
                 requestText = "{}",
                 maxOutputTokens = 8192,
-                modelName = "gemini-3-flash-preview",
+                modelName = "gemini-3.5-flash-lite",
                 includeThinkingConfig = true,
             ),
         ).jsonObject.getValue("generationConfig").jsonObject
-        assertEquals("minimal", flash3Json.getValue("thinkingConfig").jsonObject.getValue("thinkingLevel").jsonPrimitive.content)
+        assertEquals("minimal", flash3LiteJson.getValue("thinkingConfig").jsonObject.getValue("thinkingLevel").jsonPrimitive.content)
+
+        val flash38Json = Json.parseToJsonElement(
+            buildGeminiRestRequestBody(
+                systemInstruction = "Translate comics",
+                requestText = "{}",
+                maxOutputTokens = 8192,
+                modelName = "gemini-3.8-flash",
+                includeThinkingConfig = true,
+            ),
+        ).jsonObject.getValue("generationConfig").jsonObject
+        assertEquals("low", flash38Json.getValue("thinkingConfig").jsonObject.getValue("thinkingLevel").jsonPrimitive.content)
+
+        val hydrogen4Json = Json.parseToJsonElement(
+            buildGeminiRestRequestBody(
+                systemInstruction = "Translate comics",
+                requestText = "{}",
+                maxOutputTokens = 8192,
+                modelName = "gemini-4-hydrogen",
+                includeThinkingConfig = true,
+            ),
+        ).jsonObject.getValue("generationConfig").jsonObject
+        assertEquals("low", hydrogen4Json.getValue("thinkingConfig").jsonObject.getValue("thinkingLevel").jsonPrimitive.content)
 
         val pro3Json = Json.parseToJsonElement(
             buildGeminiRestRequestBody(

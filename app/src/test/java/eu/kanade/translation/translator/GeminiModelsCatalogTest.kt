@@ -81,8 +81,11 @@ class GeminiModelsCatalogTest {
     }
 
     @Test
-    fun `curated defaults start with gemini-3_8-flash`() {
-        assertEquals("gemini-3.8-flash", GeminiModelsCatalog.curatedDefaults.first().id)
+    fun `curated defaults start with gemini-3_8-flash and include active 3_x and 4_x models`() {
+        val ids = GeminiModelsCatalog.curatedDefaults.map { it.id }
+        assertEquals("gemini-3.8-flash", ids.first())
+        assertTrue("gemini-3.5-flash-lite" in ids)
+        assertTrue("gemini-4-hydrogen" in ids)
         assertTrue(GeminiModelsCatalog.curatedDefaults.first().isRecommended)
         assertTrue(GeminiModelsCatalog.curatedDefaults.first().supportsVision)
     }

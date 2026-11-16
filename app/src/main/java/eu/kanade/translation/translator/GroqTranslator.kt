@@ -81,8 +81,20 @@ class GroqTranslator(
         context: ComicTranslationContext,
     ) {
         val chunkedPages = chunkPages(pages, maxPages = 8, maxBlocks = GROQ_MAX_BLOCKS_PER_CHUNK)
-        for (chunk in chunkedPages) {
+        if (chunkedPages.isEmpty()) return
+        val totalChunks = chunkedPages.size
+        val totalPages = chunkedPages.sumOf { it.size }
+        var completedPages = 0
+        context.onProgress?.invoke(0, totalPages, 0, totalChunks)
+        for ((index, chunk) in chunkedPages.withIndex()) {
             translateChunkInternal(chunk, context)
+            completedPages += chunk.size
+            context.onProgress?.invoke(
+                completedPages.coerceAtMost(totalPages),
+                totalPages,
+                index + 1,
+                totalChunks,
+            )
         }
     }
 

@@ -327,6 +327,18 @@ class ChapterTranslator(
                             ComicTranslationContext(
                                 mangaTitle = translation.manga.title,
                                 chapterName = translation.chapter.name,
+                                onProgress = { completedPages, translatedTotalPages, completedBatches, totalBatches ->
+                                    notifier.onTextTranslationBatchProgress(
+                                        manga = translation.manga,
+                                        chapterName = translation.chapter.name,
+                                        completedPages = completedPages,
+                                        totalPages = translatedTotalPages,
+                                        completedBatches = completedBatches,
+                                        totalBatches = totalBatches,
+                                        chapterNumber = chapterNumber,
+                                        chapterTotal = currentSessionTotal(),
+                                    )
+                                },
                             ),
                         )
                     }

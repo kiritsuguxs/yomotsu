@@ -24,6 +24,7 @@ import okhttp3.Response
 import org.json.JSONObject
 import tachiyomi.core.common.util.system.logcat
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
 
 class GeminiTranslator(
     override val fromLang: TextRecognizerLanguage,
@@ -52,12 +53,27 @@ class GeminiTranslator(
                 maxPages = GEMINI_MAX_PAGES_PER_CHUNK,
                 maxBlocks = GEMINI_MAX_BLOCKS_PER_CHUNK,
             )
+            if (chunks.isEmpty()) return
+            val totalChunks = chunks.size
+            val totalPages = chunks.sumOf { it.size }
+            val completedChunks = AtomicInteger(0)
+            val completedPages = AtomicInteger(0)
+            context.onProgress?.invoke(0, totalPages, 0, totalChunks)
             for (batch in chunks.chunked(GEMINI_CONCURRENT_CHUNKS)) {
                 val continuityPrefix = continuity.promptPrefix()
                 val batchRemembered = coroutineScope {
                     batch.map { chunk ->
                         async {
-                            translateChunk(chunk, context, continuityPrefix)
+                            translateChunk(chunk, context, continuityPrefix).also {
+                                val doneChunks = completedChunks.incrementAndGet()
+                                val donePages = completedPages.addAndGet(chunk.size)
+                                context.onProgress?.invoke(
+                                    donePages.coerceAtMost(totalPages),
+                                    totalPages,
+                                    doneChunks.coerceAtMost(totalChunks),
+                                    totalChunks,
+                                )
+                            }
                         }
                     }.awaitAll()
                 }
@@ -557,9 +573,18 @@ internal fun kotlinx.serialization.json.JsonObjectBuilder.applyGeminiThinkingCon
     val normalized = modelName.trim().removePrefix("models/").lowercase()
     if (normalized.isBlank()) return
     when {
+        normalized.contains("gemini-4") -> {
+            putJsonObject("thinkingConfig") {
+                put("thinkingLevel", "low")
+            }
+        }
         normalized.contains("gemini-3") -> {
             putJsonObject("thinkingConfig") {
-                val level = if (normalized.contains("-pro")) "low" else "minimal"
+                val level = if (normalized.contains("-pro") || normalized.contains("gemini-3.8")) {
+                    "low"
+                } else {
+                    "minimal"
+                }
                 put("thinkingLevel", level)
             }
         }

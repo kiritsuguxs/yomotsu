@@ -60,7 +60,7 @@ class ReliableTextTranslator(
         if (shouldRetryPrimary) {
             clearFailedBlocks(failed, context)
             val retryPages = pagesFor(failed, pages)
-            val retryFailure = translateWithFactory(retryFactory, retryPages, context)
+            val retryFailure = translateWithFactory(retryFactory, retryPages, context.copy(onProgress = null))
             normalizeTranslations(retryPages)
             failed = collectFailedBlocks(pages)
             if (failed.isEmpty()) return
@@ -72,7 +72,7 @@ class ReliableTextTranslator(
         if (failed.isNotEmpty() && fallbackFactory != null) {
             clearFailedBlocks(failed, context)
             val fallbackPages = pagesFor(failed, pages)
-            val fallbackFailure = translateWithFactory(fallbackFactory, fallbackPages, context)
+            val fallbackFailure = translateWithFactory(fallbackFactory, fallbackPages, context.copy(onProgress = null))
             normalizeTranslations(fallbackPages)
             failed = collectFailedBlocks(pages)
             if (failed.isEmpty()) return

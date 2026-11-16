@@ -21,6 +21,7 @@ interface TextTranslator : Closeable {
 data class ComicTranslationContext(
     val mangaTitle: String,
     val chapterName: String,
+    val onProgress: ((completedPages: Int, totalPages: Int, completedBatches: Int, totalBatches: Int) -> Unit)? = null,
 ) {
     companion object {
         val EMPTY = ComicTranslationContext(mangaTitle = "", chapterName = "")
