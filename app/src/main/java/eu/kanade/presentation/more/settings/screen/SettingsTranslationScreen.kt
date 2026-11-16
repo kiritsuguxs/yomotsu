@@ -151,8 +151,8 @@ object SettingsTranslationScreen : SearchableSettings {
                         } else {
                             null
                         },
-                    )
-                }
+                    ),
+                )
             }
             if (TranslationEngineSetting.DEEPL_API_KEY in engineSettings) {
                 add(
@@ -280,8 +280,8 @@ object SettingsTranslationScreen : SearchableSettings {
                         } else {
                             null
                         },
-                    )
-                }
+                    ),
+                )
             }
             if (TranslationEngineSetting.LLM_API_KEY in engineSettings) {
                 add(
