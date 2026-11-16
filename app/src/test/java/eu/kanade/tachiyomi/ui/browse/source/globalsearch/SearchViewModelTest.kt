@@ -285,9 +285,10 @@ class SearchViewModelTest {
         val extensionManager = mockk<ExtensionManager> {
             every { installedExtensionsFlow } returns MutableStateFlow(emptyList())
         }
-        val networkToLocalManga = mockk<NetworkToLocalManga> {
-            coEvery { invoke(any<List<tachiyomi.domain.manga.model.Manga>>()) } answers { firstArg() }
-        }
+        val networkToLocalManga = mockk<NetworkToLocalManga>()
+        coEvery {
+            networkToLocalManga.invoke(any<List<tachiyomi.domain.manga.model.Manga>>())
+        } answers { firstArg<List<tachiyomi.domain.manga.model.Manga>>() }
         val getManga = mockk<GetManga> {
             every { subscribe(any(), any()) } returns flowOf(null)
         }
