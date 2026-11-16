@@ -39,13 +39,13 @@ class TranslationFallbackEngineTest {
         assertEquals(
             TextTranslators.MLKIT,
             TranslationFallbackEngine.ML_KIT.resolve(
-                primary = TextTranslators.OPENROUTER,
+                primary = TextTranslators.GROQ,
                 mlKitTargetSupported = true,
             ),
         )
         assertNull(
             TranslationFallbackEngine.ML_KIT.resolve(
-                primary = TextTranslators.OPENROUTER,
+                primary = TextTranslators.GROQ,
                 mlKitTargetSupported = false,
             ),
         )

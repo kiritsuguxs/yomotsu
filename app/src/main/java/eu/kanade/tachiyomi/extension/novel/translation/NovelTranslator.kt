@@ -78,7 +78,7 @@ object NovelTranslator {
         }
 
         val maxChunkLen = when (selectedEngine) {
-            TextTranslators.GEMINI, TextTranslators.OPENROUTER -> 8000
+            TextTranslators.GEMINI, TextTranslators.GROQ -> 8000
             else -> 3000
         }
         val chunks = chunkText(text, maxChunkLen)
@@ -148,7 +148,7 @@ object NovelTranslator {
     ): String {
         return when (engine) {
             TextTranslators.GEMINI -> translateWithGemini(text, tl) ?: translateWithGoogle(text, sl, tl)
-            TextTranslators.OPENROUTER -> translateWithOpenRouter(text, tl) ?: translateWithGoogle(text, sl, tl)
+            TextTranslators.GROQ -> translateWithGroq(text, tl) ?: translateWithGoogle(text, sl, tl)
             TextTranslators.DEEPL -> translateWithDeepL(text, sl, tl, previousContext) ?: translateWithGoogle(text, sl, tl)
             else -> translateWithGoogle(text, sl, tl)
         }
@@ -207,7 +207,7 @@ object NovelTranslator {
 
             val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.GEMINI).get()
                 .ifBlank { translationPreferences.llmModel(TranslationLlmProvider.GEMINI).get() }
-                .ifBlank { "gemini-1.5-flash" }
+                .ifBlank { "gemini-3.8-flash" }
             val normalizedModel = modelName.trim().removePrefix("models/")
             val url = "https://generativelanguage.googleapis.com/v1beta/models/$normalizedModel:generateContent?key=$apiKey"
 
@@ -254,12 +254,12 @@ object NovelTranslator {
         }
     }
 
-    private fun translateWithOpenRouter(text: String, tl: String): String? {
+    private fun translateWithGroq(text: String, tl: String): String? {
         return try {
-            translationPreferences.migrateLegacyLlmSettings(TranslationLlmProvider.OPENROUTER)
-            val apiKey = translationPreferences.llmApiKey(TranslationLlmProvider.OPENROUTER).get().trim()
-            val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.OPENROUTER).get().trim()
-                .ifBlank { translationPreferences.llmModel(TranslationLlmProvider.OPENROUTER).get().trim() }
+            translationPreferences.migrateLegacyLlmSettings(TranslationLlmProvider.GROQ)
+            val apiKey = translationPreferences.llmApiKey(TranslationLlmProvider.GROQ).get().trim()
+            val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.GROQ).get().trim()
+                .ifBlank { translationPreferences.llmModel(TranslationLlmProvider.GROQ).get().trim() }
             if (apiKey.isBlank() || modelName.isBlank()) return null
 
             val targetLanguageName = targetLanguagePromptName(tl)
@@ -268,6 +268,16 @@ object NovelTranslator {
             val jsonBody = JSONObject().apply {
                 put("model", modelName)
                 put("temperature", 0.3)
+                put("max_completion_tokens", 4096)
+                when {
+                    eu.kanade.translation.translator.isGroqQwenReasoningModel(modelName) -> {
+                        put("reasoning_effort", "none")
+                    }
+                    eu.kanade.translation.translator.isGroqGptOssModel(modelName) -> {
+                        put("reasoning_effort", "low")
+                        put("include_reasoning", false)
+                    }
+                }
                 put("messages", JSONArray().apply {
                     put(JSONObject().apply {
                         put("role", "system")
@@ -282,25 +292,43 @@ object NovelTranslator {
 
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val request = Request.Builder()
-                .url("https://openrouter.ai/api/v1/chat/completions")
+                .url(eu.kanade.translation.translator.GROQ_CHAT_COMPLETIONS_URL)
                 .header("Authorization", "Bearer $apiKey")
                 .header("Content-Type", "application/json")
                 .post(jsonBody.toString().toRequestBody(mediaType))
                 .build()
 
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val responseBody = response.body?.string() ?: return null
+            var attempt = 0
+            while (true) {
+                val (code, responseBody, waitMs) = client.newCall(request).execute().use { response ->
+                    val body = response.body?.string().orEmpty()
+                    val headerWaitMs = eu.kanade.translation.translator.parseGroqRateLimitWaitMs(
+                        retryAfterHeader = response.header("retry-after"),
+                        resetTokensHeader = response.header("x-ratelimit-reset-tokens"),
+                        resetRequestsHeader = response.header("x-ratelimit-reset-requests"),
+                    )
+                    Triple(response.code, body, headerWaitMs)
+                }
+                if (code == 429 && attempt < 2 && !eu.kanade.translation.translator.isGroqDailyQuotaExhausted(responseBody)) {
+                    val delayMs = waitMs ?: ((attempt + 1) * 3_000L)
+                    if (delayMs in 0..35_000L) {
+                        attempt++
+                        Thread.sleep(delayMs + 250L)
+                        continue
+                    }
+                }
+                if (code !in 200..299 || responseBody.isBlank()) return null
                 val json = JSONObject(responseBody)
-                val content = json.optJSONArray("choices")
+                val rawContent = json.optJSONArray("choices")
                     ?.optJSONObject(0)
                     ?.optJSONObject("message")
                     ?.optString("content")
-                    ?.trim()
-                if (!content.isNullOrBlank()) content else null
+                    .orEmpty()
+                val cleaned = eu.kanade.translation.translator.stripGroqThinkingTags(rawContent)
+                return cleaned.ifBlank { null }
             }
         } catch (e: Exception) {
-            logcat(throwable = e) { "Failed to translate chunk with OpenRouter" }
+            logcat(throwable = e) { "Failed to translate chunk with Groq" }
             null
         }
     }

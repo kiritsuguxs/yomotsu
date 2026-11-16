@@ -39,8 +39,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import eu.kanade.translation.translator.OpenRouterFreeModel
-import eu.kanade.translation.translator.OpenRouterFreeModelsCatalog
+import eu.kanade.translation.translator.GroqModelInfo
+import eu.kanade.translation.translator.GroqModelsCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tachiyomi.core.common.preference.Preference
@@ -51,24 +51,25 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 
 @Composable
-internal fun OpenRouterFreeModelsDialog(
+internal fun GroqModelsDialog(
     preference: Preference<String>,
+    apiKey: String,
     onDismissRequest: () -> Unit,
 ) {
     val currentModel by preference.collectAsState()
-    var models by remember { mutableStateOf<List<OpenRouterFreeModel>>(emptyList()) }
+    var models by remember { mutableStateOf(GroqModelsCatalog.curatedDefaults) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var reloadNonce by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var visionOnly by remember { mutableStateOf(false) }
 
-    LaunchedEffect(reloadNonce) {
+    LaunchedEffect(reloadNonce, apiKey) {
         isLoading = true
         errorMessage = null
         val result = runCatching {
             withContext(Dispatchers.IO) {
-                OpenRouterFreeModelsCatalog.fetchLiveFreeModels()
+                GroqModelsCatalog.fetchModels(apiKey)
             }
         }
         result.onSuccess { fetched ->
@@ -93,7 +94,7 @@ internal fun OpenRouterFreeModelsDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text(text = stringResource(ATMR.strings.openrouter_free_models_title)) },
+        title = { Text(text = stringResource(ATMR.strings.groq_models_title)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -102,7 +103,7 @@ internal fun OpenRouterFreeModelsDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    label = { Text(text = stringResource(ATMR.strings.openrouter_free_models_search)) },
+                    label = { Text(text = stringResource(ATMR.strings.groq_models_search)) },
                     leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
@@ -123,13 +124,13 @@ internal fun OpenRouterFreeModelsDialog(
                     FilterChip(
                         selected = visionOnly,
                         onClick = { visionOnly = !visionOnly },
-                        label = { Text(text = stringResource(ATMR.strings.openrouter_free_models_vision_only)) },
+                        label = { Text(text = stringResource(ATMR.strings.groq_models_vision_only)) },
                     )
                     TextButton(
                         enabled = !isLoading,
                         onClick = { reloadNonce++ },
                     ) {
-                        Text(text = stringResource(ATMR.strings.openrouter_free_models_refresh))
+                        Text(text = stringResource(ATMR.strings.groq_models_refresh))
                     }
                 }
 
@@ -147,7 +148,7 @@ internal fun OpenRouterFreeModelsDialog(
                             ) {
                                 CircularProgressIndicator(modifier = Modifier.size(28.dp))
                                 Text(
-                                    text = stringResource(ATMR.strings.openrouter_free_models_loading),
+                                    text = stringResource(ATMR.strings.groq_models_loading),
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
@@ -159,7 +160,7 @@ internal fun OpenRouterFreeModelsDialog(
                                 modifier = Modifier.padding(12.dp),
                             ) {
                                 Text(
-                                    text = stringResource(ATMR.strings.openrouter_free_models_error),
+                                    text = stringResource(ATMR.strings.groq_models_error),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.error,
                                 )
@@ -171,13 +172,13 @@ internal fun OpenRouterFreeModelsDialog(
                                     )
                                 }
                                 TextButton(onClick = { reloadNonce++ }) {
-                                    Text(text = stringResource(ATMR.strings.openrouter_free_models_retry))
+                                    Text(text = stringResource(ATMR.strings.groq_models_retry))
                                 }
                             }
                         }
                         filteredModels.isEmpty() -> {
                             Text(
-                                text = stringResource(ATMR.strings.openrouter_free_models_empty),
+                                text = stringResource(ATMR.strings.groq_models_empty),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -193,7 +194,7 @@ internal fun OpenRouterFreeModelsDialog(
                                         items = filteredModels,
                                         key = { it.id },
                                     ) { model ->
-                                        OpenRouterModelRow(
+                                        GroqModelRow(
                                             model = model,
                                             isSelected = currentModel == model.id,
                                             onSelect = {
@@ -224,8 +225,8 @@ internal fun OpenRouterFreeModelsDialog(
 }
 
 @Composable
-private fun OpenRouterModelRow(
-    model: OpenRouterFreeModel,
+private fun GroqModelRow(
+    model: GroqModelInfo,
     isSelected: Boolean,
     onSelect: () -> Unit,
 ) {
@@ -268,18 +269,25 @@ private fun OpenRouterModelRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.padding(top = 2.dp),
             ) {
-                ModelBadge(
-                    text = stringResource(ATMR.strings.openrouter_free_models_badge_free),
-                    highlighted = false,
-                )
+                if (model.isRecommended) {
+                    GroqModelBadge(
+                        text = stringResource(ATMR.strings.groq_models_badge_recommended),
+                        highlighted = true,
+                    )
+                } else {
+                    GroqModelBadge(
+                        text = stringResource(ATMR.strings.groq_models_badge_free),
+                        highlighted = false,
+                    )
+                }
                 if (model.supportsVision) {
-                    ModelBadge(
-                        text = stringResource(ATMR.strings.openrouter_free_models_badge_vision),
+                    GroqModelBadge(
+                        text = stringResource(ATMR.strings.groq_models_badge_vision),
                         highlighted = true,
                     )
                 }
-                OpenRouterFreeModelsCatalog.formatContextLength(model.contextLength)?.let { ctx ->
-                    ModelBadge(text = ctx, highlighted = false)
+                GroqModelsCatalog.formatContextLength(model.contextLength)?.let { ctx ->
+                    GroqModelBadge(text = ctx, highlighted = false)
                 }
             }
         }
@@ -287,7 +295,7 @@ private fun OpenRouterModelRow(
 }
 
 @Composable
-private fun ModelBadge(
+private fun GroqModelBadge(
     text: String,
     highlighted: Boolean,
 ) {

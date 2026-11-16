@@ -22,7 +22,7 @@ class TranslationEngineSettingsVisibilityTest {
         )
 
         assertEquals(expected, translationEngineSettings(TextTranslators.GEMINI))
-        assertEquals(expected, translationEngineSettings(TextTranslators.OPENROUTER))
+        assertEquals(expected, translationEngineSettings(TextTranslators.GROQ))
     }
 
     @Test
@@ -34,9 +34,11 @@ class TranslationEngineSettingsVisibilityTest {
     }
 
     @Test
-    fun `LLM engines map to independent provider preferences`() {
+    fun `LLM engines map to independent provider preferences and preserve ordinals`() {
         assertEquals(TranslationLlmProvider.GEMINI, TextTranslators.GEMINI.llmProvider)
-        assertEquals(TranslationLlmProvider.OPENROUTER, TextTranslators.OPENROUTER.llmProvider)
+        assertEquals(TranslationLlmProvider.GROQ, TextTranslators.GROQ.llmProvider)
+        assertEquals(3, TextTranslators.GROQ.ordinal)
+        assertEquals(4, TextTranslators.DEEPL.ordinal)
         assertNull(TextTranslators.MLKIT.llmProvider)
         assertNull(TextTranslators.GOOGLE.llmProvider)
         assertNull(TextTranslators.DEEPL.llmProvider)

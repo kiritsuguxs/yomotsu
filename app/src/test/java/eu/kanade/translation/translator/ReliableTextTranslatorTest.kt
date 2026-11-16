@@ -175,10 +175,10 @@ class ReliableTextTranslatorTest {
         category: TranslationFailureCategory,
         retryable: Boolean,
     ) = TranslationProviderException(
-        provider = TranslationProviderId.OPENROUTER,
+        provider = TranslationProviderId.GROQ,
         category = category,
         retryable = retryable,
-        message = "OpenRouter: falha segura.",
+        message = "Groq: falha segura.",
     )
 
     private fun pages(vararg blocks: TranslationBlock): MutableMap<String, PageTranslation> =

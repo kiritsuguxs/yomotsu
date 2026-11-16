@@ -465,7 +465,7 @@ class TranslationGlossaryScreen(
                                         message = "✨ ${result.addedCount} termos exclusivos da obra gerados via ${result.providerLabel} (${result.modelName})!"
                                     }
                                     AiGlossaryResult.MissingApiKey -> {
-                                        message = "Configure sua chave de API do Gemini ou OpenRouter em Configurações > Traduções primeiro."
+                                        message = "Configure sua chave de API do Gemini ou Groq em Configurações > Traduções primeiro."
                                     }
                                     is AiGlossaryResult.Failure -> {
                                         message = result.reason

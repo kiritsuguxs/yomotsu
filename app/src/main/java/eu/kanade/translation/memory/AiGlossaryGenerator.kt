@@ -84,7 +84,7 @@ object AiGlossaryGenerator {
                     userRequest = userRequest,
                     maxOutputTokens = maxTokens,
                 )
-                TranslationLlmProvider.OPENROUTER -> requestOpenRouterGlossary(
+                TranslationLlmProvider.GROQ -> requestGroqGlossary(
                     apiKey = apiKey,
                     modelName = modelName,
                     systemInstruction = systemInstruction,
@@ -103,7 +103,7 @@ object AiGlossaryGenerator {
             TranslationMemory.replaceEntries(context, entries, merge = true)
             val providerLabel = when (activeProvider) {
                 TranslationLlmProvider.GEMINI -> "Gemini"
-                TranslationLlmProvider.OPENROUTER -> "OpenRouter"
+                TranslationLlmProvider.GROQ -> "Groq"
             }
             AiGlossaryResult.Success(
                 addedCount = entries.size,
@@ -177,17 +177,19 @@ object AiGlossaryGenerator {
         return content
     }
 
-    private suspend fun requestOpenRouterGlossary(
+    private suspend fun requestGroqGlossary(
         apiKey: String,
         modelName: String,
         systemInstruction: String,
         userRequest: String,
         maxOutputTokens: Int,
     ): String {
+        val trimmedModel = modelName.trim()
         val payload = buildJsonObject {
-            put("model", modelName)
+            put("model", trimmedModel)
             put("temperature", 0.2f)
-            put("max_tokens", maxOutputTokens)
+            put("max_completion_tokens", maxOutputTokens)
+            eu.kanade.translation.translator.applyGroqReasoningControls(trimmedModel)
             putJsonArray("messages") {
                 addJsonObject {
                     put("role", "system")
@@ -201,7 +203,7 @@ object AiGlossaryGenerator {
         }.toString()
 
         val request = Request.Builder()
-            .url("https://openrouter.ai/api/v1/chat/completions")
+            .url(eu.kanade.translation.translator.GROQ_CHAT_COMPLETIONS_URL)
             .header("Authorization", "Bearer $apiKey")
             .header("Content-Type", "application/json")
             .post(payload.toRequestBody(jsonMediaType))
@@ -211,19 +213,20 @@ object AiGlossaryGenerator {
         val rawBody = response.use { res ->
             val text = res.body.string()
             if (!res.isSuccessful) {
-                throw IllegalStateException("OpenRouter HTTP ${res.code}")
+                throw IllegalStateException("Groq HTTP ${res.code}")
             }
             text
         }
         val json = JSONObject(rawBody)
         val choices = json.optJSONArray("choices")
             ?: throw IllegalStateException(
-                json.optJSONObject("error")?.optString("message") ?: "Resposta inválida do OpenRouter",
+                json.optJSONObject("error")?.optString("message") ?: "Resposta inválida do Groq",
             )
-        return choices.optJSONObject(0)
+        val rawContent = choices.optJSONObject(0)
             ?.optJSONObject("message")
             ?.optString("content")
             .orEmpty()
+        return eu.kanade.translation.translator.stripGroqThinkingTags(rawContent)
     }
 
     internal fun buildGlossarySystemPrompt(): String = """

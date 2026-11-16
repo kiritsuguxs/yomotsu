@@ -33,7 +33,7 @@ internal enum class TranslationEngineSetting {
 internal fun translationEngineSettings(engine: TextTranslators): List<TranslationEngineSetting> {
     return when (engine) {
         TextTranslators.GEMINI,
-        TextTranslators.OPENROUTER,
+        TextTranslators.GROQ,
         -> listOf(
             TranslationEngineSetting.LLM_API_KEY,
             TranslationEngineSetting.LLM_MODEL,
@@ -53,12 +53,14 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     override fun getPreferences(): List<Preference> {
         val translationPreferences = remember { Injekt.get<TranslationPreferences>() }
-        var openRouterPickerTarget by remember { mutableStateOf<PreferenceData<String>?>(null) }
+        var groqPickerTarget by remember { mutableStateOf<PreferenceData<String>?>(null) }
 
-        openRouterPickerTarget?.let { targetPreference ->
-            OpenRouterFreeModelsDialog(
+        groqPickerTarget?.let { targetPreference ->
+            val groqApiKey by translationPreferences.llmApiKey(TranslationLlmProvider.GROQ).collectAsState()
+            GroqModelsDialog(
                 preference = targetPreference,
-                onDismissRequest = { openRouterPickerTarget = null },
+                apiKey = groqApiKey,
+                onDismissRequest = { groqPickerTarget = null },
             )
         }
 
@@ -78,11 +80,11 @@ object SettingsTranslationScreen : SearchableSettings {
             getTranslationLangGroup(translationPreferences),
             getTranslatioEngineGroup(
                 translationPreferences = translationPreferences,
-                onOpenRouterModelPicker = { openRouterPickerTarget = it },
+                onGroqModelPicker = { groqPickerTarget = it },
             ),
             getNovelTranslationGroup(
                 translationPreferences = translationPreferences,
-                onOpenRouterModelPicker = { openRouterPickerTarget = it },
+                onGroqModelPicker = { groqPickerTarget = it },
             ),
             getOcrEngineGroup(translationPreferences),
             getTranslatioAdvancedGroup(translationPreferences),
@@ -92,7 +94,7 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     private fun getNovelTranslationGroup(
         translationPreferences: TranslationPreferences,
-        onOpenRouterModelPicker: (PreferenceData<String>) -> Unit,
+        onGroqModelPicker: (PreferenceData<String>) -> Unit,
     ): Preference.PreferenceGroup {
         val engines = TextTranslators.entries
         val novelEnginePref = translationPreferences.novelTranslationEngine()
@@ -117,7 +119,7 @@ object SettingsTranslationScreen : SearchableSettings {
                     entries = mapOf(
                         TextTranslators.GOOGLE.ordinal to getTranslatorLabel(TextTranslators.GOOGLE),
                         TextTranslators.GEMINI.ordinal to getTranslatorLabel(TextTranslators.GEMINI),
-                        TextTranslators.OPENROUTER.ordinal to getTranslatorLabel(TextTranslators.OPENROUTER),
+                        TextTranslators.GROQ.ordinal to getTranslatorLabel(TextTranslators.GROQ),
                         TextTranslators.DEEPL.ordinal to getTranslatorLabel(TextTranslators.DEEPL),
                     ).toImmutableMap(),
                 ),
@@ -133,9 +135,9 @@ object SettingsTranslationScreen : SearchableSettings {
             }
             if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
                 val modelPreference = translationPreferences.novelLlmModel(requireNotNull(llmProvider))
-                val isOpenRouter = llmProvider == TranslationLlmProvider.OPENROUTER
-                val openRouterActionLabel = if (isOpenRouter) {
-                    stringResource(ATMR.strings.pref_openrouter_free_models)
+                val isGroq = llmProvider == TranslationLlmProvider.GROQ
+                val groqActionLabel = if (isGroq) {
+                    stringResource(ATMR.strings.pref_groq_models)
                 } else {
                     null
                 }
@@ -143,20 +145,20 @@ object SettingsTranslationScreen : SearchableSettings {
                     Preference.PreferenceItem.EditTextPreference(
                         preference = modelPreference,
                         title = "${stringResource(ATMR.strings.pref_engine_model)} (Novel)",
-                        secondaryActionLabel = openRouterActionLabel,
-                        onSecondaryAction = if (isOpenRouter) {
-                            { onOpenRouterModelPicker(modelPreference) }
+                        secondaryActionLabel = groqActionLabel,
+                        onSecondaryAction = if (isGroq) {
+                            { onGroqModelPicker(modelPreference) }
                         } else {
                             null
                         },
                     ),
                 )
-                if (isOpenRouter) {
+                if (isGroq) {
                     add(
                         Preference.PreferenceItem.TextPreference(
-                            title = stringResource(ATMR.strings.pref_openrouter_free_models),
-                            subtitle = stringResource(ATMR.strings.pref_openrouter_free_models_summary),
-                            onClick = { onOpenRouterModelPicker(modelPreference) },
+                            title = stringResource(ATMR.strings.pref_groq_models),
+                            subtitle = stringResource(ATMR.strings.pref_groq_models_summary),
+                            onClick = { onGroqModelPicker(modelPreference) },
                         ),
                     )
                 }
@@ -232,7 +234,7 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     private fun getTranslatioEngineGroup(
         translationPreferences: TranslationPreferences,
-        onOpenRouterModelPicker: (PreferenceData<String>) -> Unit,
+        onGroqModelPicker: (PreferenceData<String>) -> Unit,
     ): Preference.PreferenceGroup {
         val engines = TextTranslators.entries
         val enginePreference = translationPreferences.translationEngine()
@@ -271,9 +273,9 @@ object SettingsTranslationScreen : SearchableSettings {
             }
             if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
                 val modelPreference = translationPreferences.llmModel(requireNotNull(llmProvider))
-                val isOpenRouter = llmProvider == TranslationLlmProvider.OPENROUTER
-                val openRouterActionLabel = if (isOpenRouter) {
-                    stringResource(ATMR.strings.pref_openrouter_free_models)
+                val isGroq = llmProvider == TranslationLlmProvider.GROQ
+                val groqActionLabel = if (isGroq) {
+                    stringResource(ATMR.strings.pref_groq_models)
                 } else {
                     null
                 }
@@ -281,20 +283,20 @@ object SettingsTranslationScreen : SearchableSettings {
                     Preference.PreferenceItem.EditTextPreference(
                         preference = modelPreference,
                         title = stringResource(ATMR.strings.pref_engine_model),
-                        secondaryActionLabel = openRouterActionLabel,
-                        onSecondaryAction = if (isOpenRouter) {
-                            { onOpenRouterModelPicker(modelPreference) }
+                        secondaryActionLabel = groqActionLabel,
+                        onSecondaryAction = if (isGroq) {
+                            { onGroqModelPicker(modelPreference) }
                         } else {
                             null
                         },
                     ),
                 )
-                if (isOpenRouter) {
+                if (isGroq) {
                     add(
                         Preference.PreferenceItem.TextPreference(
-                            title = stringResource(ATMR.strings.pref_openrouter_free_models),
-                            subtitle = stringResource(ATMR.strings.pref_openrouter_free_models_summary),
-                            onClick = { onOpenRouterModelPicker(modelPreference) },
+                            title = stringResource(ATMR.strings.pref_groq_models),
+                            subtitle = stringResource(ATMR.strings.pref_groq_models_summary),
+                            onClick = { onGroqModelPicker(modelPreference) },
                         ),
                     )
                 }
@@ -359,7 +361,7 @@ object SettingsTranslationScreen : SearchableSettings {
             TextTranslators.MLKIT -> stringResource(ATMR.strings.translator_mlkit)
             TextTranslators.GOOGLE -> stringResource(ATMR.strings.translator_google)
             TextTranslators.GEMINI -> stringResource(ATMR.strings.translator_gemini)
-            TextTranslators.OPENROUTER -> stringResource(ATMR.strings.translator_openrouter)
+            TextTranslators.GROQ -> stringResource(ATMR.strings.translator_groq)
             TextTranslators.DEEPL -> "DeepL"
         }
     }

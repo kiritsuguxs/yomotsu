@@ -121,14 +121,16 @@ internal object VisionBubbleMontagePlanner {
         maxCellHeight: Int = DEFAULT_MAX_CELL_HEIGHT,
         paddingPx: Int = DEFAULT_GRID_PADDING_PX,
         maxCells: Int = DEFAULT_MAX_CELLS,
+        maxColumns: Int = DEFAULT_MAX_COLUMNS,
     ): MontageLayout {
         val bounded = requests.take(maxCells)
         if (bounded.isEmpty()) return MontageLayout(0, 0, emptyList())
 
+        val cappedCols = maxColumns.coerceAtLeast(1)
         val cols = when {
             bounded.size <= 1 -> 1
-            bounded.size <= 4 -> 2
-            else -> 3
+            bounded.size <= 4 -> min(2, cappedCols)
+            else -> min(3, cappedCols)
         }
         val availableWidth = (maxSheetWidth - paddingPx * (cols + 1)).coerceAtLeast(cols)
         val colWidth = availableWidth / cols
@@ -234,6 +236,7 @@ internal object VisionBubbleMontagePlanner {
     const val DEFAULT_MAX_CELL_HEIGHT = 380
     const val DEFAULT_GRID_PADDING_PX = 10
     const val DEFAULT_MAX_CELLS = 30
+    const val DEFAULT_MAX_COLUMNS = 3
     private const val MAX_UPSCALE_FACTOR = 1.5f
 }
 
@@ -242,6 +245,7 @@ internal object VisionBubbleMontageBuilder {
     fun build(
         pages: Map<String, PageTranslation>,
         scratchDir: File? = null,
+        maxColumns: Int = VisionBubbleMontagePlanner.DEFAULT_MAX_COLUMNS,
         openPageStream: (String) -> InputStream?,
     ): VisionMontageAttachment? {
         val pageSizes = HashMap<String, Pair<Int, Int>>(pages.size)
@@ -271,7 +275,10 @@ internal object VisionBubbleMontageBuilder {
         }
         if (requests.isEmpty()) return null
 
-        val layout = VisionBubbleMontagePlanner.planMontageGrid(requests)
+        val layout = VisionBubbleMontagePlanner.planMontageGrid(
+            requests = requests,
+            maxColumns = maxColumns,
+        )
         if (layout.sheetWidth <= 0 || layout.sheetHeight <= 0 || layout.placements.isEmpty()) return null
 
         var montageBitmap: Bitmap? = null

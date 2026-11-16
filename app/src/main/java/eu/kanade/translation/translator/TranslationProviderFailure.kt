@@ -7,7 +7,7 @@ import java.io.IOException
 enum class TranslationProviderId(val label: String) {
     GEMINI("Gemini"),
     DEEPL("DeepL"),
-    OPENROUTER("OpenRouter"),
+    GROQ("Groq"),
 }
 
 enum class TranslationFailureCategory {

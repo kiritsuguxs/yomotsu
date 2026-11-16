@@ -6,8 +6,8 @@ enum class TranslationLlmProvider(
     val preferenceKey: String,
     val defaultModel: String,
 ) {
-    GEMINI("gemini", "gemini-1.5-flash"),
-    OPENROUTER("openrouter", "openrouter/free"),
+    GEMINI("gemini", "gemini-3.8-flash"),
+    GROQ("groq", "qwen/qwen3.8-27b"),
 }
 
 class TranslationPreferences(
@@ -46,7 +46,7 @@ class TranslationPreferences(
 
     fun translationEngine() = preferenceStore.getInt("translation_engine", 0)
     fun translationFallbackEngine() = preferenceStore.getInt("translation_fallback_engine", 0)
-    fun translationEngineModel() = preferenceStore.getString("translation_engine_model", "gemini-1.5-flash")
+    fun translationEngineModel() = preferenceStore.getString("translation_engine_model", "gemini-3.8-flash")
     fun translationEngineApiKey() = preferenceStore.getString("translation_engine_api_key", "")
     fun translationEngineTemperature() = preferenceStore.getString("translation_engine_temperature", "0.3")
     fun translationEngineMaxOutputTokens() = preferenceStore.getString("translation_engine_output_tokens", "8192")

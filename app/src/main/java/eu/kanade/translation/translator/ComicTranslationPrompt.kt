@@ -92,6 +92,8 @@ internal fun buildComicTranslationPrompt(
         - Read the entire sequential chapter before deciding ambiguous wording.
         - Use nearby regions and adjacent pages to infer speaker, gender, relationship, tone, pronouns, and implied subjects.
         - Treat line breaks inside an OCR region as visual wrapping, not separate sentences.
+        - In webtoons/manhwa, when a single sentence is split vertically across consecutive strip images or bubbles, translate each region in flow so the sequence reads continuously without merging array items.
+        - Keep RPG/system notifications, status windows, skills, and quests (e.g., [Status], [Skill], Level Up) in crisp, idiomatic game-UI style.
         - Silently repair only obvious OCR mistakes when the surrounding context makes the intended text clear.
         - Produce fluent comic dialogue that sounds written by a human editor, never a literal sequence of dictionary substitutions.
         - Preserve meaning, emotion, politeness level, jokes, names, honorifics, and recurring terminology consistently.

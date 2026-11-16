@@ -35,7 +35,7 @@ enum class TextTranslators(
     MLKIT("MlKit (On Device)"),
     GOOGLE("Google Translate"),
     GEMINI("Gemini AI [API KEY]", TranslationLlmProvider.GEMINI),
-    OPENROUTER("OpenRouter [API KEY]", TranslationLlmProvider.OPENROUTER),
+    GROQ("Groq [API KEY]", TranslationLlmProvider.GROQ),
     DEEPL("DeepL [API KEY]");
 
     fun build(
@@ -75,7 +75,7 @@ enum class TextTranslators(
             MLKIT -> MLKitTranslator(fromLang, toLang)
             GOOGLE -> GoogleTranslator(fromLang, toLang)
             GEMINI -> GeminiTranslator(fromLang, toLang, apiKey, modelName, maxOutputTokens, temperature)
-            OPENROUTER -> OpenRouterTranslator(fromLang, toLang, apiKey, modelName, maxOutputTokens, temperature)
+            GROQ -> GroqTranslator(fromLang, toLang, apiKey, modelName, maxOutputTokens, temperature)
             DEEPL -> DeepLTranslator(fromLang, toLang, pref.deepLApiKey().get())
         }
     }

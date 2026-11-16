@@ -97,4 +97,31 @@ class VisionBubbleMontageTest {
         )!!
         assertEquals(VisionBubbleMontagePlanner.CropRect(100, 200, 300, 400), scaled)
     }
+
+    @Test
+    fun `planMontageGrid respects maxColumns = 2 for sharper manhwa cells`() {
+        val requests = (1..10).map { idx ->
+            VisionBubbleMontagePlanner.CropRequest(
+                reference = VisionBubbleReference(
+                    index = idx,
+                    pageKey = "strip_%02d.jpg".format((idx - 1) / 2 + 1),
+                    blockIndex = (idx - 1) % 2,
+                ),
+                cropRect = VisionBubbleMontagePlanner.CropRect(0, 0, 500, 700),
+            )
+        }
+
+        val twoColLayout = VisionBubbleMontagePlanner.planMontageGrid(
+            requests = requests,
+            maxColumns = 2,
+        )
+        val threeColLayout = VisionBubbleMontagePlanner.planMontageGrid(
+            requests = requests,
+            maxColumns = 3,
+        )
+
+        val twoColDistinctXs = twoColLayout.placements.map { it.cellLeft }.distinct()
+        assertEquals(2, twoColDistinctXs.size)
+        assertTrue(twoColLayout.placements.first().cellWidth > threeColLayout.placements.first().cellWidth)
+    }
 }

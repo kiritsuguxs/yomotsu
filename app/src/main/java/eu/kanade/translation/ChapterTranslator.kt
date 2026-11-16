@@ -324,6 +324,11 @@ class ChapterTranslator(
                 val pageStreamByName = chapterPages.pages.toMap()
                 val archiveMutex = Mutex()
                 val visionScratchDir = File(context.cacheDir, "vision-montage")
+                val visionMaxColumns = if (selectedEngine == TextTranslators.GROQ) {
+                    2
+                } else {
+                    VisionBubbleMontagePlanner.DEFAULT_MAX_COLUMNS
+                }
                 val visionAttachmentBuilder: (suspend (Map<String, PageTranslation>) -> VisionMontageAttachment?)? =
                     if (useVisionBubbleContext && selectedEngine.llmProvider != null) {
                         { chunkPages ->
@@ -331,6 +336,7 @@ class ChapterTranslator(
                                 VisionBubbleMontageBuilder.build(
                                     pages = chunkPages,
                                     scratchDir = visionScratchDir,
+                                    maxColumns = visionMaxColumns,
                                 ) { pageKey ->
                                     pageStreamByName[pageKey]?.invoke()
                                 }

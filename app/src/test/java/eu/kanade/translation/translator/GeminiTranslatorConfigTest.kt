@@ -79,25 +79,31 @@ class GeminiTranslatorConfigTest {
     }
 
     @Test
-    fun `builds OpenRouter multimodal and text-only request payloads cleanly`() {
-        val textOnlyBody = buildOpenRouterRequestBody(
-            modelName = "google/gemini-2.0-flash-001",
+    fun `builds Groq multimodal and text-only request payloads cleanly with model-aware reasoning controls`() {
+        val textOnlyBody = buildGroqRequestBody(
+            modelName = "openai/gpt-oss-120b",
             systemInstruction = "Translate comics",
             requestText = "Translate JSON",
             maxOutputTokens = 4096,
-            temperature = 0.3f,
+            temperature = 0f,
         )
         val textOnlyJson = Json.parseToJsonElement(textOnlyBody).jsonObject
         val textOnlyUser = textOnlyJson.getValue("messages").jsonArray[1].jsonObject
         assertEquals("Translate JSON", textOnlyUser.getValue("content").jsonPrimitive.content)
+        assertFalse("top_k" in textOnlyJson)
+        assertEquals(4096, textOnlyJson.getValue("max_completion_tokens").jsonPrimitive.int)
+        assertEquals("json_object", textOnlyJson.getValue("response_format").jsonObject.getValue("type").jsonPrimitive.content)
+        assertEquals("low", textOnlyJson.getValue("reasoning_effort").jsonPrimitive.content)
+        assertEquals("false", textOnlyJson.getValue("include_reasoning").jsonPrimitive.content)
+        assertEquals("0.01", textOnlyJson.getValue("temperature").jsonPrimitive.content)
 
         val attachment = VisionMontageAttachment(
             mimeType = "image/jpeg",
             base64Data = "YWJjMTIz",
             references = listOf(VisionBubbleReference(1, "001.jpg", 0)),
         )
-        val visionBody = buildOpenRouterRequestBody(
-            modelName = "google/gemini-2.0-flash-001",
+        val visionBody = buildGroqRequestBody(
+            modelName = "qwen/qwen3.8-27b",
             systemInstruction = "Translate comics",
             requestText = "Translate JSON",
             maxOutputTokens = 4096,
@@ -105,6 +111,8 @@ class GeminiTranslatorConfigTest {
             visionAttachment = attachment,
         )
         val visionJson = Json.parseToJsonElement(visionBody).jsonObject
+        assertEquals("none", visionJson.getValue("reasoning_effort").jsonPrimitive.content)
+        assertFalse("include_reasoning" in visionJson)
         val contentParts = visionJson.getValue("messages").jsonArray[1].jsonObject.getValue("content").jsonArray
         assertEquals(2, contentParts.size)
         assertEquals("text", contentParts[0].jsonObject.getValue("type").jsonPrimitive.content)
@@ -113,5 +121,17 @@ class GeminiTranslatorConfigTest {
             "data:image/jpeg;base64,YWJjMTIz",
             contentParts[1].jsonObject.getValue("image_url").jsonObject.getValue("url").jsonPrimitive.content,
         )
+
+        val customBody = buildGroqRequestBody(
+            modelName = "llama-3.3-70b-versatile",
+            systemInstruction = "Translate comics",
+            requestText = "Translate JSON",
+            maxOutputTokens = 8192,
+            temperature = 0.3f,
+        )
+        val customJson = Json.parseToJsonElement(customBody).jsonObject
+        assertFalse("reasoning_effort" in customJson)
+        assertFalse("include_reasoning" in customJson)
+        assertEquals(8192, customJson.getValue("max_completion_tokens").jsonPrimitive.int)
     }
 }

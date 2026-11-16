@@ -14,22 +14,22 @@ import java.net.UnknownHostException
 class TranslationProviderFailureTest {
 
     @Test
-    fun `OpenRouter 401 is an invalid key without leaking response body`() {
+    fun `Groq 401 is an invalid key without leaking response body`() {
         val error = TranslationProviderFailureMapper.fromHttp(
-            provider = TranslationProviderId.OPENROUTER,
+            provider = TranslationProviderId.GROQ,
             statusCode = 401,
             responseBody = """{"error":{"message":"bad secret sk-test"}}""",
         )
 
         assertEquals(TranslationFailureCategory.INVALID_KEY, error.category)
-        assertTrue(error.message.orEmpty().contains("OpenRouter"))
+        assertTrue(error.message.orEmpty().contains("Groq"))
         assertFalse(error.message.orEmpty().contains("sk-test"))
     }
 
     @Test
-    fun `OpenRouter 402 reports insufficient credits`() {
+    fun `Groq 402 reports insufficient credits`() {
         val error = TranslationProviderFailureMapper.fromHttp(
-            TranslationProviderId.OPENROUTER,
+            TranslationProviderId.GROQ,
             402,
             "insufficient credits",
         )
@@ -63,9 +63,9 @@ class TranslationProviderFailureTest {
     }
 
     @Test
-    fun `OpenRouter 404 reports missing model`() {
+    fun `Groq 404 reports missing model`() {
         val error = TranslationProviderFailureMapper.fromHttp(
-            TranslationProviderId.OPENROUTER,
+            TranslationProviderId.GROQ,
             404,
             "No endpoints found for model",
         )
@@ -119,7 +119,7 @@ class TranslationProviderFailureTest {
     @Test
     fun `server response is retryable`() {
         val error = TranslationProviderFailureMapper.fromHttp(
-            TranslationProviderId.OPENROUTER,
+            TranslationProviderId.GROQ,
             503,
             "temporary upstream failure",
         )
@@ -161,7 +161,7 @@ class TranslationProviderFailureTest {
         )
         assertEquals(
             TranslationFailureCategory.MODEL_NOT_FOUND,
-            TranslationProviderFailureMapper.missingModel(TranslationProviderId.OPENROUTER).category,
+            TranslationProviderFailureMapper.missingModel(TranslationProviderId.GROQ).category,
         )
     }
 
@@ -180,25 +180,25 @@ class TranslationProviderFailureTest {
     }
 
     @Test
-    fun `OpenRouter rejects blank key through typed boundary`() = runTest {
-        val translator = OpenRouterTranslator(
+    fun `Groq rejects blank key through typed boundary`() = runTest {
+        val translator = GroqTranslator(
             TextRecognizerLanguage.ENGLISH,
             TextTranslatorLanguage.PORTUGUESE,
             apiKey = "",
-            modelName = "openai/gpt-4o-mini",
+            modelName = "qwen/qwen3.8-27b",
             maxOutputToken = 128,
             temp = 0.3f,
         )
 
         val error = captureFailure { translator.translate(mutableMapOf()) }
 
-        assertEquals(TranslationProviderId.OPENROUTER, error.provider)
+        assertEquals(TranslationProviderId.GROQ, error.provider)
         assertEquals(TranslationFailureCategory.INVALID_KEY, error.category)
     }
 
     @Test
-    fun `OpenRouter rejects blank model through typed boundary`() = runTest {
-        val translator = OpenRouterTranslator(
+    fun `Groq rejects blank model through typed boundary`() = runTest {
+        val translator = GroqTranslator(
             TextRecognizerLanguage.ENGLISH,
             TextTranslatorLanguage.PORTUGUESE,
             apiKey = "configured",
@@ -219,7 +219,7 @@ class TranslationProviderFailureTest {
                 TextRecognizerLanguage.ENGLISH,
                 TextTranslatorLanguage.PORTUGUESE,
                 apiKey = "",
-                modelName = "gemini-1.5-flash",
+                modelName = "gemini-3.8-flash",
                 maxOutputToken = 128,
                 temp = 0.3f,
             ).translate(mutableMapOf())
