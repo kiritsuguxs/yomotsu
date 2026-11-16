@@ -59,6 +59,12 @@ class GeminiModelsCatalogTest {
                   "displayName": "Gemini 4 Hydrogen",
                   "inputTokenLimit": 1048576,
                   "supportedGenerationMethods": ["generateContent"]
+                },
+                {
+                  "name": "models/gemini-4-argon",
+                  "displayName": "Gemini 4 Argon",
+                  "inputTokenLimit": 1048576,
+                  "supportedGenerationMethods": ["generateContent"]
                 }
               ]
             }
@@ -69,15 +75,17 @@ class GeminiModelsCatalogTest {
         assertEquals(
             listOf(
                 "gemini-3.8-flash",
-                "gemini-3.1-pro-preview",
                 "gemini-4-hydrogen",
+                "gemini-3.1-pro-preview",
+                "gemini-4-argon",
             ),
             models.map { it.id },
         )
         assertTrue(models[0].isRecommended)
         assertTrue(models[0].supportsVision)
         assertEquals(1_048_576, models[0].contextLength)
-        assertEquals("Gemini 4 Hydrogen", models[2].name)
+        assertEquals("Gemini 4 Hydrogen (Novo • Visão + Texto)", models[1].name)
+        assertEquals("Gemini 4 Argon", models[3].name)
     }
 
     @Test
