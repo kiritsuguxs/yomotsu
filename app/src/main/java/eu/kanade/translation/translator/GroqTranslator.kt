@@ -119,7 +119,7 @@ class GroqTranslator(
         val systemInstruction = buildComicTranslationPrompt(fromLang, toLang) +
             "\nIMPORTANT: Return ONLY a valid JSON object. No explanations, no markdown formatting."
         val expectedPageKeys = uncachedPages.keys.toList()
-        val hasTranslatableBlocks = uncachedPages.values.flatten().any { block ->
+        val hasTranslatableBlocks = uncachedPages.values.flatMap { it.blocks }.any { block ->
             TranslationQualityGuard.shouldRetry(block.text, "", fromLang, toLang)
         }
 
