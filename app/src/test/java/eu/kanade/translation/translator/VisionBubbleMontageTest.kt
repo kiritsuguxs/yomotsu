@@ -107,7 +107,7 @@ class VisionBubbleMontageTest {
                     pageKey = "strip_%02d.jpg".format((idx - 1) / 2 + 1),
                     blockIndex = (idx - 1) % 2,
                 ),
-                cropRect = VisionBubbleMontagePlanner.CropRect(0, 0, 500, 700),
+                cropRect = VisionBubbleMontagePlanner.CropRect(0, 0, 900, 320),
             )
         }
 
