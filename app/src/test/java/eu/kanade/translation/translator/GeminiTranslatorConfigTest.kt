@@ -166,6 +166,80 @@ class GeminiTranslatorConfigTest {
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
             buildGeminiRestUrl("models/gemini-3.6-flash"),
         )
+        assertEquals(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:streamGenerateContent?alt=sse",
+            buildGeminiStreamRestUrl("models/gemini-3.6-flash"),
+        )
+    }
+
+    @Test
+    fun `parseGeminiStreamLines merges SSE data chunks while ignoring thought parts`() {
+        val ssePayload = """
+            data: {"candidates":[{"content":{"parts":[{"thought":true,"text":"reasoning step"}]}}]}
+
+            data: {"candidates":[{"content":{"parts":[{"text":"{\"001.jpg\":["}]}}]}
+
+            data: {"candidates":[{"content":{"parts":[{"text":"\"Bora!\"]}"}]},"finishReason":"STOP"}]}
+
+            data: [DONE]
+        """.trimIndent()
+
+        val parsed = parseGeminiStreamLines(ssePayload.lineSequence())
+
+        assertEquals("""{"001.jpg":["Bora!"]}""", parsed.text)
+        assertEquals("STOP", parsed.finishReason)
+    }
+
+    @Test
+    fun `parseGeminiStreamLines handles plain JSON fallback payload cleanly`() {
+        val plainJson = """{"candidates":[{"content":{"parts":[{"text":"Capítulo traduzido"}]},"finishReason":"STOP"}]}"""
+
+        val parsed = parseGeminiStreamLines(plainJson.lineSequence())
+
+        assertEquals("Capítulo traduzido", parsed.text)
+        assertEquals("STOP", parsed.finishReason)
+    }
+
+    @Test
+    fun `executeGeminiStreamWithFallback falls back from SSE streaming to generateContent on unsupported endpoint`() {
+        val calledUrls = mutableListOf<String>()
+        val result = executeGeminiStreamWithFallback(
+            systemInstruction = "Translate",
+            requestText = "{}",
+            maxOutputTokens = 4096,
+            modelName = "gemini-2.5-flash",
+            temperature = 0.3f,
+            responseMimeType = "application/json",
+        ) { url, _ ->
+            calledUrls += url
+            if (url.contains("streamGenerateContent")) {
+                GeminiHttpResult(
+                    statusCode = 404,
+                    content = GeminiResponseContent("", ""),
+                    errorBody = """{"error":{"message":"streamGenerateContent not supported"}}""",
+                )
+            } else {
+                GeminiHttpResult(
+                    statusCode = 200,
+                    content = GeminiResponseContent("""{"001.jpg":["Ok"]}""", "STOP"),
+                )
+            }
+        }
+
+        assertEquals(200, result.statusCode)
+        assertEquals("""{"001.jpg":["Ok"]}""", result.content.text)
+        assertEquals(2, calledUrls.size)
+        assertTrue(calledUrls[0].endsWith(":streamGenerateContent?alt=sse"))
+        assertTrue(calledUrls[1].endsWith(":generateContent"))
+    }
+
+    @Test
+    fun `isTransientTranslationIoFailure retries timeouts and socket resets but not DNS or SSL failures`() {
+        assertTrue(TranslationNetworkHelper.isTransientTranslationIoFailure(java.net.SocketTimeoutException("timeout")))
+        assertTrue(TranslationNetworkHelper.isTransientTranslationIoFailure(java.io.EOFException("eof")))
+        assertTrue(TranslationNetworkHelper.isTransientTranslationIoFailure(java.net.SocketException("reset")))
+        assertFalse(TranslationNetworkHelper.isTransientTranslationIoFailure(java.net.UnknownHostException("offline")))
+        assertFalse(TranslationNetworkHelper.isTransientTranslationIoFailure(javax.net.ssl.SSLException("handshake")))
     }
 
     @Test

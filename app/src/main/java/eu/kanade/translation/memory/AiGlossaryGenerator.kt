@@ -7,10 +7,9 @@ import eu.kanade.translation.translator.TextTranslators
 import eu.kanade.translation.translator.TranslationNetworkHelper
 import eu.kanade.translation.translator.applyGroqReasoningControls
 import eu.kanade.translation.translator.buildGeminiHttpDiagnostic
-import eu.kanade.translation.translator.buildGeminiRestUrl
-import eu.kanade.translation.translator.executeGeminiRequestWithFallback
-import eu.kanade.translation.translator.extractGeminiResponseText
+import eu.kanade.translation.translator.executeGeminiStreamWithFallback
 import eu.kanade.translation.translator.stripGroqThinkingTags
+import eu.kanade.translation.translator.toGeminiHttpResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -134,37 +133,30 @@ object AiGlossaryGenerator {
         userRequest: String,
         maxOutputTokens: Int,
     ): String {
-        val url = buildGeminiRestUrl(modelName)
-        val (statusCode, rawBody) = executeGeminiRequestWithFallback(
+        val result = executeGeminiStreamWithFallback(
             systemInstruction = systemInstruction,
             requestText = userRequest,
             maxOutputTokens = maxOutputTokens,
             modelName = modelName,
             temperature = 0.2f,
             responseMimeType = "application/json",
-        ) { body ->
+        ) { url, body ->
             val request = Request.Builder()
                 .url(url)
                 .header("x-goog-api-key", apiKey)
                 .header("Content-Type", "application/json")
+                .header("Accept", "text/event-stream, application/json")
                 .post(body.toRequestBody(jsonMediaType))
                 .build()
-            TranslationNetworkHelper.sharedClient.newCall(request).await().use { res ->
-                res.code to res.body.string()
-            }
+            TranslationNetworkHelper.sharedClient.newCall(request).await().toGeminiHttpResult()
         }
-        if (statusCode !in 200..299) {
-            throw IllegalStateException(buildGeminiHttpDiagnostic(statusCode, rawBody, apiKey))
+        if (result.statusCode !in 200..299) {
+            throw IllegalStateException(buildGeminiHttpDiagnostic(result.statusCode, result.errorBody, apiKey))
         }
 
-        val json = JSONObject(rawBody)
-        val content = extractGeminiResponseText(json)
+        val content = result.content.text
         if (content.isBlank()) {
-            val finishReason = json.optJSONArray("candidates")
-                ?.optJSONObject(0)
-                ?.optString("finishReason")
-                .orEmpty()
-                .ifBlank { "EMPTY" }
+            val finishReason = result.content.finishReason.ifBlank { "EMPTY" }
             throw IllegalStateException("Resposta vazia do Gemini ($finishReason)")
         }
         return content

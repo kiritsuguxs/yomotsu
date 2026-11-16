@@ -20,6 +20,7 @@ import logcat.LogPriority
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONObject
 import tachiyomi.core.common.util.system.logcat
 import java.io.IOException
@@ -125,40 +126,37 @@ class GeminiTranslator(
             inputJson = inputJson,
             relevantText = relevantGlossaryText,
         )
-        val endpointUrl = buildGeminiRestUrl(modelName)
-
-        val rawBody = executeGeminiRequestWithFallback(
+        val result = executeGeminiStreamWithFallback(
             systemInstruction = systemInstruction,
             requestText = requestText,
             maxOutputTokens = maxOutputToken,
             modelName = modelName,
             temperature = temp,
             responseMimeType = JSON_MIME_TYPE,
-        ) { requestBody ->
+        ) { url, requestBody ->
             val request = Request.Builder()
-                .url(endpointUrl)
+                .url(url)
                 .header("x-goog-api-key", cleanApiKey)
                 .header("Content-Type", "application/json")
+                .header("Accept", "text/event-stream, application/json")
                 .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                 .build()
-            okHttpClient.newCall(request).await().use { it.code to it.body.string() }
-        }.let { (statusCode, body) ->
-            if (statusCode !in 200..299) {
-                throw TranslationProviderException(
-                    TranslationProviderId.GEMINI,
-                    TranslationFailureCategory.UNKNOWN,
-                    statusCode == 429 || statusCode >= 500,
-                    buildGeminiHttpDiagnostic(statusCode, body, cleanApiKey),
-                )
-            }
-            body
+            okHttpClient.newCall(request).await().toGeminiHttpResult()
         }
 
-        val responseJson = JSONObject(rawBody)
-        val responseText = extractGeminiResponseText(responseJson)
+        if (result.statusCode !in 200..299) {
+            throw TranslationProviderException(
+                TranslationProviderId.GEMINI,
+                TranslationFailureCategory.UNKNOWN,
+                result.statusCode == 429 || result.statusCode >= 500,
+                buildGeminiHttpDiagnostic(result.statusCode, result.errorBody, cleanApiKey),
+            )
+        }
+
+        val responseText = result.content.text
 
         if (responseText.isBlank()) {
-            val finishReason = responseJson.optJSONArray("candidates")?.optJSONObject(0)?.optString("finishReason") ?: "UNKNOWN"
+            val finishReason = result.content.finishReason.ifBlank { "UNKNOWN" }
             throw TranslationProviderException(
                 TranslationProviderId.GEMINI,
                 TranslationFailureCategory.UNKNOWN,
@@ -217,6 +215,169 @@ class GeminiTranslator(
     }
 
     override fun close() { continuity.clear() }
+}
+
+internal data class GeminiResponseContent(
+    val text: String,
+    val finishReason: String,
+)
+
+internal data class GeminiHttpResult(
+    val statusCode: Int,
+    val content: GeminiResponseContent,
+    val errorBody: String = "",
+)
+
+internal fun Response.toGeminiHttpResult(): GeminiHttpResult = use { response ->
+    if (!response.isSuccessful) {
+        return GeminiHttpResult(
+            statusCode = response.code,
+            content = GeminiResponseContent("", ""),
+            errorBody = response.body.string(),
+        )
+    }
+    val parsed = response.body.charStream().buffered().useLines { lines ->
+        parseGeminiStreamLines(lines)
+    }
+    GeminiHttpResult(
+        statusCode = response.code,
+        content = parsed,
+        errorBody = "",
+    )
+}
+
+internal fun parseGeminiStreamLines(lines: Sequence<String>): GeminiResponseContent {
+    var sawSseDataLine = false
+    val eventData = StringBuilder()
+    val rawLines = StringBuilder()
+    val nonThoughtText = StringBuilder()
+    val fallbackText = StringBuilder()
+    var lastFinishReason = ""
+
+    fun consumeEventJson(jsonText: String) {
+        val trimmed = jsonText.trim()
+        if (trimmed.isEmpty() || trimmed == "[DONE]") return
+        val chunkJson = runCatching { JSONObject(trimmed) }.getOrNull() ?: return
+        val candidate = chunkJson.optJSONArray("candidates")?.optJSONObject(0) ?: return
+        val finishReason = candidate.optString("finishReason").trim()
+        if (finishReason.isNotEmpty() && !finishReason.equals("null", ignoreCase = true)) {
+            lastFinishReason = finishReason
+        }
+        val parts = candidate.optJSONObject("content")?.optJSONArray("parts") ?: return
+        for (index in 0 until parts.length()) {
+            val part = parts.optJSONObject(index) ?: continue
+            val text = part.optString("text")
+            if (text.isEmpty()) continue
+            fallbackText.append(text)
+            if (!part.optBoolean("thought", false)) {
+                nonThoughtText.append(text)
+            }
+        }
+    }
+
+    for (line in lines) {
+        if (!sawSseDataLine) {
+            rawLines.appendLine(line)
+        }
+        if (line.startsWith("data:")) {
+            sawSseDataLine = true
+            val payload = line.substringAfter("data:").trimStart()
+            if (payload == "[DONE]") continue
+            if (eventData.isNotEmpty() && runCatching { JSONObject(eventData.toString().trim()) }.isSuccess) {
+                consumeEventJson(eventData.toString())
+                eventData.clear()
+            }
+            if (payload.isNotEmpty()) {
+                if (eventData.isNotEmpty()) eventData.append('\n')
+                eventData.append(payload)
+            }
+        } else if (line.isBlank()) {
+            if (eventData.isNotEmpty()) {
+                consumeEventJson(eventData.toString())
+                eventData.clear()
+            }
+        }
+    }
+    if (eventData.isNotEmpty()) {
+        consumeEventJson(eventData.toString())
+    }
+
+    if (sawSseDataLine) {
+        val resolvedText = if (nonThoughtText.isNotEmpty()) nonThoughtText.toString() else fallbackText.toString()
+        return GeminiResponseContent(
+            text = resolvedText,
+            finishReason = lastFinishReason.ifBlank { "UNKNOWN" },
+        )
+    }
+
+    val rawJson = rawLines.toString().trim()
+    val responseJson = runCatching { JSONObject(rawJson) }.getOrNull()
+        ?: return GeminiResponseContent("", "UNKNOWN")
+    val finishReason = responseJson.optJSONArray("candidates")
+        ?.optJSONObject(0)
+        ?.optString("finishReason")
+        ?.trim()
+        .orEmpty()
+        .ifBlank { "UNKNOWN" }
+    return GeminiResponseContent(
+        text = extractGeminiResponseText(responseJson),
+        finishReason = finishReason,
+    )
+}
+
+internal inline fun executeGeminiStreamWithFallback(
+    systemInstruction: String,
+    requestText: String,
+    maxOutputTokens: Int,
+    modelName: String,
+    temperature: Float?,
+    responseMimeType: String?,
+    execute: (url: String, body: String) -> GeminiHttpResult,
+): GeminiHttpResult {
+    var useStreaming = true
+    var includeThinkingConfig = true
+    var activeResponseMimeType = responseMimeType
+    var activeTemperature = temperature
+    var compatibilityDowngrades = 0
+
+    while (true) {
+        val url = if (useStreaming) buildGeminiStreamRestUrl(modelName) else buildGeminiRestUrl(modelName)
+        val body = buildGeminiRestRequestBody(
+            systemInstruction = systemInstruction,
+            requestText = requestText,
+            maxOutputTokens = maxOutputTokens,
+            modelName = modelName,
+            temperature = activeTemperature,
+            responseMimeType = activeResponseMimeType,
+            includeThinkingConfig = includeThinkingConfig,
+        )
+        val result = execute(url, body)
+        if (result.statusCode in 200..299 || compatibilityDowngrades >= 4) {
+            return result
+        }
+        val lower = result.errorBody.lowercase()
+        if (useStreaming && (result.statusCode == 400 || result.statusCode == 404) &&
+            (lower.contains("stream") || lower.contains("alt=sse") || lower.contains("sse"))
+        ) {
+            useStreaming = false
+            compatibilityDowngrades++
+            continue
+        }
+        if (result.statusCode != 400) {
+            return result
+        }
+        val downgraded = resolveGeminiCompatibilityDowngrade(
+            responseBody = result.errorBody,
+            includeThinkingConfig = includeThinkingConfig,
+            hasResponseMimeType = !activeResponseMimeType.isNullOrBlank(),
+            hasTemperature = activeTemperature != null,
+        ) ?: return result
+
+        includeThinkingConfig = downgraded.includeThinkingConfig
+        if (!downgraded.keepResponseMimeType) activeResponseMimeType = null
+        if (!downgraded.keepTemperature) activeTemperature = null
+        compatibilityDowngrades++
+    }
 }
 
 internal inline fun executeGeminiRequestWithFallback(
@@ -416,6 +577,11 @@ internal fun kotlinx.serialization.json.JsonObjectBuilder.applyGeminiThinkingCon
 internal fun buildGeminiRestUrl(modelName: String): String {
     val normalizedModel = modelName.trim().removePrefix("models/")
     return "https://generativelanguage.googleapis.com/v1beta/models/$normalizedModel:generateContent"
+}
+
+internal fun buildGeminiStreamRestUrl(modelName: String): String {
+    val normalizedModel = modelName.trim().removePrefix("models/")
+    return "https://generativelanguage.googleapis.com/v1beta/models/$normalizedModel:streamGenerateContent?alt=sse"
 }
 
 internal fun buildGeminiHttpDiagnostic(statusCode: Int, responseBody: String, apiKey: String): String {

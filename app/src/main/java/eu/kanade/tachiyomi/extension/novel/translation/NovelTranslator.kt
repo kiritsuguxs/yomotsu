@@ -1,11 +1,13 @@
 package eu.kanade.tachiyomi.extension.novel.translation
 
 import android.app.Application
-import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.translation.memory.TranslationGlossary
 import eu.kanade.translation.translator.ComicTranslationContext
 import eu.kanade.translation.translator.TextTranslatorLanguage
 import eu.kanade.translation.translator.TextTranslators
+import eu.kanade.translation.translator.TranslationNetworkHelper
+import eu.kanade.translation.translator.executeGeminiStreamWithFallback
+import eu.kanade.translation.translator.toGeminiHttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -31,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
 object NovelTranslator {
 
     private const val GEMINI_NOVEL_CONCURRENT_CHUNKS = 3
-    private val client: OkHttpClient by lazy { Injekt.get<NetworkHelper>().client }
+    private val client: OkHttpClient by lazy { TranslationNetworkHelper.sharedClient }
     private val translationCache = ConcurrentHashMap<Long, String>()
     private val translationPreferences: TranslationPreferences by lazy { Injekt.get() }
     private val context: Application by lazy { Injekt.get() }
@@ -260,7 +262,6 @@ object NovelTranslator {
             val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.GEMINI).get()
                 .ifBlank { translationPreferences.llmModel(TranslationLlmProvider.GEMINI).get() }
                 .ifBlank { eu.kanade.translation.translator.DEFAULT_GEMINI_MODEL_ID }
-            val url = eu.kanade.translation.translator.buildGeminiRestUrl(modelName)
 
             val targetLanguageName = targetLanguagePromptName(tl)
             val systemInstruction = "You are a professional literary translator for light novels and web novels. Translate the following text into natural $targetLanguageName. Preserve all paragraph breaks, HTML/image tags if any, and protected tokens (such as [[YOMOTSU_TERM_0]]). Output ONLY the translated text without commentary."
@@ -271,27 +272,25 @@ object NovelTranslator {
                 ?: 0.25f
             val mediaType = "application/json; charset=utf-8".toMediaType()
 
-            val (statusCode, responseBody) = eu.kanade.translation.translator.executeGeminiRequestWithFallback(
+            val result = executeGeminiStreamWithFallback(
                 systemInstruction = systemInstruction,
                 requestText = text,
                 maxOutputTokens = maxTokens,
                 modelName = modelName,
                 temperature = temperature,
                 responseMimeType = null,
-            ) { requestBody ->
+            ) { url, requestBody ->
                 val request = Request.Builder()
                     .url(url)
                     .header("x-goog-api-key", apiKey)
                     .header("Content-Type", "application/json")
+                    .header("Accept", "text/event-stream, application/json")
                     .post(requestBody.toRequestBody(mediaType))
                     .build()
-                client.newCall(request).execute().use { response ->
-                    response.code to response.body?.string().orEmpty()
-                }
+                client.newCall(request).execute().toGeminiHttpResult()
             }
-            if (statusCode !in 200..299 || responseBody.isBlank()) return null
-            val candidateText = eu.kanade.translation.translator.extractGeminiResponseText(JSONObject(responseBody)).trim()
-            candidateText.ifBlank { null }
+            if (result.statusCode !in 200..299) return null
+            result.content.text.trim().ifBlank { null }
         } catch (e: Exception) {
             logcat(throwable = e) { "Failed to translate chunk with Gemini" }
             null
