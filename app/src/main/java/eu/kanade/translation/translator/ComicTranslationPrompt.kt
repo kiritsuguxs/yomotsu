@@ -128,11 +128,25 @@ internal fun buildComicTranslationRequest(
     relevantText: String? = inputJson,
     visionAttachment: VisionMontageAttachment? = null,
 ): String {
+    val glossary = TranslationGlossary.instructions(context, relevantText)
+    return formatComicTranslationRequest(
+        context = context,
+        inputJson = inputJson,
+        glossary = glossary,
+        visionAttachment = visionAttachment,
+    )
+}
+
+internal fun formatComicTranslationRequest(
+    context: ComicTranslationContext,
+    inputJson: String,
+    glossary: String = "",
+    visionAttachment: VisionMontageAttachment? = null,
+): String {
     val workContext = buildList {
         context.mangaTitle.takeIf { it.isNotBlank() }?.let { add("Series: $it") }
         context.chapterName.takeIf { it.isNotBlank() }?.let { add("Chapter: $it") }
     }.joinToString("\n")
-    val glossary = TranslationGlossary.instructions(context, relevantText)
     val visionLegend = visionAttachment?.let(::buildVisionBubbleLegend).orEmpty()
 
     return buildString {

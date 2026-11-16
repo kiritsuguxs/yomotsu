@@ -88,7 +88,7 @@ class ComicTranslationPromptTest {
     }
 
     @Test
-    fun `buildComicTranslationRequest appends numbered crop legend when vision attachment exists`() {
+    fun `formatComicTranslationRequest appends numbered crop legend when vision attachment exists`() {
         val attachment = VisionMontageAttachment(
             mimeType = "image/jpeg",
             base64Data = "AQID",
@@ -97,12 +97,12 @@ class ComicTranslationPromptTest {
                 VisionBubbleReference(index = 2, pageKey = "001.jpg", blockIndex = 1),
             ),
         )
-        val promptWithVision = buildComicTranslationRequest(
+        val promptWithVision = formatComicTranslationRequest(
             context = ComicTranslationContext("Solo Leveling", "Cap. 1"),
             inputJson = """{"001.jpg":["Hey!","Watch out!"]}""",
             visionAttachment = attachment,
         )
-        val promptTextOnly = buildComicTranslationRequest(
+        val promptTextOnly = formatComicTranslationRequest(
             context = ComicTranslationContext("Solo Leveling", "Cap. 1"),
             inputJson = """{"001.jpg":["Hey!","Watch out!"]}""",
             visionAttachment = null,

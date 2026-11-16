@@ -24,7 +24,8 @@ class VisionBubbleMontageTest {
     @Test
     fun `chooseSampleSize selects largest power of two above target dimensions`() {
         assertEquals(1, VisionBubbleMontagePlanner.chooseSampleSize(400, 300, 350, 260))
-        assertEquals(2, VisionBubbleMontagePlanner.chooseSampleSize(1200, 900, 300, 220))
+        assertEquals(2, VisionBubbleMontagePlanner.chooseSampleSize(1000, 800, 300, 220))
+        assertEquals(4, VisionBubbleMontagePlanner.chooseSampleSize(1200, 900, 300, 220))
         assertEquals(4, VisionBubbleMontagePlanner.chooseSampleSize(2400, 1800, 400, 300))
     }
 
