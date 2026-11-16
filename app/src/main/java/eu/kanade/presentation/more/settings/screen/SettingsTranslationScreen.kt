@@ -53,15 +53,24 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     override fun getPreferences(): List<Preference> {
         val translationPreferences = remember { Injekt.get<TranslationPreferences>() }
-        var groqPickerTarget by remember { mutableStateOf<PreferenceData<String>?>(null) }
+        var llmModelPickerTarget by remember {
+            mutableStateOf<Pair<TranslationLlmProvider, PreferenceData<String>>?>(null)
+        }
 
-        groqPickerTarget?.let { targetPreference ->
-            val groqApiKey by translationPreferences.llmApiKey(TranslationLlmProvider.GROQ).collectAsState()
-            GroqModelsDialog(
-                preference = targetPreference,
-                apiKey = groqApiKey,
-                onDismissRequest = { groqPickerTarget = null },
-            )
+        llmModelPickerTarget?.let { (provider, targetPreference) ->
+            val apiKey by translationPreferences.llmApiKey(provider).collectAsState()
+            when (provider) {
+                TranslationLlmProvider.GROQ -> GroqModelsDialog(
+                    preference = targetPreference,
+                    apiKey = apiKey,
+                    onDismissRequest = { llmModelPickerTarget = null },
+                )
+                TranslationLlmProvider.GEMINI -> GeminiModelsDialog(
+                    preference = targetPreference,
+                    apiKey = apiKey,
+                    onDismissRequest = { llmModelPickerTarget = null },
+                )
+            }
         }
 
         return listOf(
@@ -80,11 +89,11 @@ object SettingsTranslationScreen : SearchableSettings {
             getTranslationLangGroup(translationPreferences),
             getTranslatioEngineGroup(
                 translationPreferences = translationPreferences,
-                onGroqModelPicker = { groqPickerTarget = it },
+                onLlmModelPicker = { provider, pref -> llmModelPickerTarget = provider to pref },
             ),
             getNovelTranslationGroup(
                 translationPreferences = translationPreferences,
-                onGroqModelPicker = { groqPickerTarget = it },
+                onLlmModelPicker = { provider, pref -> llmModelPickerTarget = provider to pref },
             ),
             getOcrEngineGroup(translationPreferences),
             getTranslatioAdvancedGroup(translationPreferences),
@@ -94,7 +103,7 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     private fun getNovelTranslationGroup(
         translationPreferences: TranslationPreferences,
-        onGroqModelPicker: (PreferenceData<String>) -> Unit,
+        onLlmModelPicker: (TranslationLlmProvider, PreferenceData<String>) -> Unit,
     ): Preference.PreferenceGroup {
         val engines = TextTranslators.entries
         val novelEnginePref = translationPreferences.novelTranslationEngine()
@@ -134,23 +143,15 @@ object SettingsTranslationScreen : SearchableSettings {
                 )
             }
             if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
-                val modelPreference = translationPreferences.novelLlmModel(requireNotNull(llmProvider))
-                val isGroq = llmProvider == TranslationLlmProvider.GROQ
-                val groqActionLabel = if (isGroq) {
-                    stringResource(ATMR.strings.pref_groq_models)
-                } else {
-                    null
-                }
+                val provider = requireNotNull(llmProvider)
+                val modelPreference = translationPreferences.novelLlmModel(provider)
+                val pickerLabel = getLlmModelsActionLabel(provider)
                 add(
                     Preference.PreferenceItem.EditTextPreference(
                         preference = modelPreference,
                         title = "${stringResource(ATMR.strings.pref_engine_model)} (Novel)",
-                        secondaryActionLabel = groqActionLabel,
-                        onSecondaryAction = if (isGroq) {
-                            { onGroqModelPicker(modelPreference) }
-                        } else {
-                            null
-                        },
+                        secondaryActionLabel = pickerLabel,
+                        onSecondaryAction = { onLlmModelPicker(provider, modelPreference) },
                     ),
                 )
             }
@@ -225,7 +226,7 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     private fun getTranslatioEngineGroup(
         translationPreferences: TranslationPreferences,
-        onGroqModelPicker: (PreferenceData<String>) -> Unit,
+        onLlmModelPicker: (TranslationLlmProvider, PreferenceData<String>) -> Unit,
     ): Preference.PreferenceGroup {
         val engines = TextTranslators.entries
         val enginePreference = translationPreferences.translationEngine()
@@ -263,23 +264,15 @@ object SettingsTranslationScreen : SearchableSettings {
                 )
             }
             if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
-                val modelPreference = translationPreferences.llmModel(requireNotNull(llmProvider))
-                val isGroq = llmProvider == TranslationLlmProvider.GROQ
-                val groqActionLabel = if (isGroq) {
-                    stringResource(ATMR.strings.pref_groq_models)
-                } else {
-                    null
-                }
+                val provider = requireNotNull(llmProvider)
+                val modelPreference = translationPreferences.llmModel(provider)
+                val pickerLabel = getLlmModelsActionLabel(provider)
                 add(
                     Preference.PreferenceItem.EditTextPreference(
                         preference = modelPreference,
                         title = stringResource(ATMR.strings.pref_engine_model),
-                        secondaryActionLabel = groqActionLabel,
-                        onSecondaryAction = if (isGroq) {
-                            { onGroqModelPicker(modelPreference) }
-                        } else {
-                            null
-                        },
+                        secondaryActionLabel = pickerLabel,
+                        onSecondaryAction = { onLlmModelPicker(provider, modelPreference) },
                     ),
                 )
             }
@@ -362,6 +355,14 @@ object SettingsTranslationScreen : SearchableSettings {
         return when (engine) {
             OcrEngineType.ML_KIT -> stringResource(ATMR.strings.ocr_mlkit)
             OcrEngineType.PADDLE_OCR -> stringResource(ATMR.strings.ocr_paddle_english)
+        }
+    }
+
+    @Composable
+    private fun getLlmModelsActionLabel(provider: TranslationLlmProvider): String {
+        return when (provider) {
+            TranslationLlmProvider.GROQ -> stringResource(ATMR.strings.pref_groq_models)
+            TranslationLlmProvider.GEMINI -> stringResource(ATMR.strings.pref_gemini_models)
         }
     }
 }

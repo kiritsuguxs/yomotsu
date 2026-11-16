@@ -36,12 +36,14 @@ class GeminiTranslator(
 
     private val okHttpClient by lazy { TranslationNetworkHelper.sharedClient }
     private val continuity = TranslationContext()
+    private val cleanApiKey: String
+        get() = sanitizeGeminiApiKey(apiKey)
 
     override suspend fun translate(
         pages: MutableMap<String, PageTranslation>,
         context: ComicTranslationContext,
     ) {
-        if (apiKey.isBlank()) throw TranslationProviderFailureMapper.missingKey(TranslationProviderId.GEMINI)
+        if (cleanApiKey.isBlank()) throw TranslationProviderFailureMapper.missingKey(TranslationProviderId.GEMINI)
         if (modelName.isBlank()) throw TranslationProviderFailureMapper.missingModel(TranslationProviderId.GEMINI)
         try {
             continuity.enter(context)
@@ -58,10 +60,10 @@ class GeminiTranslator(
             val mapped = TranslationProviderFailureMapper.fromThrowable(TranslationProviderId.GEMINI, error)
             logcat(LogPriority.ERROR, mapped) { "Gemini translation failed: ${mapped.category}" }
             if (mapped.category == TranslationFailureCategory.CONNECTION) {
-                throw TranslationProviderException(TranslationProviderId.GEMINI, TranslationFailureCategory.CONNECTION, true, buildGeminiNetworkDiagnostic(error, apiKey), error)
+                throw TranslationProviderException(TranslationProviderId.GEMINI, TranslationFailureCategory.CONNECTION, true, buildGeminiNetworkDiagnostic(error, cleanApiKey), error)
             }
             if (mapped.category == TranslationFailureCategory.UNKNOWN) {
-                throw TranslationProviderException(TranslationProviderId.GEMINI, TranslationFailureCategory.UNKNOWN, false, buildGeminiUnknownDiagnostic(error, apiKey), error)
+                throw TranslationProviderException(TranslationProviderId.GEMINI, TranslationFailureCategory.UNKNOWN, false, buildGeminiUnknownDiagnostic(error, cleanApiKey), error)
             }
             throw mapped
         }
@@ -122,7 +124,7 @@ class GeminiTranslator(
             )
             val request = Request.Builder()
                 .url(buildGeminiRestUrl(modelName))
-                .header("x-goog-api-key", apiKey)
+                .header("x-goog-api-key", cleanApiKey)
                 .header("Content-Type", "application/json")
                 .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                 .build()
@@ -153,7 +155,7 @@ class GeminiTranslator(
                 TranslationProviderId.GEMINI,
                 TranslationFailureCategory.UNKNOWN,
                 statusCode == 429 || statusCode >= 500,
-                buildGeminiHttpDiagnostic(statusCode, rawBody, apiKey),
+                buildGeminiHttpDiagnostic(statusCode, rawBody, cleanApiKey),
             )
         }
         val responseBody = rawBody

@@ -202,7 +202,9 @@ object NovelTranslator {
     private fun translateWithGemini(text: String, tl: String): String? {
         return try {
             translationPreferences.migrateLegacyLlmSettings(TranslationLlmProvider.GEMINI)
-            val apiKey = translationPreferences.llmApiKey(TranslationLlmProvider.GEMINI).get().trim()
+            val apiKey = eu.kanade.translation.translator.sanitizeGeminiApiKey(
+                translationPreferences.llmApiKey(TranslationLlmProvider.GEMINI).get(),
+            )
             if (apiKey.isBlank()) return null
 
             val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.GEMINI).get()

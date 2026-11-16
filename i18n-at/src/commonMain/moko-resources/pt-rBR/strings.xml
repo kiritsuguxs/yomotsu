@@ -93,6 +93,12 @@
     <string name="groq_models_badge_free">Grátis</string>
     <string name="groq_models_badge_recommended">Recomendado</string>
     <string name="groq_models_badge_vision">Visão</string>
+    <string name="pref_gemini_models">Modelos do Gemini</string>
+    <string name="gemini_models_title">Modelos do Gemini</string>
+    <string name="gemini_models_loading">Buscando modelos do Gemini…</string>
+    <string name="gemini_models_error">Não foi possível carregar os modelos do Gemini.</string>
+    <string name="gemini_models_missing_key_hint">Exibindo modelos recomendados. Adicione sua chave da API do Gemini para listar os modelos disponíveis.</string>
+    <string name="gemini_models_empty">Nenhum modelo encontrado com esse filtro.</string>
 
     <string name="novel_customize_reading">Personalizar leitura</string>
     <string name="novel_tts_listen">Ouvir capítulo</string>
