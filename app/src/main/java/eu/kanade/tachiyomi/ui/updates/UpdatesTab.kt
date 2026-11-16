@@ -26,9 +26,13 @@ import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel.Event
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import mihon.feature.upcoming.UpcomingScreen
 import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
@@ -58,6 +62,7 @@ data object UpdatesTab : Tab {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
+        val scope = rememberCoroutineScope()
         val viewModel = viewModel<UpdatesViewModel>()
         val settingsViewModel = viewModel<UpdatesSettingsViewModel>()
         val state by viewModel.state.collectAsState()
@@ -76,17 +81,23 @@ data object UpdatesTab : Tab {
             onMultiDeleteClicked = viewModel::showConfirmDeleteChapters,
             onUpdateSelected = viewModel::toggleSelection,
             onOpenChapter = {
-                val manga = kotlinx.coroutines.runBlocking { Injekt.get<GetManga>().await(it.update.mangaId) }
-                val source = manga?.let { m -> Injekt.get<SourceManager>().get(m.source) }
-                val intent = when (source) {
-                    is eu.kanade.tachiyomi.animesource.AnimeSource ->
-                        eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
-                    is eu.kanade.tachiyomi.source.INovelSource ->
-                        eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
-                    else ->
-                        ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                scope.launch {
+                    val intent = withIOContext {
+                        val manga = Injekt.get<GetManga>().await(it.update.mangaId)
+                        val source = manga?.let { m -> Injekt.get<SourceManager>().get(m.source) }
+                        when (source) {
+                            is eu.kanade.tachiyomi.animesource.AnimeSource ->
+                                eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                            is eu.kanade.tachiyomi.source.INovelSource ->
+                                eu.kanade.tachiyomi.ui.reader.NovelReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                            else ->
+                                ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                        }
+                    }
+                    withUIContext {
+                        context.startActivity(intent)
+                    }
                 }
-                context.startActivity(intent)
             },
             onCalendarClicked = { navigator.push(UpcomingScreen()) },
             onFilterClicked = viewModel::showFilterDialog,

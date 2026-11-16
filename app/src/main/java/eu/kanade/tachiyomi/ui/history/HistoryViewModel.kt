@@ -56,6 +56,8 @@ class HistoryViewModel(
     private val updateManga: UpdateManga = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     private val sourceManager: SourceManager = Injekt.get(),
+    private val mangaMergeManager: eu.kanade.domain.manga.MangaMergeManager = Injekt.get(),
+    private val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get(),
 ) : StateViewModel<HistoryViewModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
@@ -98,6 +100,35 @@ class HistoryViewModel(
 
     fun getNextChapterForManga(mangaId: Long, chapterId: Long) {
         viewModelScope.launchIO {
+            val manga = getManga.await(mangaId)
+            if (manga != null && libraryPreferences.seriesMergingEnabled.get() && mangaMergeManager.groupIdOf(mangaId) != null) {
+                val group = mergedChapterProvider.load(manga)
+                if (group.isMerged && group.chapters.isNotEmpty()) {
+                    val ordered = group.chapters
+                    val target = if (chapterId != -1L) {
+                        val currentUnit = group.stitch.firstOrNull { it.chapterId == chapterId }?.unit
+                        val currIdx = ordered.indexOfFirst { ch ->
+                            ch.id == chapterId || (currentUnit != null && group.stitch.any { it.chapterId == ch.id && it.unit == currentUnit })
+                        }
+                        if (currIdx >= 0) {
+                            val current = ordered[currIdx]
+                            if (!current.read) {
+                                current
+                            } else {
+                                ordered.drop(currIdx + 1).firstOrNull { !it.read } ?: ordered.getOrNull(currIdx + 1)
+                            }
+                        } else {
+                            ordered.firstOrNull { !it.read }
+                        }
+                    } else {
+                        ordered.firstOrNull { !it.read }
+                    }
+                    if (target != null) {
+                        sendNextChapterEvent(listOf(target))
+                        return@launchIO
+                    }
+                }
+            }
             sendNextChapterEvent(getNextChapters.await(mangaId, chapterId, onlyUnread = false))
         }
     }

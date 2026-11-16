@@ -65,6 +65,10 @@ class UpdatesViewModel(
     private val getChapter: GetChapter = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val updatesPreferences: UpdatesPreferences = Injekt.get(),
+    private val animeDownloadManager: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager = Injekt.get(),
+    private val animeDownloadCache: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadCache = Injekt.get(),
+    private val mergeGroupRepository: tachiyomi.domain.merge.MergeGroupRepository = Injekt.get(),
+    private val reconcileMergedChapters: eu.kanade.domain.merge.ReconcileMergedChapters = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateViewModel<UpdatesViewModel.State>(State()) {
 
@@ -82,6 +86,17 @@ class UpdatesViewModel(
             // Set date limit for recent chapters
             val limit = Clock.System.now().minus(3, DateTimeUnit.MONTH, TimeZone.currentSystemDefault())
 
+            val downloadRefreshSignals = combine(
+                downloadCache.changes,
+                downloadManager.queueState,
+                animeDownloadCache.changes,
+                animeDownloadManager.queueState,
+                combine(
+                    eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadedChapters,
+                    eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadingChapters,
+                ) { downloaded, downloading -> downloaded to downloading },
+            ) { _, _, _, _, _ -> Unit }
+
             combine(
                 // needed for SQL filters (unread, started, bookmarked, etc)
                 getUpdatesItemPreferenceFlow()
@@ -97,13 +112,12 @@ class UpdatesViewModel(
                             excludedCategories = it.filterExcludedCategories,
                         ).distinctUntilChanged()
                     },
-                downloadCache.changes,
-                downloadManager.queueState,
+                downloadRefreshSignals,
                 // needed for Kotlin filters (downloaded)
                 getUpdatesItemPreferenceFlow().distinctUntilChanged { old, new ->
                     old.filterDownloaded == new.filterDownloaded
                 },
-            ) { updates, _, _, itemPreferences ->
+            ) { updates, _, itemPreferences ->
                 updates
                     .toUpdateItems()
                     .applyFilters(itemPreferences)
@@ -122,6 +136,12 @@ class UpdatesViewModel(
             merge(downloadManager.statusFlow(), downloadManager.progressFlow())
                 .catch { logcat(LogPriority.ERROR, it) }
                 .collect(this@UpdatesViewModel::updateDownloadState)
+        }
+
+        viewModelScope.launchIO {
+            merge(animeDownloadManager.statusFlow(), animeDownloadManager.progressFlow())
+                .catch { logcat(LogPriority.ERROR, it) }
+                .collect(this@UpdatesViewModel::updateAnimeDownloadState)
         }
 
         getUpdatesItemPreferenceFlow()
@@ -256,6 +276,29 @@ class UpdatesViewModel(
         }
     }
 
+    private fun updateAnimeDownloadState(download: eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload) {
+        val mappedState = when (download.status) {
+            eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.NOT_DOWNLOADED -> Download.State.NOT_DOWNLOADED
+            eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.QUEUE -> Download.State.QUEUE
+            eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.DOWNLOADING -> Download.State.DOWNLOADING
+            eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.DOWNLOADED -> Download.State.DOWNLOADED
+            eu.kanade.tachiyomi.data.animedownload.model.AnimeDownload.State.ERROR -> Download.State.ERROR
+        }
+        mutableState.update { state ->
+            val newItems = state.items.toMutableList().also { list ->
+                val modifiedIndex = list.indexOfFirst { it.update.chapterId == download.chapter.id }
+                if (modifiedIndex < 0) return@also
+
+                val item = list[modifiedIndex]
+                list[modifiedIndex] = item.copy(
+                    downloadStateProvider = { mappedState },
+                    downloadProgressProvider = { download.progress },
+                )
+            }
+            state.copy(items = newItems)
+        }
+    }
+
     fun downloadChapters(items: List<UpdatesItem>, action: ChapterDownloadAction) {
         if (items.isEmpty()) return
         viewModelScope.launch {
@@ -263,7 +306,16 @@ class UpdatesViewModel(
                 ChapterDownloadAction.START -> {
                     downloadChapters(items)
                     if (items.any { it.downloadStateProvider() == Download.State.ERROR }) {
-                        downloadManager.startDownloads()
+                        if (items.any { sourceManager.get(it.update.sourceId) is eu.kanade.tachiyomi.animesource.AnimeSource }) {
+                            animeDownloadManager.startDownloads()
+                        }
+                        if (items.any {
+                                val src = sourceManager.get(it.update.sourceId)
+                                src !is eu.kanade.tachiyomi.animesource.AnimeSource && src !is eu.kanade.tachiyomi.source.INovelSource
+                            }
+                        ) {
+                            downloadManager.startDownloads()
+                        }
                     }
                 }
                 ChapterDownloadAction.START_NOW -> {
@@ -290,7 +342,7 @@ class UpdatesViewModel(
                 if (item != null) downloadChapters(listOf(item))
             }
             is eu.kanade.tachiyomi.animesource.AnimeSource -> {
-                Injekt.get<eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager>().startDownloadNow(chapterId)
+                animeDownloadManager.startDownloadNow(chapterId)
             }
             else -> {
                 downloadManager.startDownloadNow(chapterId)
@@ -306,7 +358,6 @@ class UpdatesViewModel(
                 eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.cancelDownload(chapterId)
             }
             is eu.kanade.tachiyomi.animesource.AnimeSource -> {
-                val animeDownloadManager = Injekt.get<eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager>()
                 val activeDownload = animeDownloadManager.getQueuedDownloadOrNull(chapterId) ?: return
                 animeDownloadManager.cancelQueuedDownloads(listOf(activeDownload))
             }
@@ -318,6 +369,26 @@ class UpdatesViewModel(
         }
     }
 
+    private suspend fun expandChapterIdsForMergeGroup(updates: List<UpdatesItem>): Set<Long> {
+        val baseIds = updates.mapTo(HashSet()) { it.update.chapterId }
+        if (!libraryPreferences.seriesMergingEnabled.get() || baseIds.isEmpty()) return baseIds
+
+        val expanded = HashSet(baseIds)
+        updates.groupBy { it.update.mangaId }.forEach { (mangaId, groupUpdates) ->
+            val source = sourceManager.get(groupUpdates.first().update.sourceId)
+            val contentType = when {
+                source is eu.kanade.tachiyomi.animesource.AnimeSource -> tachiyomi.domain.merge.model.ContentType.ANIME
+                source is eu.kanade.tachiyomi.novelsource.NovelSource || source is eu.kanade.tachiyomi.source.INovelSource -> tachiyomi.domain.merge.model.ContentType.NOVEL
+                else -> tachiyomi.domain.merge.model.ContentType.MANGA
+            }
+            val groupId = mergeGroupRepository.getGroupId(contentType, mangaId) ?: return@forEach
+            val stitch = reconcileMergedChapters.currentStitch(contentType, groupId)
+            val ids = groupUpdates.mapTo(HashSet()) { it.update.chapterId }
+            expanded.addAll(eu.kanade.domain.merge.expandToUnits(ids, stitch))
+        }
+        return expanded
+    }
+
     /**
      * Mark the selected updates list as read/unread.
      * @param updates the list of selected updates.
@@ -325,10 +396,11 @@ class UpdatesViewModel(
      */
     fun markUpdatesRead(updates: List<UpdatesItem>, read: Boolean) {
         viewModelScope.launchIO {
+            val targetIds = expandChapterIdsForMergeGroup(updates)
             setReadStatus.await(
                 read = read,
-                chapters = updates
-                    .mapNotNull { getChapter.await(it.update.chapterId) }
+                chapters = targetIds
+                    .mapNotNull { getChapter.await(it) }
                     .toTypedArray(),
             )
         }
@@ -341,9 +413,11 @@ class UpdatesViewModel(
      */
     fun bookmarkUpdates(updates: List<UpdatesItem>, bookmark: Boolean) {
         viewModelScope.launchIO {
-            updates
-                .filterNot { it.update.bookmark == bookmark }
-                .map { ChapterUpdate(id = it.update.chapterId, bookmark = bookmark) }
+            val targetIds = expandChapterIdsForMergeGroup(updates)
+            targetIds
+                .mapNotNull { getChapter.await(it) }
+                .filterNot { it.bookmark == bookmark }
+                .map { ChapterUpdate(id = it.id, bookmark = bookmark) }
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)

@@ -184,8 +184,24 @@ class LibraryViewModel(
                 } else {
                     favorites
                 }
+                val mergedTracksMap = if (mergingEnabled && memberships.isNotEmpty() && tracksMap.isNotEmpty()) {
+                    val itemsByGroup = favorites.filter { it.id in memberships }.groupBy { memberships[it.id]!! }
+                    tracksMap.toMutableMap().apply {
+                        itemsByGroup.values.forEach { groupMembers ->
+                            if (groupMembers.size <= 1) return@forEach
+                            val combinedTracks = groupMembers
+                                .flatMap { tracksMap[it.id].orEmpty() }
+                                .distinctBy { it.trackerId to it.remoteId }
+                            if (combinedTracks.isNotEmpty()) {
+                                groupMembers.forEach { member -> put(member.id, combinedTracks) }
+                            }
+                        }
+                    }
+                } else {
+                    tracksMap
+                }
                 val filteredFavorites = mergedAwareFavorites
-                    .applyFilters(tracksMap, trackingFilters, itemPreferences)
+                    .applyFilters(mergedTracksMap, trackingFilters, itemPreferences)
                     .let { libraryItems ->
                         if (searchQuery.isNullOrEmpty()) {
                             libraryItems
@@ -207,7 +223,7 @@ class LibraryViewModel(
                     showSystemCategory = showSystemCategory,
                     categories = categories,
                     favorites = filteredFavorites,
-                    tracksMap = tracksMap,
+                    tracksMap = mergedTracksMap,
                     loggedInTrackerIds = trackingFilters.keys,
                 ) to memberships
             }

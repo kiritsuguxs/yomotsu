@@ -1,7 +1,9 @@
 package mihon.domain.migration.usecases
 
+import eu.kanade.domain.manga.MangaMergeManager
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.hasCustomCover
+import eu.kanade.domain.merge.ReconcileMergedChapters
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
@@ -36,6 +38,8 @@ class MigrateMangaUseCase(
     private val insertTrack: InsertTrack,
     private val coverCache: CoverCache,
     private val updateMangaFromRemote: UpdateMangaFromRemote,
+    private val mangaMergeManager: MangaMergeManager,
+    private val reconcileMergedChapters: ReconcileMergedChapters,
 ) {
     private val enhancedServices by lazy { trackerManager.trackers.filterIsInstance<EnhancedTracker>() }
 
@@ -129,6 +133,11 @@ class MigrateMangaUseCase(
             )
 
             updateManga.awaitAll(listOfNotNull(currentMangaUpdate, targetMangaUpdate))
+
+            if (replace) {
+                mangaMergeManager.replaceInGroup(current.id, target.id)
+                reconcileMergedChapters.await()
+            }
         } catch (e: Throwable) {
             if (e is CancellationException) {
                 throw e

@@ -87,6 +87,11 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     private val fetchInterval: FetchInterval = Injekt.get()
     private val filterChaptersForDownload: FilterChaptersForDownload = Injekt.get()
     private val updateMangaFromRemote: UpdateMangaFromRemote = Injekt.get()
+    private val mergeGroupRepository: tachiyomi.domain.merge.MergeGroupRepository = Injekt.get()
+    private val mergedChapterUnitRepository: tachiyomi.domain.merge.MergedChapterUnitRepository = Injekt.get()
+    private val reconcileMergedChapters: eu.kanade.domain.merge.ReconcileMergedChapters = Injekt.get()
+    private val downloadPreferences: tachiyomi.domain.download.service.DownloadPreferences = Injekt.get()
+    private val getChaptersByMangaId: tachiyomi.domain.chapter.interactor.GetChaptersByMangaId = Injekt.get()
 
     private val notifier = LibraryUpdateNotifier(context)
 
@@ -246,9 +251,11 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         val semaphore = Semaphore(5)
         val progressCount = AtomicInt(0)
         val currentlyUpdatingManga = CopyOnWriteArrayList<Manga>()
-        val newUpdates = CopyOnWriteArrayList<Pair<Manga, Array<Chapter>>>()
+        val fetchedUpdates = CopyOnWriteArrayList<Pair<Manga, List<Chapter>>>()
+        val newUpdates = mutableListOf<Pair<Manga, Array<Chapter>>>()
         val failedUpdates = CopyOnWriteArrayList<Pair<Manga, String?>>()
-        val hasDownloads = AtomicBoolean(false)
+        var hasMangaDownloads = false
+        var hasAnimeDownloads = false
         val timeZone = TimeZone.currentSystemDefault()
         val fetchWindow = fetchInterval.getWindow(Clock.System.now().toLocalDateTime(timeZone).date, timeZone)
 
@@ -277,17 +284,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                                             .sortedByDescending { it.sourceOrder }
 
                                         if (newChapters.isNotEmpty()) {
-                                            val chaptersToDownload = filterChaptersForDownload.await(manga, newChapters)
-
-                                            if (chaptersToDownload.isNotEmpty()) {
-                                                downloadChapters(manga, chaptersToDownload)
-                                                hasDownloads.store(true)
-                                            }
-
-                                            libraryPreferences.newUpdatesCount.getAndSet { it + newChapters.size }
-
-                                            // Convert to the manga that contains new chapters
-                                            newUpdates.add(manga to newChapters.toTypedArray())
+                                            fetchedUpdates.add(manga to newChapters)
                                         }
                                     } catch (e: Throwable) {
                                         val errorMessage = when (e) {
@@ -310,12 +307,81 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                 .awaitAll()
         }
 
+        val mergingEnabled = libraryPreferences.seriesMergingEnabled.get()
+        if (mergingEnabled && fetchedUpdates.isNotEmpty()) {
+            try {
+                reconcileMergedChapters.await()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to reconcile merged chapters after library update" }
+            }
+        }
+
+        val memberships = if (mergingEnabled && fetchedUpdates.isNotEmpty()) {
+            mergeGroupRepository.getAllMemberships(tachiyomi.domain.merge.model.ContentType.MANGA)
+        } else {
+            emptyMap()
+        }
+        val stitchByGroup = mutableMapOf<Long, Map<Long, tachiyomi.domain.merge.ChapterUnit>>()
+        val readNumbersByGroup = mutableMapOf<Long, Set<Double>>()
+        val checkUnreadAcrossGroup = downloadPreferences.downloadNewUnreadChaptersOnly.get()
+
+        for ((manga, rawNewChapters) in fetchedUpdates) {
+            val groupId = memberships[manga.id]
+            val dedupedNewChapters = if (groupId != null) {
+                val unitByChapterId = stitchByGroup.getOrPut(groupId) {
+                    mergedChapterUnitRepository.getStitch(tachiyomi.domain.merge.model.ContentType.MANGA, groupId)
+                        .associateBy { it.chapterId }
+                }
+                rawNewChapters.filter { ch ->
+                    val unitInfo = unitByChapterId[ch.id]
+                    unitInfo == null || unitInfo.copyOrder == 0
+                }
+            } else {
+                rawNewChapters
+            }
+
+            if (dedupedNewChapters.isEmpty()) continue
+
+            var chaptersToDownload = filterChaptersForDownload.await(manga, dedupedNewChapters)
+            if (groupId != null && checkUnreadAcrossGroup && chaptersToDownload.isNotEmpty()) {
+                val groupReadNumbers = readNumbersByGroup.getOrPut(groupId) {
+                    mergeGroupRepository.getFavoriteMembers(tachiyomi.domain.merge.model.ContentType.MANGA, groupId)
+                        .flatMap { memberId -> getChaptersByMangaId.await(memberId) }
+                        .asSequence()
+                        .filter { it.read && it.isRecognizedNumber }
+                        .map { it.chapterNumber }
+                        .toSet()
+                }
+                chaptersToDownload = chaptersToDownload.filterNot {
+                    it.isRecognizedNumber && it.chapterNumber in groupReadNumbers
+                }
+            }
+
+            if (chaptersToDownload.isNotEmpty()) {
+                downloadChapters(manga, chaptersToDownload)
+                val source = sourceManager.getOrStub(manga.source)
+                when {
+                    source is eu.kanade.tachiyomi.source.INovelSource -> {}
+                    source is eu.kanade.tachiyomi.animesource.AnimeSource -> hasAnimeDownloads = true
+                    else -> hasMangaDownloads = true
+                }
+            }
+
+            libraryPreferences.newUpdatesCount.getAndSet { it + dedupedNewChapters.size }
+            newUpdates.add(manga to dedupedNewChapters.toTypedArray())
+        }
+
         notifier.cancelProgressNotification()
 
         if (newUpdates.isNotEmpty()) {
             notifier.showUpdateNotifications(newUpdates)
-            if (hasDownloads.load()) {
+            if (hasMangaDownloads) {
                 downloadManager.startDownloads()
+            }
+            if (hasAnimeDownloads) {
+                animeDownloadManager.startDownloads()
             }
         }
 
@@ -397,7 +463,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     private fun writeErrorFile(errors: List<Pair<Manga, String?>>): File {
         try {
             if (errors.isNotEmpty()) {
-                val file = context.createFileInCacheDir("mihon_update_errors.txt")
+                val file = context.createFileInCacheDir("yomotsu_update_errors.txt")
                 file.bufferedWriter().use { out ->
                     out.write(context.stringResource(MR.strings.library_errors_help, ERROR_LOG_HELP_URL) + "\n\n")
                     // Error file format:

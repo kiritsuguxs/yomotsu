@@ -2706,12 +2706,14 @@ class PlayerViewModel @JvmOverloads constructor(
         val context = Injekt.get<Application>()
 
         viewModelScope.launchNonCancellable {
-            val trackAnimeId = if (mergedAnimeById.size > 1 && getTracks.await(anime.id).isEmpty()) {
-                mergedAnimeById.keys.firstOrNull { id -> getTracks.await(id).isNotEmpty() } ?: anime.id
+            val targetIds = if (mergedAnimeById.size > 1) {
+                mergedAnimeById.keys.filter { id -> getTracks.await(id).isNotEmpty() }.ifEmpty { listOf(anime.id) }
             } else {
-                anime.id
+                listOf(anime.id)
             }
-            trackEpisode.await(context, trackAnimeId, episode.chapter_number.toDouble())
+            targetIds.forEach { trackAnimeId ->
+                trackEpisode.await(context, trackAnimeId, episode.chapter_number.toDouble())
+            }
         }
     }
 

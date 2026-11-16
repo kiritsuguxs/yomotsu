@@ -1210,20 +1210,30 @@ class MangaViewModel(
                 chapters = targetChapters.toTypedArray(),
             )
 
-            if (!read || successState?.hasLoggedInTrackers == false || autoTrackState == AutoTrackState.NEVER) {
+            if (!read || autoTrackState == AutoTrackState.NEVER || trackerManager.loggedInTrackers().isEmpty()) {
                 return@launchIO
             }
 
-            val trackTargetId = successState?.manga?.id ?: mangaId
-            refreshTrackers(trackTargetId)
+            val anchorId = successState?.manga?.id ?: mangaId
+            val candidateTrackIds = if (libraryPreferences.seriesMergingEnabled.get() && mergeGroup.relatedIds.size > 1) {
+                val others = mergeGroup.relatedIds.toList().filter { it != anchorId }
+                (listOf(anchorId) + others).filter { getTracks.await(it).isNotEmpty() }
+            } else {
+                listOf(anchorId).filter { getTracks.await(it).isNotEmpty() }
+            }
+            if (candidateTrackIds.isEmpty()) return@launchIO
 
-            val tracks = getTracks.await(trackTargetId)
+            candidateTrackIds.forEach { refreshTrackers(it) }
+
+            val tracks = candidateTrackIds.flatMap { getTracks.await(it) }
             val maxChapterNumber = chapters.maxOf { it.chapterNumber }
             val shouldPromptTrackingUpdate = tracks.any { track -> maxChapterNumber > track.lastChapterRead }
 
             if (!shouldPromptTrackingUpdate) return@launchIO
             if (autoTrackState == AutoTrackState.ALWAYS) {
-                trackChapter.await(context, trackTargetId, maxChapterNumber)
+                candidateTrackIds.forEach { targetId ->
+                    trackChapter.await(context, targetId, maxChapterNumber)
+                }
                 withUIContext {
                     context.toast(context.stringResource(MR.strings.trackers_updated_summary, maxChapterNumber.toInt()))
                 }
@@ -1238,7 +1248,9 @@ class MangaViewModel(
             )
 
             if (result == SnackbarResult.ActionPerformed) {
-                trackChapter.await(context, trackTargetId, maxChapterNumber)
+                candidateTrackIds.forEach { targetId ->
+                    trackChapter.await(context, targetId, maxChapterNumber)
+                }
             }
         }
     }

@@ -289,6 +289,7 @@ class NovelReaderActivity : ComponentActivity() {
         val trackChapter: TrackChapter = Injekt.get()
         val downloadPreferences: tachiyomi.domain.download.service.DownloadPreferences = Injekt.get()
         val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get()
+        val getTracks: tachiyomi.domain.track.interactor.GetTracks = Injekt.get()
         val appContext: Application = Injekt.get()
 
         val prefs = getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
@@ -522,12 +523,27 @@ class NovelReaderActivity : ComponentActivity() {
                         val group = mergedChapterProvider.load(loadedManga)
                         mangaById = group.mangaById
                         currentStitch = group.stitch
-                        val sourceList = if (group.chapters.any { it.id == initialChapterId } || group.pooledChapters.none { it.id == initialChapterId }) {
-                            group.chapters
-                        } else {
-                            group.pooledChapters
+                        when {
+                            group.chapters.any { it.id == initialChapterId } -> group.chapters
+                            else -> {
+                                val requested = group.pooledChapters.firstOrNull { it.id == initialChapterId }
+                                if (requested != null) {
+                                    val unitOfRequested = group.stitch.firstOrNull { it.chapterId == initialChapterId }?.unit
+                                    if (unitOfRequested != null) {
+                                        val sameUnitIds = group.stitch
+                                            .filter { it.unit == unitOfRequested }
+                                            .mapTo(HashSet()) { it.chapterId }
+                                        group.chapters.map {
+                                            if (it.id in sameUnitIds) requested.copy(sourceOrder = it.sourceOrder) else it
+                                        }.let { list -> if (list.any { it.id == initialChapterId }) list else list + requested }
+                                    } else {
+                                        group.chapters + requested
+                                    }
+                                } else {
+                                    group.chapters
+                                }
+                            }
                         }
-                        sourceList.sortedBy { it.sourceOrder }
                     } else {
                         getChaptersByMangaId.await(mangaId).sortedBy { it.sourceOrder }
                     }
@@ -605,9 +621,43 @@ class NovelReaderActivity : ComponentActivity() {
                             }
                             upsertHistory.await(HistoryUpdate(item.chapter.id, Date(), 0L))
                             if (markAsRead && !item.chapter.read) {
-                                trackChapter.await(appContext, mangaId, item.chapter.chapterNumber.toDouble())
+                                val targetTrackIds = if (mangaById.size > 1) {
+                                    mangaById.keys.filter { id -> getTracks.await(id).isNotEmpty() }
+                                        .ifEmpty { listOf(mangaId) }
+                                } else {
+                                    listOf(mangaId)
+                                }
+                                targetTrackIds.forEach { targetId ->
+                                    trackChapter.await(appContext, targetId, item.chapter.chapterNumber.toDouble())
+                                }
+                                eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(appContext)
                                 if (downloadPreferences.removeAfterReadSlots.get() != -1) {
-                                    eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.deleteChapter(item.chapter.mangaId, item.chapter.id)
+                                    NovelDownloadManager.deleteChapter(item.chapter.mangaId, item.chapter.id)
+                                }
+                            }
+
+                            val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading.get()
+                            if (downloadAheadAmount > 0 && allChapters.isNotEmpty()) {
+                                val currAllIdx = allChapters.indexOfFirst { it.id == item.chapter.id }
+                                if (currAllIdx != -1) {
+                                    val seenUnits = HashSet<Int>()
+                                    currentStitch.firstOrNull { it.chapterId == item.chapter.id }?.unit?.let(seenUnits::add)
+                                    val toDownload = allChapters.drop(currAllIdx + 1)
+                                        .filter { ch ->
+                                            val unit = currentStitch.firstOrNull { it.chapterId == ch.id }?.unit
+                                            val unitOk = unit == null || seenUnits.add(unit)
+                                            unitOk &&
+                                                !ch.read &&
+                                                !NovelDownloadManager.isChapterDownloaded(ch.mangaId, ch.id) &&
+                                                !NovelDownloadManager.isChapterDownloading(ch.id)
+                                        }
+                                        .take(downloadAheadAmount)
+                                    toDownload.groupBy { it.mangaId }.forEach { (targetMangaId, targetChapters) ->
+                                        val targetManga = mangaById[targetMangaId] ?: manga
+                                        if (targetManga != null) {
+                                            NovelDownloadManager.downloadChapters(targetManga, targetChapters)
+                                        }
+                                    }
                                 }
                             }
                         }

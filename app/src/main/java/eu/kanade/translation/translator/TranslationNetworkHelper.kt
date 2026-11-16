@@ -17,7 +17,19 @@ internal object TranslationNetworkHelper {
         while (!response.isSuccessful && (response.code == 429 || response.code >= 500) && tryCount < 3) {
             tryCount++
             response.close()
-            Thread.sleep(2000L * tryCount)
+            if (chain.call().isCanceled()) {
+                throw java.io.IOException("Canceled")
+            }
+            val deadlineNs = System.nanoTime() + (2000L * tryCount) * 1_000_000L
+            while (System.nanoTime() < deadlineNs) {
+                if (chain.call().isCanceled()) {
+                    throw java.io.IOException("Canceled")
+                }
+                val remainingMs = ((deadlineNs - System.nanoTime()) / 1_000_000L).coerceAtMost(200L)
+                if (remainingMs > 0L) {
+                    Thread.sleep(remainingMs)
+                }
+            }
             response = chain.proceed(request)
         }
         response

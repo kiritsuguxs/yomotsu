@@ -112,6 +112,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private val getIncognitoState: GetIncognitoState = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val mergedChapterProvider: MergedChapterProvider = Injekt.get(),
+    private val getTracks: tachiyomi.domain.track.interactor.GetTracks = Injekt.get(),
 ) : ViewModel() {
 
     private val mutableState = MutableStateFlow(State())
@@ -1087,7 +1088,15 @@ class ReaderViewModel @JvmOverloads constructor(
         val context = Injekt.get<Application>()
 
         viewModelScope.launchNonCancellable {
-            trackChapter.await(context, manga.id, readerChapter.chapter.chapter_number.toDouble())
+            val targetIds = if (mergedGroup.isMerged) {
+                mergedGroup.mangaById.keys.filter { id -> getTracks.await(id).isNotEmpty() }
+                    .ifEmpty { listOf(manga.id) }
+            } else {
+                listOf(manga.id)
+            }
+            targetIds.forEach { targetId ->
+                trackChapter.await(context, targetId, readerChapter.chapter.chapter_number.toDouble())
+            }
         }
     }
 

@@ -70,7 +70,7 @@ jobs:
 
       - name: Run unit tests
         id: unit_tests
-        run: ./gradlew :core:common:testDebugUnitTest :domain:testDebugUnitTest :app:compileDebugUnitTestKotlin
+        run: ./gradlew :core:common:testDebugUnitTest :domain:testDebugUnitTest :app:testDebugUnitTest
 
       - name: Verify SQLDelight migrations
         run: ./gradlew verifySqlDelightMigration

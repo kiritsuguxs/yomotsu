@@ -63,7 +63,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
         val notification = context.notificationBuilder(Notifications.CHANNEL_APP_UPDATE)
             .setContentTitle(context.stringResource(MR.strings.update_check_notification_update_available))
             .setContentText(context.stringResource(MR.strings.update_check_notification_download_in_progress))
-            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setSmallIcon(eu.kanade.tachiyomi.R.drawable.ic_yomotsu)
             .setOngoing(true)
             .build()
 
