@@ -38,9 +38,6 @@ import eu.kanade.translation.translator.ComicTranslationContext
 import eu.kanade.translation.translator.TextTranslator
 import eu.kanade.translation.translator.TextTranslatorLanguage
 import eu.kanade.translation.translator.TextTranslators
-import eu.kanade.translation.translator.VisionBubbleMontageBuilder
-import eu.kanade.translation.translator.VisionBubbleMontagePlanner
-import eu.kanade.translation.translator.VisionMontageAttachment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,8 +57,6 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
@@ -267,8 +262,6 @@ class ChapterTranslator(
         try {
             val chapterNumber = synchronized(sessionLock) { completedChaptersInSession + 1 }
             notifier.onPreparing(translation.manga, translation.chapter.name, chapterNumber, currentSessionTotal())
-            val selectedEngine = TextTranslators.fromPref(translationPreferences.translationEngine())
-            val useVisionBubbleContext = translationPreferences.visionBubbleContext().get()
             val translator = ensureTextTranslator(translation.fromLang, translation.toLang)
             val strictOcrGrouping = selectedOcrType == OcrEngineType.PADDLE_OCR
             val translationMangaDir = provider.getMangaDir(translation.manga.title, translation.source)
@@ -322,30 +315,6 @@ class ChapterTranslator(
                 val automaticPages = pages.mapValuesTo(mutableMapOf()) { (_, page) ->
                     PageTranslation(page.blocks.filter(::isTranslatableBlock).toMutableList(), page.imgWidth, page.imgHeight)
                 }
-                val pageStreamByName = chapterPages.pages.toMap()
-                val archiveMutex = Mutex()
-                val visionScratchDir = File(context.cacheDir, "vision-montage")
-                val visionMaxColumns = if (selectedEngine == TextTranslators.GROQ) {
-                    2
-                } else {
-                    VisionBubbleMontagePlanner.DEFAULT_MAX_COLUMNS
-                }
-                val visionAttachmentBuilder: (suspend (Map<String, PageTranslation>) -> VisionMontageAttachment?)? =
-                    if (useVisionBubbleContext && selectedEngine.llmProvider != null) {
-                        { chunkPages ->
-                            archiveMutex.withLock {
-                                VisionBubbleMontageBuilder.build(
-                                    pages = chunkPages,
-                                    scratchDir = visionScratchDir,
-                                    maxColumns = visionMaxColumns,
-                                ) { pageKey ->
-                                    pageStreamByName[pageKey]?.invoke()
-                                }
-                            }
-                        }
-                    } else {
-                        null
-                    }
                 withContext(Dispatchers.IO) {
                     notifier.onTextTranslation(
                         translation.manga, translation.chapter.name, totalPageCount, chapterNumber, currentSessionTotal(),
@@ -358,7 +327,6 @@ class ChapterTranslator(
                             ComicTranslationContext(
                                 mangaTitle = translation.manga.title,
                                 chapterName = translation.chapter.name,
-                                visionAttachmentBuilder = visionAttachmentBuilder,
                             ),
                         )
                     }

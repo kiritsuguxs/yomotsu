@@ -102,54 +102,24 @@ class GeminiTranslator(
             preparedIterator.next().textForTranslation
         }
         val relevantGlossaryText = normalizedTexts.joinToString("\n") + "\n" + inputJson
-        val visionAttachment = runCatching {
-            context.visionAttachmentBuilder?.invoke(chunkPages)
-        }.onFailure { error ->
-            if (error is CancellationException) throw error
-            logcat(LogPriority.WARN, error) { "Failed to build Vision bubble montage; continuing text-only" }
-        }.getOrNull()
+        val requestText = continuity.promptPrefix() + buildComicTranslationRequest(
+            context = context,
+            inputJson = inputJson,
+            relevantText = relevantGlossaryText,
+        )
+        val requestBody = buildGeminiRestRequestBody(
+            systemInstruction = buildComicTranslationPrompt(fromLang, toLang),
+            requestText = requestText,
+            maxOutputTokens = maxOutputToken,
+        )
+        val request = Request.Builder()
+            .url(buildGeminiRestUrl(modelName))
+            .header("x-goog-api-key", cleanApiKey)
+            .header("Content-Type", "application/json")
+            .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
+            .build()
 
-        suspend fun executeGeminiRequest(attachment: VisionMontageAttachment?): Pair<Int, String> {
-            val requestText = continuity.promptPrefix() + buildComicTranslationRequest(
-                context = context,
-                inputJson = inputJson,
-                relevantText = relevantGlossaryText,
-                visionAttachment = attachment,
-            )
-            val requestBody = buildGeminiRestRequestBody(
-                systemInstruction = buildComicTranslationPrompt(fromLang, toLang),
-                requestText = requestText,
-                maxOutputTokens = maxOutputToken,
-                visionAttachment = attachment,
-            )
-            val request = Request.Builder()
-                .url(buildGeminiRestUrl(modelName))
-                .header("x-goog-api-key", cleanApiKey)
-                .header("Content-Type", "application/json")
-                .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
-                .build()
-
-            return okHttpClient.newCall(request).await().use { it.code to it.body.string() }
-        }
-
-        var (statusCode, rawBody) = try {
-            executeGeminiRequest(visionAttachment)
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: OutOfMemoryError) {
-            if (visionAttachment != null) {
-                logcat(LogPriority.WARN, error) { "OutOfMemoryError sending Gemini vision bubble grid; retrying text-only" }
-                executeGeminiRequest(null)
-            } else {
-                throw error
-            }
-        }
-        if (visionAttachment != null && (statusCode == 400 || statusCode == 422)) {
-            logcat(LogPriority.WARN) { "Gemini model rejected multimodal bubble grid (HTTP $statusCode); retrying text-only" }
-            val fallbackResult = executeGeminiRequest(null)
-            statusCode = fallbackResult.first
-            rawBody = fallbackResult.second
-        }
+        val (statusCode, rawBody) = okHttpClient.newCall(request).await().use { it.code to it.body.string() }
         if (statusCode !in 200..299) {
             throw TranslationProviderException(
                 TranslationProviderId.GEMINI,
@@ -234,7 +204,6 @@ internal fun buildGeminiRestRequestBody(
     systemInstruction: String,
     requestText: String,
     maxOutputTokens: Int,
-    visionAttachment: VisionMontageAttachment? = null,
 ): String = buildJsonObject {
     put("systemInstruction", buildJsonObject { put("parts", buildJsonArray { add(buildJsonObject { put("text", systemInstruction) }) }) })
     put(
@@ -246,19 +215,6 @@ internal fun buildGeminiRestRequestBody(
                     put(
                         "parts",
                         buildJsonArray {
-                            if (visionAttachment != null) {
-                                add(
-                                    buildJsonObject {
-                                        put(
-                                            "inline_data",
-                                            buildJsonObject {
-                                                put("mime_type", visionAttachment.mimeType)
-                                                put("data", visionAttachment.base64Data)
-                                            },
-                                        )
-                                    },
-                                )
-                            }
                             add(buildJsonObject { put("text", requestText) })
                         },
                     )

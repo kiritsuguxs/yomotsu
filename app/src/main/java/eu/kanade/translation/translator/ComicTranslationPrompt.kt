@@ -112,30 +112,16 @@ internal fun buildComicTranslationPrompt(
     """.trimIndent()
 }
 
-internal fun buildVisionBubbleLegend(attachment: VisionMontageAttachment): String {
-    if (attachment.references.isEmpty()) return ""
-    return buildString {
-        appendLine("VISUAL BUBBLE REFERENCE (attached numbered crop grid image):")
-        appendLine("Each crop in the attached image is labeled #1, #2, etc. Inspect the visual artwork (facial expression, speaker tone, balloon shape/size, shouting spikes, system/box UI style) to choose the right pronoun/gender, formality, emotion, and concise wording that fits cleanly inside the balloon.")
-        appendLine("Mapping from #crop label to JSON array position:")
-        attachment.references.forEach { ref ->
-            appendLine("- #${ref.index} -> page \"${ref.pageKey}\", index ${ref.blockIndex}")
-        }
-    }.trimEnd()
-}
-
 internal fun buildComicTranslationRequest(
     context: ComicTranslationContext,
     inputJson: String,
     relevantText: String? = inputJson,
-    visionAttachment: VisionMontageAttachment? = null,
 ): String {
     val glossary = TranslationGlossary.instructions(context, relevantText)
     return formatComicTranslationRequest(
         context = context,
         inputJson = inputJson,
         glossary = glossary,
-        visionAttachment = visionAttachment,
     )
 }
 
@@ -143,13 +129,11 @@ internal fun formatComicTranslationRequest(
     context: ComicTranslationContext,
     inputJson: String,
     glossary: String = "",
-    visionAttachment: VisionMontageAttachment? = null,
 ): String {
     val workContext = buildList {
         context.mangaTitle.takeIf { it.isNotBlank() }?.let { add("Series: $it") }
         context.chapterName.takeIf { it.isNotBlank() }?.let { add("Chapter: $it") }
     }.joinToString("\n")
-    val visionLegend = visionAttachment?.let(::buildVisionBubbleLegend).orEmpty()
 
     return buildString {
         if (workContext.isNotBlank()) {
@@ -158,11 +142,6 @@ internal fun formatComicTranslationRequest(
         if (glossary.isNotBlank()) {
             appendLine()
             appendLine(glossary)
-            appendLine()
-        }
-        if (visionLegend.isNotBlank()) {
-            appendLine()
-            appendLine(visionLegend)
             appendLine()
         }
         appendLine("Translate the following sequential chapter JSON:")

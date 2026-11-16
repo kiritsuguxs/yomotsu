@@ -41,9 +41,6 @@ class TranslationPreferences(
 
     fun ocrEngine() = preferenceStore.getInt("ocr_engine", 0)
 
-    fun visionBubbleContext() = preferenceStore.getBoolean("translation_vision_bubble_context", false)
-
-
     fun translationEngine() = preferenceStore.getInt("translation_engine", 0)
     fun translationFallbackEngine() = preferenceStore.getInt("translation_fallback_engine", 0)
     fun translationEngineModel() = preferenceStore.getString("translation_engine_model", "gemini-3.8-flash")

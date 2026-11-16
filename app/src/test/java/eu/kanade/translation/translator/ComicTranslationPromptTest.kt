@@ -86,31 +86,4 @@ class ComicTranslationPromptTest {
         // Must return empty strings so ReliableTextTranslator retries and doesn't shift indices
         assertEquals(listOf("", ""), aligned)
     }
-
-    @Test
-    fun `formatComicTranslationRequest appends numbered crop legend when vision attachment exists`() {
-        val attachment = VisionMontageAttachment(
-            mimeType = "image/jpeg",
-            base64Data = "AQID",
-            references = listOf(
-                VisionBubbleReference(index = 1, pageKey = "001.jpg", blockIndex = 0),
-                VisionBubbleReference(index = 2, pageKey = "001.jpg", blockIndex = 1),
-            ),
-        )
-        val promptWithVision = formatComicTranslationRequest(
-            context = ComicTranslationContext("Solo Leveling", "Cap. 1"),
-            inputJson = """{"001.jpg":["Hey!","Watch out!"]}""",
-            visionAttachment = attachment,
-        )
-        val promptTextOnly = formatComicTranslationRequest(
-            context = ComicTranslationContext("Solo Leveling", "Cap. 1"),
-            inputJson = """{"001.jpg":["Hey!","Watch out!"]}""",
-            visionAttachment = null,
-        )
-
-        org.junit.jupiter.api.Assertions.assertTrue(promptWithVision.contains("VISUAL BUBBLE REFERENCE"))
-        org.junit.jupiter.api.Assertions.assertTrue(promptWithVision.contains("#1 -> page \"001.jpg\", index 0"))
-        org.junit.jupiter.api.Assertions.assertTrue(promptWithVision.contains("#2 -> page \"001.jpg\", index 1"))
-        org.junit.jupiter.api.Assertions.assertFalse(promptTextOnly.contains("VISUAL BUBBLE REFERENCE"))
-    }
 }

@@ -78,12 +78,9 @@
     <string name="pref_inpainter_aot_summary">Reconstrói o fundo e arte atrás dos textos usando rede neural (NCNN). Primeiro uso baixa ~11 MB. Se desativado, usa preenchimento rápido de cor.</string>
     <string name="pref_deepl_api_key">Chave da API DeepL</string>
     <string name="pref_sub_deepl_api_key">Chave da API DeepL (Free ou Pro)</string>
-    <string name="pref_translation_vision_bubble_context">Enviar recorte dos balões para IA (Visão)</string>
-    <string name="pref_translation_vision_bubble_context_summary">Anexa uma grade numerada com os balões para que Gemini ou Groq vejam expressões e tamanho do balão (consome mais tokens de imagem; volta automaticamente para só texto se não suportado)</string>
     <string name="pref_groq_models">Modelos do Groq</string>
     <string name="groq_models_title">Modelos do Groq</string>
     <string name="groq_models_search">Filtrar por nome ou ID</string>
-    <string name="groq_models_vision_only">Com Visão</string>
     <string name="groq_models_loading">Buscando modelos do Groq…</string>
     <string name="groq_models_error">Não foi possível carregar os modelos do Groq.</string>
     <string name="groq_models_missing_key_hint">Exibindo modelos recomendados. Adicione sua chave da API do Groq para listar os modelos ativos.</string>
@@ -92,7 +89,6 @@
     <string name="groq_models_retry">Tentar novamente</string>
     <string name="groq_models_badge_free">Grátis</string>
     <string name="groq_models_badge_recommended">Recomendado</string>
-    <string name="groq_models_badge_vision">Visão</string>
     <string name="pref_gemini_models">Modelos do Gemini</string>
     <string name="gemini_models_title">Modelos do Gemini</string>
     <string name="gemini_models_loading">Buscando modelos do Gemini…</string>

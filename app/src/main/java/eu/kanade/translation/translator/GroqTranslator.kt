@@ -108,12 +108,6 @@ class GroqTranslator(
             preparedChunk.preparedByBlock[block]?.textForTranslation ?: normalizeOcrText(block.text)
         }
         val relevantGlossaryText = preparedChunk.uncachedNormalizedTexts.joinToString("\n") + "\n" + inputJson
-        val visionAttachment = runCatching {
-            context.visionAttachmentBuilder?.invoke(uncachedPages)
-        }.onFailure { error ->
-            if (error is CancellationException) throw error
-            logcat(LogPriority.WARN, error) { "Failed to build Vision bubble montage for Groq; continuing text-only" }
-        }.getOrNull()
 
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val systemInstruction = buildComicTranslationPrompt(fromLang, toLang) +
@@ -124,7 +118,6 @@ class GroqTranslator(
         }
 
         suspend fun executeSingleGroqCall(
-            attachment: VisionMontageAttachment?,
             responseFormatMode: GroqResponseFormatMode,
             includeReasoningParams: Boolean,
             formatReminder: String = "",
@@ -133,7 +126,6 @@ class GroqTranslator(
                 context = context,
                 inputJson = inputJson,
                 relevantText = relevantGlossaryText,
-                visionAttachment = attachment,
             ) + formatReminder
             val jsonObject = buildGroqRequestBody(
                 modelName = modelName,
@@ -141,7 +133,6 @@ class GroqTranslator(
                 requestText = requestText,
                 maxOutputTokens = maxOutputToken,
                 temperature = temp,
-                visionAttachment = attachment,
                 useJsonMode = responseFormatMode != GroqResponseFormatMode.TEXT,
                 includeReasoningParams = includeReasoningParams,
                 expectedPageKeys = expectedPageKeys,
@@ -165,36 +156,21 @@ class GroqTranslator(
         }
 
         suspend fun executeWithCompatibilityAndRateLimit(
-            initialAttachment: VisionMontageAttachment?,
             initialFormatMode: GroqResponseFormatMode = initialGroqResponseFormatMode(modelName),
             initialIncludeReasoningParams: Boolean = true,
             formatReminder: String = "",
         ): GroqHttpResponse {
-            var currentAttachment = initialAttachment
             var responseFormatMode = initialFormatMode
             var includeReasoningParams = initialIncludeReasoningParams
             var rateLimitRetries = 0
             var compatibilityDowngrades = 0
 
             while (true) {
-                val response = try {
-                    executeSingleGroqCall(
-                        attachment = currentAttachment,
-                        responseFormatMode = responseFormatMode,
-                        includeReasoningParams = includeReasoningParams,
-                        formatReminder = formatReminder,
-                    )
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (error: OutOfMemoryError) {
-                    if (currentAttachment != null) {
-                        logcat(LogPriority.WARN) { "OutOfMemoryError sending Groq vision bubble grid; retrying text-only" }
-                        currentAttachment = null
-                        continue
-                    } else {
-                        throw error
-                    }
-                }
+                val response = executeSingleGroqCall(
+                    responseFormatMode = responseFormatMode,
+                    includeReasoningParams = includeReasoningParams,
+                    formatReminder = formatReminder,
+                )
 
                 if (response.statusCode == 429 && rateLimitRetries < GROQ_MAX_RATE_LIMIT_RETRIES) {
                     if (!isGroqDailyQuotaExhausted(response.body)) {
@@ -228,12 +204,6 @@ class GroqTranslator(
                         responseFormatMode == GroqResponseFormatMode.JSON_OBJECT &&
                             (lower.contains("response_format") || lower.contains("json_object")) -> {
                             responseFormatMode = GroqResponseFormatMode.TEXT
-                            compatibilityDowngrades++
-                            continue
-                        }
-                        currentAttachment != null -> {
-                            logcat(LogPriority.WARN) { "Groq model rejected multimodal bubble grid (HTTP ${response.statusCode}); retrying text-only" }
-                            currentAttachment = null
                             compatibilityDowngrades++
                             continue
                         }
@@ -274,7 +244,7 @@ class GroqTranslator(
             }
         }
 
-        var response = executeWithCompatibilityAndRateLimit(visionAttachment)
+        var response = executeWithCompatibilityAndRateLimit()
         checkHttpStatus(response)
 
         val resJson = try {
@@ -292,7 +262,6 @@ class GroqTranslator(
                 "Groq returned empty/unparseable JSON; retrying with explicit JSON-keys format reminder"
             }
             response = executeWithCompatibilityAndRateLimit(
-                initialAttachment = null,
                 initialFormatMode = GroqResponseFormatMode.JSON_OBJECT,
                 initialIncludeReasoningParams = true,
                 formatReminder = buildGroqFormatRetryReminder(expectedPageKeys),
@@ -455,7 +424,6 @@ internal fun buildGroqRequestBody(
     requestText: String,
     maxOutputTokens: Int,
     temperature: Float,
-    visionAttachment: VisionMontageAttachment? = null,
     useJsonMode: Boolean = true,
     includeReasoningParams: Boolean = true,
     expectedPageKeys: Collection<String> = emptyList(),
@@ -514,22 +482,7 @@ internal fun buildGroqRequestBody(
         }
         addJsonObject {
             put("role", "user")
-            if (visionAttachment == null) {
-                put("content", requestText)
-            } else {
-                putJsonArray("content") {
-                    addJsonObject {
-                        put("type", "text")
-                        put("text", requestText)
-                    }
-                    addJsonObject {
-                        put("type", "image_url")
-                        putJsonObject("image_url") {
-                            put("url", "data:${visionAttachment.mimeType};base64,${visionAttachment.base64Data}")
-                        }
-                    }
-                }
-            }
+            put("content", requestText)
         }
     }
 }.toString()

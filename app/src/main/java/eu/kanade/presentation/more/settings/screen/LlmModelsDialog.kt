@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,7 +52,7 @@ internal data class LlmModelDialogItem(
     val id: String,
     val name: String,
     val contextLength: Int,
-    val supportsVision: Boolean,
+    val supportsVision: Boolean = false,
     val isRecommended: Boolean = false,
 )
 
@@ -77,7 +76,6 @@ internal fun LlmModelsPickerDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var reloadNonce by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
-    var visionOnly by remember { mutableStateOf(false) }
 
     LaunchedEffect(reloadNonce, apiKey) {
         isLoading = true
@@ -95,15 +93,12 @@ internal fun LlmModelsPickerDialog(
         isLoading = false
     }
 
-    val filteredModels = remember(models, searchQuery, visionOnly) {
+    val filteredModels = remember(models, searchQuery) {
         val needle = searchQuery.trim()
         models.filter { model ->
-            (!visionOnly || model.supportsVision) &&
-                (
-                    needle.isEmpty() ||
-                        model.name.contains(needle, ignoreCase = true) ||
-                        model.id.contains(needle, ignoreCase = true)
-                    )
+            needle.isEmpty() ||
+                model.name.contains(needle, ignoreCase = true) ||
+                model.id.contains(needle, ignoreCase = true)
         }
     }
 
@@ -133,14 +128,9 @@ internal fun LlmModelsPickerDialog(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    FilterChip(
-                        selected = visionOnly,
-                        onClick = { visionOnly = !visionOnly },
-                        label = { Text(text = stringResource(ATMR.strings.groq_models_vision_only)) },
-                    )
                     TextButton(
                         enabled = !isLoading,
                         onClick = { reloadNonce++ },
@@ -317,12 +307,6 @@ private fun LlmModelRow(
                     LlmModelBadge(
                         text = stringResource(ATMR.strings.groq_models_badge_free),
                         highlighted = false,
-                    )
-                }
-                if (model.supportsVision) {
-                    LlmModelBadge(
-                        text = stringResource(ATMR.strings.groq_models_badge_vision),
-                        highlighted = true,
                     )
                 }
                 GroqModelsCatalog.formatContextLength(model.contextLength)?.let { ctx ->
