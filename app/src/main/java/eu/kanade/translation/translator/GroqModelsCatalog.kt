@@ -58,7 +58,7 @@ internal object GroqModelsCatalog {
         apiKey: String,
         client: OkHttpClient = TranslationNetworkHelper.sharedClient,
     ): List<GroqModelInfo> {
-        val cleanKey = apiKey.trim()
+        val cleanKey = sanitizeGroqApiKey(apiKey)
         if (cleanKey.isEmpty()) {
             return curatedDefaults
         }

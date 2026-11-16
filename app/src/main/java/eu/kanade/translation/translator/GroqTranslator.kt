@@ -22,6 +22,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import tachiyomi.core.common.util.system.logcat
+import java.io.IOException
 import java.util.IdentityHashMap
 import kotlin.math.roundToLong
 
@@ -35,21 +36,42 @@ class GroqTranslator(
 ) : TextTranslator {
     private val okHttpClient by lazy { TranslationNetworkHelper.sharedClient }
     private val continuity = TranslationContext()
+    private val cleanApiKey: String
+        get() = sanitizeGroqApiKey(apiKey)
 
     override suspend fun translate(
         pages: MutableMap<String, PageTranslation>,
         context: ComicTranslationContext,
     ) {
-        if (apiKey.isBlank()) throw TranslationProviderFailureMapper.missingKey(TranslationProviderId.GROQ)
+        if (cleanApiKey.isBlank()) throw TranslationProviderFailureMapper.missingKey(TranslationProviderId.GROQ)
         if (modelName.isBlank()) throw TranslationProviderFailureMapper.missingModel(TranslationProviderId.GROQ)
         try {
             translateInternal(pages, context)
         } catch (error: CancellationException) {
             throw error
+        } catch (error: TranslationProviderException) {
+            logcat(LogPriority.ERROR, error) { "Groq translation failed: ${error.category}" }
+            throw error
         } catch (error: Throwable) {
             val mapped = TranslationProviderFailureMapper.fromThrowable(TranslationProviderId.GROQ, error)
-            logcat(LogPriority.ERROR) { "Groq translation failed: ${mapped.category}" }
-            throw mapped
+            logcat(LogPriority.ERROR, error) { "Groq translation failed: ${mapped.category}" }
+            when (mapped.category) {
+                TranslationFailureCategory.CONNECTION -> throw TranslationProviderException(
+                    TranslationProviderId.GROQ,
+                    TranslationFailureCategory.CONNECTION,
+                    true,
+                    buildGroqNetworkDiagnostic(error, cleanApiKey),
+                    error,
+                )
+                TranslationFailureCategory.UNKNOWN -> throw TranslationProviderException(
+                    TranslationProviderId.GROQ,
+                    TranslationFailureCategory.UNKNOWN,
+                    false,
+                    buildGroqUnknownDiagnostic(error, cleanApiKey),
+                    error,
+                )
+                else -> throw mapped
+            }
         }
     }
 
@@ -119,7 +141,7 @@ class GroqTranslator(
             )
             val request = Request.Builder()
                 .url(GROQ_CHAT_COMPLETIONS_URL)
-                .header("Authorization", "Bearer $apiKey")
+                .header("Authorization", "Bearer $cleanApiKey")
                 .header("Content-Type", "application/json")
                 .post(jsonObject.toRequestBody(mediaType))
                 .build()
@@ -134,10 +156,14 @@ class GroqTranslator(
             }
         }
 
-        suspend fun executeWithCompatibilityAndRateLimit(initialAttachment: VisionMontageAttachment?): GroqHttpResponse {
+        suspend fun executeWithCompatibilityAndRateLimit(
+            initialAttachment: VisionMontageAttachment?,
+            initialUseJsonMode: Boolean = true,
+            initialIncludeReasoningParams: Boolean = true,
+        ): GroqHttpResponse {
             var currentAttachment = initialAttachment
-            var useJsonMode = true
-            var includeReasoningParams = true
+            var useJsonMode = initialUseJsonMode
+            var includeReasoningParams = initialIncludeReasoningParams
             var rateLimitRetries = 0
             var compatibilityDowngrades = 0
 
@@ -203,27 +229,95 @@ class GroqTranslator(
             }
         }
 
-        val response = executeWithCompatibilityAndRateLimit(visionAttachment)
+        fun parseSuccessfulGroqBody(responseBody: String): JSONObject {
+            val json = JSONObject(responseBody)
+            val choices = json.optJSONArray("choices")
+            if (choices == null || choices.length() == 0) {
+                val errorMsg = json.optJSONObject("error")?.optString("message")
+                    ?.takeIf { it.isNotBlank() }
+                    ?: "Unknown Groq Error"
+                val mappedFromBody = TranslationProviderFailureMapper.fromHttp(
+                    provider = TranslationProviderId.GROQ,
+                    statusCode = 400,
+                    responseBody = responseBody,
+                )
+                if (mappedFromBody.category != TranslationFailureCategory.SERVER) {
+                    throw mappedFromBody
+                }
+                throw TranslationProviderException(
+                    TranslationProviderId.GROQ,
+                    TranslationFailureCategory.SERVER,
+                    false,
+                    buildGroqHttpDiagnostic(200, responseBody, cleanApiKey, fallbackMessage = errorMsg),
+                )
+            }
+
+            val choice = choices.getJSONObject(0)
+            val finishReason = choice.optString("finish_reason").ifBlank { "unknown" }
+            val rawContent = extractGroqMessageContent(choice)
+            val cleanedContent = stripGroqThinkingTags(rawContent)
+            if (cleanedContent.isBlank()) {
+                throw TranslationProviderException(
+                    TranslationProviderId.GROQ,
+                    TranslationFailureCategory.MALFORMED_RESPONSE,
+                    true,
+                    "Groq retornou resposta vazia (finish_reason=$finishReason).",
+                )
+            }
+
+            val parsed = runCatching { parseComicTranslationResponse(cleanedContent) }
+                .getOrElse { parseError ->
+                    val snippet = cleanedContent.take(80).replace('\n', ' ')
+                    throw TranslationProviderException(
+                        TranslationProviderId.GROQ,
+                        TranslationFailureCategory.MALFORMED_RESPONSE,
+                        true,
+                        "Groq JSON inválido (finish_reason=$finishReason): $snippet",
+                        parseError,
+                    )
+                }
+            return unwrapGroqPageMapJson(parsed, uncachedPages.keys)
+        }
+
+        var response = executeWithCompatibilityAndRateLimit(visionAttachment)
         if (response.statusCode !in 200..299) {
-            throw TranslationProviderFailureMapper.fromHttp(
+            val mapped = TranslationProviderFailureMapper.fromHttp(
                 provider = TranslationProviderId.GROQ,
                 statusCode = response.statusCode,
                 responseBody = response.body,
             )
+            if (mapped.category == TranslationFailureCategory.SERVER && response.statusCode in 400..499) {
+                throw TranslationProviderException(
+                    TranslationProviderId.GROQ,
+                    TranslationFailureCategory.SERVER,
+                    false,
+                    buildGroqHttpDiagnostic(response.statusCode, response.body, cleanApiKey),
+                )
+            }
+            throw mapped
         }
 
-        val json = JSONObject(response.body)
-        val choices = json.optJSONArray("choices")
-        if (choices == null || choices.length() == 0) {
-            val errorMsg = json.optJSONObject("error")?.optString("message") ?: "Unknown Groq Error"
-            throw Exception("Groq returned error: $errorMsg")
+        val resJson = try {
+            parseSuccessfulGroqBody(response.body)
+        } catch (firstParseFailure: TranslationProviderException) {
+            if (!firstParseFailure.retryable) throw firstParseFailure
+            logcat(LogPriority.WARN, firstParseFailure) {
+                "Groq returned empty/unparseable JSON; retrying without strict json_object/reasoning params"
+            }
+            response = executeWithCompatibilityAndRateLimit(
+                initialAttachment = null,
+                initialUseJsonMode = false,
+                initialIncludeReasoningParams = false,
+            )
+            if (response.statusCode !in 200..299) {
+                throw TranslationProviderFailureMapper.fromHttp(
+                    provider = TranslationProviderId.GROQ,
+                    statusCode = response.statusCode,
+                    responseBody = response.body,
+                )
+            }
+            parseSuccessfulGroqBody(response.body)
         }
-
-        val rawContent = choices.getJSONObject(0)
-            .getJSONObject("message")
-            .getString("content")
-        val cleanedContent = stripGroqThinkingTags(rawContent)
-        val resJson = parseComicTranslationResponse(cleanedContent)
 
         val uncachedEntries = uncachedPages.entries.toList()
         uncachedEntries.forEachIndexed { pageIdx, (pageKey, uncachedPage) ->
@@ -412,8 +506,89 @@ internal fun isGroqQwenReasoningModel(modelName: String): Boolean =
 internal fun isGroqGptOssModel(modelName: String): Boolean =
     modelName.contains("gpt-oss", ignoreCase = true)
 
-internal fun stripGroqThinkingTags(content: String): String =
-    content.replace(THINK_TAG_REGEX, "").trim()
+internal fun sanitizeGroqApiKey(rawKey: String): String =
+    rawKey.trim().filter { ch -> ch in '!'..'~' }
+
+internal fun stripGroqThinkingTags(content: String): String {
+    var cleaned = content.replace(THINK_TAG_REGEX, "")
+    val closeIdx = cleaned.lastIndexOf("</think>", ignoreCase = true)
+    if (closeIdx >= 0) {
+        cleaned = cleaned.substring(closeIdx + "</think>".length)
+    }
+    cleaned = cleaned.replace(UNCLOSED_THINK_TAG_REGEX, "")
+    return cleaned.trim()
+}
+
+internal fun extractGroqMessageContent(choice: JSONObject): String {
+    val message = choice.optJSONObject("message") ?: return ""
+    val rawContent = message.opt("content")
+    return when {
+        rawContent == null || rawContent === JSONObject.NULL -> ""
+        rawContent is String -> rawContent
+        else -> rawContent.toString()
+    }
+}
+
+internal fun unwrapGroqPageMapJson(
+    parsed: JSONObject,
+    expectedPageKeys: Collection<String>,
+): JSONObject {
+    if (expectedPageKeys.isEmpty() || expectedPageKeys.any { parsed.has(it) }) {
+        return parsed
+    }
+    val keys = parsed.keys()
+    while (keys.hasNext()) {
+        val wrapperKey = keys.next()
+        val nested = parsed.optJSONObject(wrapperKey) ?: continue
+        if (expectedPageKeys.any { nested.has(it) }) {
+            return nested
+        }
+    }
+    return parsed
+}
+
+internal fun buildGroqHttpDiagnostic(
+    statusCode: Int,
+    responseBody: String,
+    apiKey: String,
+    fallbackMessage: String = "",
+): String {
+    val parsed = runCatching {
+        val error = JSONObject(responseBody).optJSONObject("error")
+        listOf(error?.optString("type").orEmpty(), error?.optString("message").orEmpty())
+            .filter { it.isNotBlank() }
+            .joinToString(": ")
+    }.getOrDefault("")
+    var detail = parsed.ifBlank { fallbackMessage }.ifBlank { responseBody }
+    if (apiKey.isNotBlank()) detail = detail.replace(apiKey, "[REDACTED]")
+    detail = detail.replace(GROQ_API_KEY_PATTERN, "[REDACTED]").replace(Regex("\\s+"), " ").trim().take(280)
+    return if (detail.isBlank()) "Groq HTTP $statusCode" else "Groq HTTP $statusCode: $detail"
+}
+
+internal fun buildGroqNetworkDiagnostic(error: Throwable, apiKey: String): String =
+    buildGroqDiagnostic("Groq diagnóstico de rede", error, apiKey, preferIOException = true)
+
+internal fun buildGroqUnknownDiagnostic(error: Throwable, apiKey: String): String =
+    buildGroqDiagnostic("Groq diagnóstico", error, apiKey, preferIOException = false)
+
+private fun buildGroqDiagnostic(
+    prefix: String,
+    error: Throwable,
+    apiKey: String,
+    preferIOException: Boolean,
+): String {
+    val causes = generateSequence(error) { it.cause }.toList()
+    val detail = if (preferIOException) {
+        causes.firstOrNull { it is IOException } ?: causes.lastOrNull() ?: error
+    } else {
+        causes.lastOrNull() ?: error
+    }
+    val type = detail::class.java.simpleName.ifBlank { "Throwable" }
+    var detailMessage = detail.message.orEmpty()
+    if (apiKey.isNotBlank()) detailMessage = detailMessage.replace(apiKey, "[REDACTED]")
+    detailMessage = detailMessage.replace(GROQ_API_KEY_PATTERN, "[REDACTED]").replace(Regex("\\s+"), " ").trim().take(220)
+    return if (detailMessage.isBlank()) "$prefix: $type" else "$prefix: $type: $detailMessage"
+}
 
 internal fun parseGroqRateLimitWaitMs(
     retryAfterHeader: String?,
@@ -467,4 +642,6 @@ private const val GROQ_DEFAULT_RATE_LIMIT_WAIT_MS = 3_000L
 private const val GROQ_RETRY_BUFFER_MS = 250L
 private const val GROQ_MAX_RATE_LIMIT_RETRIES = 2
 private val THINK_TAG_REGEX = Regex("(?is)<think>.*?</think>")
+private val UNCLOSED_THINK_TAG_REGEX = Regex("(?is)<think>.*$")
+private val GROQ_API_KEY_PATTERN = Regex("gsk_[0-9A-Za-z_-]{8,}")
 private val DURATION_SEGMENT_REGEX = Regex("""(\d+(?:\.\d+)?)(ms|s|m|h)""")

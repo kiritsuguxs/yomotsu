@@ -205,9 +205,10 @@ object AiGlossaryGenerator {
             }
         }.toString()
 
+        val cleanKey = eu.kanade.translation.translator.sanitizeGroqApiKey(apiKey)
         val request = Request.Builder()
             .url(GROQ_CHAT_COMPLETIONS_URL)
-            .header("Authorization", "Bearer $apiKey")
+            .header("Authorization", "Bearer $cleanKey")
             .header("Content-Type", "application/json")
             .post(payload.toRequestBody(jsonMediaType))
             .build()

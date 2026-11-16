@@ -82,6 +82,36 @@ class GroqTranslatorOptimizationTest {
     fun `strips think blocks cleanly without corrupting JSON`() {
         val raw = """<think>Analyzing comic context</think>{"001.jpg":["Olá!"]}"""
         assertEquals("""{"001.jpg":["Olá!"]}""", stripGroqThinkingTags(raw))
+
+        val prefilled = """Reasoning with {braces} inside</think>{"001.jpg":["E aí?"]}"""
+        assertEquals("""{"001.jpg":["E aí?"]}""", stripGroqThinkingTags(prefilled))
+
+        val unclosed = """{"001.jpg":["Certo"]}<think>trailing thought"""
+        assertEquals("""{"001.jpg":["Certo"]}""", stripGroqThinkingTags(unclosed))
+    }
+
+    @Test
+    fun `sanitizes pasted Groq API keys and redacts secrets in diagnostics`() {
+        assertEquals("gsk_abc123", sanitizeGroqApiKey("  gsk_abc123\r\n "))
+
+        val diag = buildGroqUnknownDiagnostic(
+            IllegalArgumentException("Header failure for gsk_supersecret123"),
+            apiKey = "gsk_supersecret123",
+        )
+        assertTrue(diag.contains("IllegalArgumentException"))
+        assertFalse(diag.contains("gsk_supersecret123"))
+        assertTrue(diag.contains("[REDACTED]"))
+    }
+
+    @Test
+    fun `safely extracts null message content and unwraps nested page map objects`() {
+        val nullChoice = org.json.JSONObject("""{"message":{"role":"assistant","content":null}}""")
+        assertEquals("", extractGroqMessageContent(nullChoice))
+
+        val wrapped = org.json.JSONObject("""{"translations":{"001.jpg":["Oi!"],"002.jpg":["Tudo bem?"]}}""")
+        val unwrapped = unwrapGroqPageMapJson(wrapped, listOf("001.jpg", "002.jpg"))
+        assertTrue(unwrapped.has("001.jpg"))
+        assertEquals("Oi!", unwrapped.getJSONArray("001.jpg").getString(0))
     }
 
     private fun block(text: String) = TranslationBlock(

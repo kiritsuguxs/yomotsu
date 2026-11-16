@@ -257,7 +257,9 @@ object NovelTranslator {
     private fun translateWithGroq(text: String, tl: String): String? {
         try {
             translationPreferences.migrateLegacyLlmSettings(TranslationLlmProvider.GROQ)
-            val apiKey = translationPreferences.llmApiKey(TranslationLlmProvider.GROQ).get().trim()
+            val apiKey = eu.kanade.translation.translator.sanitizeGroqApiKey(
+                translationPreferences.llmApiKey(TranslationLlmProvider.GROQ).get(),
+            )
             val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.GROQ).get().trim()
                 .ifBlank { translationPreferences.llmModel(TranslationLlmProvider.GROQ).get().trim() }
             if (apiKey.isBlank() || modelName.isBlank()) return null
