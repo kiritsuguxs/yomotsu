@@ -51,6 +51,7 @@ class MigrateSearchScreen(private val mangaId: Long) : Screen() {
                 }
             },
             onLongClickItem = { navigator.push(MangaScreen(it.id, true)) },
+            onRetrySource = viewModel::retrySource,
         )
 
         when (val dialog = state.dialog) {

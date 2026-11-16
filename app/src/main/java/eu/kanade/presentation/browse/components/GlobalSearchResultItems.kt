@@ -79,9 +79,19 @@ fun GlobalSearchLoadingResultItem() {
 }
 
 @Composable
-fun GlobalSearchErrorResultItem(message: String?) {
+fun GlobalSearchErrorResultItem(
+    message: String?,
+    onRetry: (() -> Unit)? = null,
+) {
     Column(
         modifier = Modifier
+            .then(
+                if (onRetry != null) {
+                    Modifier.clickable(onClick = onRetry)
+                } else {
+                    Modifier
+                },
+            )
             .padding(
                 horizontal = MaterialTheme.padding.medium,
                 vertical = MaterialTheme.padding.small,
@@ -96,5 +106,13 @@ fun GlobalSearchErrorResultItem(message: String?) {
             text = message ?: stringResource(MR.strings.unknown_error),
             textAlign = TextAlign.Center,
         )
+        if (onRetry != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(MR.strings.action_retry),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
