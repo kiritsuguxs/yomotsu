@@ -80,6 +80,18 @@
     <string name="pref_sub_deepl_api_key">Clave API de DeepL (Free o Pro)</string>
     <string name="pref_translation_vision_bubble_context">Enviar recorte de bocadillos a la IA (Visión)</string>
     <string name="pref_translation_vision_bubble_context_summary">Adjunta una cuadrícula numerada con los bocadillos para que Gemini u OpenRouter vean expresiones y tamaño del globo (usa más tokens de imagen; vuelve automáticamente a solo texto si no es compatible)</string>
+    <string name="pref_openrouter_free_models">Modelos gratis de OpenRouter (en vivo)</string>
+    <string name="pref_openrouter_free_models_summary">Consulta en la API de OpenRouter los modelos gratuitos activos ahora</string>
+    <string name="openrouter_free_models_title">Modelos gratis de OpenRouter</string>
+    <string name="openrouter_free_models_search">Filtrar por nombre o ID</string>
+    <string name="openrouter_free_models_vision_only">Con Visión</string>
+    <string name="openrouter_free_models_loading">Cargando modelos activos de OpenRouter…</string>
+    <string name="openrouter_free_models_error">No se pudieron cargar los modelos de OpenRouter.</string>
+    <string name="openrouter_free_models_empty">No se encontraron modelos gratuitos con ese filtro.</string>
+    <string name="openrouter_free_models_refresh">Actualizar</string>
+    <string name="openrouter_free_models_retry">Reintentar</string>
+    <string name="openrouter_free_models_badge_free">Gratis</string>
+    <string name="openrouter_free_models_badge_vision">Visión</string>
 
     <string name="novel_customize_reading">Personalizar lectura</string>
     <string name="novel_tts_listen">Escuchar capítulo</string>

@@ -80,6 +80,18 @@
     <string name="pref_sub_deepl_api_key">DeepL API Key (Free or Pro)</string>
     <string name="pref_translation_vision_bubble_context">Send bubble crops to AI (Vision)</string>
     <string name="pref_translation_vision_bubble_context_summary">Attaches a numbered grid of speech bubbles so Gemini or OpenRouter can see speaker expressions and bubble shapes (uses extra image tokens; auto-fallbacks to text-only if unsupported)</string>
+    <string name="pref_openrouter_free_models">Browse free OpenRouter models (live)</string>
+    <string name="pref_openrouter_free_models_summary">Fetches currently active free models from OpenRouter API</string>
+    <string name="openrouter_free_models_title">Free OpenRouter models</string>
+    <string name="openrouter_free_models_search">Filter by name or ID</string>
+    <string name="openrouter_free_models_vision_only">Vision only</string>
+    <string name="openrouter_free_models_loading">Loading live OpenRouter models…</string>
+    <string name="openrouter_free_models_error">Could not load OpenRouter models.</string>
+    <string name="openrouter_free_models_empty">No matching free models found.</string>
+    <string name="openrouter_free_models_refresh">Refresh</string>
+    <string name="openrouter_free_models_retry">Retry</string>
+    <string name="openrouter_free_models_badge_free">Free</string>
+    <string name="openrouter_free_models_badge_vision">Vision</string>
 
     <string name="novel_customize_reading">Customize reading</string>
     <string name="novel_tts_listen">Listen to chapter</string>

@@ -7,7 +7,7 @@ enum class TranslationLlmProvider(
     val defaultModel: String,
 ) {
     GEMINI("gemini", "gemini-1.5-flash"),
-    OPENROUTER("openrouter", "gemini-1.5-flash"),
+    OPENROUTER("openrouter", "openrouter/free"),
 }
 
 class TranslationPreferences(

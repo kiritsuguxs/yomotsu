@@ -82,16 +82,33 @@ object NovelTranslator {
             else -> 3000
         }
         val chunks = chunkText(text, maxChunkLen)
+        var previousChunkContext: String? = null
         val translatedChunks = chunks.map { chunk ->
-            if (chunk.isBlank()) {
+            val translated = if (chunk.isBlank()) {
                 ""
             } else if (glossaryContext != null) {
                 val prepared = TranslationGlossary.prepare(chunk, glossaryContext)
-                val rawTranslated = translateChunk(prepared.textForTranslation, sourceLang, resolvedTargetLang, selectedEngine)
+                val rawTranslated = translateChunk(
+                    text = prepared.textForTranslation,
+                    sl = sourceLang,
+                    tl = resolvedTargetLang,
+                    engine = selectedEngine,
+                    previousContext = previousChunkContext,
+                )
                 TranslationGlossary.resolve(prepared, rawTranslated, glossaryContext)
             } else {
-                translateChunk(chunk, sourceLang, resolvedTargetLang, selectedEngine)
+                translateChunk(
+                    text = chunk,
+                    sl = sourceLang,
+                    tl = resolvedTargetLang,
+                    engine = selectedEngine,
+                    previousContext = previousChunkContext,
+                )
             }
+            if (chunk.isNotBlank()) {
+                previousChunkContext = chunk.trim().takeLast(1000)
+            }
+            translated
         }
         val result = translatedChunks.joinToString("\n\n")
 
@@ -127,11 +144,12 @@ object NovelTranslator {
         sl: String,
         tl: String,
         engine: TextTranslators = TextTranslators.GOOGLE,
+        previousContext: String? = null,
     ): String {
         return when (engine) {
             TextTranslators.GEMINI -> translateWithGemini(text, tl) ?: translateWithGoogle(text, sl, tl)
             TextTranslators.OPENROUTER -> translateWithOpenRouter(text, tl) ?: translateWithGoogle(text, sl, tl)
-            TextTranslators.DEEPL -> translateWithDeepL(text, sl, tl) ?: translateWithGoogle(text, sl, tl)
+            TextTranslators.DEEPL -> translateWithDeepL(text, sl, tl, previousContext) ?: translateWithGoogle(text, sl, tl)
             else -> translateWithGoogle(text, sl, tl)
         }
     }
@@ -287,7 +305,12 @@ object NovelTranslator {
         }
     }
 
-    private fun translateWithDeepL(text: String, sl: String, tl: String): String? {
+    private fun translateWithDeepL(
+        text: String,
+        sl: String,
+        tl: String,
+        previousContext: String? = null,
+    ): String? {
         return try {
             val apiKey = translationPreferences.deepLApiKey().get().trim()
             if (apiKey.isBlank()) return null
@@ -305,9 +328,13 @@ object NovelTranslator {
             }
             val formBuilder = FormBody.Builder()
                 .add("target_lang", deepLTarget)
+                .add("preserve_formatting", "1")
                 .add("text", text)
             if (sl != "auto" && sl.isNotBlank()) {
                 formBuilder.add("source_lang", sl.uppercase().take(2))
+            }
+            previousContext?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                formBuilder.add("context", it)
             }
             val request = Request.Builder()
                 .url(endpoint)

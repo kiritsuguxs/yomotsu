@@ -3,7 +3,9 @@ package eu.kanade.presentation.more.settings.screen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.translation.data.TranslationFont
 import eu.kanade.translation.recognizer.OcrEngineType
@@ -13,6 +15,8 @@ import eu.kanade.translation.translator.TextTranslators
 import eu.kanade.translation.translator.TranslationFallbackEngine
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableMap
+import tachiyomi.core.common.preference.Preference as PreferenceData
+import tachiyomi.domain.translation.TranslationLlmProvider
 import tachiyomi.domain.translation.TranslationPreferences
 import tachiyomi.i18n.at.ATMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -49,6 +53,15 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     override fun getPreferences(): List<Preference> {
         val translationPreferences = remember { Injekt.get<TranslationPreferences>() }
+        var openRouterPickerTarget by remember { mutableStateOf<PreferenceData<String>?>(null) }
+
+        openRouterPickerTarget?.let { targetPreference ->
+            OpenRouterFreeModelsDialog(
+                preference = targetPreference,
+                onDismissRequest = { openRouterPickerTarget = null },
+            )
+        }
+
         return listOf(
             Preference.PreferenceItem.SwitchPreference(
                 preference = translationPreferences.translateSoundEffects(),
@@ -63,8 +76,14 @@ object SettingsTranslationScreen : SearchableSettings {
                     .toImmutableMap(),
             ),
             getTranslationLangGroup(translationPreferences),
-            getTranslatioEngineGroup(translationPreferences),
-            getNovelTranslationGroup(translationPreferences),
+            getTranslatioEngineGroup(
+                translationPreferences = translationPreferences,
+                onOpenRouterModelPicker = { openRouterPickerTarget = it },
+            ),
+            getNovelTranslationGroup(
+                translationPreferences = translationPreferences,
+                onOpenRouterModelPicker = { openRouterPickerTarget = it },
+            ),
             getOcrEngineGroup(translationPreferences),
             getTranslatioAdvancedGroup(translationPreferences),
         )
@@ -73,6 +92,7 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     private fun getNovelTranslationGroup(
         translationPreferences: TranslationPreferences,
+        onOpenRouterModelPicker: (PreferenceData<String>) -> Unit,
     ): Preference.PreferenceGroup {
         val engines = TextTranslators.entries
         val novelEnginePref = translationPreferences.novelTranslationEngine()
@@ -112,12 +132,22 @@ object SettingsTranslationScreen : SearchableSettings {
                 )
             }
             if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
+                val modelPreference = translationPreferences.novelLlmModel(requireNotNull(llmProvider))
                 add(
                     Preference.PreferenceItem.EditTextPreference(
-                        preference = translationPreferences.novelLlmModel(requireNotNull(llmProvider)),
+                        preference = modelPreference,
                         title = "${stringResource(ATMR.strings.pref_engine_model)} (Novel)",
                     ),
                 )
+                if (llmProvider == TranslationLlmProvider.OPENROUTER) {
+                    add(
+                        Preference.PreferenceItem.TextPreference(
+                            title = stringResource(ATMR.strings.pref_openrouter_free_models),
+                            subtitle = stringResource(ATMR.strings.pref_openrouter_free_models_summary),
+                            onClick = { onOpenRouterModelPicker(modelPreference) },
+                        ),
+                    )
+                }
             }
             if (TranslationEngineSetting.DEEPL_API_KEY in engineSettings) {
                 add(
@@ -190,6 +220,7 @@ object SettingsTranslationScreen : SearchableSettings {
     @Composable
     private fun getTranslatioEngineGroup(
         translationPreferences: TranslationPreferences,
+        onOpenRouterModelPicker: (PreferenceData<String>) -> Unit,
     ): Preference.PreferenceGroup {
         val engines = TextTranslators.entries
         val enginePreference = translationPreferences.translationEngine()
@@ -227,12 +258,22 @@ object SettingsTranslationScreen : SearchableSettings {
                 )
             }
             if (TranslationEngineSetting.LLM_MODEL in engineSettings) {
+                val modelPreference = translationPreferences.llmModel(requireNotNull(llmProvider))
                 add(
                     Preference.PreferenceItem.EditTextPreference(
-                        preference = translationPreferences.llmModel(requireNotNull(llmProvider)),
+                        preference = modelPreference,
                         title = stringResource(ATMR.strings.pref_engine_model),
                     ),
                 )
+                if (llmProvider == TranslationLlmProvider.OPENROUTER) {
+                    add(
+                        Preference.PreferenceItem.TextPreference(
+                            title = stringResource(ATMR.strings.pref_openrouter_free_models),
+                            subtitle = stringResource(ATMR.strings.pref_openrouter_free_models_summary),
+                            onClick = { onOpenRouterModelPicker(modelPreference) },
+                        ),
+                    )
+                }
             }
             if (TranslationEngineSetting.LLM_API_KEY in engineSettings) {
                 add(
