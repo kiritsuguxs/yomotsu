@@ -234,6 +234,15 @@ object SettingsTranslationScreen : SearchableSettings {
                     ),
                 )
             }
+            if (TranslationEngineSetting.LLM_API_KEY in engineSettings) {
+                add(
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = translationPreferences.visionBubbleContext(),
+                        title = stringResource(ATMR.strings.pref_translation_vision_bubble_context),
+                        subtitle = stringResource(ATMR.strings.pref_translation_vision_bubble_context_summary),
+                    ),
+                )
+            }
             if (TranslationEngineSetting.DEEPL_API_KEY in engineSettings) {
                 add(
                     Preference.PreferenceItem.EditTextPreference(

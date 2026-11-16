@@ -93,45 +93,57 @@ class OpenRouterTranslator(
                 preparedIterator.next().textForTranslation
             }
             val relevantGlossaryText = normalizedTexts.joinToString("\n") + "\n" + inputJson
-            val requestText = continuity.promptPrefix() + buildComicTranslationRequest(context, inputJson, relevantGlossaryText)
-            val mediaType = "application/json; charset=utf-8".toMediaType()
-            val jsonObject = buildJsonObject {
-                put("model", modelName)
-                put("top_p", 0.5f)
-                put("top_k", 30)
-                put("temperature", temp)
-                put("max_tokens", maxOutputToken.coerceAtMost(4096))
-                putJsonArray("messages") {
-                    addJsonObject {
-                        put("role", "system")
-                        put("content", buildComicTranslationPrompt(fromLang, toLang) + "\nIMPORTANT: Return ONLY a valid JSON object. No explanations, no markdown formatting.")
-                    }
-                    addJsonObject {
-                        put("role", "user")
-                        put("content", requestText)
-                    }
-                }
-            }.toString()
+            val visionAttachment = runCatching {
+                context.visionAttachmentBuilder?.invoke(pages)
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                logcat { "Failed to build Vision bubble montage for OpenRouter; continuing text-only" }
+            }.getOrNull()
 
-            val body = jsonObject.toRequestBody(mediaType)
-            val request = Request.Builder()
-                .url("https://openrouter.ai/api/v1/chat/completions")
-                .header("Authorization", "Bearer $apiKey")
-                .header("Content-Type", "application/json")
-                .post(body)
-                .build()
-            val response = okHttpClient.newCall(request).await()
-            val responseBody = response.use {
-                val rawBody = it.body.string()
-                if (!it.isSuccessful) {
-                    throw TranslationProviderFailureMapper.fromHttp(
-                        provider = TranslationProviderId.OPENROUTER,
-                        statusCode = it.code,
-                        responseBody = rawBody,
-                    )
-                }
-                rawBody
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val systemInstruction = buildComicTranslationPrompt(fromLang, toLang) +
+                "\nIMPORTANT: Return ONLY a valid JSON object. No explanations, no markdown formatting."
+
+            suspend fun executeOpenRouterRequest(attachment: VisionMontageAttachment?): Pair<Int, String> {
+                val requestText = continuity.promptPrefix() + buildComicTranslationRequest(
+                    context = context,
+                    inputJson = inputJson,
+                    relevantText = relevantGlossaryText,
+                    visionAttachment = attachment,
+                )
+                val jsonObject = buildOpenRouterRequestBody(
+                    modelName = modelName,
+                    systemInstruction = systemInstruction,
+                    requestText = requestText,
+                    maxOutputTokens = maxOutputToken,
+                    temperature = temp,
+                    visionAttachment = attachment,
+                )
+                val body = jsonObject.toRequestBody(mediaType)
+                val request = Request.Builder()
+                    .url("https://openrouter.ai/api/v1/chat/completions")
+                    .header("Authorization", "Bearer $apiKey")
+                    .header("Content-Type", "application/json")
+                    .post(body)
+                    .build()
+                return okHttpClient.newCall(request).await().use { it.code to it.body.string() }
             }
+
+            var (statusCode, rawBody) = executeOpenRouterRequest(visionAttachment)
+            if (visionAttachment != null && (statusCode == 400 || statusCode == 422)) {
+                logcat { "OpenRouter model rejected multimodal bubble grid (HTTP $statusCode); retrying text-only" }
+                val fallbackResult = executeOpenRouterRequest(null)
+                statusCode = fallbackResult.first
+                rawBody = fallbackResult.second
+            }
+            if (statusCode !in 200..299) {
+                throw TranslationProviderFailureMapper.fromHttp(
+                    provider = TranslationProviderId.OPENROUTER,
+                    statusCode = statusCode,
+                    responseBody = rawBody,
+                )
+            }
+            val responseBody = rawBody
             val json = JSONObject(responseBody)
             
             val choices = json.optJSONArray("choices")
@@ -194,3 +206,43 @@ class OpenRouterTranslator(
         continuity.clear()
     }
 }
+
+internal fun buildOpenRouterRequestBody(
+    modelName: String,
+    systemInstruction: String,
+    requestText: String,
+    maxOutputTokens: Int,
+    temperature: Float,
+    visionAttachment: VisionMontageAttachment? = null,
+): String = buildJsonObject {
+    put("model", modelName)
+    put("top_p", 0.5f)
+    put("top_k", 30)
+    put("temperature", temperature)
+    put("max_tokens", maxOutputTokens.coerceAtMost(4096))
+    putJsonArray("messages") {
+        addJsonObject {
+            put("role", "system")
+            put("content", systemInstruction)
+        }
+        addJsonObject {
+            put("role", "user")
+            if (visionAttachment == null) {
+                put("content", requestText)
+            } else {
+                putJsonArray("content") {
+                    addJsonObject {
+                        put("type", "text")
+                        put("text", requestText)
+                    }
+                    addJsonObject {
+                        put("type", "image_url")
+                        putJsonObject("image_url") {
+                            put("url", "data:${visionAttachment.mimeType};base64,${visionAttachment.base64Data}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}.toString()

@@ -100,32 +100,52 @@ class GeminiTranslator(
             preparedIterator.next().textForTranslation
         }
         val relevantGlossaryText = normalizedTexts.joinToString("\n") + "\n" + inputJson
-        val requestText = continuity.promptPrefix() + buildComicTranslationRequest(context, inputJson, relevantGlossaryText)
-        val requestBody = buildGeminiRestRequestBody(
-            systemInstruction = buildComicTranslationPrompt(fromLang, toLang),
-            requestText = requestText,
-            maxOutputTokens = maxOutputToken,
-        )
-        val request = Request.Builder()
-            .url(buildGeminiRestUrl(modelName))
-            .header("x-goog-api-key", apiKey)
-            .header("Content-Type", "application/json")
-            .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
+        val visionAttachment = runCatching {
+            context.visionAttachmentBuilder?.invoke(chunkPages)
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            logcat(LogPriority.WARN, error) { "Failed to build Vision bubble montage; continuing text-only" }
+        }.getOrNull()
 
-        val response = okHttpClient.newCall(request).await()
-        val responseBody = response.use {
-            val rawBody = it.body.string()
-            if (!it.isSuccessful) {
-                throw TranslationProviderException(
-                    TranslationProviderId.GEMINI,
-                    TranslationFailureCategory.UNKNOWN,
-                    it.code == 429 || it.code >= 500,
-                    buildGeminiHttpDiagnostic(it.code, rawBody, apiKey),
-                )
-            }
-            rawBody
+        suspend fun executeGeminiRequest(attachment: VisionMontageAttachment?): Pair<Int, String> {
+            val requestText = continuity.promptPrefix() + buildComicTranslationRequest(
+                context = context,
+                inputJson = inputJson,
+                relevantText = relevantGlossaryText,
+                visionAttachment = attachment,
+            )
+            val requestBody = buildGeminiRestRequestBody(
+                systemInstruction = buildComicTranslationPrompt(fromLang, toLang),
+                requestText = requestText,
+                maxOutputTokens = maxOutputToken,
+                visionAttachment = attachment,
+            )
+            val request = Request.Builder()
+                .url(buildGeminiRestUrl(modelName))
+                .header("x-goog-api-key", apiKey)
+                .header("Content-Type", "application/json")
+                .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
+                .build()
+
+            return okHttpClient.newCall(request).await().use { it.code to it.body.string() }
         }
+
+        var (statusCode, rawBody) = executeGeminiRequest(visionAttachment)
+        if (visionAttachment != null && (statusCode == 400 || statusCode == 422)) {
+            logcat(LogPriority.WARN) { "Gemini model rejected multimodal bubble grid (HTTP $statusCode); retrying text-only" }
+            val fallbackResult = executeGeminiRequest(null)
+            statusCode = fallbackResult.first
+            rawBody = fallbackResult.second
+        }
+        if (statusCode !in 200..299) {
+            throw TranslationProviderException(
+                TranslationProviderId.GEMINI,
+                TranslationFailureCategory.UNKNOWN,
+                statusCode == 429 || statusCode >= 500,
+                buildGeminiHttpDiagnostic(statusCode, rawBody, apiKey),
+            )
+        }
+        val responseBody = rawBody
         val responseJson = JSONObject(responseBody)
         val parts = responseJson.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
         val responseText = buildString {
@@ -197,9 +217,42 @@ internal fun <T> chunkGeminiItems(items: List<T>, maxItems: Int = GEMINI_MAX_ITE
     return items.chunked(maxItems)
 }
 
-internal fun buildGeminiRestRequestBody(systemInstruction: String, requestText: String, maxOutputTokens: Int): String = buildJsonObject {
+internal fun buildGeminiRestRequestBody(
+    systemInstruction: String,
+    requestText: String,
+    maxOutputTokens: Int,
+    visionAttachment: VisionMontageAttachment? = null,
+): String = buildJsonObject {
     put("systemInstruction", buildJsonObject { put("parts", buildJsonArray { add(buildJsonObject { put("text", systemInstruction) }) }) })
-    put("contents", buildJsonArray { add(buildJsonObject { put("role", "user"); put("parts", buildJsonArray { add(buildJsonObject { put("text", requestText) }) }) }) })
+    put(
+        "contents",
+        buildJsonArray {
+            add(
+                buildJsonObject {
+                    put("role", "user")
+                    put(
+                        "parts",
+                        buildJsonArray {
+                            if (visionAttachment != null) {
+                                add(
+                                    buildJsonObject {
+                                        put(
+                                            "inline_data",
+                                            buildJsonObject {
+                                                put("mime_type", visionAttachment.mimeType)
+                                                put("data", visionAttachment.base64Data)
+                                            },
+                                        )
+                                    },
+                                )
+                            }
+                            add(buildJsonObject { put("text", requestText) })
+                        },
+                    )
+                },
+            )
+        },
+    )
     put("generationConfig", buildJsonObject { put("maxOutputTokens", maxOutputTokens) })
     put("safetySettings", buildJsonArray {
         add(buildJsonObject { put("category", "HARM_CATEGORY_HARASSMENT"); put("threshold", "BLOCK_NONE") })

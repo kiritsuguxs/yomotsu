@@ -75,6 +75,8 @@
     <string name="pref_inpainter_aot_summary">Reconstructs background and artwork behind text using neural network (NCNN). First use downloads ~11 MB. If disabled, uses fast color fill.</string>
     <string name="pref_deepl_api_key">DeepL API Key</string>
     <string name="pref_sub_deepl_api_key">DeepL API Key (Free or Pro)</string>
+    <string name="pref_translation_vision_bubble_context">Send bubble crops to AI (Vision)</string>
+    <string name="pref_translation_vision_bubble_context_summary">Attaches a numbered grid of speech bubbles so Gemini or OpenRouter can see speaker expressions and bubble shapes (uses extra image tokens; auto-fallbacks to text-only if unsupported)</string>
 
     <string name="novel_customize_reading">Customize reading</string>
     <string name="novel_tts_listen">Listen to chapter</string>

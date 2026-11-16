@@ -3,6 +3,9 @@ package eu.kanade.translation
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
+import android.graphics.Rect
+import android.os.Build
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -30,10 +33,13 @@ import eu.kanade.translation.recognizer.OcrImage
 import eu.kanade.translation.recognizer.OcrTextBlock
 import eu.kanade.translation.recognizer.SpeechBubbleAnalyzer
 import eu.kanade.translation.recognizer.TextRecognizerLanguage
+import eu.kanade.translation.recognizer.WebtoonBubbleAnalysisPlanner
 import eu.kanade.translation.translator.ComicTranslationContext
 import eu.kanade.translation.translator.TextTranslator
 import eu.kanade.translation.translator.TextTranslatorLanguage
 import eu.kanade.translation.translator.TextTranslators
+import eu.kanade.translation.translator.VisionBubbleMontageBuilder
+import eu.kanade.translation.translator.VisionMontageAttachment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +59,8 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
@@ -258,6 +266,8 @@ class ChapterTranslator(
         try {
             val chapterNumber = synchronized(sessionLock) { completedChaptersInSession + 1 }
             notifier.onPreparing(translation.manga, translation.chapter.name, chapterNumber, currentSessionTotal())
+            val selectedEngine = TextTranslators.fromPref(translationPreferences.translationEngine())
+            val useVisionBubbleContext = translationPreferences.visionBubbleContext().get()
             val translator = ensureTextTranslator(translation.fromLang, translation.toLang)
             val strictOcrGrouping = selectedOcrType == OcrEngineType.PADDLE_OCR
             val translationMangaDir = provider.getMangaDir(translation.manga.title, translation.source)
@@ -289,19 +299,14 @@ class ChapterTranslator(
                             val blocks = result.blocks.map { block ->
                                 block.copy(text = normalizeTranslationText(block.text))
                             }.filter { it.text.length > 1 && !TranslationRecoveryPolicy.isWatermarkOrCredit(it.text) }
-                            val analysisBitmap = decodeAnalysisBitmap(tmpFile, result.width, result.height)
-                            val pageTranslation = try {
-                                convertToPageTranslation(
-                                    blocks, result.width, result.height,
-                                    translationPreferences.translateSoundEffects().get(),
-                                    analysisBitmap?.let {
-                                        SpeechBubbleAnalyzer(it, result.width, result.height, blocks.map { block ->
-                                            TranslationRegion(block.x, block.y, block.width, block.height)
-                                        })
-                                    },
-                                    strictOcrGrouping,
-                                )
-                            } finally { analysisBitmap?.recycle() }
+                            val pageTranslation = analyzeAndConvertPage(
+                                tmpFile = tmpFile,
+                                blocks = blocks,
+                                width = result.width,
+                                height = result.height,
+                                includeSoundEffects = translationPreferences.translateSoundEffects().get(),
+                                strictOcrGrouping = strictOcrGrouping,
+                            )
                             if (pageTranslation.blocks.isNotEmpty()) pages[fileName] = pageTranslation
                             notifier.onPageProgress(
                                 translation.manga, translation.chapter.name, index + 1, totalPageCount,
@@ -316,6 +321,20 @@ class ChapterTranslator(
                 val automaticPages = pages.mapValuesTo(mutableMapOf()) { (_, page) ->
                     PageTranslation(page.blocks.filter(::isTranslatableBlock).toMutableList(), page.imgWidth, page.imgHeight)
                 }
+                val pageStreamByName = chapterPages.pages.toMap()
+                val archiveMutex = Mutex()
+                val visionAttachmentBuilder: (suspend (Map<String, PageTranslation>) -> VisionMontageAttachment?)? =
+                    if (useVisionBubbleContext && selectedEngine.llmProvider != null) {
+                        { chunkPages ->
+                            archiveMutex.withLock {
+                                VisionBubbleMontageBuilder.build(chunkPages) { pageKey ->
+                                    pageStreamByName[pageKey]?.invoke()
+                                }
+                            }
+                        }
+                    } else {
+                        null
+                    }
                 withContext(Dispatchers.IO) {
                     notifier.onTextTranslation(
                         translation.manga, translation.chapter.name, totalPageCount, chapterNumber, currentSessionTotal(),
@@ -325,7 +344,11 @@ class ChapterTranslator(
                     val translationDeferred = async(Dispatchers.IO) {
                         translator.translate(
                             automaticPages,
-                            ComicTranslationContext(translation.manga.title, translation.chapter.name),
+                            ComicTranslationContext(
+                                mangaTitle = translation.manga.title,
+                                chapterName = translation.chapter.name,
+                                visionAttachmentBuilder = visionAttachmentBuilder,
+                            ),
                         )
                     }
 
@@ -475,9 +498,113 @@ class ChapterTranslator(
         return inpaintedTotal
     }
 
+    private fun analyzeAndConvertPage(
+        tmpFile: UniFile,
+        blocks: List<OcrTextBlock>,
+        width: Int,
+        height: Int,
+        includeSoundEffects: Boolean,
+        strictOcrGrouping: Boolean,
+    ): PageTranslation {
+        if (blocks.isNotEmpty() && WebtoonBubbleAnalysisPlanner.shouldUseTiledAnalysis(width, height)) {
+            val tiledTranslation = tryTiledPageAnalysis(
+                tmpFile = tmpFile,
+                blocks = blocks,
+                width = width,
+                height = height,
+                includeSoundEffects = includeSoundEffects,
+                strictOcrGrouping = strictOcrGrouping,
+            )
+            if (tiledTranslation != null) return tiledTranslation
+        }
+
+        val rawRegions = blocks.map { block -> TranslationRegion(block.x, block.y, block.width, block.height) }
+        val analysisBitmap = decodeAnalysisBitmap(tmpFile, width, height)
+        return try {
+            val analyzer = analysisBitmap?.let { SpeechBubbleAnalyzer(it, width, height, rawRegions) }
+            convertToPageTranslation(
+                blocks = blocks,
+                width = width,
+                height = height,
+                includeSoundEffects = includeSoundEffects,
+                strictOcrGrouping = strictOcrGrouping,
+                analyzeBlocks = analyzer?.let { a -> { targetBlocks -> analyzeTranslationBlocks(targetBlocks, a) } },
+            )
+        } finally {
+            analysisBitmap?.recycle()
+        }
+    }
+
+    private fun tryTiledPageAnalysis(
+        tmpFile: UniFile,
+        blocks: List<OcrTextBlock>,
+        width: Int,
+        height: Int,
+        includeSoundEffects: Boolean,
+        strictOcrGrouping: Boolean,
+    ): PageTranslation? {
+        val slices = WebtoonBubbleAnalysisPlanner.planSlices(width, height)
+        if (slices.isEmpty()) return null
+        val rawRegions = blocks.map { block -> TranslationRegion(block.x, block.y, block.width, block.height) }
+        val decoder = runCatching {
+            tmpFile.openInputStream().use { input ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    BitmapRegionDecoder.newInstance(input)
+                } else {
+                    @Suppress("DEPRECATION")
+                    BitmapRegionDecoder.newInstance(input, false)
+                }
+            }
+        }.getOrNull() ?: return null
+
+        val decodeOpts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.RGB_565 }
+        try {
+            return convertToPageTranslation(
+                blocks = blocks,
+                width = width,
+                height = height,
+                includeSoundEffects = includeSoundEffects,
+                strictOcrGrouping = strictOcrGrouping,
+                analyzeBlocks = { targetBlocks ->
+                    val blockRegions = targetBlocks.map { TranslationRegion(it.x, it.y, it.width, it.height) }
+                    val assignments = WebtoonBubbleAnalysisPlanner.assignIndicesToSlices(slices, blockRegions)
+                    for ((sliceIndex, indices) in assignments) {
+                        val slice = slices[sliceIndex]
+                        val sliceBitmap = runCatching {
+                            decoder.decodeRegion(Rect(0, slice.top, width, slice.bottom), decodeOpts)
+                        }.getOrNull() ?: continue
+                        try {
+                            val localRawRegions = WebtoonBubbleAnalysisPlanner.toSliceLocalRegions(rawRegions, slice)
+                            val analyzer = SpeechBubbleAnalyzer(sliceBitmap, width, slice.height, localRawRegions)
+                            for (blockIdx in indices) {
+                                val block = targetBlocks[blockIdx]
+                                val localBlock = WebtoonBubbleAnalysisPlanner.toSliceLocalBlock(block, slice)
+                                val analysis = WebtoonBubbleAnalysisPlanner.shiftAnalysisToPage(
+                                    analysis = analyzer.analyze(localBlock),
+                                    slice = slice,
+                                    pageWidth = width,
+                                    pageHeight = height,
+                                )
+                                applyBubbleAnalysis(block, analysis)
+                            }
+                        } finally {
+                            sliceBitmap.recycle()
+                        }
+                    }
+                },
+            )
+        } finally {
+            decoder.recycle()
+        }
+    }
+
     private fun convertToPageTranslation(
-        blocks: List<OcrTextBlock>, width: Int, height: Int, includeSoundEffects: Boolean,
-        bubbleAnalyzer: SpeechBubbleAnalyzer?, strictOcrGrouping: Boolean,
+        blocks: List<OcrTextBlock>,
+        width: Int,
+        height: Int,
+        includeSoundEffects: Boolean,
+        strictOcrGrouping: Boolean,
+        analyzeBlocks: ((List<TranslationBlock>) -> Unit)?,
     ): PageTranslation {
         val translation = PageTranslation(imgWidth = width.toFloat(), imgHeight = height.toFloat())
         for (block in blocks) {
@@ -490,14 +617,14 @@ class ChapterTranslator(
                 ).withReliableSourceMetrics(),
             )
         }
-        if (bubbleAnalyzer == null) {
+        if (analyzeBlocks == null) {
             if (!includeSoundEffects) translation.blocks.removeAll { block -> isLikelySoundEffect(block, width, height) }
             translation.blocks.removeAll { block -> TranslationRecoveryPolicy.isWatermarkOrCredit(block.text) }
             return translation
         }
-        analyzeTranslationBlocks(translation.blocks, bubbleAnalyzer)
+        analyzeBlocks(translation.blocks)
         translation.blocks = TranslationBlockGrouper.group(translation.blocks, strict = strictOcrGrouping)
-        analyzeTranslationBlocks(translation.blocks, bubbleAnalyzer)
+        analyzeBlocks(translation.blocks)
         if (!includeSoundEffects) translation.blocks.removeAll { block -> isLikelySoundEffect(block, width, height) }
         translation.blocks.removeAll { block -> TranslationRecoveryPolicy.isWatermarkOrCredit(block.text) }
         return translation
@@ -505,14 +632,20 @@ class ChapterTranslator(
 
     private fun analyzeTranslationBlocks(blocks: List<TranslationBlock>, analyzer: SpeechBubbleAnalyzer) {
         blocks.forEach { block ->
-            val analysis = analyzer.analyze(block)
-            block.cleanupRegion = analysis.cleanupRegion
-            block.layoutRegion = analysis.layoutRegion
-            block.backgroundColor = analysis.backgroundColor
-            block.foregroundColor = analysis.foregroundColor
-            block.balloonDetected = analysis.balloonDetected
-            block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
+            applyBubbleAnalysis(block, analyzer.analyze(block))
         }
+    }
+
+    private fun applyBubbleAnalysis(
+        block: TranslationBlock,
+        analysis: eu.kanade.translation.recognizer.SpeechBubbleAnalysis,
+    ) {
+        block.cleanupRegion = analysis.cleanupRegion
+        block.layoutRegion = analysis.layoutRegion
+        block.backgroundColor = analysis.backgroundColor
+        block.foregroundColor = analysis.foregroundColor
+        block.balloonDetected = analysis.balloonDetected
+        block.geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION
     }
 
     private fun isTranslatableBlock(block: TranslationBlock): Boolean {

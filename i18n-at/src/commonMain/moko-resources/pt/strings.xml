@@ -75,6 +75,8 @@
     <string name="pref_inpainter_aot_summary">Reconstrói o fundo e arte atrás dos textos usando rede neural (NCNN). Primeiro uso baixa ~11 MB. Se desativado, usa preenchimento rápido de cor.</string>
     <string name="pref_deepl_api_key">Chave da API DeepL</string>
     <string name="pref_sub_deepl_api_key">Chave da API DeepL (Free ou Pro)</string>
+    <string name="pref_translation_vision_bubble_context">Enviar recorte dos balões para IA (Visão)</string>
+    <string name="pref_translation_vision_bubble_context_summary">Anexa uma grelha numerada com os balões para que Gemini ou OpenRouter vejam expressões e tamanho do balão (consome mais tokens de imagem; volta automaticamente para só texto se não suportado)</string>
 
     <string name="novel_customize_reading">Personalizar leitura</string>
     <string name="novel_tts_listen">Ouvir capítulo</string>

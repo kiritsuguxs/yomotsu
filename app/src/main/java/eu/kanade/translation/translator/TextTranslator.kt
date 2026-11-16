@@ -21,6 +21,7 @@ interface TextTranslator : Closeable {
 data class ComicTranslationContext(
     val mangaTitle: String,
     val chapterName: String,
+    val visionAttachmentBuilder: (suspend (Map<String, PageTranslation>) -> VisionMontageAttachment?)? = null,
 ) {
     companion object {
         val EMPTY = ComicTranslationContext(mangaTitle = "", chapterName = "")
