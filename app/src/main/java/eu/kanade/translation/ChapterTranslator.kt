@@ -39,6 +39,7 @@ import eu.kanade.translation.translator.TextTranslator
 import eu.kanade.translation.translator.TextTranslatorLanguage
 import eu.kanade.translation.translator.TextTranslators
 import eu.kanade.translation.translator.VisionBubbleMontageBuilder
+import eu.kanade.translation.translator.VisionBubbleMontagePlanner
 import eu.kanade.translation.translator.VisionMontageAttachment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

@@ -255,7 +255,7 @@ object NovelTranslator {
     }
 
     private fun translateWithGroq(text: String, tl: String): String? {
-        return try {
+        try {
             translationPreferences.migrateLegacyLlmSettings(TranslationLlmProvider.GROQ)
             val apiKey = translationPreferences.llmApiKey(TranslationLlmProvider.GROQ).get().trim()
             val modelName = translationPreferences.novelLlmModel(TranslationLlmProvider.GROQ).get().trim()
@@ -329,7 +329,7 @@ object NovelTranslator {
             }
         } catch (e: Exception) {
             logcat(throwable = e) { "Failed to translate chunk with Groq" }
-            null
+            return null
         }
     }
 

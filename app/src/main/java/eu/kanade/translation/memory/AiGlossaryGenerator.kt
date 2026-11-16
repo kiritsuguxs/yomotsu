@@ -2,11 +2,14 @@ package eu.kanade.translation.memory
 
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.translation.translator.ComicTranslationContext
+import eu.kanade.translation.translator.GROQ_CHAT_COMPLETIONS_URL
 import eu.kanade.translation.translator.TextTranslators
 import eu.kanade.translation.translator.TranslationNetworkHelper
+import eu.kanade.translation.translator.applyGroqReasoningControls
 import eu.kanade.translation.translator.buildGeminiHttpDiagnostic
 import eu.kanade.translation.translator.buildGeminiRestRequestBody
 import eu.kanade.translation.translator.buildGeminiRestUrl
+import eu.kanade.translation.translator.stripGroqThinkingTags
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -189,7 +192,7 @@ object AiGlossaryGenerator {
             put("model", trimmedModel)
             put("temperature", 0.2f)
             put("max_completion_tokens", maxOutputTokens)
-            eu.kanade.translation.translator.applyGroqReasoningControls(trimmedModel)
+            applyGroqReasoningControls(trimmedModel)
             putJsonArray("messages") {
                 addJsonObject {
                     put("role", "system")
@@ -203,7 +206,7 @@ object AiGlossaryGenerator {
         }.toString()
 
         val request = Request.Builder()
-            .url(eu.kanade.translation.translator.GROQ_CHAT_COMPLETIONS_URL)
+            .url(GROQ_CHAT_COMPLETIONS_URL)
             .header("Authorization", "Bearer $apiKey")
             .header("Content-Type", "application/json")
             .post(payload.toRequestBody(jsonMediaType))
@@ -226,7 +229,7 @@ object AiGlossaryGenerator {
             ?.optJSONObject("message")
             ?.optString("content")
             .orEmpty()
-        return eu.kanade.translation.translator.stripGroqThinkingTags(rawContent)
+        return stripGroqThinkingTags(rawContent)
     }
 
     internal fun buildGlossarySystemPrompt(): String = """
