@@ -15,6 +15,7 @@ import coil3.request.ImageRequest
 import coil3.request.transformations
 import coil3.transform.CircleCropTransformation
 import eu.kanade.presentation.util.formatChapterNumber
+import eu.kanade.presentation.util.formatEpisodeNumber
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.download.Downloader
@@ -332,7 +333,13 @@ class LibraryUpdateNotifier(
         val displayableChapterNumbers = chapters
             .filter { it.isRecognizedNumber }
             .sortedBy { it.chapterNumber }
-            .map { formatChapterNumber(it.chapterNumber) }
+            .map {
+                if (isAnime) {
+                    formatEpisodeNumber(it.chapterNumber, it.name)
+                } else {
+                    formatChapterNumber(it.chapterNumber)
+                }
+            }
             .toSet()
 
         return when (displayableChapterNumbers.size) {

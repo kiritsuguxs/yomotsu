@@ -49,7 +49,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 
 import kotlinx.datetime.LocalDate
 
-import eu.kanade.presentation.util.formatChapterNumber as formatEpisodeNumber
+import eu.kanade.presentation.util.formatEpisodeNumber
 
 @Composable
 fun EpisodeListDialog(
@@ -92,7 +92,7 @@ fun EpisodeListDialog(
                     val title = if (displayMode == Anime.EPISODE_DISPLAY_NUMBER) {
                         stringResource(
                             AYMR.strings.display_mode_episode,
-                            formatEpisodeNumber(episode.chapter_number.toDouble()),
+                            formatEpisodeNumber(episode.chapter_number.toDouble(), episode.name),
                         )
                     } else {
                         episode.name

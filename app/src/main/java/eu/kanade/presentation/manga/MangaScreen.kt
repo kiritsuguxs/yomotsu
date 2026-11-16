@@ -60,6 +60,7 @@ import eu.kanade.presentation.manga.components.MangaInfoBox
 import eu.kanade.presentation.manga.components.MangaToolbar
 import eu.kanade.presentation.manga.components.MissingChapterCountListItem
 import eu.kanade.presentation.util.formatChapterNumber
+import eu.kanade.presentation.util.formatEpisodeNumber
 import eu.kanade.presentation.util.formatTime
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
@@ -911,7 +912,11 @@ private fun LazyListScope.sharedChapterItems(
                     title = if (manga.displayMode == Manga.CHAPTER_DISPLAY_NUMBER) {
                         stringResource(
                             if (isAnime) AYMR.strings.display_mode_episode else MR.strings.display_mode_chapter,
-                            formatChapterNumber(item.chapter.chapterNumber),
+                            if (isAnime) {
+                                formatEpisodeNumber(item.chapter.chapterNumber, item.chapter.name)
+                            } else {
+                                formatChapterNumber(item.chapter.chapterNumber)
+                            },
                         )
                     } else {
                         item.chapter.name

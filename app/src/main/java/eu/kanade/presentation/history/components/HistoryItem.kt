@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.formatChapterNumber
+import eu.kanade.presentation.util.formatEpisodeNumber
 import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.util.lang.toTimestampString
 import tachiyomi.domain.history.model.HistoryWithRelations
@@ -91,7 +92,11 @@ fun HistoryItem(
                     }
                     stringResource(
                         stringRes,
-                        formatChapterNumber(history.chapterNumber),
+                        if (isAnime) {
+                            formatEpisodeNumber(history.chapterNumber)
+                        } else {
+                            formatChapterNumber(history.chapterNumber)
+                        },
                         readAt,
                     )
                 } else {
