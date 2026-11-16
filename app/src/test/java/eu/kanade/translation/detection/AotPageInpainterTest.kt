@@ -17,7 +17,11 @@ import org.junit.jupiter.api.Test
 
 class AotPageInpainterTest {
 
-    private class FakeAotBackend : DbnetBackend {
+    private class FakeAotBackend(
+        private val fillR: Float = -0.6f,
+        private val fillG: Float = -0.5f,
+        private val fillB: Float = 0.2f,
+    ) : DbnetBackend {
         var inpaintCalls = 0
         var lastTileSize = 0
         var lastMaskedCount = 0
@@ -48,10 +52,9 @@ class AotPageInpainterTest {
             for (i in 0 until area) {
                 if (mask[i] > 0.5f) {
                     masked++
-                    // Reconstruct dark blue artwork (-0.6, -0.5, 0.2) inside masked holes
-                    out[i] = -0.6f
-                    out[area + i] = -0.5f
-                    out[2 * area + i] = 0.2f
+                    out[i] = fillR
+                    out[area + i] = fillG
+                    out[2 * area + i] = fillB
                 } else {
                     out[i] = img[i]
                     out[area + i] = img[area + i]
@@ -398,5 +401,57 @@ class AotPageInpainterTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `light gradient burst on dark panel picks black text from masked interior`() {
+        val backend = FakeAotBackend(fillR = 0.7f, fillG = 0.7f, fillB = 0.7f)
+        val inpainter = Inpainter(
+            modelPath = "/models/mit_aot_fixed512.ncnn.param",
+            cfg = InpainterConfig(method = InpainterConfig.METHOD_AOT, tileSize = 512),
+            backend = backend,
+        )
+        val pageInpainter = AotPageInpainter(inpainter, tileSize = 512)
+
+        val burstBlock = TranslationBlock(
+            text = "I LIKE YOU TOO!!!",
+            translation = "EU TAMBÉM GOSTO DE VOCÊ!!!",
+            width = 120f,
+            height = 40f,
+            symWidth = 14f,
+            symHeight = 20f,
+            angle = 0f,
+            x = 200f,
+            y = 200f,
+            backgroundColor = null,
+            foregroundColor = -0x1000000,
+            balloonDetected = false,
+            geometryVersion = CURRENT_TRANSLATION_GEOMETRY_VERSION,
+        )
+
+        val page = PageTranslation(
+            blocks = mutableListOf(burstBlock),
+            imgWidth = 600f,
+            imgHeight = 600f,
+        )
+
+        // Most of the outer patch rectangle is pure black panel outside the spiky burst,
+        // while the erased text core inside [205..315, 205..235] is reconstructed as light gray (~216).
+        val reader = SyntheticReader(600, 600) { x, y ->
+            if (x in 210..310 && y in 208..232) {
+                (0xFF shl 24) or (210 shl 16) or (210 shl 8) or 210
+            } else {
+                -0x1000000
+            }
+        }
+
+        val count = pageInpainter.inpaintPageWithReader(
+            reader = reader,
+            page = page,
+            encodePatch = { _, w, h -> "patch:${w}x${h}" },
+        )
+
+        assertEquals(1, count)
+        assertEquals(-0x1000000, burstBlock.foregroundColor, "Light burst interior must keep black text despite black outer corners")
     }
 }

@@ -69,4 +69,21 @@ class PaddleTextBlockMapperTest {
             ),
         )
     }
+
+    @Test
+    fun `allows large shout lettering on high resolution webtoon strips`() {
+        val block = PaddleTextBlockMapper.map(
+            text = "YOU",
+            confidence = 0.94f,
+            points = listOf(
+                OcrPoint(200f, 300f),
+                OcrPoint(760f, 300f),
+                OcrPoint(760f, 460f),
+                OcrPoint(200f, 460f),
+            ),
+            pageWidth = 1600,
+        )
+
+        assertEquals("YOU", block?.text)
+    }
 }

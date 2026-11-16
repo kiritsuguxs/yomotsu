@@ -43,8 +43,10 @@ object TranslationBlockGrouper {
         if (abs(a.angle - b.angle) > MAX_ANGLE_DIFFERENCE) return false
         val visualSizeCompatible = visualTextSizeSimilar(a, b)
         val diagonallySeparated = areDiagonallySeparatedSources(a, b)
+        val openEnded = isOpenEndedContinuation(a, b)
+        val staggeredFinishedLobes = !openEnded && areStaggeredLobes(a, b)
         val paragraphGlyphGap = if (strict) MAX_PADDLE_PARAGRAPH_GLYPH_GAP else MAX_COMIC_PARAGRAPH_GLYPH_GAP
-        val continuousParagraph = visualSizeCompatible && !diagonallySeparated && isOpenEndedContinuation(a, b) && shouldMergeByProximity(a, b, paragraphGlyphGap)
+        val continuousParagraph = visualSizeCompatible && !diagonallySeparated && openEnded && shouldMergeByProximity(a, b, paragraphGlyphGap)
         val connectorContinuation = visualSizeCompatible && !diagonallySeparated && !strict && endsWithConnector(a, b) && shouldMergeByProximity(a, b, MAX_CONNECTOR_GLYPH_GAP)
 
         if (a.balloonDetected || b.balloonDetected) {
@@ -56,28 +58,31 @@ object TranslationBlockGrouper {
                     val sharedArea = intersectionArea(firstLayout, secondLayout)
                     val smallerArea = minOf(firstLayout.area(), secondLayout.area()).coerceAtLeast(1f)
                     val sharedRatio = sharedArea / smallerArea
-                    val minSharedRatio = if (diagonallySeparated) DIAGONAL_SHARED_BALLOON_RATIO else MIN_SHARED_BALLOON_RATIO
+                    val minSharedRatio = if (diagonallySeparated || staggeredFinishedLobes) DIAGONAL_SHARED_BALLOON_RATIO else MIN_SHARED_BALLOON_RATIO
                     if (sharedRatio >= minSharedRatio) return true
                     val layoutsClearlySeparated = detectedLayoutsClearlySeparated(a, b, firstLayout, secondLayout)
                     if (a.translation.isNotBlank() && b.translation.isNotBlank()) {
                         // After translation, source OCR punctuation must not pull two detached
                         // balloon regions back together. A connector may join only a very close
                         // split region; clearly separated detected balloons always stay apart.
-                        if (layoutsClearlySeparated || diagonallySeparated) return false
+                        if (layoutsClearlySeparated || diagonallySeparated || staggeredFinishedLobes) return false
                         return connectorContinuation
                     }
                     if (continuousParagraph) return true
+                    if (staggeredFinishedLobes) return false
                     // Inside the same balloon area or proximity, allow dialogue sentences to merge
                     // unless they belong to diagonally separate figure-8 lobes or merely kiss at edges.
                     if (!layoutsClearlySeparated && !diagonallySeparated &&
-                        (isOpenEndedContinuation(a, b) || sharedRatio >= 0.25f || shouldMergeByProximity(a, b, paragraphGlyphGap))
+                        (openEnded || sharedRatio >= 0.25f || shouldMergeByProximity(a, b, paragraphGlyphGap))
                     ) {
                         return true
                     }
                     if (connectorContinuation && layoutsClearlySeparated) return false
                 }
+                if (staggeredFinishedLobes) return false
                 return continuousParagraph || connectorContinuation
             }
+            if (staggeredFinishedLobes) return false
             val detected = if (a.balloonDetected) a else b
             val candidate = if (a.balloonDetected) b else a
             val detectedLayout = detected.layoutRegion
@@ -92,7 +97,7 @@ object TranslationBlockGrouper {
                 if (a.translation.isBlank() && b.translation.isBlank() &&
                     !diagonallySeparated &&
                     isAdjacentToDetectedBalloon(candidate, detected, detectedLayout, paragraphGlyphGap) &&
-                    (isOpenEndedContinuation(a, b) || colorsAreCompatible(a.backgroundColor, b.backgroundColor))
+                    (openEnded || colorsAreCompatible(a.backgroundColor, b.backgroundColor))
                 ) {
                     return true
                 }
@@ -100,7 +105,17 @@ object TranslationBlockGrouper {
             if (!colorsAreCompatible(a.backgroundColor, b.backgroundColor)) return false
             return continuousParagraph || connectorContinuation
         }
+        if (staggeredFinishedLobes) return false
         return visualSizeCompatible && !diagonallySeparated && (continuousParagraph || connectorContinuation || shouldMergeByProximity(a, b, paragraphGlyphGap))
+    }
+
+    private fun areStaggeredLobes(a: TranslationBlock, b: TranslationBlock): Boolean {
+        val horizontalOverlap = (minOf(a.x + a.width, b.x + b.width) - maxOf(a.x, b.x)).coerceAtLeast(0f)
+        val minWidth = minOf(a.width, b.width).coerceAtLeast(1f)
+        val maxWidth = maxOf(a.width, b.width).coerceAtLeast(1f)
+        val overlapRatio = horizontalOverlap / minWidth
+        val centerDiffX = abs((a.x + a.width / 2f) - (b.x + b.width / 2f))
+        return overlapRatio < MAX_STAGGERED_LOBE_OVERLAP && centerDiffX > maxWidth * MIN_STAGGERED_CENTER_SHIFT_RATIO
     }
 
     private fun areDiagonallySeparatedSources(a: TranslationBlock, b: TranslationBlock): Boolean {
@@ -192,8 +207,8 @@ object TranslationBlockGrouper {
                     enclosingNullable(first, second)
                 }
             }
-            a.balloonDetected -> a.layoutRegion ?: a.defaultLayoutRegion()
-            b.balloonDetected -> b.layoutRegion ?: b.defaultLayoutRegion()
+            a.balloonDetected -> mergeWithDetectedLayout(a, b)
+            b.balloonDetected -> mergeWithDetectedLayout(b, a)
             else -> enclosingNullable(a.layoutRegion, b.layoutRegion) ?: enclosing(a.defaultLayoutRegion(), b.defaultLayoutRegion())
         }
         val mergedBackground = when {
@@ -216,6 +231,20 @@ object TranslationBlockGrouper {
             sourceCleanupRegions = (a.resolvedCleanupPatches(Float.MAX_VALUE, Float.MAX_VALUE) +
                 b.resolvedCleanupPatches(Float.MAX_VALUE, Float.MAX_VALUE)).map { it.region },
         )
+    }
+
+    private fun mergeWithDetectedLayout(
+        detected: TranslationBlock,
+        other: TranslationBlock,
+    ): TranslationRegion {
+        val detectedLayout = detected.layoutRegion ?: detected.defaultLayoutRegion()
+        val otherCenterX = other.x + other.width / 2f
+        val otherCenterY = other.y + other.height / 2f
+        val centerInsideDetected = otherCenterX in detectedLayout.x..(detectedLayout.x + detectedLayout.width) &&
+            otherCenterY in detectedLayout.y..(detectedLayout.y + detectedLayout.height)
+        if (centerInsideDetected) return detectedLayout
+        val otherLayout = other.layoutRegion ?: other.defaultLayoutRegion()
+        return enclosing(detectedLayout, otherLayout)
     }
 
     private fun isAdjacentToDetectedBalloon(
@@ -241,6 +270,6 @@ object TranslationBlockGrouper {
     private fun enclosingNullable(first: TranslationRegion?, second: TranslationRegion?): TranslationRegion? = when { first == null -> second; second == null -> first; else -> enclosing(first, second) }
     private fun enclosing(first: TranslationRegion, second: TranslationRegion): TranslationRegion { val l = minOf(first.x, second.x); val t = minOf(first.y, second.y); val r = maxOf(first.x + first.width, second.x + second.width); val b = maxOf(first.y + first.height, second.y + second.height); return TranslationRegion(l, t, r - l, b - t) }
     private val readingOrder = compareBy<TranslationBlock> { it.y }.thenBy { it.x }
-    private const val MAX_ANGLE_DIFFERENCE = 12f; private const val MIN_SHARED_BALLOON_RATIO = 0.15f; private const val DIAGONAL_SHARED_BALLOON_RATIO = 0.55f; private const val MAX_DIAGONAL_LOBE_OVERLAP = 0.25f; private const val MIN_DIAGONAL_CENTER_SHIFT_RATIO = 0.55f; private const val MAX_CENTER_OFFSET_RATIO = 0.65f; private const val MAX_GLYPH_GAP = 2.0f; private const val MAX_COMIC_PARAGRAPH_GLYPH_GAP = 2.8f; private const val MAX_PADDLE_PARAGRAPH_GLYPH_GAP = 2.6f; private const val MAX_CONNECTOR_GLYPH_GAP = 3.8f; private const val MAX_DETECTED_LAYOUT_GLYPH_GAP = 0.85f; private const val MIN_HORIZONTAL_OVERLAP = 0.15f; private const val MAX_COLOR_DISTANCE_SQUARED = 4_900; private const val MAX_VISUAL_SIZE_RATIO = 2.2f
+    private const val MAX_ANGLE_DIFFERENCE = 12f; private const val MIN_SHARED_BALLOON_RATIO = 0.15f; private const val DIAGONAL_SHARED_BALLOON_RATIO = 0.55f; private const val MAX_DIAGONAL_LOBE_OVERLAP = 0.25f; private const val MIN_DIAGONAL_CENTER_SHIFT_RATIO = 0.55f; private const val MAX_STAGGERED_LOBE_OVERLAP = 0.50f; private const val MIN_STAGGERED_CENTER_SHIFT_RATIO = 0.38f; private const val MAX_CENTER_OFFSET_RATIO = 0.65f; private const val MAX_GLYPH_GAP = 2.0f; private const val MAX_COMIC_PARAGRAPH_GLYPH_GAP = 2.8f; private const val MAX_PADDLE_PARAGRAPH_GLYPH_GAP = 2.6f; private const val MAX_CONNECTOR_GLYPH_GAP = 3.8f; private const val MAX_DETECTED_LAYOUT_GLYPH_GAP = 0.85f; private const val MIN_HORIZONTAL_OVERLAP = 0.15f; private const val MAX_COLOR_DISTANCE_SQUARED = 4_900; private const val MAX_VISUAL_SIZE_RATIO = 2.2f
     private val continuationConnectors = setOf("a", "an", "the", "of", "to", "in", "on", "at", "from", "for", "with", "by", "and", "or", "but", "my", "your", "his", "her", "our", "their", "this", "that", "o", "os", "as", "um", "uma", "uns", "umas", "de", "do", "da", "dos", "das", "em", "no", "na", "nos", "nas", "ao", "aos", "à", "às", "para", "por", "com", "sem", "pelo", "pela", "num", "numa", "e", "ou", "mas", "meu", "minha", "seu", "sua", "nosso", "nossa", "que")
 }

@@ -113,7 +113,7 @@ internal object MlKitLineClusterer {
 
     private const val MIN_LOBE_HORIZONTAL_OVERLAP = 0.15f
     private const val MIN_LOBE_CENTER_SHIFT_RATIO = 0.55f
-    private const val SENTENCE_SPLIT_HORIZONTAL_OVERLAP = 0.35f
-    private const val SENTENCE_SPLIT_CENTER_RATIO = 0.45f
+    private const val SENTENCE_SPLIT_HORIZONTAL_OVERLAP = 0.52f
+    private const val SENTENCE_SPLIT_CENTER_RATIO = 0.38f
     private const val TERMINAL_PUNCTUATION_GAP_MULTIPLIER = 1.4f
 }

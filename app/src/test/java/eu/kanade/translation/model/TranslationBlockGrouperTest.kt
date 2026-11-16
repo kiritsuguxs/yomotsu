@@ -204,6 +204,25 @@ class TranslationBlockGrouperTest {
         assertEquals(2, TranslationBlockGrouper.group(listOf(topRight, bottomLeft), strict = true).size)
     }
 
+    @Test
+    fun `staggered figure-8 double shout balloon lobes with separate sentences stay separate`() {
+        val topLeft = block(
+            text = "You're always like this!",
+            x = 40f,
+            y = 60f,
+            layout = TranslationRegion(25f, 40f, 200f, 95f),
+        ).copy(width = 180f, height = 60f)
+        val bottomRight = block(
+            text = "Don't you know what I'm thinking?!",
+            x = 135f,
+            y = 135f,
+            layout = TranslationRegion(120f, 115f, 225f, 105f),
+        ).copy(width = 200f, height = 70f)
+
+        assertEquals(2, TranslationBlockGrouper.group(listOf(topLeft, bottomRight), strict = false).size)
+        assertEquals(2, TranslationBlockGrouper.group(listOf(topLeft, bottomRight), strict = true).size)
+    }
+
     private fun block(text: String, translation: String = "", x: Float, y: Float, detected: Boolean = true, layout: TranslationRegion?) = TranslationBlock(
         text = text, translation = translation, width = 100f, height = 45f, x = x, y = y,
         symHeight = 20f, symWidth = 12f, angle = 0f,

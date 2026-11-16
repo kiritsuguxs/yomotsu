@@ -133,6 +133,26 @@ class SpeechBubbleBackgroundRegressionTest {
         assertEquals(WHITE, analyzer.analyze(grouped.single()).backgroundColor)
     }
 
+    @Test
+    fun `tight spiky white balloon on black page recovers white instead of sampling black panel`() {
+        val shout = line("ME TOO! I SAID!", 140f, 170f, 120f, 60f).copy(
+            symWidth = 22f,
+            symHeight = 28f,
+        )
+        // Outer ring (0.65 * 28 = 18px) extends past the tight white starburst into pure BLACK,
+        // while the interior around the sparse black lettering (~30% ink) is bright WHITE.
+        val page = bitmap { x, y ->
+            val insideBurst = x in 134..266 && y in 164..236
+            val ink = x in 145..255 && y in 175..225 && x % 10 < 3 && y % 12 < 5
+            if (insideBurst && !ink) WHITE else BLACK
+        }
+
+        val result = SpeechBubbleAnalyzer(page, 400, 400, listOf(shout.sourceRegion())).analyze(shout)
+
+        assertEquals(WHITE, result.backgroundColor, "Spiky white balloon must never sample outer black panel as its cleanup fill")
+        assertEquals(BLACK, result.foregroundColor)
+    }
+
     private fun lines() = listOf(
         line("THE FIRST PRINTED LINE", 90f, 158f, 220f, 18f),
         line("A WIDER MIDDLE PRINTED LINE", 80f, 180f, 240f, 16f),

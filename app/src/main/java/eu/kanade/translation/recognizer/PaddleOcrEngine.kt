@@ -72,6 +72,7 @@ class PaddleOcrEngine(
                         text = block.text,
                         confidence = block.confidence,
                         points = block.box.points.map { point -> OcrPoint(point.x, point.y) },
+                        pageWidth = result.imageWidth,
                     )
                 }
                 val totalTimeMs = elapsedMs(pageStart)
@@ -175,6 +176,7 @@ class PaddleOcrEngine(
                         tile = tile,
                         prevTile = tiles.getOrNull(index - 1),
                         nextTile = tiles.getOrNull(index + 1),
+                        pageWidth = pageWidth,
                         out = rawBlocks,
                     )
                 }
@@ -208,6 +210,7 @@ class PaddleOcrEngine(
                         tile = tile,
                         prevTile = tiles.getOrNull(index - 1),
                         nextTile = tiles.getOrNull(index + 1),
+                        pageWidth = pageWidth,
                         out = rawBlocks,
                     )
                 }
@@ -230,6 +233,7 @@ class PaddleOcrEngine(
         tile: PaddleWebtoonTiler.TileWindow,
         prevTile: PaddleWebtoonTiler.TileWindow?,
         nextTile: PaddleWebtoonTiler.TileWindow?,
+        pageWidth: Int,
         out: MutableList<OcrTextBlock>,
     ) {
         for (item in tileRes.results) {
@@ -242,6 +246,7 @@ class PaddleOcrEngine(
                 text = item.text,
                 confidence = item.confidence,
                 points = pagePoints,
+                pageWidth = pageWidth,
             )
             if (mapped != null) {
                 out += mapped

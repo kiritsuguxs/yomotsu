@@ -174,7 +174,7 @@ internal class AotPageInpainter(
                     height = ph / scaleY,
                 )
 
-                val stats = computePatchLuminanceStats(patchOut)
+                val stats = computePatchLuminanceStats(patchOut, target.mask)
                 block.backgroundColor = null
                 block.balloonDetected = false
                 block.foregroundColor = if (stats.meanLum < DARK_BG_LUMINANCE_THRESHOLD) {
@@ -543,20 +543,37 @@ internal class AotPageInpainter(
 
     private class PatchStats(val meanLum: Float, val stdLum: Float)
 
-    private fun computePatchLuminanceStats(pixels: IntArray): PatchStats {
+    private fun computePatchLuminanceStats(pixels: IntArray, mask: BooleanArray? = null): PatchStats {
         if (pixels.isEmpty()) return PatchStats(255f, 0f)
         var sum = 0.0
         var sum2 = 0.0
-        for (px in pixels) {
-            val r = (px ushr 16) and 0xFF
-            val g = (px ushr 8) and 0xFF
-            val b = px and 0xFF
-            val lum = 0.299 * r + 0.587 * g + 0.114 * b
-            sum += lum
-            sum2 += lum * lum
+        var count = 0
+        if (mask != null && mask.size == pixels.size) {
+            for (i in pixels.indices) {
+                if (!mask[i]) continue
+                val px = pixels[i]
+                val r = (px ushr 16) and 0xFF
+                val g = (px ushr 8) and 0xFF
+                val b = px and 0xFF
+                val lum = 0.299 * r + 0.587 * g + 0.114 * b
+                sum += lum
+                sum2 += lum * lum
+                count++
+            }
         }
-        val mean = sum / pixels.size
-        val std = sqrt((sum2 / pixels.size - mean * mean).coerceAtLeast(0.0))
+        if (count == 0) {
+            for (px in pixels) {
+                val r = (px ushr 16) and 0xFF
+                val g = (px ushr 8) and 0xFF
+                val b = px and 0xFF
+                val lum = 0.299 * r + 0.587 * g + 0.114 * b
+                sum += lum
+                sum2 += lum * lum
+            }
+            count = pixels.size
+        }
+        val mean = sum / count
+        val std = sqrt((sum2 / count - mean * mean).coerceAtLeast(0.0))
         return PatchStats(mean.toFloat(), std.toFloat())
     }
 

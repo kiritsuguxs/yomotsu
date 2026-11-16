@@ -76,46 +76,90 @@ class SpeechBubbleAnalyzer(
             horizontal, vertical,
         )
         val outer = dominantBackground(samples)
-        // Preserve established samples supported on both axes. A nearby collar
-        // alone can be a tight caption outline rather than its background.
-        if (outer != null && hasColorSupport(horizontal, outer.color) && hasColorSupport(vertical, outer.color)) return outer
-
-        // Peer OCR lines can mask the inner samples, leaving only lateral page
-        // color outside the balloon. Recover evidence close to each ORIGINAL
-        // source; the enclosing paragraph corners can also cross the contour.
         val nearby = mutableListOf<Int>()
         for (source in block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }) {
             for (margin in 1..2) sampleRing(nearby, source, margin, margin)
         }
-        val sampledNearby = dominantBackground(nearby)?.takeIf { it.confidence >= MIN_BACKGROUND_RATIO } ?: outer
-        if (sampledNearby != null) return sampledNearby
+        val dominantNearby = dominantBackground(nearby)
+
+        // Preserve established samples supported on both axes. A nearby collar
+        // alone can be a tight caption outline rather than its background.
+        // However, on spiky shout balloons over dark panels, the outer 0.65*symHeight
+        // ring can step past the jagged contour onto the black panel while the interior
+        // between glyphs is bright white. Reject dark outer samples contradicted by
+        // bright nearby/interior evidence without affecting real dark balloons.
+        if (outer != null && hasColorSupport(horizontal, outer.color) && hasColorSupport(vertical, outer.color)) {
+            if (luminance(outer.color) < DARK_OUTER_LUMINANCE_THRESHOLD) {
+                if (dominantNearby != null &&
+                    dominantNearby.confidence >= MIN_BACKGROUND_RATIO &&
+                    luminance(dominantNearby.color) >= BRIGHT_INTERIOR_MIN_LUMINANCE &&
+                    !colorsMatch(dominantNearby.color, outer.color)
+                ) {
+                    return dominantNearby
+                }
+                val brightInterior = sampleBrightInterior(block, nearby, outer.color)
+                if (brightInterior != null) return brightInterior
+            }
+            return outer
+        }
+
+        // Peer OCR lines can mask the inner samples, leaving only lateral page
+        // color outside the balloon. Recover evidence close to each ORIGINAL
+        // source; the enclosing paragraph corners can also cross the contour.
+        val sampledNearby = dominantNearby?.takeIf { it.confidence >= MIN_BACKGROUND_RATIO } ?: outer
+        if (sampledNearby != null) {
+            if (luminance(sampledNearby.color) < DARK_OUTER_LUMINANCE_THRESHOLD) {
+                val brightInterior = sampleBrightInterior(block, nearby, sampledNearby.color)
+                if (brightInterior != null) return brightInterior
+            }
+            return sampledNearby
+        }
 
         // Fallback for shout/jagged balloons where outer ring hits dark contour spikes:
         // Sample non-text interior pixels between glyphs inside the bounding box.
-        val interior = mutableListOf<Int>()
-        val left = toBitmapX(block.x)
-        val right = toBitmapX(block.x + block.width)
-        val top = toBitmapY(block.y)
-        val bottom = toBitmapY(block.y + block.height)
-        if (right > left && bottom > top) {
+        return sampleBrightInterior(block, nearby = emptyList(), darkCandidate = null, minRatio = 0.40f)
+    }
+
+    private fun sampleBrightInterior(
+        block: TranslationBlock,
+        nearby: List<Int>,
+        darkCandidate: Int?,
+        minRatio: Float = MIN_INTERIOR_BRIGHT_RATIO,
+    ): BackgroundSample? {
+        val bright = mutableListOf<Int>()
+        var totalSamples = 0
+        for (source in block.sourceRegions.ifEmpty { listOf(block.sourceRegion()) }) {
+            val left = toBitmapX(source.x)
+            val right = toBitmapX(source.x + source.width)
+            val top = toBitmapY(source.y)
+            val bottom = toBitmapY(source.y + source.height)
+            if (right <= left || bottom <= top) continue
             val stepX = maxOf(1, (right - left) / 12)
             val stepY = maxOf(1, (bottom - top) / 12)
             for (y in top..bottom step stepY) {
                 for (x in left..right step stepX) {
                     if (x in 0 until bitmap.width && y in 0 until bitmap.height) {
                         val pixel = pixels[y * bitmap.width + x]
-                        val r = pixel ushr 16 and 0xff
-                        val g = pixel ushr 8 and 0xff
-                        val b = pixel and 0xff
-                        val lum = (r * 299 + g * 587 + b * 114) / 1000
-                        if (lum >= 150) {
-                            interior.add(pixel)
+                        if (Color.alpha(pixel) < MIN_ALPHA) continue
+                        totalSamples++
+                        if (luminance(pixel) >= BRIGHT_INTERIOR_MIN_LUMINANCE) {
+                            bright.add(pixel)
                         }
                     }
                 }
             }
         }
-        return dominantBackground(interior)?.takeIf { it.confidence >= 0.40f }
+        if (totalSamples < MIN_COLOR_SAMPLES) return null
+        val brightRatio = bright.size / totalSamples.toFloat()
+        if (darkCandidate != null) {
+            val nearbySupportsDark = nearby.size >= MIN_COLOR_SAMPLES &&
+                nearby.count { colorsMatch(it, darkCandidate) } / nearby.size.toFloat() >= DARK_NEARBY_CONFIRM_RATIO
+            if (nearbySupportsDark && brightRatio < STRONG_INTERIOR_BRIGHT_RATIO) return null
+        }
+        if (brightRatio < minRatio) return null
+        val dominantBright = dominantBackground(bright) ?: return null
+        if (darkCandidate != null && colorsMatch(dominantBright.color, darkCandidate)) return null
+        return dominantBright.copy(confidence = maxOf(dominantBright.confidence, brightRatio))
     }
 
     private fun hasColorSupport(samples: List<Int>, color: Int): Boolean =
@@ -511,6 +555,7 @@ class SpeechBubbleAnalyzer(
         const val ROUNDED_SAFE_LAYOUT_INSET_RATIO=0.1465f; const val ROUNDED_SAFE_LAYOUT_MIN_ASPECT=0.75f; const val ROUNDED_SAFE_LAYOUT_MAX_ASPECT=1.8f
         const val BALLOON_VERTICAL_REACH_IN_GLYPHS=18f; const val MIN_SOURCE_DIMENSION_RATIO=0.55f; const val MAX_COLOR_DISTANCE_SQUARED=6400; const val MAX_CLUSTER_DISTANCE_SQUARED=4900; const val MAX_LUMINANCE_DELTA=58; const val COLOR_BUCKET_SIZE=32
         const val INTERIOR_GRID_SAMPLES=10; const val MIN_INTERIOR_UNIFORM_SAMPLES=12; const val MAX_INTERIOR_LUMINANCE_STD=9.5; const val MAX_INTERIOR_GRADIENT_DELTA=15.0
+        const val DARK_OUTER_LUMINANCE_THRESHOLD=100; const val BRIGHT_INTERIOR_MIN_LUMINANCE=150; const val MIN_INTERIOR_BRIGHT_RATIO=0.56f; const val STRONG_INTERIOR_BRIGHT_RATIO=0.65f; const val DARK_NEARBY_CONFIRM_RATIO=0.78f
     }
 }
 

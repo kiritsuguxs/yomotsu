@@ -9,6 +9,7 @@ object PaddleTextBlockMapper {
         text: String,
         confidence: Float,
         points: List<OcrPoint>,
+        pageWidth: Int = 0,
     ): OcrTextBlock? {
         val normalizedText = text.trim()
         if (normalizedText.isEmpty() || points.size < REQUIRED_POINT_COUNT) return null
@@ -28,7 +29,13 @@ object PaddleTextBlockMapper {
         val characterCount = normalizedText.count { !it.isWhitespace() }.coerceAtLeast(1)
         val boxArea = width * height
         val areaPerCharacter = boxArea / characterCount
-        if (areaPerCharacter > MAX_AREA_PER_CHARACTER && characterCount <= SHORT_TEXT_LIMIT) return null
+        val widthScale = if (pageWidth > BASE_REFERENCE_PAGE_WIDTH) {
+            pageWidth / BASE_REFERENCE_PAGE_WIDTH.toFloat()
+        } else {
+            1f
+        }
+        val maxAreaPerCharacter = MAX_AREA_PER_CHARACTER * widthScale * widthScale
+        if (areaPerCharacter > maxAreaPerCharacter && characterCount <= SHORT_TEXT_LIMIT) return null
 
         val topLeft = quad[0]
         val topRight = quad[1]
@@ -65,5 +72,6 @@ object PaddleTextBlockMapper {
     private const val REQUIRED_POINT_COUNT = 4
     private const val MIN_CONFIDENCE = 0.40f
     private const val SHORT_TEXT_LIMIT = 12
+    private const val BASE_REFERENCE_PAGE_WIDTH = 1000
     private const val MAX_AREA_PER_CHARACTER = 20_000f
 }
