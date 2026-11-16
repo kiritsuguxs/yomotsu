@@ -98,4 +98,13 @@ class GroqModelsCatalogTest {
         assertEquals("131k ctx", GroqModelsCatalog.formatContextLength(131072))
         assertEquals("1M ctx", GroqModelsCatalog.formatContextLength(1048576))
     }
+
+    @Test
+    fun `buildModelsRequest forces network refresh with Bearer auth`() {
+        val request = GroqModelsCatalog.buildModelsRequest("gsk_test_key")
+
+        assertEquals("https://api.groq.com/openai/v1/models", request.url.toString())
+        assertEquals("Bearer gsk_test_key", request.header("Authorization"))
+        assertTrue(request.cacheControl.noCache)
+    }
 }

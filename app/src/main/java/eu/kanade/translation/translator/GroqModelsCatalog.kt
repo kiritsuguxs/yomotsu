@@ -1,6 +1,7 @@
 package eu.kanade.translation.translator
 
 import eu.kanade.tachiyomi.network.await
+import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -43,6 +44,16 @@ internal object GroqModelsCatalog {
 
     private val curatedById = curatedDefaults.associateBy { it.id.lowercase() }
 
+    internal fun buildModelsRequest(cleanApiKey: String): Request {
+        return Request.Builder()
+            .url(MODELS_URL)
+            .cacheControl(CacheControl.FORCE_NETWORK)
+            .header("Authorization", "Bearer $cleanApiKey")
+            .header("Accept", "application/json")
+            .get()
+            .build()
+    }
+
     suspend fun fetchModels(
         apiKey: String,
         client: OkHttpClient = TranslationNetworkHelper.sharedClient,
@@ -52,12 +63,7 @@ internal object GroqModelsCatalog {
             return curatedDefaults
         }
 
-        val request = Request.Builder()
-            .url(MODELS_URL)
-            .header("Authorization", "Bearer $cleanKey")
-            .header("Accept", "application/json")
-            .get()
-            .build()
+        val request = buildModelsRequest(cleanKey)
 
         val responseBody = client.newCall(request).await().use { response ->
             val body = response.body.string()

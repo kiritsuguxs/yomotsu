@@ -81,12 +81,12 @@
     <string name="pref_translation_vision_bubble_context">Enviar recorte de bocadillos a la IA (Visión)</string>
     <string name="pref_translation_vision_bubble_context_summary">Adjunta una cuadrícula numerada con los bocadillos para que Gemini o Groq vean expresiones y tamaño del globo (usa más tokens de imagen; vuelve automáticamente a solo texto si no es compatible)</string>
     <string name="pref_groq_models">Modelos de Groq</string>
-    <string name="pref_groq_models_summary">Muestra los modelos recomendados o consulta los modelos activos en la API de Groq</string>
     <string name="groq_models_title">Modelos de Groq</string>
     <string name="groq_models_search">Filtrar por nombre o ID</string>
     <string name="groq_models_vision_only">Con Visión</string>
     <string name="groq_models_loading">Cargando modelos de Groq…</string>
     <string name="groq_models_error">No se pudieron cargar los modelos de Groq.</string>
+    <string name="groq_models_missing_key_hint">Mostrando modelos recomendados. Añade tu clave API de Groq para consultar los modelos activos.</string>
     <string name="groq_models_empty">No se encontraron modelos con ese filtro.</string>
     <string name="groq_models_refresh">Actualizar</string>
     <string name="groq_models_retry">Reintentar</string>

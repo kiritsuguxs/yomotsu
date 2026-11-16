@@ -81,12 +81,12 @@
     <string name="pref_translation_vision_bubble_context">Send bubble crops to AI (Vision)</string>
     <string name="pref_translation_vision_bubble_context_summary">Attaches a numbered grid of speech bubbles so Gemini or Groq can see speaker expressions and bubble shapes (uses extra image tokens; auto-fallbacks to text-only if unsupported)</string>
     <string name="pref_groq_models">Browse Groq models</string>
-    <string name="pref_groq_models_summary">Shows recommended free-tier models or live models from your Groq API key</string>
     <string name="groq_models_title">Groq models</string>
     <string name="groq_models_search">Filter by name or ID</string>
     <string name="groq_models_vision_only">Vision only</string>
     <string name="groq_models_loading">Loading Groq models…</string>
     <string name="groq_models_error">Could not load Groq models.</string>
+    <string name="groq_models_missing_key_hint">Showing recommended models. Add a Groq API key to query all active models.</string>
     <string name="groq_models_empty">No matching Groq models found.</string>
     <string name="groq_models_refresh">Refresh</string>
     <string name="groq_models_retry">Retry</string>

@@ -151,15 +151,6 @@ object SettingsTranslationScreen : SearchableSettings {
                         } else {
                             null
                         },
-                    ),
-                )
-                if (isGroq) {
-                    add(
-                        Preference.PreferenceItem.TextPreference(
-                            title = stringResource(ATMR.strings.pref_groq_models),
-                            subtitle = stringResource(ATMR.strings.pref_groq_models_summary),
-                            onClick = { onGroqModelPicker(modelPreference) },
-                        ),
                     )
                 }
             }
@@ -289,15 +280,6 @@ object SettingsTranslationScreen : SearchableSettings {
                         } else {
                             null
                         },
-                    ),
-                )
-                if (isGroq) {
-                    add(
-                        Preference.PreferenceItem.TextPreference(
-                            title = stringResource(ATMR.strings.pref_groq_models),
-                            subtitle = stringResource(ATMR.strings.pref_groq_models_summary),
-                            onClick = { onGroqModelPicker(modelPreference) },
-                        ),
                     )
                 }
             }

@@ -134,6 +134,51 @@ internal fun GroqModelsDialog(
                     }
                 }
 
+                if (!isLoading) {
+                    when {
+                        errorMessage != null -> {
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = stringResource(ATMR.strings.groq_models_error),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                        )
+                                        errorMessage?.takeIf { it.isNotBlank() }?.let { detail ->
+                                            Text(
+                                                text = detail,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                    }
+                                    TextButton(onClick = { reloadNonce++ }) {
+                                        Text(text = stringResource(ATMR.strings.groq_models_retry))
+                                    }
+                                }
+                            }
+                        }
+                        apiKey.isBlank() -> {
+                            Text(
+                                text = stringResource(ATMR.strings.groq_models_missing_key_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -151,29 +196,6 @@ internal fun GroqModelsDialog(
                                     text = stringResource(ATMR.strings.groq_models_loading),
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
-                            }
-                        }
-                        errorMessage != null && models.isEmpty() -> {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(12.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(ATMR.strings.groq_models_error),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                                errorMessage?.takeIf { it.isNotBlank() }?.let { detail ->
-                                    Text(
-                                        text = detail,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                TextButton(onClick = { reloadNonce++ }) {
-                                    Text(text = stringResource(ATMR.strings.groq_models_retry))
-                                }
                             }
                         }
                         filteredModels.isEmpty() -> {
