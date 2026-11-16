@@ -3,6 +3,54 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.23.0
+
+🇧🇷 **Português (Brasil)**
+
+### ✨ Novidades
+- **Integração com Groq no lugar do OpenRouter:** Suporte completo à API do **Groq** para tradução de quadrinhos, novels e glossário por IA, com seletor ao vivo de modelos (destaque para modelos gratuitos e recomendados).
+- **Seletor de modelos do Gemini ao vivo:** Novo diálogo para consultar e selecionar diretamente os modelos ativos da sua chave Gemini, já atualizado com `gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.6-flash`, `gemini-4-hydrogen` e `gemini-3.1-pro-preview`.
+- **Progresso detalhado na notificação de tradução:** A notificação passa a atualizar em tempo real com a contagem de lotes e páginas concluídas (`Traduzindo textos: X/Y lotes (A/B págs)`) em vez de parecer parada até o fim do capítulo.
+
+### 🚀 Melhorias
+- **Gemini muito mais rápido:**
+  - Controle inteligente de raciocínio (`thinkingConfig`): aplica nível `"minimal"` nos modelos `3.5-flash-lite` / `3.1-flash-lite` / `3.6-flash` e `"low"` em `3.8-flash` / `gemini-4-*` / `-pro`, além de filtrar partes internas de raciocínio (`thought`).
+  - Lotes maiores e paralelos em quadrinhos (até **16 páginas / 75 balões** por lote, com **2 lotes simultâneos**) e até **3 chunks paralelos** em novels.
+  - Prompt enxuto sem dupla passagem desnecessária e resposta estruturada em JSON (`application/json`).
+- **Streaming SSE no Gemini:** Tradução de quadrinhos, novels e geração de glossário passam a usar streaming (`streamGenerateContent?alt=sse`) com fallback automático caso o modelo não suporte.
+- **Encaixe de texto e contraste em balões/webtoons:** Melhor aproveitamento do espaço interno nos balões sem alterar layouts normais e contraste aprimorado na reconstrução de fundo por IA (`AOT-GAN`).
+- **Pipeline simplificada:** Removida a opção experimental de envio de recortes visuais de balões (*AI Vision bubble montage*), mantendo o fluxo mais leve e focado nos seletores de modelo.
+
+### 🛠️ Correções
+- **Fim dos timeouts no Gemini:** Removido o limite global de 2 minutos que interrompia capítulos longos, ajustados os timeouts dedicados de rede (leitura de até 5 min) inclusive no tradutor de novels, e adicionada retentativa automática em falhas transitórias (`408`, timeouts e quedas de socket).
+- **Notificações e UI de episódios de anime:** Corrigida a decodificação de episódios no formato `temporada.milésimos` que apareciam como milhares (ex.: `1.007` → `7`, `2.018` → `18 (S2)`) nas notificações, atualizações, histórico e player.
+- **Balões complexos e OCR em webtoons:** Corrigida a amostragem de cor em balões pontiagudos/de grito, a separação de balões duplos desalinhados e o escalonamento de área do PaddleOCR em páginas longas.
+- **Estabilidade do Groq:** Corrigido mapeamento de blocos não cacheados, sanitização de chaves/respostas, preferência duplicada, diagnóstico de erros e saída JSON estruturada.
+
+---
+
+🇺🇸 **English**
+
+### ✨ New
+- **Groq Integration Replacing OpenRouter:** Full **Groq** API support across comic translation, light novels, and AI glossary generation, featuring a live model picker with free-tier and recommended badges.
+- **Live Gemini Model Picker:** New in-app browser to fetch and pick active models directly from your Gemini API key, updated with `gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.6-flash`, `gemini-4-hydrogen`, and `gemini-3.1-pro-preview`.
+- **Live Batch & Page Progress Notifications:** Translation notifications now update in real time with completed batches and pages (`Translating text: X/Y batches (A/B pages)`) instead of appearing stuck until the chapter finishes.
+
+### 🚀 Improvements
+- **Much Faster Gemini Latency:**
+  - Model-aware `thinkingConfig`: sets `"minimal"` on `3.5-flash-lite` / `3.1-flash-lite` / `3.6-flash` and `"low"` on `3.8-flash` / `gemini-4-*` / `-pro`, while filtering out internal `thought` parts.
+  - Larger parallel batches for comics (up to **16 pages / 75 blocks**, **2 concurrent batches**) and up to **3 concurrent chunks** for novels.
+  - Streamlined prompt without slow double-pass revision and enforced structured JSON mode (`application/json`).
+- **Gemini SSE Streaming:** Comic, novel, and AI glossary requests now stream over SSE (`streamGenerateContent?alt=sse`) with automatic fallback to standard endpoints when needed.
+- **Speech Bubble Fit & AOT Contrast:** Better text fitting inside bubbles without altering normal layouts, plus improved contrast on masked pixels in `AOT-GAN` neural background removal.
+- **Streamlined Pipeline:** Removed the experimental AI Vision bubble montage feature while keeping the dedicated Gemini and Groq model pickers.
+
+### 🛠️ Fixes
+- **Eliminated Gemini Timeouts:** Removed the inherited 2-minute global call timeout, configured dedicated network timeouts (up to 5 min read timeout) including in `NovelTranslator`, and added automatic retries on transient IO errors (`408`, socket resets, and timeouts).
+- **Anime Episode Numbers in Notifications & UI:** Fixed `season.thousandths` episode encoding displaying as thousands (e.g. `1.007` → `7`, `2.018` → `18 (S2)`) across notifications, updates, history, and player.
+- **Complex Balloons & Webtoon OCR:** Fixed background sampling on spiky shout balloons, staggered double-lobe grouping, and PaddleOCR area scaling on tall webtoon strips.
+- **Groq Stability:** Fixed uncached block mapping, key/response sanitization, duplicate settings entries, error diagnostics, and strict JSON output parsing.
+
 ## 0.22.0
 
 🇧🇷 **Português (Brasil)**
