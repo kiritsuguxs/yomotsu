@@ -3,6 +3,44 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.22.0
+
+🇧🇷 **Português (Brasil)**
+
+### ✨ Novidades
+- **Modelos gratuitos do OpenRouter ao vivo:** Seletor em tempo real direto no campo **Modelo de LLM** (botão **Grátis**, em Quadrinhos e Novels), com padrão atualizado para `openrouter/free`.
+- **Visão de balões para IA:** Opção para Gemini e OpenRouter enviarem recortes dos balões junto ao texto para melhorar o contexto e o encaixe das falas, com fallback automático para modo texto.
+- **Retentativa na Pesquisa Global:** Toque no card de erro (ou busque novamente) para reprocessar só as extensões que falharam, mantendo os resultados já carregados.
+
+### 🚀 Melhorias
+- **Detecção e OCR em Webtoons:** Análise fatiada para páginas longas, agrupamento de linhas mais preciso, melhor leitura de balões verticais e prompt refinado.
+- **Tradutor DeepL:** Contexto contínuo dos diálogos anteriores sem custo extra de caracteres, tom mais natural (`prefer_less`, inclusive em `PT-BR`), preservação de formatação em novels e proteção contra cache de marcas d'água.
+- **Pesquisa Global mais resiliente:** Retentativa automática em falhas passageiras (rede, `408`/`429`/`5xx` e Cloudflare) sem encerrar extensões lentas antes da hora.
+
+### 🛠️ Correções
+- **Pesquisa Global:** Eliminado o carregamento infinito causado por perda de atualizações concorrentes e o travamento entre buscas seguidas por esgotamento do pool de threads.
+- **Balões e edição manual:** Melhor separação de balões duplos, contenção de texto em margens brancas, ancoragem correta da limpeza e preservação de ajustes manuais.
+- **Estabilidade:** Correção de leitura simultânea em arquivos compactados, estabilidade no fim de capítulo (Visão/AOT) e novos testes unitários.
+
+---
+
+🇺🇸 **English**
+
+### ✨ New
+- **Live OpenRouter Free Models:** Real-time free model picker directly inside the **LLM Model** dialog (**Free** button, for Comics and Novels), with `openrouter/free` as the new default.
+- **AI Balloon Vision Context:** Opt-in support for Gemini and OpenRouter to inspect balloon crops alongside text for better speaker context and spatial fit, with automatic text-only fallback.
+- **Global Search Retry:** Tap any failed source card (or re-submit the query) to retry only failed sources while keeping loaded results.
+
+### 🚀 Improvements
+- **Webtoon Detection & OCR:** Overlapping strip analysis for tall pages, cleaner line clustering, improved vertical balloon handling, and refined translation prompts.
+- **DeepL Translation:** Sliding context window with zero extra billed characters, more natural dialogue tone (`prefer_less`, including `PT-BR`), preserved formatting for novels, and watermark cache protection.
+- **More Resilient Global Search:** Automatic background retries on transient errors (network drops, `408`/`429`/`5xx`, and Cloudflare contention) without cutting off slow extensions prematurely.
+
+### 🛠️ Fixes
+- **Global Search:** Fixed infinite loading from concurrent lost updates and repeat-search stalls caused by thread-pool exhaustion.
+- **Balloons & Manual Edits:** Better double-balloon splitting, gutter containment for oval layouts, anchored cleanup regions, and protection against overriding manual edits.
+- **Stability:** Fixed concurrent archive stream reads, end-of-chapter Vision/AOT stability, and expanded unit test coverage.
+
 ## 0.21.8
 
 🇧🇷 **Português (Brasil)**
