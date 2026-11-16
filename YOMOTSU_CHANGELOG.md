@@ -3,7 +3,7 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
-## 0.23.0
+## 0.22.1
 
 🇧🇷 **Português (Brasil)**
 
