@@ -114,6 +114,94 @@ class GroqTranslatorOptimizationTest {
         assertEquals("Oi!", unwrapped.getJSONArray("001.jpg").getString(0))
     }
 
+    @Test
+    fun `uses strict json_schema for supported Groq models and omits restrictive top_p`() {
+        val body = buildGroqRequestBody(
+            modelName = "qwen/qwen3.8-27b",
+            systemInstruction = "Translate comics",
+            requestText = "Translate JSON",
+            maxOutputTokens = 4096,
+            temperature = 0.3f,
+            expectedPageKeys = listOf("001.jpg", "002.jpg"),
+            responseFormatMode = initialGroqResponseFormatMode("qwen/qwen3.8-27b"),
+        )
+        val parsed = kotlinx.serialization.json.Json.parseToJsonElement(body) as kotlinx.serialization.json.JsonObject
+        assertFalse("top_p" in parsed)
+
+        val responseFormat = parsed["response_format"] as kotlinx.serialization.json.JsonObject
+        assertEquals("json_schema", (responseFormat["type"] as kotlinx.serialization.json.JsonPrimitive).content)
+        val jsonSchema = responseFormat["json_schema"] as kotlinx.serialization.json.JsonObject
+        assertEquals("true", (jsonSchema["strict"] as kotlinx.serialization.json.JsonPrimitive).content)
+        val schema = jsonSchema["schema"] as kotlinx.serialization.json.JsonObject
+        val properties = schema["properties"] as kotlinx.serialization.json.JsonObject
+        assertTrue("001.jpg" in properties)
+        assertTrue("002.jpg" in properties)
+        assertEquals(GroqResponseFormatMode.JSON_OBJECT, initialGroqResponseFormatMode("llama-3.3-70b-versatile"))
+    }
+
+    @Test
+    fun `detects Groq refusals and handles bare empty responses according to chunk translatability`() {
+        val refusalBody = """{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":null,"refusal":"Safety policy"}}]}"""
+        val refusalError = org.junit.jupiter.api.Assertions.assertThrows(TranslationProviderException::class.java) {
+            parseGroqTranslationBody(
+                responseBody = refusalBody,
+                modelName = "qwen/qwen3.8-27b",
+                apiKey = "gsk_test",
+                expectedPageKeys = listOf("001.jpg"),
+                hasTranslatableBlocks = true,
+                isFinalAttempt = false,
+            )
+        }
+        assertFalse(refusalError.retryable)
+        assertTrue(refusalError.message.orEmpty().contains("openai/gpt-oss-120b"))
+
+        val bareEmptyQuoteBody = """{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":"\"\""}}]}"""
+        val firstAttemptError = org.junit.jupiter.api.Assertions.assertThrows(TranslationProviderException::class.java) {
+            parseGroqTranslationBody(
+                responseBody = bareEmptyQuoteBody,
+                modelName = "qwen/qwen3.8-27b",
+                apiKey = "gsk_test",
+                expectedPageKeys = listOf("001.jpg"),
+                hasTranslatableBlocks = false,
+                isFinalAttempt = false,
+            )
+        }
+        assertTrue(firstAttemptError.retryable)
+
+        val recoveredWatermarkChunk = parseGroqTranslationBody(
+            responseBody = bareEmptyQuoteBody,
+            modelName = "qwen/qwen3.8-27b",
+            apiKey = "gsk_test",
+            expectedPageKeys = listOf("001.jpg"),
+            hasTranslatableBlocks = false,
+            isFinalAttempt = true,
+        )
+        assertEquals(0, recoveredWatermarkChunk.length())
+
+        val finalDialogueError = org.junit.jupiter.api.Assertions.assertThrows(TranslationProviderException::class.java) {
+            parseGroqTranslationBody(
+                responseBody = bareEmptyQuoteBody,
+                modelName = "qwen/qwen3.8-27b",
+                apiKey = "gsk_test",
+                expectedPageKeys = listOf("001.jpg"),
+                hasTranslatableBlocks = true,
+                isFinalAttempt = true,
+            )
+        }
+        assertFalse(finalDialogueError.retryable)
+        assertTrue(finalDialogueError.message.orEmpty().contains("openai/gpt-oss-120b"))
+    }
+
+    @Test
+    fun `comic prompt forbids returning bare empty quotes or empty object`() {
+        val prompt = buildComicTranslationPrompt(
+            eu.kanade.translation.recognizer.TextRecognizerLanguage.ENGLISH,
+            TextTranslatorLanguage.PORTUGUESE,
+        )
+        assertTrue(prompt.contains("NEVER output bare \"\" or {}"))
+        assertTrue(buildGroqFormatRetryReminder(listOf("001.jpg")).contains("\"001.jpg\""))
+    }
+
     private fun block(text: String) = TranslationBlock(
         text = text,
         width = 160f,

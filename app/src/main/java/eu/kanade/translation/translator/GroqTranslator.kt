@@ -11,6 +11,7 @@ import eu.kanade.translation.model.TranslationRecoveryPolicy
 import eu.kanade.translation.recognizer.TextRecognizerLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -117,18 +118,23 @@ class GroqTranslator(
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val systemInstruction = buildComicTranslationPrompt(fromLang, toLang) +
             "\nIMPORTANT: Return ONLY a valid JSON object. No explanations, no markdown formatting."
+        val expectedPageKeys = uncachedPages.keys.toList()
+        val hasTranslatableBlocks = uncachedPages.values.flatten().any { block ->
+            TranslationQualityGuard.shouldRetry(block.text, "", fromLang, toLang)
+        }
 
         suspend fun executeSingleGroqCall(
             attachment: VisionMontageAttachment?,
-            useJsonMode: Boolean,
+            responseFormatMode: GroqResponseFormatMode,
             includeReasoningParams: Boolean,
+            formatReminder: String = "",
         ): GroqHttpResponse {
             val requestText = continuity.promptPrefix() + buildComicTranslationRequest(
                 context = context,
                 inputJson = inputJson,
                 relevantText = relevantGlossaryText,
                 visionAttachment = attachment,
-            )
+            ) + formatReminder
             val jsonObject = buildGroqRequestBody(
                 modelName = modelName,
                 systemInstruction = systemInstruction,
@@ -136,8 +142,10 @@ class GroqTranslator(
                 maxOutputTokens = maxOutputToken,
                 temperature = temp,
                 visionAttachment = attachment,
-                useJsonMode = useJsonMode,
+                useJsonMode = responseFormatMode != GroqResponseFormatMode.TEXT,
                 includeReasoningParams = includeReasoningParams,
+                expectedPageKeys = expectedPageKeys,
+                responseFormatMode = responseFormatMode,
             )
             val request = Request.Builder()
                 .url(GROQ_CHAT_COMPLETIONS_URL)
@@ -158,18 +166,24 @@ class GroqTranslator(
 
         suspend fun executeWithCompatibilityAndRateLimit(
             initialAttachment: VisionMontageAttachment?,
-            initialUseJsonMode: Boolean = true,
+            initialFormatMode: GroqResponseFormatMode = initialGroqResponseFormatMode(modelName),
             initialIncludeReasoningParams: Boolean = true,
+            formatReminder: String = "",
         ): GroqHttpResponse {
             var currentAttachment = initialAttachment
-            var useJsonMode = initialUseJsonMode
+            var responseFormatMode = initialFormatMode
             var includeReasoningParams = initialIncludeReasoningParams
             var rateLimitRetries = 0
             var compatibilityDowngrades = 0
 
             while (true) {
                 val response = try {
-                    executeSingleGroqCall(currentAttachment, useJsonMode, includeReasoningParams)
+                    executeSingleGroqCall(
+                        attachment = currentAttachment,
+                        responseFormatMode = responseFormatMode,
+                        includeReasoningParams = includeReasoningParams,
+                        formatReminder = formatReminder,
+                    )
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: OutOfMemoryError) {
@@ -197,16 +211,23 @@ class GroqTranslator(
                     }
                 }
 
-                if ((response.statusCode == 400 || response.statusCode == 422) && compatibilityDowngrades < 3) {
+                if ((response.statusCode == 400 || response.statusCode == 422) && compatibilityDowngrades < 4) {
                     val lower = response.body.lowercase()
                     when {
-                        useJsonMode && (lower.contains("response_format") || lower.contains("json_object")) -> {
-                            useJsonMode = false
+                        includeReasoningParams && lower.contains("reasoning") -> {
+                            includeReasoningParams = false
                             compatibilityDowngrades++
                             continue
                         }
-                        includeReasoningParams && lower.contains("reasoning") -> {
-                            includeReasoningParams = false
+                        responseFormatMode == GroqResponseFormatMode.JSON_SCHEMA &&
+                            (lower.contains("json_schema") || lower.contains("schema") || lower.contains("response_format") || lower.contains("strict")) -> {
+                            responseFormatMode = GroqResponseFormatMode.JSON_OBJECT
+                            compatibilityDowngrades++
+                            continue
+                        }
+                        responseFormatMode == GroqResponseFormatMode.JSON_OBJECT &&
+                            (lower.contains("response_format") || lower.contains("json_object")) -> {
+                            responseFormatMode = GroqResponseFormatMode.TEXT
                             compatibilityDowngrades++
                             continue
                         }
@@ -216,8 +237,13 @@ class GroqTranslator(
                             compatibilityDowngrades++
                             continue
                         }
-                        useJsonMode || includeReasoningParams -> {
-                            useJsonMode = false
+                        responseFormatMode == GroqResponseFormatMode.JSON_SCHEMA -> {
+                            responseFormatMode = GroqResponseFormatMode.JSON_OBJECT
+                            compatibilityDowngrades++
+                            continue
+                        }
+                        responseFormatMode != GroqResponseFormatMode.TEXT || includeReasoningParams -> {
+                            responseFormatMode = GroqResponseFormatMode.TEXT
                             includeReasoningParams = false
                             compatibilityDowngrades++
                             continue
@@ -229,94 +255,57 @@ class GroqTranslator(
             }
         }
 
-        fun parseSuccessfulGroqBody(responseBody: String): JSONObject {
-            val json = JSONObject(responseBody)
-            val choices = json.optJSONArray("choices")
-            if (choices == null || choices.length() == 0) {
-                val errorMsg = json.optJSONObject("error")?.optString("message")
-                    ?.takeIf { it.isNotBlank() }
-                    ?: "Unknown Groq Error"
-                val mappedFromBody = TranslationProviderFailureMapper.fromHttp(
+        fun checkHttpStatus(httpResponse: GroqHttpResponse) {
+            if (httpResponse.statusCode !in 200..299) {
+                val mapped = TranslationProviderFailureMapper.fromHttp(
                     provider = TranslationProviderId.GROQ,
-                    statusCode = 400,
-                    responseBody = responseBody,
+                    statusCode = httpResponse.statusCode,
+                    responseBody = httpResponse.body,
                 )
-                if (mappedFromBody.category != TranslationFailureCategory.SERVER) {
-                    throw mappedFromBody
-                }
-                throw TranslationProviderException(
-                    TranslationProviderId.GROQ,
-                    TranslationFailureCategory.SERVER,
-                    false,
-                    buildGroqHttpDiagnostic(200, responseBody, cleanApiKey, fallbackMessage = errorMsg),
-                )
-            }
-
-            val choice = choices.getJSONObject(0)
-            val finishReason = choice.optString("finish_reason").ifBlank { "unknown" }
-            val rawContent = extractGroqMessageContent(choice)
-            val cleanedContent = stripGroqThinkingTags(rawContent)
-            if (cleanedContent.isBlank()) {
-                throw TranslationProviderException(
-                    TranslationProviderId.GROQ,
-                    TranslationFailureCategory.MALFORMED_RESPONSE,
-                    true,
-                    "Groq retornou resposta vazia (finish_reason=$finishReason).",
-                )
-            }
-
-            val parsed = runCatching { parseComicTranslationResponse(cleanedContent) }
-                .getOrElse { parseError ->
-                    val snippet = cleanedContent.take(80).replace('\n', ' ')
+                if (mapped.category == TranslationFailureCategory.SERVER && httpResponse.statusCode in 400..499) {
                     throw TranslationProviderException(
                         TranslationProviderId.GROQ,
-                        TranslationFailureCategory.MALFORMED_RESPONSE,
-                        true,
-                        "Groq JSON inválido (finish_reason=$finishReason): $snippet",
-                        parseError,
+                        TranslationFailureCategory.SERVER,
+                        false,
+                        buildGroqHttpDiagnostic(httpResponse.statusCode, httpResponse.body, cleanApiKey),
                     )
                 }
-            return unwrapGroqPageMapJson(parsed, uncachedPages.keys)
+                throw mapped
+            }
         }
 
         var response = executeWithCompatibilityAndRateLimit(visionAttachment)
-        if (response.statusCode !in 200..299) {
-            val mapped = TranslationProviderFailureMapper.fromHttp(
-                provider = TranslationProviderId.GROQ,
-                statusCode = response.statusCode,
-                responseBody = response.body,
-            )
-            if (mapped.category == TranslationFailureCategory.SERVER && response.statusCode in 400..499) {
-                throw TranslationProviderException(
-                    TranslationProviderId.GROQ,
-                    TranslationFailureCategory.SERVER,
-                    false,
-                    buildGroqHttpDiagnostic(response.statusCode, response.body, cleanApiKey),
-                )
-            }
-            throw mapped
-        }
+        checkHttpStatus(response)
 
         val resJson = try {
-            parseSuccessfulGroqBody(response.body)
+            parseGroqTranslationBody(
+                responseBody = response.body,
+                modelName = modelName,
+                apiKey = cleanApiKey,
+                expectedPageKeys = expectedPageKeys,
+                hasTranslatableBlocks = hasTranslatableBlocks,
+                isFinalAttempt = false,
+            )
         } catch (firstParseFailure: TranslationProviderException) {
             if (!firstParseFailure.retryable) throw firstParseFailure
             logcat(LogPriority.WARN, firstParseFailure) {
-                "Groq returned empty/unparseable JSON; retrying without strict json_object/reasoning params"
+                "Groq returned empty/unparseable JSON; retrying with explicit JSON-keys format reminder"
             }
             response = executeWithCompatibilityAndRateLimit(
                 initialAttachment = null,
-                initialUseJsonMode = false,
-                initialIncludeReasoningParams = false,
+                initialFormatMode = GroqResponseFormatMode.JSON_OBJECT,
+                initialIncludeReasoningParams = true,
+                formatReminder = buildGroqFormatRetryReminder(expectedPageKeys),
             )
-            if (response.statusCode !in 200..299) {
-                throw TranslationProviderFailureMapper.fromHttp(
-                    provider = TranslationProviderId.GROQ,
-                    statusCode = response.statusCode,
-                    responseBody = response.body,
-                )
-            }
-            parseSuccessfulGroqBody(response.body)
+            checkHttpStatus(response)
+            parseGroqTranslationBody(
+                responseBody = response.body,
+                modelName = modelName,
+                apiKey = cleanApiKey,
+                expectedPageKeys = expectedPageKeys,
+                hasTranslatableBlocks = hasTranslatableBlocks,
+                isFinalAttempt = true,
+            )
         }
 
         val uncachedEntries = uncachedPages.entries.toList()
@@ -437,6 +426,29 @@ internal fun prepareGroqChunk(
     )
 }
 
+internal enum class GroqResponseFormatMode {
+    JSON_SCHEMA,
+    JSON_OBJECT,
+    TEXT,
+}
+
+internal fun supportsGroqStrictJsonSchema(modelName: String): Boolean {
+    val lower = modelName.trim().lowercase()
+    return lower.contains("qwen3.8") ||
+        lower.contains("gpt-oss-120b") ||
+        lower.contains("gpt-oss-20b") ||
+        lower.contains("muse-spark-open")
+}
+
+internal fun initialGroqResponseFormatMode(modelName: String): GroqResponseFormatMode =
+    if (supportsGroqStrictJsonSchema(modelName)) GroqResponseFormatMode.JSON_SCHEMA else GroqResponseFormatMode.JSON_OBJECT
+
+internal fun buildGroqFormatRetryReminder(expectedKeys: Collection<String>): String {
+    if (expectedKeys.isEmpty()) return ""
+    val keysHint = expectedKeys.joinToString(", ") { "\"$it\"" }
+    return "\n\nCRITICAL FORMAT REQUIREMENT: Your previous reply was empty or invalid. Return ONLY a single valid JSON object containing EVERY one of these keys: $keysHint. Map each key to an array of translated strings (use \"\" inside the array for watermarks/credits). NEVER output bare \"\" or {}."
+}
+
 internal fun buildGroqRequestBody(
     modelName: String,
     systemInstruction: String,
@@ -446,17 +458,51 @@ internal fun buildGroqRequestBody(
     visionAttachment: VisionMontageAttachment? = null,
     useJsonMode: Boolean = true,
     includeReasoningParams: Boolean = true,
+    expectedPageKeys: Collection<String> = emptyList(),
+    responseFormatMode: GroqResponseFormatMode = if (useJsonMode) GroqResponseFormatMode.JSON_OBJECT else GroqResponseFormatMode.TEXT,
 ): String = buildJsonObject {
     val trimmedModel = modelName.trim()
     val safeTemp = temperature.coerceIn(0.01f, 0.5f)
     put("model", trimmedModel)
-    put("top_p", 0.5f)
     put("temperature", safeTemp)
     put("max_completion_tokens", maxOutputTokens.coerceIn(256, 8192))
-    if (useJsonMode) {
-        putJsonObject("response_format") {
-            put("type", "json_object")
+    when (responseFormatMode) {
+        GroqResponseFormatMode.JSON_SCHEMA -> if (expectedPageKeys.isNotEmpty()) {
+            putJsonObject("response_format") {
+                put("type", "json_schema")
+                putJsonObject("json_schema") {
+                    put("name", "comic_page_translations")
+                    put("strict", true)
+                    putJsonObject("schema") {
+                        put("type", "object")
+                        putJsonObject("properties") {
+                            expectedPageKeys.forEach { pageKey ->
+                                putJsonObject(pageKey) {
+                                    put("type", "array")
+                                    putJsonObject("items") {
+                                        put("type", "string")
+                                    }
+                                }
+                            }
+                        }
+                        putJsonArray("required") {
+                            expectedPageKeys.forEach { add(it) }
+                        }
+                        put("additionalProperties", false)
+                    }
+                }
+            }
+        } else {
+            putJsonObject("response_format") {
+                put("type", "json_object")
+            }
         }
+        GroqResponseFormatMode.JSON_OBJECT -> {
+            putJsonObject("response_format") {
+                put("type", "json_object")
+            }
+        }
+        GroqResponseFormatMode.TEXT -> Unit
     }
     if (includeReasoningParams) {
         applyGroqReasoningControls(trimmedModel)
@@ -488,6 +534,92 @@ internal fun buildGroqRequestBody(
     }
 }.toString()
 
+internal fun parseGroqTranslationBody(
+    responseBody: String,
+    modelName: String,
+    apiKey: String,
+    expectedPageKeys: Collection<String>,
+    hasTranslatableBlocks: Boolean,
+    isFinalAttempt: Boolean,
+): JSONObject {
+    val json = JSONObject(responseBody)
+    val choices = json.optJSONArray("choices")
+    if (choices == null || choices.length() == 0) {
+        val errorMsg = json.optJSONObject("error")?.optString("message")
+            ?.takeIf { it.isNotBlank() }
+            ?: "Unknown Groq Error"
+        val mappedFromBody = TranslationProviderFailureMapper.fromHttp(
+            provider = TranslationProviderId.GROQ,
+            statusCode = 400,
+            responseBody = responseBody,
+        )
+        if (mappedFromBody.category != TranslationFailureCategory.SERVER) {
+            throw mappedFromBody
+        }
+        throw TranslationProviderException(
+            TranslationProviderId.GROQ,
+            TranslationFailureCategory.SERVER,
+            false,
+            buildGroqHttpDiagnostic(200, responseBody, apiKey, fallbackMessage = errorMsg),
+        )
+    }
+
+    val choice = choices.getJSONObject(0)
+    val refusal = extractGroqRefusal(choice)
+    if (refusal.isNotBlank()) {
+        val snippet = refusal.take(120).replace('\n', ' ')
+        throw TranslationProviderException(
+            TranslationProviderId.GROQ,
+            TranslationFailureCategory.MALFORMED_RESPONSE,
+            false,
+            "Groq ($modelName) recusou este trecho ($snippet). Tente outro modelo em Modelo de LLM (ex.: openai/gpt-oss-120b).",
+        )
+    }
+
+    val finishReason = choice.optString("finish_reason").ifBlank { "unknown" }
+    val rawContent = extractGroqMessageContent(choice)
+    val cleanedContent = stripGroqThinkingTags(rawContent)
+
+    fun handleEmptyOrMissingPages(rawSnippet: String, cause: Throwable? = null): JSONObject {
+        if (isFinalAttempt && !hasTranslatableBlocks) {
+            return JSONObject()
+        }
+        val retryable = !isFinalAttempt
+        val message = if (cleanedContent.isBlank() || cleanedContent == "\"\"" || cleanedContent == "{}") {
+            if (isFinalAttempt) {
+                "Groq ($modelName) retornou resposta vazia ($rawSnippet, finish_reason=$finishReason). Se este capítulo tiver conteúdo sensível ou recusado pelo modelo, tente outro modelo em Modelo de LLM (ex.: openai/gpt-oss-120b)."
+            } else {
+                "Groq retornou resposta vazia ($rawSnippet, finish_reason=$finishReason)."
+            }
+        } else {
+            "Groq JSON inválido (finish_reason=$finishReason): $rawSnippet"
+        }
+        throw TranslationProviderException(
+            TranslationProviderId.GROQ,
+            TranslationFailureCategory.MALFORMED_RESPONSE,
+            retryable,
+            message,
+            cause,
+        )
+    }
+
+    if (cleanedContent.isBlank() || cleanedContent == "\"\"" || cleanedContent == "{}") {
+        return handleEmptyOrMissingPages(cleanedContent.ifBlank { "\"\"" })
+    }
+
+    val parsed = runCatching { parseComicTranslationResponse(cleanedContent) }
+        .getOrElse { parseError ->
+            val snippet = cleanedContent.take(80).replace('\n', ' ')
+            return handleEmptyOrMissingPages(snippet, parseError)
+        }
+    val unwrapped = unwrapGroqPageMapJson(parsed, expectedPageKeys)
+    if (expectedPageKeys.isNotEmpty() && expectedPageKeys.none { unwrapped.has(it) }) {
+        val snippet = cleanedContent.take(80).replace('\n', ' ')
+        return handleEmptyOrMissingPages(snippet)
+    }
+    return unwrapped
+}
+
 internal fun kotlinx.serialization.json.JsonObjectBuilder.applyGroqReasoningControls(modelName: String) {
     when {
         isGroqQwenReasoningModel(modelName) -> {
@@ -517,6 +649,16 @@ internal fun stripGroqThinkingTags(content: String): String {
     }
     cleaned = cleaned.replace(UNCLOSED_THINK_TAG_REGEX, "")
     return cleaned.trim()
+}
+
+internal fun extractGroqRefusal(choice: JSONObject): String {
+    val message = choice.optJSONObject("message") ?: return ""
+    val refusal = message.opt("refusal")
+    return when {
+        refusal == null || refusal === JSONObject.NULL -> ""
+        refusal is String -> refusal.trim()
+        else -> refusal.toString().trim()
+    }
 }
 
 internal fun extractGroqMessageContent(choice: JSONObject): String {
