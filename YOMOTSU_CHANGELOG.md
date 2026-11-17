@@ -3,6 +3,36 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.22.2
+
+🇧🇷 **Português (Brasil)**
+
+### 🚀 Melhorias
+- **Suporte ao formato `index.pb` do Aniyomi:** Adicionada compatibilidade completa com repositórios de extensões de anime em Protobuf no esquema do Aniyomi (incluindo campo `isTorrent`, mensagens de fonte, valores padrão proto3 e listas externas via `extensionListUrl`), mantendo a compatibilidade com repositórios do Mihon.
+- **Lista de extensões mais limpa:** Removido o rótulo `Private` do subtítulo das extensões instaladas.
+
+### 🛠️ Correções
+- **Instalação e carregamento de extensões de anime:**
+  - A instalação privada agora carrega e registra a extensão de forma síncrona antes de concluir a etapa na interface, evitando o problema de girar e voltar para o botão de download sem instalar (e exibindo erro caso o carregamento falhe).
+  - Corrigida a classificação de conteúdo (`tachiyomix.contentWarning`), que tratava extensões seguras (`SAFE = 1`) como NSFW quando a opção de conteúdo adulto estava desativada, além de passar a ler a preferência dinamicamente.
+  - Garantida a marcação somente leitura após o fechamento dos arquivos `.ext` (compatibilidade com Android 14+), detecção de extensões de anime pelos metadados do manifesto e separação dos filtros de broadcast do sistema e internos.
+- **Fim do loop falso de atualizações:** Adicionada verificação em `ExtensionManager` e `ExtensionApi` para evitar falsos avisos de atualização quando o `index.pb` do repositório usa `versionCode` composto (`extensionLib * 100000 + code`) para o mesmo `versionName` do APK instalado.
+
+---
+
+🇺🇸 **English**
+
+### 🚀 Improvements
+- **Aniyomi `index.pb` Protobuf Support:** Added full support for anime extension repositories using Aniyomi's Protobuf schema (including the `isTorrent` field offset, source notices, proto3 defaults, and `extensionListUrl` lists) alongside Mihon repositories.
+- **Cleaner Extension List:** Removed the `Private` label from the subtitle of installed extensions.
+
+### 🛠️ Fixes
+- **Anime Extension Installation & Loading:**
+  - Private extension installation now loads and registers the extension synchronously before reporting completion, fixing the loop where the spinner reverted back to the download button without installing (and surfacing errors if loading fails).
+  - Fixed `tachiyomix.contentWarning` handling so safe extensions (`SAFE = 1`) are no longer misclassified as NSFW when NSFW sources are disabled, and switched the preference check to read dynamically.
+  - Applied read-only permissions after closing copied `.ext` streams (for Android 14+ dynamic code loading), added anime metadata detection, and split system vs. internal broadcast receiver filters.
+- **No More False Update Loops:** Added composite `versionCode` comparison (`extensionLib * 100000 + code` matching the installed `versionName`) across extension lists and background update checks to prevent perpetual update prompts caused by mismatched repository indexes.
+
 ## 0.22.1
 
 🇧🇷 **Português (Brasil)**
