@@ -41,9 +41,8 @@ internal object ExtensionLoader {
 
     private val preferences: SourcePreferences by injectLazy()
     private val trustExtension: TrustExtension by injectLazy()
-    private val loadNsfwSource by lazy {
-        preferences.showNsfwSource.get()
-    }
+    private val loadNsfwSource: Boolean
+        get() = preferences.showNsfwSource.get()
 
     private const val EXTENSION_FEATURE = "tachiyomi.extension"
     private const val ANIME_EXTENSION_FEATURE = "tachiyomi.animeextension"
@@ -54,6 +53,7 @@ internal object ExtensionLoader {
     private const val METADATA_NAME = "tachiyomix.name"
     private const val METADATA_EXTENSION_LIB = "tachiyomix.extensionLib"
     private const val METADATA_CONTENT_WARNING = "tachiyomix.contentWarning"
+    private const val CONTENT_WARNING_MIXED = 2
 
     private val SUPPORTED_LIB_VERSIONS = listOf(1.4, 1.6)
 
@@ -107,16 +107,25 @@ internal object ExtensionLoader {
     }
 
     fun installPrivateExtensionFile(context: Context, file: File): Boolean {
+        return installPrivateExtensionPackage(context, file) != null
+    }
+
+    fun installPrivateExtensionPackage(
+        context: Context,
+        file: File,
+        notifyBroadcast: Boolean = true,
+    ): String? {
         val extension = getPackageArchiveInfoCompat(context.packageManager, file.absolutePath)
-            ?.takeIf { isPackageAnExtension(it) } ?: return false
-        val currentExtension = getExtensionPackageInfoFromPkgName(context, extension.packageName)
+            ?.takeIf { isPackageAnExtension(it) } ?: return null
+        val pkgName = extension.packageName ?: return null
+        val currentExtension = getExtensionPackageInfoFromPkgName(context, pkgName)
 
         if (currentExtension != null) {
             if (PackageInfoCompat.getLongVersionCode(extension) <
                 PackageInfoCompat.getLongVersionCode(currentExtension)
             ) {
                 logcat(LogPriority.ERROR) { "Installed extension version is higher. Downgrading is not allowed." }
-                return false
+                return null
             }
 
             val extensionSignatures = getSignatures(extension)
@@ -124,26 +133,31 @@ internal object ExtensionLoader {
             if (!extensionSignatures.isNullOrEmpty() && !currentSignatures.isNullOrEmpty()) {
                 if (!extensionSignatures.containsAll(currentSignatures)) {
                     logcat(LogPriority.ERROR) { "Installed extension signature is not matched." }
-                    return false
+                    return null
                 }
             }
         }
 
         val privateDir = getPrivateExtensionDir(context).apply { mkdirs() }
-        val target = File(privateDir, "${extension.packageName}.$PRIVATE_EXTENSION_EXTENSION")
+        val target = File(privateDir, "$pkgName.$PRIVATE_EXTENSION_EXTENSION")
         return try {
             target.delete()
             file.copyAndSetReadOnlyTo(target, overwrite = true)
-            if (currentExtension != null) {
-                ExtensionInstallReceiver.notifyReplaced(context, extension.packageName)
-            } else {
-                ExtensionInstallReceiver.notifyAdded(context, extension.packageName)
+            if (target.canWrite()) {
+                target.setReadOnly()
             }
-            true
+            if (notifyBroadcast) {
+                if (currentExtension != null) {
+                    ExtensionInstallReceiver.notifyReplaced(context, pkgName)
+                } else {
+                    ExtensionInstallReceiver.notifyAdded(context, pkgName)
+                }
+            }
+            pkgName
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Failed to copy extension file." }
             target.delete()
-            false
+            null
         }
     }
 
@@ -257,6 +271,9 @@ internal object ExtensionLoader {
     private fun getExtensionInfoFromPkgName(context: Context, pkgName: String): ExtensionInfo? {
         val privateExtensionFile = File(getPrivateExtensionDir(context), "$pkgName.$PRIVATE_EXTENSION_EXTENSION")
         val privatePkg = if (privateExtensionFile.isFile) {
+            if (privateExtensionFile.canWrite()) {
+                privateExtensionFile.setReadOnly()
+            }
             getPackageArchiveInfoCompat(context.packageManager, privateExtensionFile.absolutePath)
                 ?.takeIf { isPackageAnExtension(it) }
                 ?.let {
@@ -370,8 +387,10 @@ internal object ExtensionLoader {
             }
 
             val nsfwKey = if (isAnime) "tachiyomi.animeextension.nsfw" else METADATA_NSFW
-            val isNsfw = (appInfo.metaData?.getInt(METADATA_CONTENT_WARNING) ?: 0) > 0 ||
-                appInfo.metaData?.getInt(nsfwKey) == 1
+            val isNsfw = isContentWarningNsfw(
+                contentWarning = appInfo.metaData?.getInt(METADATA_CONTENT_WARNING) ?: 0,
+                legacyNsfw = appInfo.metaData?.getInt(nsfwKey) ?: 0,
+            )
             if (!loadNsfwSource && isNsfw) {
                 logcat(LogPriority.WARN) { "NSFW extension $pkgName not allowed" }
                 return LoadResult.Error
@@ -491,6 +510,10 @@ internal object ExtensionLoader {
         }
     }
 
+    internal fun isContentWarningNsfw(contentWarning: Int, legacyNsfw: Int): Boolean {
+        return contentWarning >= CONTENT_WARNING_MIXED || legacyNsfw == 1
+    }
+
     /**
      * Returns true if the given package is an extension.
      *
@@ -500,7 +523,16 @@ internal object ExtensionLoader {
         return pkgInfo.reqFeatures.orEmpty().any { it.name == EXTENSION_FEATURE || it.name == ANIME_EXTENSION_FEATURE } ||
             pkgInfo.packageName.contains("animeextension") ||
             pkgInfo.packageName.startsWith("eu.kanade.tachiyomi.animeextension") ||
-            pkgInfo.packageName.startsWith("eu.kanade.tachiyomi.extension")
+            pkgInfo.packageName.startsWith("eu.kanade.tachiyomi.extension") ||
+            hasAnimeMetadata(pkgInfo.applicationInfo)
+    }
+
+    private fun hasAnimeMetadata(appInfo: ApplicationInfo?): Boolean {
+        val metaData = appInfo?.metaData ?: return false
+        return metaData.containsKey("tachiyomi.animeextension.class") ||
+            metaData.containsKey("tachiyomi.animeextension.factory") ||
+            metaData.containsKey("aniyomi.animeextension.class") ||
+            metaData.containsKey("aniyomi.animeextension.factory")
     }
 
     /**
@@ -542,6 +574,7 @@ internal object ExtensionLoader {
         val isAnime: Boolean
             get() = packageInfo.reqFeatures.orEmpty().any { it.name == ANIME_EXTENSION_FEATURE } ||
                 packageInfo.packageName.contains("animeextension") ||
-                packageInfo.packageName.startsWith("eu.kanade.tachiyomi.animeextension")
+                packageInfo.packageName.startsWith("eu.kanade.tachiyomi.animeextension") ||
+                hasAnimeMetadata(packageInfo.applicationInfo)
     }
 }

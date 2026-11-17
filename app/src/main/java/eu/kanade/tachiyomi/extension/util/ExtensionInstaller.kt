@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.extension.model.InstallStep
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.isPackageInstalled
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -34,6 +35,7 @@ import java.io.File
  */
 internal class ExtensionInstaller(
     private val context: Context,
+    private val onPrivateExtensionInstalled: suspend (pkgName: String) -> Boolean = { true },
 ) {
 
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -67,20 +69,24 @@ internal class ExtensionInstaller(
             try {
                 step.value = InstallStep.Downloading
                 val request = Request.Builder().url(url).build()
-                val response = httpClient.newCall(request).execute()
-
-                if (!response.isSuccessful) {
-                    throw Exception("Failed to download extension")
-                }
-                response.body.byteStream().use { input ->
-                    tmpFile.outputStream().use { output ->
-                        input.copyTo(output)
+                httpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        throw Exception("Failed to download extension")
+                    }
+                    response.body.byteStream().use { input ->
+                        tmpFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
                     }
                 }
 
                 step.value = InstallStep.Installing
                 installApk(downloadId, tmpFile, isUpdateForPrivatelyInstalled, isAnime = extension.isAnime)
+            } catch (e: CancellationException) {
+                tmpFile.delete()
+                throw e
             } catch (e: Exception) {
+                tmpFile.delete()
                 if (e is InterruptedException) {
                     // Canceled
                 } else {
@@ -106,7 +112,7 @@ internal class ExtensionInstaller(
      * @param tempFile The file of the extension to install. Delete after use.
      * @param isUpdateForPrivatelyInstalled If this install is an update for a privately installed extension
      */
-    private fun installApk(
+    private suspend fun installApk(
         downloadId: Long,
         tempFile: File,
         isUpdateForPrivatelyInstalled: Boolean = false,
@@ -143,19 +149,26 @@ internal class ExtensionInstaller(
         }
     }
 
-    private fun installApkPrivately(downloadId: Long, tempFile: File) {
+    private suspend fun installApkPrivately(downloadId: Long, tempFile: File) {
         try {
-            if (ExtensionLoader.installPrivateExtensionFile(context, tempFile)) {
+            val pkgName = ExtensionLoader.installPrivateExtensionPackage(
+                context = context,
+                file = tempFile,
+                notifyBroadcast = false,
+            )
+            if (pkgName != null && onPrivateExtensionInstalled(pkgName)) {
                 updateInstallStep(downloadId, InstallStep.Installed)
             } else {
                 updateInstallStep(downloadId, InstallStep.Error)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Failed to read downloaded extension file." }
             updateInstallStep(downloadId, InstallStep.Error)
+        } finally {
+            tempFile.delete()
         }
-
-        tempFile.delete()
     }
 
     /**

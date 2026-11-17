@@ -27,16 +27,21 @@ internal class ExtensionInstallReceiver(private val listener: Listener) : Broadc
 
     fun register(context: Context) {
         try {
-            ContextCompat.registerReceiver(context, this, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            ContextCompat.registerReceiver(context, this, systemFilter, ContextCompat.RECEIVER_EXPORTED)
+            ContextCompat.registerReceiver(context, this, internalFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
         } catch (e: Throwable) {
             logcat(LogPriority.ERROR, e) { "Failed to register ExtensionInstallReceiver" }
         }
     }
 
-    private val filter = IntentFilter().apply {
+    private val systemFilter = IntentFilter().apply {
         addAction(Intent.ACTION_PACKAGE_ADDED)
         addAction(Intent.ACTION_PACKAGE_REPLACED)
         addAction(Intent.ACTION_PACKAGE_REMOVED)
+        addDataScheme("package")
+    }
+
+    private val internalFilter = IntentFilter().apply {
         addAction(ACTION_EXTENSION_ADDED)
         addAction(ACTION_EXTENSION_REPLACED)
         addAction(ACTION_EXTENSION_REMOVED)
@@ -44,8 +49,8 @@ internal class ExtensionInstallReceiver(private val listener: Listener) : Broadc
     }
 
     /**
-     * Called when one of the events of the [filter] is received. When the package is an extension,
-     * it's loaded in background and it notifies the [listener] when finished.
+     * Called when one of the events of [systemFilter] or [internalFilter] is received. When the package is an
+     * extension, it's loaded in background and it notifies the [listener] when finished.
      */
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent == null) return

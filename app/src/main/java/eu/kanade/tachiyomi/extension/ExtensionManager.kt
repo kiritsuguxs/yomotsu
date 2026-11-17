@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
@@ -58,7 +59,12 @@ class ExtensionManager(
     /**
      * The installer which installs, updates and uninstalls the extensions.
      */
-    private val installer by lazy { ExtensionInstaller(context) }
+    private val installer by lazy {
+        ExtensionInstaller(
+            context = context,
+            onPrivateExtensionInstalled = ::handlePrivateExtensionInstalled,
+        )
+    }
 
     private val iconMap = mutableMapOf<String, Drawable>()
 
@@ -313,7 +319,7 @@ class ExtensionManager(
      * @param extension The extension to be registered.
      */
     private fun registerNewExtension(extension: Extension.Installed) {
-        installedExtensionMapFlow.value += extension
+        installedExtensionMapFlow.update { it + extension }
     }
 
     /**
@@ -323,7 +329,7 @@ class ExtensionManager(
      * @param extension The extension to be registered.
      */
     private fun registerUpdatedExtension(extension: Extension.Installed) {
-        installedExtensionMapFlow.value += extension
+        installedExtensionMapFlow.update { it + extension }
     }
 
     /**
@@ -333,8 +339,29 @@ class ExtensionManager(
      * @param pkgName The package name of the uninstalled application.
      */
     private fun unregisterExtension(pkgName: String) {
-        installedExtensionMapFlow.value -= pkgName
-        untrustedExtensionMapFlow.value -= pkgName
+        installedExtensionMapFlow.update { it - pkgName }
+        untrustedExtensionMapFlow.update { it - pkgName }
+    }
+
+    private suspend fun handlePrivateExtensionInstalled(pkgName: String): Boolean {
+        return when (val result = ExtensionLoader.loadExtensionFromPkgName(context, pkgName)) {
+            is LoadResult.Success -> {
+                installedExtensionMapFlow.update { it + result.extension.withUpdateCheck() }
+                untrustedExtensionMapFlow.update { it - pkgName }
+                updatePendingUpdatesCount()
+                true
+            }
+            is LoadResult.Untrusted -> {
+                installedExtensionMapFlow.update { it - result.extension.pkgName }
+                untrustedExtensionMapFlow.update { it + result.extension }
+                updatePendingUpdatesCount()
+                true
+            }
+            LoadResult.Error -> {
+                ExtensionLoader.uninstallPrivateExtension(context, pkgName)
+                false
+            }
+        }
     }
 
     /**
@@ -353,8 +380,8 @@ class ExtensionManager(
         }
 
         override fun onExtensionUntrusted(extension: Extension.Untrusted) {
-            installedExtensionMapFlow.value -= extension.pkgName
-            untrustedExtensionMapFlow.value += extension
+            installedExtensionMapFlow.update { it - extension.pkgName }
+            untrustedExtensionMapFlow.update { it + extension }
             updatePendingUpdatesCount()
         }
 
