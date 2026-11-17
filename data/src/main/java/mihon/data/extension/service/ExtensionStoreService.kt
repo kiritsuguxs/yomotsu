@@ -9,6 +9,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.okio.decodeFromBufferedSource
 import kotlinx.serialization.protobuf.ProtoBuf
 import logcat.LogPriority
+import mihon.data.extension.model.NetworkAniyomiExtensionStore
 import mihon.data.extension.model.NetworkExtensionStore
 import mihon.data.extension.model.NetworkLegacyExtension
 import mihon.data.extension.model.NetworkLegacyExtensionRepo
@@ -93,7 +94,7 @@ class ExtensionStoreService(
                     } catch (_: IllegalArgumentException) {
                         json.decodeFromBufferedSource<NetworkExtensionStore>(source)
                     }
-                    else -> protoBuf.decodeFromByteArray<NetworkExtensionStore>(source.readByteArray())
+                    else -> decodeProtoStore(source.readByteArray())
                 }
 
                 if (networkStore is NetworkLegacyExtensionRepo && networkStore.indexV2 != null) {
@@ -132,9 +133,7 @@ class ExtensionStoreService(
                         // "{..."
                         0x7B.toByte() -> json.decodeFromBufferedSource<NetworkExtensionStore.ExtensionList>(source)
                             .toAvailableExtensions(store)
-                        else -> protoBuf.decodeFromByteArray<NetworkExtensionStore.ExtensionList>(
-                            source.readByteArray(),
-                        )
+                        else -> decodeProtoExtensionList(source.readByteArray())
                             .toAvailableExtensions(store)
                     }
                 }
@@ -144,10 +143,11 @@ class ExtensionStoreService(
                     when (source.peek().readByte()) {
                         // "{..."
                         0x7B.toByte() -> json.decodeFromBufferedSource<NetworkExtensionStore>(source)
-                        else -> protoBuf.decodeFromByteArray<NetworkExtensionStore>(source.readByteArray())
+                        else -> decodeProtoStore(source.readByteArray())
                     }
-                        .extensionList!!
-                        .toAvailableExtensions(store)
+                        .extensionList
+                        ?.toAvailableExtensions(store)
+                        .orEmpty()
                 }
             } else {
                 val storeBaseUrl = store.indexUrl.removeSuffix("/repo.json")
@@ -163,6 +163,46 @@ class ExtensionStoreService(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun decodeProtoStore(bytes: ByteArray): NetworkExtensionStore {
+        val mihonResult = runCatching {
+            protoBuf.decodeFromByteArray<NetworkExtensionStore>(bytes)
+        }
+        val mihonStore = mihonResult.getOrNull()
+        if (mihonStore?.extensionList?.extensions?.any { it.sources.isNotEmpty() } == true) {
+            return mihonStore
+        }
+
+        val aniyomiStore = runCatching {
+            protoBuf.decodeFromByteArray<NetworkAniyomiExtensionStore>(bytes).toNetworkExtensionStore()
+        }.getOrNull()
+        val aniyomiHasSources = aniyomiStore?.extensionList?.extensions?.any { it.sources.isNotEmpty() } == true
+        if (aniyomiStore != null && (aniyomiHasSources || mihonStore == null)) {
+            return aniyomiStore
+        }
+
+        return mihonResult.getOrThrow()
+    }
+
+    private fun decodeProtoExtensionList(bytes: ByteArray): NetworkExtensionStore.ExtensionList {
+        val mihonResult = runCatching {
+            protoBuf.decodeFromByteArray<NetworkExtensionStore.ExtensionList>(bytes)
+        }
+        val mihonList = mihonResult.getOrNull()
+        if (mihonList?.extensions?.any { it.sources.isNotEmpty() } == true) {
+            return mihonList
+        }
+
+        val aniyomiList = runCatching {
+            protoBuf.decodeFromByteArray<NetworkAniyomiExtensionStore.ExtensionList>(bytes).toNetworkExtensionList()
+        }.getOrNull()
+        val aniyomiHasSources = aniyomiList?.extensions?.any { it.sources.isNotEmpty() } == true
+        if (aniyomiList != null && (aniyomiHasSources || mihonList == null)) {
+            return aniyomiList
+        }
+
+        return mihonResult.getOrThrow()
     }
 
     private fun BufferedSource.decompressIfGzipped(): BufferedSource {

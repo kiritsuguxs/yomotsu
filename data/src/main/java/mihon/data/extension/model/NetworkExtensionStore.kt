@@ -16,17 +16,17 @@ data class NetworkExtensionStore(
     @ProtoNumber(2) val badgeLabel: String,
     @ProtoNumber(3) val signingKey: String,
     @ProtoNumber(4) val contact: Contact,
-    @ProtoNumber(101) val extensionList: ExtensionList?,
-    @ProtoNumber(102) val extensionListUrl: String?,
+    @ProtoNumber(101) val extensionList: ExtensionList? = null,
+    @ProtoNumber(102) val extensionListUrl: String? = null,
 ) : BaseNetworkExtensionStore {
     @Serializable
     data class Contact(
         @ProtoNumber(1) val website: String,
-        @ProtoNumber(2) val discord: String?,
+        @ProtoNumber(2) val discord: String? = null,
     )
 
     @Serializable
-    data class ExtensionList(@ProtoNumber(1) val extensions: List<Extension>)
+    data class ExtensionList(@ProtoNumber(1) val extensions: List<Extension> = emptyList())
 
     @Serializable
     data class Extension(
@@ -36,8 +36,8 @@ data class NetworkExtensionStore(
         @ProtoNumber(4) val extensionLib: String,
         @ProtoNumber(5) val versionCode: Long,
         @ProtoNumber(6) val versionName: String,
-        @ProtoNumber(7) val contentWarning: ContentWarning,
-        @ProtoNumber(8) val sources: List<Source>,
+        @ProtoNumber(7) val contentWarning: ContentWarning = ContentWarning.UNSPECIFIED,
+        @ProtoNumber(8) val sources: List<Source> = emptyList(),
     )
 
     @Serializable
