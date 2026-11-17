@@ -409,11 +409,7 @@ class ExtensionManager(
             ?: return false
 
         val isAnimeExt = isAnime || pkgName.contains("animeextension") || pkgName.startsWith("eu.kanade.tachiyomi.animeextension")
-        return if (isAnimeExt) {
-            availableExt.versionCode > versionCode
-        } else {
-            availableExt.versionCode > versionCode || availableExt.libVersion > libVersion
-        }
+        return hasExtensionUpdate(this, availableExt, isAnimeExt)
     }
 
     private fun updatePendingUpdatesCount() {
@@ -430,5 +426,25 @@ class ExtensionManager(
 
     private fun <T : Extension> StateFlow<Map<String, T>>.mapExtensions(scope: CoroutineScope): StateFlow<List<T>> {
         return map { it.values.toList() }.stateIn(scope, SharingStarted.Lazily, value.values.toList())
+    }
+}
+
+internal fun hasExtensionUpdate(
+    installed: Extension.Installed,
+    available: Extension.Available,
+    isAnime: Boolean,
+): Boolean {
+    val isCompositeSameVersion = available.versionName == installed.versionName &&
+        available.libVersion >= 1.0 &&
+        available.libVersion % 1.0 == 0.0 &&
+        available.versionCode == available.libVersion.toLong() * 100_000L + installed.versionCode
+    if (isCompositeSameVersion) {
+        return false
+    }
+
+    return if (isAnime) {
+        available.versionCode > installed.versionCode
+    } else {
+        available.versionCode > installed.versionCode || available.libVersion > installed.libVersion
     }
 }

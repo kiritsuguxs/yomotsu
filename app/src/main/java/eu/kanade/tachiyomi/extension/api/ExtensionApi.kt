@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.extension.api
 
 import android.content.Context
+import eu.kanade.tachiyomi.extension.hasExtensionUpdate
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.LoadResult
 import eu.kanade.tachiyomi.extension.util.ExtensionLoader
@@ -36,10 +37,7 @@ internal class ExtensionApi {
                 pkgName.startsWith("eu.kanade.tachiyomi.animeextension")
 
             val availableExt = extensions.find { it.pkgName == pkgName } ?: continue
-            val hasUpdatedVer = availableExt.versionCode > installedExt.versionCode
-            val hasUpdatedLib = !isAnime && availableExt.libVersion > installedExt.libVersion
-            val hasUpdate = hasUpdatedVer || hasUpdatedLib
-            if (hasUpdate) {
+            if (hasExtensionUpdate(installedExt, availableExt, isAnime)) {
                 extensionsWithUpdate.add(installedExt)
             }
         }
