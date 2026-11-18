@@ -506,6 +506,11 @@ class PlayerActivity : BaseActivity() {
             noisyReceiver.initialized = false
         }
 
+        pipReceiver?.let { receiver ->
+            runCatching { unregisterReceiver(receiver) }
+            pipReceiver = null
+        }
+
         mpv.removeLogObserver(playerObserver)
         mpv.removeObserver(playerObserver)
         // ANK -->
@@ -873,12 +878,11 @@ class PlayerActivity : BaseActivity() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
-        if (!isInPictureInPictureMode) {
-            pipReceiver?.let {
-                unregisterReceiver(pipReceiver)
-                pipReceiver = null
-            }
-        } else {
+        pipReceiver?.let { receiver ->
+            runCatching { unregisterReceiver(receiver) }
+            pipReceiver = null
+        }
+        if (isInPictureInPictureMode) {
             setPictureInPictureParams(createPipParams())
             viewModel.hideControls()
             viewModel.hideSeekBar()
@@ -955,7 +959,7 @@ class PlayerActivity : BaseActivity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (player.onKey(event!!)) return true
+        if (event != null && player.onKey(event)) return true
         return super.onKeyUp(keyCode, event)
     }
 
@@ -1038,7 +1042,9 @@ class PlayerActivity : BaseActivity() {
                     override fun onStop() {
                         super.onStop()
                         isActive = false
-                        this@PlayerActivity.onStop()
+                        viewModel.pause()
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        finish()
                     }
                 },
             )
@@ -1371,15 +1377,27 @@ class PlayerActivity : BaseActivity() {
 
         val headers = (video.headers ?: sourceHeaders)
             ?.toMultimap()
-            ?.mapValues { it.value.firstOrNull() ?: "" }
-            ?.toMutableMap() ?: mutableMapOf()
+            ?.entries
+            ?.mapNotNull { (rawKey, rawValues) ->
+                val cleanKey = rawKey.replace("\r", "").replace("\n", "").trim()
+                val cleanVal = (rawValues.firstOrNull() ?: "").replace("\r", "").replace("\n", "").trim()
+                if (cleanKey.isNotEmpty()) cleanKey to cleanVal else null
+            }
+            ?.toMap()
+            ?: emptyMap()
 
         if (headers.isNotEmpty()) {
-            val httpHeaderString = headers.map {
-                it.key + ": " + it.value.replace(",", "\\,")
-            }.joinToString(",")
-
-            mpv.setOptionString("http-header-fields", httpHeaderString)
+            val headerNode = MPVNode.ArrayNode(
+                headers.map { (key, value) -> MPVNode.StringNode("$key: $value") }.toTypedArray(),
+            )
+            runCatching {
+                mpv.setPropertyNode("http-header-fields", headerNode)
+            }.onFailure {
+                val httpHeaderString = headers.entries.joinToString(",") { (key, value) ->
+                    "$key: ${value.replace(",", "\\,")}"
+                }
+                mpv.setOptionString("http-header-fields", httpHeaderString)
+            }
             (headers["User-Agent"] ?: headers["user-agent"])?.let { mpv.setOptionString("user-agent", it) }
             (headers["Referer"] ?: headers["referer"])?.let { mpv.setOptionString("referrer", it) }
         }
@@ -1573,9 +1591,11 @@ class PlayerActivity : BaseActivity() {
         // Write to mpv table
         mpv.setPropertyString("user-data/current-anime/episode-title", episode.name)
 
-        val epNumber = episode.episode_number.let { number ->
-            if (ceil(number) == floor(number)) number.toInt() else number
-        }.toString().padStart(2, '0')
+        val formattedEp = eu.kanade.presentation.util.formatEpisodeNumber(
+            episode.episode_number.toDouble(),
+            episode.name,
+        )
+        val epNumber = formattedEp.toIntOrNull()?.toString()?.padStart(2, '0') ?: formattedEp
 
         val title = stringResource(
             AYMR.strings.mpv_media_title,

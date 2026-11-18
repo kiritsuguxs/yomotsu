@@ -125,4 +125,30 @@ class ExtensionVersionCheckTest {
             ),
         )
     }
+
+    @Test
+    fun `hasExtensionUpdate handles composite installed APK against simple repo versionCode`() {
+        assertFalse(
+            hasExtensionUpdate(
+                installed = installed(versionCode = 1400006, versionName = "14.6", libVersion = 14.0),
+                available = available(versionCode = 6, versionName = "14.6", libVersion = 14.0),
+                isAnime = true,
+            ),
+        )
+        assertTrue(
+            hasExtensionUpdate(
+                installed = installed(versionCode = 1400006, versionName = "14.6", libVersion = 14.0),
+                available = available(versionCode = 7, versionName = "14.7", libVersion = 14.0),
+                isAnime = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `deduplicateAvailableExtensions keeps highest version across stores`() {
+        val older = available(versionCode = 6, versionName = "14.6", libVersion = 14.0)
+        val newer = available(versionCode = 1400008, versionName = "14.8", libVersion = 14.0)
+        val result = deduplicateAvailableExtensions(listOf(newer, older))
+        assertTrue(result.size == 1 && result.single().versionName == "14.8")
+    }
 }

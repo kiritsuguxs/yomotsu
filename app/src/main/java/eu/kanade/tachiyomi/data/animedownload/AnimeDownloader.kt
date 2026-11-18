@@ -137,6 +137,8 @@ class AnimeDownloader(
     @Volatile
     var isFFmpegRunning: Boolean = false
 
+    private val activeFFmpegSessions = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+
     // AM -->
     val networkService: NetworkHelper by injectLazy()
     val client: OkHttpClient
@@ -296,10 +298,15 @@ class AnimeDownloader(
      */
     private fun cancelDownloaderJob() {
         isFFmpegRunning = false
-        FFmpegKitConfig.getSessions().filter {
-            it.isFFmpeg && (it.state == SessionState.CREATED || it.state == SessionState.RUNNING)
-        }.forEach {
-            it.cancel()
+        val trackedSessionIds = activeFFmpegSessions.values.toSet()
+        activeFFmpegSessions.clear()
+        if (trackedSessionIds.isNotEmpty()) {
+            FFmpegKitConfig.getSessions().filter {
+                it.sessionId in trackedSessionIds &&
+                    (it.state == SessionState.CREATED || it.state == SessionState.RUNNING)
+            }.forEach {
+                it.cancel()
+            }
         }
         downloaderJob?.cancel()
         downloaderJob = null
@@ -406,7 +413,18 @@ class AnimeDownloader(
         }
 
         val episodeDirname = provider.getChapterDirName(download.episode.name, download.episode.scanlator)
-        val tmpDir = animeDir.createDirectory(episodeDirname + TMP_DIR_SUFFIX)!!
+        val tmpDir = animeDir.findFile(episodeDirname + TMP_DIR_SUFFIX)
+            ?: animeDir.createDirectory(episodeDirname + TMP_DIR_SUFFIX)
+            ?: run {
+                download.status = AnimeDownload.State.ERROR
+                notifier.onError(
+                    "Unable to create temporary download directory",
+                    download.chapter.name,
+                    download.manga.title,
+                    download.manga.id,
+                )
+                return
+            }
 
         try {
             if (download.video == null) {
@@ -420,8 +438,12 @@ class AnimeDownloader(
                 download.video = bestVideo
             }
 
-            withIOContext {
+            val handedOffExternally = withIOContext {
                 getOrDownloadVideoFile(download, tmpDir)
+            }
+            if (handedOffExternally) {
+                removeFromQueue(download)
+                return
             }
 
             if (!isDownloadSuccessful(download, tmpDir)) {
@@ -430,7 +452,7 @@ class AnimeDownloader(
             }
 
             // Only rename the directory if it's downloaded
-            val filename = DiskUtil.buildValidFilename("${/* SY --> */ download.anime.ogTitle /* SY <-- */} - ${download.episode.name}")
+            val filename = DiskUtil.buildValidFilename("${download.anime.ogTitle} - ${download.episode.name}")
             val episodeOnlyFilename = DiskUtil.buildValidFilename(download.episode.name)
             tmpDir.findFile("$filename.tmp")?.delete()
             tmpDir.findFile("$episodeOnlyFilename.tmp")?.delete()
@@ -458,16 +480,15 @@ class AnimeDownloader(
     }
 
     /**
-     * Gets the video file if already downloaded, otherwise downloads it
+     * Gets the video file if already downloaded, otherwise downloads it.
      *
-     * @param download the download of the video.
-     * @param tmpDir the temporary directory of the download.
+     * @return true if the download was handed off to an external downloader app.
      */
     private suspend fun getOrDownloadVideoFile(
         download: AnimeDownload,
         tmpDir: UniFile,
-    ) {
-        val video = download.video!!
+    ): Boolean {
+        val video = download.video ?: throw Exception(context.stringResource(AYMR.strings.video_list_empty_error))
 
         video.status = Video.State.LoadVideo
 
@@ -480,9 +501,18 @@ class AnimeDownloader(
         tmpDir.findFile("$filename.tmp")?.delete()
 
         // Try to find the video file
-        val videoFile = tmpDir.listFiles()?.firstOrNull { it.name!!.startsWith("$filename.mkv") }
+        val videoFile = tmpDir.listFiles()?.firstOrNull { it.name?.startsWith("$filename.mkv") == true }
 
         try {
+            if (videoFile == null && preferences.useExternalDownloader.get() != download.changeDownloader) {
+                val betterFileName = DiskUtil.buildValidFilename(
+                    "${download.anime.ogTitle} - ${download.episode.name}",
+                )
+                downloadVideoExternal(video, download.source, tmpDir, betterFileName)
+                video.status = Video.State.Ready
+                return true
+            }
+
             // If the video is already downloaded, do nothing. Otherwise download from network
             val file = when {
                 videoFile != null -> videoFile
@@ -492,22 +522,14 @@ class AnimeDownloader(
                     download.status = AnimeDownload.State.DOWNLOADING
                     download.progress = 0
 
-                    // If videoFile is not existing then download it
-                    if (preferences.useExternalDownloader.get() == download.changeDownloader) {
-                        progressJob = scope.launch {
-                            while (download.status == AnimeDownload.State.DOWNLOADING) {
-                                delay(500)
-                                notifier.onProgressChange(download)
-                            }
+                    progressJob = scope.launch {
+                        while (download.status == AnimeDownload.State.DOWNLOADING) {
+                            delay(500)
+                            notifier.onProgressChange(download)
                         }
-
-                        downloadVideo(download, tmpDir, filename)
-                    } else {
-                        val betterFileName = DiskUtil.buildValidFilename(
-                            "${/* SY --> */ download.anime.ogTitle /* SY <-- */} - ${download.episode.name}",
-                        )
-                        downloadVideoExternal(download.video!!, download.source, tmpDir, betterFileName)
                     }
+
+                    downloadVideo(download, tmpDir, filename)
                 }
             }
 
@@ -515,11 +537,13 @@ class AnimeDownloader(
             download.progress = 100
             video.status = Video.State.Ready
             progressJob?.cancel()
+            return false
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             video.status = Video.State.Error(e)
-            notifier.onError(e.message, download.episode.name, /* SY --> */ download.anime.ogTitle /* SY <-- */, download.anime.id)
+            notifier.onError(e.message, download.episode.name, download.anime.ogTitle, download.anime.id)
             progressJob?.cancel()
+            return false
         }
     }
 
@@ -541,7 +565,8 @@ class AnimeDownloader(
             if (currentCoroutineContext().isActive) {
                 file = try {
                     tmpDir.findFile("$filename.tmp")?.delete()
-                    val videoFile = tmpDir.createFile("$filename.tmp")!!
+                    val videoFile = tmpDir.createFile("$filename.tmp")
+                        ?: throw Exception("Unable to create temporary video file")
                     try {
                         ffmpegDownload(download, tmpDir, videoFile, filename)
                     } catch (e: Exception) {
@@ -553,7 +578,7 @@ class AnimeDownloader(
                     notifier.onError(
                         (e.message ?: "Download error") + ", retrying..",
                         download.episode.name,
-                        /* SY --> */ download.anime.ogTitle /* SY <-- */,
+                        download.anime.ogTitle,
                         download.anime.id,
                     )
                     delay(2000L)
@@ -577,22 +602,28 @@ class AnimeDownloader(
         videoFile: UniFile,
         filename: String,
     ): UniFile {
-        val video = download.video!!
+        val video = download.video ?: throw Exception("Video is null")
 
         isFFmpegRunning = true
 
         val ffmpegFilename = videoFile.toFFmpegString(context)
 
         val headers = video.headers ?: download.source.headers
-        val headerOptions = if (headers.size > 0) {
-            headers.joinToString("", "-headers '", "'") {
-                "${it.first}: ${it.second}\r\n"
+        val headersValue = if (headers.size > 0) {
+            buildString {
+                for (i in 0 until headers.size) {
+                    val cleanKey = headers.name(i).replace("\r", "").replace("\n", "").trim()
+                    val cleanVal = headers.value(i).replace("\r", "").replace("\n", "").trim()
+                    if (cleanKey.isNotEmpty()) {
+                        append(cleanKey).append(": ").append(cleanVal).append("\r\n")
+                    }
+                }
             }
         } else {
             ""
         }
 
-        val ffmpegOptions = getFFmpegOptions(video, headerOptions, ffmpegFilename)
+        val ffmpegOptions = getFFmpegOptions(video, headersValue, ffmpegFilename)
 
         var duration = 0L
         var nextLineIsDuration = false
@@ -633,7 +664,7 @@ class AnimeDownloader(
         }
 
         val session = FFmpegSession.create(ffmpegOptions, {}, logCallback, statCallback)
-        val inputDuration = getDuration(video.videoUrl, headerOptions) ?: 0F
+        val inputDuration = getDuration(video.videoUrl, headersValue) ?: 0F
         if (inputDuration > 0F) {
             duration = (inputDuration * 1000L).toLong()
         }
@@ -642,8 +673,23 @@ class AnimeDownloader(
             throw Exception("ffmpeg was cancelled")
         }
 
-        withContext(Dispatchers.IO) {
-            FFmpegKitConfig.ffmpegExecute(session)
+        val downloadKey = download.episode.id
+        activeFFmpegSessions[downloadKey] = session.sessionId
+        try {
+            withContext(Dispatchers.IO) {
+                val cancellationHandle = currentCoroutineContext()[Job]?.invokeOnCompletion { cause ->
+                    if (cause != null) {
+                        session.cancel()
+                    }
+                }
+                try {
+                    FFmpegKitConfig.ffmpegExecute(session)
+                } finally {
+                    cancellationHandle?.dispose()
+                }
+            }
+        } finally {
+            activeFFmpegSessions.remove(downloadKey, session.sessionId)
         }
 
         return if (ReturnCode.isSuccess(session.returnCode)) {
@@ -696,84 +742,113 @@ class AnimeDownloader(
 
     private fun getFFmpegOptions(
         video: Video,
-        headerOptions: String,
+        headersValue: String,
         ffmpegFilename: String,
     ): Array<String> {
-        fun formatInputs(tracks: List<Track>) = tracks.joinToString(" ", postfix = " ") {
-            val h = if (headerOptions.isNotBlank()) "$headerOptions " else ""
-            "${h}-i \"${it.url}\""
+        val args = mutableListOf("-y", "-nostdin")
+
+        if (headersValue.isNotBlank()) {
+            args.add("-headers")
+            args.add(headersValue)
         }
-
-        fun formatMaps(tracks: List<Track>, type: String, offset: Int = 0) = tracks.indices.joinToString(" ") {
-            "-map ${it + 1 + offset}:$type"
+        if (video.videoUrl.startsWith("http") && !video.videoUrl.contains(".m3u8")) {
+            args.addAll(
+                listOf(
+                    "-reconnect", "1",
+                    "-reconnect_at_eof", "1",
+                    "-reconnect_streamed", "1",
+                    "-reconnect_delay_max", "5",
+                ),
+            )
         }
-
-        fun formatMetadata(tracks: List<Track>, type: String) = tracks.mapIndexed { i, track ->
-            "-metadata:s:$type:$i \"title=${track.lang}\""
-        }.joinToString(" ")
-
-        val subtitleInputs = formatInputs(video.subtitleTracks)
-        val subtitleMaps = formatMaps(video.subtitleTracks, "s")
-        val subtitleMetadata = formatMetadata(video.subtitleTracks, "s")
-
-        val audioInputs = formatInputs(video.audioTracks)
-        val audioMaps = formatMaps(video.audioTracks, "a", video.subtitleTracks.size)
-        val audioMetadata = formatMetadata(video.audioTracks, "a")
-
-        val sourceStreamOptions = video.ffmpegStreamArgs.joinToString(" ") { (key, value) ->
+        for ((key, value) in video.ffmpegStreamArgs) {
             val sanitizedKey = sanitizeFFmpegKey(key)
-            if (value.isNotBlank()) {
-                val sanitizedValue = sanitizeFFmpegValue(value)
-                "-$sanitizedKey \"${sanitizedValue.replace("\"", "\\\"")}\""
-            } else {
-                "-$sanitizedKey"
+            if (sanitizedKey.isNotBlank()) {
+                args.add("-$sanitizedKey")
+                if (value.isNotBlank()) {
+                    args.add(sanitizeFFmpegValue(value))
+                }
             }
         }
-        val sourceVideoOptions = video.ffmpegVideoArgs.joinToString(" ") { (key, value) ->
+        args.add("-i")
+        args.add(video.videoUrl)
+
+        for (track in video.subtitleTracks) {
+            if (headersValue.isNotBlank()) {
+                args.add("-headers")
+                args.add(headersValue)
+            }
+            args.add("-i")
+            args.add(track.url)
+        }
+
+        for (track in video.audioTracks) {
+            if (headersValue.isNotBlank()) {
+                args.add("-headers")
+                args.add(headersValue)
+            }
+            args.add("-i")
+            args.add(track.url)
+        }
+
+        // Select the first video stream (0:v:0) instead of 0:v so multi-bitrate HLS master
+        // playlists do not mux all resolution variants simultaneously into one file.
+        args.addAll(listOf("-map", "0:v:0"))
+        video.audioTracks.indices.forEach { i ->
+            args.add("-map")
+            args.add("${i + 1 + video.subtitleTracks.size}:a")
+        }
+        args.addAll(listOf("-map", "0:a?"))
+        video.subtitleTracks.indices.forEach { i ->
+            args.add("-map")
+            args.add("${i + 1}:s")
+        }
+        args.addAll(listOf("-map", "0:s?", "-map", "0:t?"))
+        args.addAll(listOf("-f", "matroska", "-c:a", "copy", "-c:v", "copy", "-c:s", "copy"))
+
+        video.subtitleTracks.forEachIndexed { i, track ->
+            args.add("-metadata:s:s:$i")
+            args.add("title=${track.lang}")
+        }
+        video.audioTracks.forEachIndexed { i, track ->
+            args.add("-metadata:s:a:$i")
+            args.add("title=${track.lang}")
+        }
+        for ((key, value) in video.ffmpegVideoArgs) {
             val sanitizedKey = sanitizeFFmpegKey(key)
-            if (value.isNotBlank()) {
-                val sanitizedValue = sanitizeFFmpegValue(value)
-                "-$sanitizedKey \"${sanitizedValue.replace("\"", "\\\"")}\""
-            } else {
-                "-$sanitizedKey"
+            if (sanitizedKey.isNotBlank()) {
+                args.add("-$sanitizedKey")
+                if (value.isNotBlank()) {
+                    args.add(sanitizeFFmpegValue(value))
+                }
             }
         }
 
-        val videoInput = buildList {
-            if (headerOptions.isNotBlank()) {
-                add(headerOptions)
-            }
-            if (video.videoUrl.startsWith("http") && !video.videoUrl.contains(".m3u8")) {
-                add("-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5")
-            }
-            if (sourceStreamOptions.isNotBlank()) {
-                add(sourceStreamOptions)
-            }
-            add("-i")
-            add("\"${video.videoUrl}\"")
-        }.joinToString(" ")
+        args.add("-y")
+        args.add(ffmpegFilename)
 
-        val command = listOf(
-            "-y -nostdin",
-            videoInput, subtitleInputs, audioInputs,
-            "-map 0:v", audioMaps, "-map 0:a?", subtitleMaps, "-map 0:s? -map 0:t?",
-            "-f matroska -c:a copy -c:v copy -c:s copy",
-            subtitleMetadata, audioMetadata, sourceVideoOptions,
-            "-y", "\"$ffmpegFilename\"",
-        )
-            .filter(String::isNotBlank)
-            .joinToString(" ")
-
-        return FFmpegKitConfig.parseArguments(command)
+        return args.toTypedArray()
     }
 
-    private suspend fun getDuration(videoUrl: String, headerOptions: String): Float? {
+    private suspend fun getDuration(videoUrl: String, headersValue: String): Float? {
         return withContext(Dispatchers.IO) {
             runCatching {
                 withTimeoutOrNull(5000L) {
-                    val headersArg = if (headerOptions.isNotBlank()) "$headerOptions " else ""
-                    val command = "${headersArg}-v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"$videoUrl\""
-                    val session = FFprobeSession.create(FFmpegKitConfig.parseArguments(command))
+                    val args = buildList {
+                        if (headersValue.isNotBlank()) {
+                            add("-headers")
+                            add(headersValue)
+                        }
+                        addAll(
+                            listOf(
+                                "-v", "quiet",
+                                "-show_entries", "format=duration",
+                                "-of", "default=noprint_wrappers=1:nokey=1",
+                                videoUrl,
+                            ),
+                        )
+                    }.toTypedArray()
+                    val session = FFprobeSession.create(args)
                     FFmpegKitConfig.ffprobeExecute(session)
                     session.allLogsAsString.trim().toFloatOrNull()
                 }
@@ -782,35 +857,28 @@ class AnimeDownloader(
     }
 
     /**
-     * Returns the observable which downloads the video with an external downloader.
-     *
-     * @param video the video to download.
-     * @param source the source of the video.
-     * @param tmpDir the temporary directory of the download.
-     * @param filename the filename of the video.
+     * Launches an external downloader app for the given [video].
      */
     private fun downloadVideoExternal(
         video: Video,
         source: AnimeHttpSource,
         tmpDir: UniFile,
         filename: String,
-    ): UniFile {
+    ) {
         try {
-            val file = tmpDir.createFile("${filename}_tmp.mkv")!!
-            // KMK -->
-            try {
-                // Use the main looper to show toast from the correct thread
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    try {
-                        context.copyToClipboard("Episode download location", tmpDir.filePath!!.substringBeforeLast("_tmp"))
-                    } catch (e: SecurityException) {
-                        logcat(LogPriority.ERROR) { "Clipboard permission not granted: " + e.message }
+            tmpDir.filePath?.substringBeforeLast("_tmp")?.let { targetPath ->
+                try {
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        try {
+                            context.copyToClipboard("Episode download location", targetPath)
+                        } catch (e: SecurityException) {
+                            logcat(LogPriority.ERROR) { "Clipboard permission not granted: " + e.message }
+                        }
                     }
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR) { "Error copying to clipboard: " + e.message }
                 }
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR) { "Error copying to clipboard: " + e.message }
             }
-            // KMK <--
 
             // Note: start download with external intent
             val pm = context.packageManager
@@ -820,6 +888,7 @@ class AnimeDownloader(
                 intent = pm.getLaunchIntentForPackage(pkgName) ?: throw Exception(
                     "Launch intent not found",
                 )
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 when {
                     // 1DM
                     pkgName.startsWith("idm.internet.download.manager") -> {
@@ -859,25 +928,10 @@ class AnimeDownloader(
                                 "com.dv.get.ACTION_LIST_ADD",
                                 "${video.videoUrl.toUri()}<info>$filename.mkv",
                             )
-                            putExtra(
-                                "com.dv.get.ACTION_LIST_PATH",
-                                tmpDir.filePath!!.substringBeforeLast("_"),
-                            )
+                            tmpDir.filePath?.substringBeforeLast("_")?.let {
+                                putExtra("com.dv.get.ACTION_LIST_PATH", it)
+                            }
                             putExtra("android.media.intent.extra.HTTP_HEADERS", bundle)
-                        }
-                        file.delete()
-                        tmpDir.delete()
-                        queueState.value.find { anime -> anime.video == video }?.let { download ->
-                            download.status = AnimeDownload.State.DOWNLOADED
-                            scope.launch { eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(context) }
-                            // Delete successful downloads from queue
-                            if (download.status == AnimeDownload.State.DOWNLOADED) {
-                                // Remove downloaded episode from queue
-                                removeFromQueue(download)
-                            }
-                            if (areAllDownloadsFinished()) {
-                                stop()
-                            }
                         }
                     }
                 }
@@ -888,8 +942,8 @@ class AnimeDownloader(
                     putExtra("extra_filename", filename)
                 }
             }
+            tmpDir.delete()
             context.startActivity(intent)
-            return file
         } catch (e: Exception) {
             tmpDir.findFile("${filename}_tmp.mkv")?.delete()
             throw e

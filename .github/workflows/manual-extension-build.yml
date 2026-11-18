@@ -6,26 +6,24 @@ on:
       branch:
         description: Branch que contém a extensão
         required: true
-        default: extensions
+        default: extensão
         type: string
       extension:
         description: Extensão para compilar
         required: true
-        default: auto
+        default: all
         type: choice
         options:
-          - auto
-          - lycantoons
-          - geasscomics
-          - toonlivre
-          - shadowmanga
-          - tiamanhwa
-          - megahentai
-          - sexkomix
-          - tankouhentai
-          - bakai
-          - hentaitokyo
+          - all
+          - animeshentai
+          - baozinho
           - blackoutcomics
+          - blitztoons
+          - nhentaibr
+          - projectnox
+          - saimotv
+          - toonlivre
+          - watchanimehentai
 
 permissions:
   actions: write
@@ -42,13 +40,27 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: "extensions-build.yml",
-              ref: process.env.TARGET_BRANCH,
-              inputs: {
-                extension: process.env.TARGET_EXTENSION,
-              },
-            });
-            core.notice(`Build iniciado para ${process.env.TARGET_EXTENSION} em ${process.env.TARGET_BRANCH}.`);
+            const allExtensions = [
+              "animeshentai",
+              "baozinho",
+              "blackoutcomics",
+              "blitztoons",
+              "nhentaibr",
+              "projectnox",
+              "saimotv",
+              "toonlivre",
+              "watchanimehentai",
+            ];
+            const targets = process.env.TARGET_EXTENSION === "all"
+              ? allExtensions
+              : [process.env.TARGET_EXTENSION];
+
+            for (const ext of targets) {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: `build-${ext}-extension.yml`,
+                ref: process.env.TARGET_BRANCH,
+              });
+              core.notice(`Build iniciado para ${ext} em ${process.env.TARGET_BRANCH}.`);
+            }

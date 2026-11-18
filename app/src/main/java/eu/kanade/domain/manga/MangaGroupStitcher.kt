@@ -2,6 +2,7 @@ package eu.kanade.domain.manga
 
 import eu.kanade.domain.merge.MergedGroupStitcher
 import eu.kanade.domain.merge.storedUnitsOf
+import eu.kanade.presentation.util.normalizeMergedEpisodeNumber
 import tachiyomi.domain.merge.rankingStamps
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -21,6 +22,8 @@ open class MangaGroupStitcher(
     override val contentType: ContentType = ContentType.MANGA,
 ) : MergedGroupStitcher {
 
+    protected open fun effectiveChapterNumber(chapter: Chapter): Double = chapter.chapterNumber
+
     override suspend fun stitch(groupId: Long): GroupStitch {
         val group = load(groupId) ?: return GroupStitch(emptyList(), emptyMap())
         val merged = ChapterAggregation.merge(
@@ -29,17 +32,18 @@ open class MangaGroupStitcher(
             libraryPreferences.preferredMangaSources.get(),
             emptySet(),
             group.memberRanking,
+            numberSelector = ::effectiveChapterNumber,
         )
         val units = storedUnitsOf(
             chapters = group.chaptersBySource.values.flatten(),
             merged = merged,
             id = { it.id },
             name = { it.name },
-            number = { it.chapterNumber },
+            number = ::effectiveChapterNumber,
             order = { it.sourceOrder },
         )
         val counts = group.chaptersBySource.mapValues { (_, chapters) ->
-            ChapterAggregation.recognizedChapterCount(chapters).toLong()
+            ChapterAggregation.recognizedChapterCount(chapters, ::effectiveChapterNumber).toLong()
         }
         return GroupStitch(units, counts)
     }
@@ -51,8 +55,9 @@ open class MangaGroupStitcher(
             group.sourceIdByManga,
             libraryPreferences.preferredMangaSources.get(),
             group.memberRanking,
+            numberSelector = ::effectiveChapterNumber,
         )
-        return group.chaptersBySource[trunk].orEmpty().associate { it.id to it.chapterNumber }
+        return group.chaptersBySource[trunk].orEmpty().associate { it.id to effectiveChapterNumber(it) }
     }
 
     override suspend fun rankings(): Map<Long, String> =
@@ -106,4 +111,8 @@ class AnimeGroupStitcher(
     sourceManager,
     libraryPreferences,
     ContentType.ANIME,
-)
+) {
+    override fun effectiveChapterNumber(chapter: Chapter): Double {
+        return normalizeMergedEpisodeNumber(chapter.chapterNumber, chapter.name)
+    }
+}

@@ -35,13 +35,22 @@ import kotlin.coroutines.resume
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.util.lang.compareToCaseInsensitiveNaturalOrder
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 
 data class PendingUpload(
     val file: UniFile,
     val manga: Manga? = null,
     val chapter: Chapter? = null,
-    val tempFile: File? = null
+    val tempFile: File? = null,
+    val isNovel: Boolean = false,
 )
 
 data class CloudChapter(
@@ -57,6 +66,7 @@ data class CloudManga(
     val description: String = "",
     val coverUrl: String = "",
     val chapters: MutableList<CloudChapter> = mutableListOf(),
+    val isNovel: Boolean = false,
 )
 
 class TelegramCloudManager(
@@ -64,7 +74,10 @@ class TelegramCloudManager(
     private val preferences: tachiyomi.domain.telegram.TelegramPreferences = Injekt.get()
 ) : Client.ResultHandler {
 
+    private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var tdClient: Client? = null
+    private var activeBotToken: String = ""
+    private var remoteIndexUploadJob: Job? = null
     val isAuthReady = MutableStateFlow(false)
     var lastDownloadError: String? = null
 
@@ -78,17 +91,85 @@ class TelegramCloudManager(
 
     companion object {
         private val uploadMutex = Mutex()
+        private val BOT_TOKEN_REGEX = Regex("""\b\d{6,12}:[A-Za-z0-9_-]{30,}\b""")
+        private const val INDEX_TAG = "#YomotsuIndex"
+        private const val INDEX_FILENAME = "telegram_cloud_index.json"
     }
 
     init {
         if (preferences.enableTelegramCloud.get()) {
             initializeTdlib()
         }
+        observePreferenceChanges()
     }
 
+    private fun normalizedBotToken(): String {
+        val raw = preferences.botToken.get().trim()
+        return if (raw.startsWith("bot", ignoreCase = true)) raw.substring(3).trim() else raw
+    }
+
+    private fun redactSecrets(text: String?): String {
+        if (text.isNullOrEmpty()) return ""
+        val rawToken = preferences.botToken.get().trim()
+        val normToken = normalizedBotToken()
+        var redacted = BOT_TOKEN_REGEX.replace(text, "[REDACTED_TOKEN]")
+        if (rawToken.length >= 8) redacted = redacted.replace(rawToken, "[REDACTED_TOKEN]")
+        if (normToken.length >= 8) redacted = redacted.replace(normToken, "[REDACTED_TOKEN]")
+        return redacted
+    }
+
+    private fun observePreferenceChanges() {
+        runCatching {
+            managerScope.launch {
+                preferences.enableTelegramCloud.changes().drop(1).collectLatest { enabled ->
+                    if (enabled) {
+                        initializeTdlib()
+                    }
+                }
+            }
+            managerScope.launch {
+                preferences.botToken.changes().drop(1).collectLatest {
+                    val newToken = normalizedBotToken()
+                    if (!preferences.enableTelegramCloud.get() || newToken.isBlank()) return@collectLatest
+                    if (tdClient == null) {
+                        initializeTdlib()
+                    } else if (!isAuthReady.value) {
+                        authenticateBotToken(newToken)
+                    } else if (activeBotToken.isNotBlank() && activeBotToken != newToken) {
+                        isAuthReady.value = false
+                        tdClient?.send(TdApi.LogOut()) {}
+                    }
+                }
+            }
+        }
+    }
+
+    private fun authenticateBotToken(token: String) {
+        if (token.isBlank()) return
+        activeBotToken = token
+        tdClient?.send(TdApi.CheckAuthenticationBotToken(token)) { authResult ->
+            if (authResult is TdApi.Error) {
+                val safeMsg = redactSecrets(authResult.message)
+                logcat(LogPriority.ERROR) { "Erro na autenticacao do Bot: $safeMsg" }
+                showNotification("Nuvem Telegram", "Erro de Token: $safeMsg", ongoing = false)
+            }
+        }
+    }
+
+    @Synchronized
     fun initializeTdlib() {
         if (tdClient != null) return
         tdClient = Client.create(this, null, null)
+    }
+
+    fun releaseDownloadedFile(path: String, fileId: Int = 0) {
+        if (path.isBlank()) return
+        val file = File(path)
+        if (file.absolutePath.startsWith(context.cacheDir.absolutePath)) {
+            file.delete()
+        } else if (fileId != 0) {
+            tdClient?.send(TdApi.DeleteFile(fileId)) {}
+        }
     }
 
     fun showNotification(
@@ -102,7 +183,7 @@ class TelegramCloudManager(
         val notificationManager = androidx.core.app.NotificationManagerCompat.from(context)
         val builder = androidx.core.app.NotificationCompat.Builder(context, "downloader_progress_channel")
             .setContentTitle(title)
-            .setContentText(text)
+            .setContentText(redactSecrets(text))
             .setSmallIcon(android.R.drawable.stat_sys_upload)
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
             .setOngoing(ongoing)
@@ -144,19 +225,14 @@ class TelegramCloudManager(
                         }
                         tdClient?.send(parameters) { result ->
                             if (result is TdApi.Error) {
-                                logcat(LogPriority.ERROR) { "Erro SetTdlibParameters: ${result.message}" }
+                                logcat(LogPriority.ERROR) { "Erro SetTdlibParameters: ${redactSecrets(result.message)}" }
                             }
                         }
                     }
                     is TdApi.AuthorizationStateWaitPhoneNumber -> {
-                        val botToken = preferences.botToken.get()
+                        val botToken = normalizedBotToken()
                         if (botToken.isNotBlank()) {
-                            tdClient?.send(TdApi.CheckAuthenticationBotToken(botToken)) { authResult ->
-                                if (authResult is TdApi.Error) {
-                                    logcat(LogPriority.ERROR) { "Erro na autenticacao do Bot: ${authResult.message}" }
-                                    showNotification("Nuvem Telegram", "Erro de Token: ${authResult.message}", ongoing = false)
-                                }
-                            }
+                            authenticateBotToken(botToken)
                         } else {
                             logcat(LogPriority.ERROR) { "Bot Token nao configurado!" }
                         }
@@ -171,6 +247,15 @@ class TelegramCloudManager(
                             tdClient?.send(TdApi.OpenChat(targetChatId)) { openRes ->
                                 logcat(LogPriority.INFO) { "Chat aberto no TDLib: $openRes" }
                             }
+                        }
+                    }
+                    is TdApi.AuthorizationStateClosed -> {
+                        synchronized(this) {
+                            tdClient = null
+                        }
+                        isAuthReady.value = false
+                        if (preferences.enableTelegramCloud.get() && normalizedBotToken().isNotBlank()) {
+                            initializeTdlib()
                         }
                     }
                 }
@@ -194,12 +279,13 @@ class TelegramCloudManager(
                 val doc = (realMessage.content as? TdApi.MessageDocument)?.document?.document
                 val realFileId = doc?.id ?: 0
                 val realRemoteId = doc?.remote?.id ?: ""
+                val hasValidRemoteDocument = doc != null && (doc.size > 0 || doc.expectedSize > 0) && realRemoteId.isNotBlank()
 
-                logcat(LogPriority.INFO) { "Upload finalizado pelo Telegram com SUCESSO. Real ID: $realMessageId, RemoteId: $realRemoteId" }
+                logcat(LogPriority.INFO) { "Upload finalizado pelo Telegram com SUCESSO. Real ID: $realMessageId" }
                 showNotification("Nuvem Telegram", "Upload concluído!", autoDismiss = true)
 
                 if (pending?.manga != null && pending.chapter != null) {
-                    CoroutineScope(Dispatchers.IO).launch {
+                    managerScope.launch {
                         registerInIndex(
                             mangaTitle = pending.manga.title,
                             description = pending.manga.description ?: "",
@@ -207,20 +293,21 @@ class TelegramCloudManager(
                             chapterName = pending.chapter.name,
                             messageId = realMessageId,
                             fileId = realFileId,
-                            remoteFileId = realRemoteId
+                            remoteFileId = realRemoteId,
+                            isNovel = pending.isNovel,
                         )
                     }
                 } else {
-                    CoroutineScope(Dispatchers.IO).launch {
+                    managerScope.launch {
                         updateMessageIdInIndex(oldMessageId, realMessageId, realFileId, realRemoteId)
                     }
                 }
 
-                if (pending != null && preferences.deleteLocalAfterUpload.get()) {
+                if (pending != null && preferences.deleteLocalAfterUpload.get() && hasValidRemoteDocument) {
                     val deleted = pending.file.delete()
                     logcat(LogPriority.INFO) { "Arquivo local apagado apos upload: $deleted" }
-                    if (pending.manga != null && pending.chapter != null) {
-                        CoroutineScope(Dispatchers.IO).launch {
+                    if (!pending.isNovel && pending.manga != null && pending.chapter != null) {
+                        managerScope.launch {
                             try {
                                 val downloadCache = Injekt.get<eu.kanade.tachiyomi.data.download.DownloadCache>()
                                 downloadCache.removeChapter(pending.chapter, pending.manga)
@@ -245,8 +332,8 @@ class TelegramCloudManager(
     // INDICE LOCAL DE OBRAS SALVAS NA NUVEM
     // ==========================================
 
-    private fun getIndexFile(): File = File(context.filesDir, "telegram_cloud_index.json")
-    private fun getBackupIndexFile(): File = File(context.filesDir, "telegram_cloud_index.json.bak")
+    private fun getIndexFile(): File = File(context.filesDir, INDEX_FILENAME)
+    private fun getBackupIndexFile(): File = File(context.filesDir, "$INDEX_FILENAME.bak")
 
     fun getCloudIndex(): List<CloudManga> {
         val primaryFile = getIndexFile()
@@ -292,6 +379,7 @@ class TelegramCloudManager(
                         description = obj.optString("description", ""),
                         coverUrl = obj.optString("coverUrl", ""),
                         chapters = chapters,
+                        isNovel = obj.optBoolean("isNovel", false),
                     ),
                 )
             }
@@ -302,7 +390,7 @@ class TelegramCloudManager(
         }
     }
 
-    private fun internalSaveCloudIndex(list: List<CloudManga>) {
+    private fun internalSaveCloudIndex(list: List<CloudManga>, syncRemote: Boolean = true) {
         try {
             val array = JSONArray()
             for (manga in list) {
@@ -310,6 +398,7 @@ class TelegramCloudManager(
                     put("title", manga.title)
                     put("description", manga.description)
                     put("coverUrl", manga.coverUrl)
+                    put("isNovel", manga.isNovel)
                     val cArray = JSONArray()
                     for (chap in manga.chapters) {
                         cArray.put(
@@ -344,14 +433,138 @@ class TelegramCloudManager(
                     tempFile.delete()
                 }
             }
+
+            if (syncRemote && list.isNotEmpty()) {
+                scheduleRemoteIndexUpload()
+            }
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Erro ao salvar telegram_cloud_index.json atomicamente" }
         }
     }
 
-    suspend fun saveCloudIndex(list: List<CloudManga>) = indexMutex.withLock {
+    private fun scheduleRemoteIndexUpload() {
+        remoteIndexUploadJob?.cancel()
+        remoteIndexUploadJob = managerScope.launch {
+            delay(4_000L)
+            uploadRemoteIndexSnapshot()
+        }
+    }
+
+    private suspend fun uploadRemoteIndexSnapshot() = withContext(Dispatchers.IO) {
+        val botToken = normalizedBotToken()
+        val chatId = preferences.chatId.get().trim()
+        val indexFile = getIndexFile()
+        if (!preferences.enableTelegramCloud.get() || botToken.isBlank() || chatId.isBlank() || !indexFile.exists() || indexFile.length() == 0L) {
+            return@withContext
+        }
+        try {
+            val client = Injekt.get<NetworkHelper>().client
+            val mediaType = "application/json".toMediaType()
+            val existingMsgId = preferences.lastIndexMessageId.get()
+
+            if (existingMsgId > 0L) {
+                val mediaJson = JSONObject()
+                    .put("type", "document")
+                    .put("media", "attach://index_doc")
+                    .put("caption", INDEX_TAG)
+                    .toString()
+                val editBody = MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("chat_id", chatId)
+                    .addFormDataPart("message_id", existingMsgId.toString())
+                    .addFormDataPart("media", mediaJson)
+                    .addFormDataPart("index_doc", INDEX_FILENAME, indexFile.asRequestBody(mediaType))
+                    .build()
+                val editReq = Request.Builder()
+                    .url("https://api.telegram.org/bot$botToken/editMessageMedia")
+                    .post(editBody)
+                    .build()
+                client.newCall(editReq).execute().use { res ->
+                    if (res.isSuccessful) {
+                        val resJson = runCatching { JSONObject(res.body.string()) }.getOrNull()
+                        if (resJson?.optBoolean("ok") == true) {
+                            return@withContext
+                        }
+                    }
+                }
+            }
+
+            val sendBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("chat_id", chatId)
+                .addFormDataPart("caption", INDEX_TAG)
+                .addFormDataPart("disable_notification", "true")
+                .addFormDataPart("document", INDEX_FILENAME, indexFile.asRequestBody(mediaType))
+                .build()
+            val sendReq = Request.Builder()
+                .url("https://api.telegram.org/bot$botToken/sendDocument")
+                .post(sendBody)
+                .build()
+            client.newCall(sendReq).execute().use { res ->
+                if (!res.isSuccessful) return@withContext
+                val resJson = JSONObject(res.body.string())
+                if (!resJson.optBoolean("ok")) return@withContext
+                val newMsgId = resJson.optJSONObject("result")?.optLong("message_id", 0L) ?: 0L
+                if (newMsgId > 0L) {
+                    preferences.lastIndexMessageId.set(newMsgId)
+                    val pinReq = Request.Builder()
+                        .url("https://api.telegram.org/bot$botToken/pinChatMessage?chat_id=$chatId&message_id=$newMsgId&disable_notification=true")
+                        .get()
+                        .build()
+                    runCatching { client.newCall(pinReq).execute().close() }
+                }
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.WARN) { "Falha ao atualizar snapshot remoto do índice: ${redactSecrets(e.message)}" }
+        }
+    }
+
+    private suspend fun fetchRemoteIndexSnapshot(targetChatId: Long): List<CloudManga>? = withContext(Dispatchers.IO) {
+        val botToken = normalizedBotToken()
+        if (botToken.isBlank() || targetChatId == 0L) return@withContext null
+        try {
+            val client = Injekt.get<NetworkHelper>().client
+            val req = Request.Builder()
+                .url("https://api.telegram.org/bot$botToken/getChat?chat_id=$targetChatId")
+                .get()
+                .build()
+            val bodyString = client.newCall(req).execute().use { res ->
+                if (!res.isSuccessful) return@withContext null
+                res.body.string()
+            }
+            val json = JSONObject(bodyString)
+            if (!json.optBoolean("ok")) return@withContext null
+            val pinned = json.optJSONObject("result")?.optJSONObject("pinned_message") ?: return@withContext null
+            val pinnedCaption = pinned.optString("caption", "")
+            val docObj = pinned.optJSONObject("document") ?: return@withContext null
+            val fileName = docObj.optString("file_name", "")
+            if (!pinnedCaption.contains(INDEX_TAG, ignoreCase = true) && !fileName.equals(INDEX_FILENAME, ignoreCase = true)) {
+                return@withContext null
+            }
+            val remoteFileId = docObj.optString("file_id", "")
+            if (remoteFileId.isBlank()) return@withContext null
+            val pinnedMsgId = pinned.optLong("message_id", 0L)
+            if (pinnedMsgId > 0L) {
+                preferences.lastIndexMessageId.set(pinnedMsgId)
+            }
+            val tempIndex = File(context.cacheDir, "tg_remote_index_${System.currentTimeMillis()}.json")
+            try {
+                if (downloadViaBotApi(remoteFileId, tempIndex)) {
+                    return@withContext parseIndexFile(tempIndex)
+                }
+            } finally {
+                tempIndex.delete()
+            }
+            null
+        } catch (e: Exception) {
+            logcat(LogPriority.WARN) { "Falha ao buscar índice remoto no Telegram: ${redactSecrets(e.message)}" }
+            null
+        }
+    }
+
+    suspend fun saveCloudIndex(list: List<CloudManga>, syncRemote: Boolean = true) = indexMutex.withLock {
         withContext(Dispatchers.IO) {
-            internalSaveCloudIndex(list)
+            internalSaveCloudIndex(list, syncRemote = syncRemote)
         }
     }
 
@@ -416,23 +629,34 @@ class TelegramCloudManager(
         chapterName: String,
         messageId: Long,
         fileId: Int,
-        remoteFileId: String
+        remoteFileId: String,
+        isNovel: Boolean = false,
     ) = indexMutex.withLock {
         withContext(Dispatchers.IO) {
             val current = getCloudIndex().toMutableList()
             var manga = current.find { it.title.equals(mangaTitle, ignoreCase = true) }
             if (manga == null) {
-                manga = CloudManga(title = mangaTitle, description = description, coverUrl = coverUrl)
+                manga = CloudManga(
+                    title = mangaTitle,
+                    description = description,
+                    coverUrl = coverUrl,
+                    isNovel = isNovel,
+                )
                 current.add(manga)
             } else {
+                var mIdx = current.indexOf(manga)
                 if (manga.description.isBlank() && description.isNotBlank()) {
-                    val mIdx = current.indexOf(manga)
                     manga = manga.copy(description = description)
                     current[mIdx] = manga
                 }
                 if (manga.coverUrl.isBlank() && coverUrl.isNotBlank()) {
-                    val mIdx = current.indexOf(manga)
+                    mIdx = current.indexOf(manga)
                     manga = manga.copy(coverUrl = coverUrl)
+                    current[mIdx] = manga
+                }
+                if (!manga.isNovel && isNovel) {
+                    mIdx = current.indexOf(manga)
+                    manga = manga.copy(isNovel = true)
                     current[mIdx] = manga
                 }
             }
@@ -543,22 +767,25 @@ class TelegramCloudManager(
                 var isTemp = false
                 var dispatched = false
                 try {
+                    val uniquePrefix = "tg_upload_${manga.id}_${chapter.id}_${System.currentTimeMillis()}"
                     fileToUpload = if (cbzFile.isDirectory) {
-                        val tempZip = File(context.cacheDir, "${DiskUtil.buildValidFilename(chapter.name)}.cbz")
+                        val tempZip = File(context.cacheDir, "$uniquePrefix.cbz")
+                        val sortedFiles = cbzFile.listFiles()
+                            ?.filter { it.isFile && !it.name.orEmpty().startsWith('.') }
+                            ?.sortedWith { a, b -> a.name.orEmpty().compareToCaseInsensitiveNaturalOrder(b.name.orEmpty()) }
+                            .orEmpty()
                         ZipOutputStream(tempZip.outputStream().buffered()).use { zipOut ->
-                            cbzFile.listFiles()?.forEach { file ->
-                                if (file.isFile && !file.name.orEmpty().startsWith('.')) {
-                                    zipOut.putNextEntry(ZipEntry(file.name.orEmpty()))
-                                    file.openInputStream().use { it.copyTo(zipOut) }
-                                    zipOut.closeEntry()
-                                }
+                            sortedFiles.forEach { file ->
+                                zipOut.putNextEntry(ZipEntry(file.name.orEmpty()))
+                                file.openInputStream().use { it.copyTo(zipOut) }
+                                zipOut.closeEntry()
                             }
                         }
                         tempZip
                     } else if (cbzFile.uri.scheme == "file") {
                         File(cbzFile.uri.path!!)
                     } else {
-                        val temp = File(context.cacheDir, cbzFile.name ?: "capitulo.cbz")
+                        val temp = File(context.cacheDir, "${uniquePrefix}_${DiskUtil.buildValidFilename(cbzFile.name ?: "capitulo.cbz")}")
                         cbzFile.openInputStream().use { input -> temp.outputStream().use { output -> input.copyTo(output) } }
                         temp
                     }
@@ -605,7 +832,7 @@ class TelegramCloudManager(
                             val doc = (result.content as? TdApi.MessageDocument)?.document?.document
                             val fileId = doc?.id ?: 0
                             val remoteId = doc?.remote?.id ?: ""
-                            CoroutineScope(Dispatchers.IO).launch {
+                            managerScope.launch {
                                 registerInIndex(
                                     mangaTitle = manga.title,
                                     description = manga.description ?: "",
@@ -613,14 +840,15 @@ class TelegramCloudManager(
                                     chapterName = chapter.name,
                                     messageId = result.id,
                                     fileId = fileId,
-                                    remoteFileId = remoteId
+                                    remoteFileId = remoteId,
                                 )
                             }
                             logcat(LogPriority.INFO) { "Mensagem despachada pro TDLib. ID = ${result.id}" }
                         } else if (result is TdApi.Error) {
                             if (isTemp) fileToUpload.delete()
-                            logcat(LogPriority.ERROR) { "Erro ao empurrar pra TDLib: ${result.message}" }
-                            showNotification("Nuvem Telegram", "Erro: ${result.message}", autoDismiss = true)
+                            val safeMsg = redactSecrets(result.message)
+                            logcat(LogPriority.ERROR) { "Erro ao empurrar pra TDLib: $safeMsg" }
+                            showNotification("Nuvem Telegram", "Erro: $safeMsg", autoDismiss = true)
                         }
                     }
                     dispatched = true
@@ -628,7 +856,7 @@ class TelegramCloudManager(
                     delay(3000)
 
                 } catch (e: Exception) {
-                    logcat(LogPriority.ERROR, e) { "Erro no fluxo de preparo da TDLib" }
+                    logcat(LogPriority.ERROR) { "Erro no fluxo de preparo da TDLib: ${redactSecrets(e.message)}" }
                     showNotification("Nuvem Telegram", "Falha interna no upload", autoDismiss = true)
                 } finally {
                     if (!dispatched && isTemp) {
@@ -644,25 +872,25 @@ class TelegramCloudManager(
     // ==========================================
 
     private suspend fun downloadViaBotApi(remoteFileId: String, destFile: File): Boolean = withContext(Dispatchers.IO) {
-        val rawToken = preferences.botToken.get().trim()
-        val botToken = if (rawToken.startsWith("bot", ignoreCase = true)) rawToken.substring(3).trim() else rawToken
+        val botToken = normalizedBotToken()
         if (botToken.isBlank() || remoteFileId.isBlank()) return@withContext false
 
         try {
             val client = Injekt.get<NetworkHelper>().client
             val getFileUrl = "https://api.telegram.org/bot$botToken/getFile?file_id=$remoteFileId"
             val req1 = Request.Builder().url(getFileUrl).get().build()
-            val res1 = client.newCall(req1).execute()
-            val bodyString = res1.body?.string() ?: ""
-
-            if (!res1.isSuccessful) {
-                logcat(LogPriority.WARN) { "Bot API getFile HTTP falhou (${res1.code}): $bodyString" }
-                return@withContext false
+            val bodyString = client.newCall(req1).execute().use { res1 ->
+                val rawBody = res1.body.string()
+                if (!res1.isSuccessful) {
+                    logcat(LogPriority.WARN) { "Bot API getFile HTTP falhou (${res1.code}): ${redactSecrets(rawBody)}" }
+                    return@withContext false
+                }
+                rawBody
             }
 
             val json = JSONObject(bodyString)
             if (!json.optBoolean("ok")) {
-                val desc = json.optString("description", "")
+                val desc = redactSecrets(json.optString("description", ""))
                 logcat(LogPriority.WARN) { "Bot API getFile retorno ok=false: $desc" }
                 return@withContext false
             }
@@ -673,21 +901,20 @@ class TelegramCloudManager(
 
             val downloadUrl = "https://api.telegram.org/file/bot$botToken/$filePath"
             val req2 = Request.Builder().url(downloadUrl).get().build()
-            val res2 = client.newCall(req2).execute()
-            if (!res2.isSuccessful) {
-                logcat(LogPriority.WARN) { "Bot API download HTTP falhou (${res2.code})" }
-                return@withContext false
-            }
-
-            val body = res2.body ?: return@withContext false
-            body.byteStream().use { input ->
-                destFile.outputStream().use { output ->
-                    input.copyTo(output)
+            client.newCall(req2).execute().use { res2 ->
+                if (!res2.isSuccessful) {
+                    logcat(LogPriority.WARN) { "Bot API download HTTP falhou (${res2.code})" }
+                    return@withContext false
+                }
+                res2.body.byteStream().use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
                 }
             }
             return@withContext destFile.exists() && destFile.length() > 0L
         } catch (e: Exception) {
-            logcat(LogPriority.WARN, e) { "Excecao no download via Bot API HTTP" }
+            logcat(LogPriority.WARN) { "Excecao no download via Bot API HTTP: ${redactSecrets(e.message)}" }
             false
         }
     }
@@ -1123,9 +1350,7 @@ class TelegramCloudManager(
                     input.copyTo(output)
                 }
             }
-            if (downloadedPath.startsWith(context.cacheDir.absolutePath)) {
-                sourceFile.delete()
-            }
+            releaseDownloadedFile(downloadedPath, chapter.fileId)
             // Extrai capa do capitulo baixado para que cover.jpg exista imediatamente
             extractCoverFromChapter(targetFile, mangaDir)
             DiskUtil.createNoMediaFile(mangaDir, context)
@@ -1183,9 +1408,7 @@ class TelegramCloudManager(
                                 input.copyTo(output)
                             }
                         }
-                        if (downloadedPath.startsWith(context.cacheDir.absolutePath)) {
-                            sourceFile.delete()
-                        }
+                        releaseDownloadedFile(downloadedPath, chapter.fileId)
                         downloadedCount++
                         // Extrai capa do capitulo baixado se ainda nao tiver
                         extractCoverFromChapter(targetFile, mangaDir)
@@ -1275,9 +1498,7 @@ class TelegramCloudManager(
                     }
                 }
 
-                if (downloadedPath.startsWith(context.cacheDir.absolutePath)) {
-                    sourceFile.delete()
-                }
+                releaseDownloadedFile(downloadedPath, cloudChapter.fileId)
 
                 extractCoverFromChapter(targetFile, localSourceMangaDir)
                 DiskUtil.createNoMediaFile(localSourceMangaDir, context)
@@ -1290,9 +1511,6 @@ class TelegramCloudManager(
                 false
             } finally {
                 if (!success) {
-                    // Ensure the notification is not left as ongoing if we return false or throw exception
-                    // showNotification with autoDismiss=true would have already cleared ongoing=true,
-                    // but in case of an unhandled throw before our catch, it's safe to clear it.
                     val notificationManager = androidx.core.app.NotificationManagerCompat.from(context)
                     notificationManager.cancel(889911)
                 }
@@ -1305,6 +1523,43 @@ class TelegramCloudManager(
     // ==========================================
 
     suspend fun syncFromTelegram(): List<CloudManga> = withContext(Dispatchers.IO) {
+        val chatIdString = preferences.chatId.get()
+        val targetChatId = chatIdString.toLongOrNull() ?: return@withContext getCloudIndex()
+
+        val currentIndex = getCloudIndex().map { it.copy(chapters = it.chapters.toMutableList()) }.toMutableList()
+
+        // 0. RECUPERAR SNAPSHOT REMOTO DO ÍNDICE (essencial em instalações novas, pois Bots não recebem histórico antigo via GetChatHistory)
+        fetchRemoteIndexSnapshot(targetChatId)?.forEach { remoteManga ->
+            var localManga = currentIndex.find { it.title.equals(remoteManga.title, ignoreCase = true) }
+            if (localManga == null) {
+                localManga = remoteManga.copy(chapters = remoteManga.chapters.toMutableList())
+                currentIndex.add(localManga)
+            } else {
+                val mIdx = currentIndex.indexOf(localManga)
+                val mergedManga = localManga.copy(
+                    description = localManga.description.ifBlank { remoteManga.description },
+                    coverUrl = localManga.coverUrl.ifBlank { remoteManga.coverUrl },
+                    isNovel = localManga.isNovel || remoteManga.isNovel,
+                )
+                currentIndex[mIdx] = mergedManga
+                localManga = mergedManga
+                for (remoteChap in remoteManga.chapters) {
+                    val existingIdx = localManga.chapters.indexOfFirst { it.name.equals(remoteChap.name, ignoreCase = true) }
+                    if (existingIdx < 0) {
+                        localManga.chapters.add(remoteChap)
+                    } else {
+                        val existing = localManga.chapters[existingIdx]
+                        if (existing.remoteFileId.isBlank() && remoteChap.remoteFileId.isNotBlank()) {
+                            localManga.chapters[existingIdx] = existing.copy(
+                                messageId = if (existing.messageId != 0L) existing.messageId else remoteChap.messageId,
+                                remoteFileId = remoteChap.remoteFileId,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         if (tdClient == null) initializeTdlib()
         val ready = withTimeoutOrNull(15000) {
             isAuthReady.first { it }
@@ -1312,12 +1567,12 @@ class TelegramCloudManager(
         } ?: false
 
         if (!ready) {
-            logcat(LogPriority.ERROR) { "TDLib nao autenticado para syncFromTelegram" }
-            return@withContext getCloudIndex()
+            logcat(LogPriority.ERROR) { "TDLib nao autenticado para syncFromTelegram; salvando índice recuperado via Bot API" }
+            if (currentIndex.isNotEmpty()) {
+                saveCloudIndex(currentIndex, syncRemote = false)
+            }
+            return@withContext currentIndex
         }
-
-        val chatIdString = preferences.chatId.get()
-        val targetChatId = chatIdString.toLongOrNull() ?: return@withContext getCloudIndex()
 
         // Garante que o chat está carregado e aberto no TDLib
         suspendCancellableCoroutine<Unit> { cont ->
@@ -1327,8 +1582,6 @@ class TelegramCloudManager(
                 }
             }
         }
-
-        val currentIndex = getCloudIndex().map { it.copy(chapters = it.chapters.toMutableList()) }.toMutableList()
 
         // 1. VERIFICAR CAPÍTULOS EXISTENTES NO ÍNDICE CONTRA O TELEGRAM
         // Se a mensagem foi confirmada como apagada no Telegram, removemos do índice ("sumir só o que não estiver mais lá")
@@ -1421,6 +1674,10 @@ class TelegramCloudManager(
                 if (content is TdApi.MessageDocument) {
                     val caption = content.caption.text
                     val docName = content.document.fileName ?: ""
+                    if (caption.contains(INDEX_TAG, ignoreCase = true) || docName.equals(INDEX_FILENAME, ignoreCase = true)) {
+                        continue
+                    }
+                    val isNovelMsg = caption.contains("#YomotsuNovel", ignoreCase = true) || docName.endsWith(".txt", ignoreCase = true)
 
                     var titleMatch: String? = null
                     var capMatch: String? = null
@@ -1461,11 +1718,15 @@ class TelegramCloudManager(
                             manga = CloudManga(
                                 title = titleMatch,
                                 description = fallbackDesc,
-                                coverUrl = fallbackCover
+                                coverUrl = fallbackCover,
+                                isNovel = isNovelMsg,
                             )
                             currentIndex.add(manga)
                         } else if (manga.description.isBlank() && !sinopseMatch.isNullOrBlank()) {
-                            val updatedManga = manga.copy(description = sinopseMatch)
+                            val updatedManga = manga.copy(
+                                description = sinopseMatch,
+                                isNovel = manga.isNovel || isNovelMsg,
+                            )
                             val mIdx = currentIndex.indexOf(manga)
                             currentIndex[mIdx] = updatedManga
                             manga = updatedManga
@@ -1544,22 +1805,36 @@ class TelegramCloudManager(
 
                     showNotification("Nuvem Telegram", "Enviando Novel: ${manga.title}...", progress = 0, max = 100, ongoing = true)
 
-                    var success = false
                     tdClient?.send(sendMessageRequest) { result ->
                         if (result is TdApi.Message) {
                             val uFile = UniFile.fromFile(txtFile)
                             if (uFile != null) {
-                                pendingUploads[result.id] = PendingUpload(uFile, manga, chapter)
+                                pendingUploads[result.id] = PendingUpload(uFile, manga, chapter, isNovel = true)
                             }
-                            success = true
+                            val doc = (result.content as? TdApi.MessageDocument)?.document?.document
+                            val fileId = doc?.id ?: 0
+                            val remoteId = doc?.remote?.id ?: ""
+                            managerScope.launch {
+                                registerInIndex(
+                                    mangaTitle = manga.title,
+                                    description = manga.description ?: "",
+                                    coverUrl = manga.thumbnailUrl ?: "",
+                                    chapterName = chapter.name,
+                                    messageId = result.id,
+                                    fileId = fileId,
+                                    remoteFileId = remoteId,
+                                    isNovel = true,
+                                )
+                            }
                         } else if (result is TdApi.Error) {
-                            logcat(LogPriority.ERROR) { "Erro ao empurrar novel pra TDLib: ${result.message}" }
-                            showNotification("Nuvem Telegram", "Erro: ${result.message}", autoDismiss = true)
+                            val safeMsg = redactSecrets(result.message)
+                            logcat(LogPriority.ERROR) { "Erro ao empurrar novel pra TDLib: $safeMsg" }
+                            showNotification("Nuvem Telegram", "Erro: $safeMsg", autoDismiss = true)
                         }
                     }
                     delay(3000)
                 } catch (e: Exception) {
-                    logcat(LogPriority.ERROR, e) { "Erro ao enviar novel" }
+                    logcat(LogPriority.ERROR) { "Erro ao enviar novel: ${redactSecrets(e.message)}" }
                     showNotification("Nuvem Telegram", "Erro fatal ao enviar novel", autoDismiss = true)
                 }
             }
@@ -1588,7 +1863,7 @@ class TelegramCloudManager(
                     val sFile = File(indexedPath)
                     if (sFile.exists()) {
                         sFile.copyTo(localTargetFile, overwrite = true)
-                        sFile.delete()
+                        releaseDownloadedFile(indexedPath, indexedChapter.fileId)
                         return@withContext true
                     }
                 }
@@ -1626,7 +1901,7 @@ class TelegramCloudManager(
             val sFile = File(downloadedPath)
             if (sFile.exists()) {
                 sFile.copyTo(localTargetFile, overwrite = true)
-                sFile.delete()
+                releaseDownloadedFile(downloadedPath, fileId)
                 return@withContext true
             }
             false

@@ -184,8 +184,8 @@ internal class ExtensionInstaller(
      *
      * @param pkgName The package name of the extension to uninstall
      */
-    fun uninstallApk(pkgName: String) {
-        if (context.isPackageInstalled(pkgName)) {
+    fun uninstallApk(pkgName: String, isPrivate: Boolean = false) {
+        if (!isPrivate && context.isPackageInstalled(pkgName)) {
             @Suppress("DEPRECATION")
             val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE, "package:$pkgName".toUri())
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

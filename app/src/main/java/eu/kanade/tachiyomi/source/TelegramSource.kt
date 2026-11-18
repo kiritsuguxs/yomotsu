@@ -21,6 +21,7 @@ import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import eu.kanade.tachiyomi.util.lang.compareToCaseInsensitiveNaturalOrder
 import tachiyomi.domain.telegram.TelegramPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -50,13 +51,20 @@ class TelegramSource(
                 } else {
                     ByteArray(0)
                 }
-                
+                val mimeType = when (file.extension.lowercase()) {
+                    "png" -> "image/png"
+                    "webp" -> "image/webp"
+                    "gif" -> "image/gif"
+                    "avif" -> "image/avif"
+                    else -> "image/jpeg"
+                }
+
                 Response.Builder()
                     .code(200)
                     .message("OK")
                     .protocol(Protocol.HTTP_1_1)
                     .request(chain.request())
-                    .body(body.toResponseBody("image/jpeg".toMediaTypeOrNull()))
+                    .body(body.toResponseBody(mimeType.toMediaTypeOrNull()))
                     .build()
             } else {
                 chain.proceed(chain.request())
@@ -64,7 +72,7 @@ class TelegramSource(
         }.build()
 
     override suspend fun getPopularManga(page: Int): MangasPage = withContext(Dispatchers.IO) {
-        val index = telegramCloudManager.getCloudIndex()
+        val index = telegramCloudManager.getCloudIndex().filterNot { it.isNovel }
         val mangas = index.map { cloudManga ->
             SManga.create().apply {
                 title = cloudManga.title
@@ -80,7 +88,7 @@ class TelegramSource(
     override suspend fun getLatestUpdates(page: Int): MangasPage = getPopularManga(page)
 
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage = withContext(Dispatchers.IO) {
-        val index = telegramCloudManager.getCloudIndex()
+        val index = telegramCloudManager.getCloudIndex().filterNot { it.isNovel }
         val mangas = index.filter {
             it.title.contains(query, ignoreCase = true)
         }.map { cloudManga ->
@@ -175,10 +183,11 @@ class TelegramSource(
             ZipFile(cbzFile).use { zip ->
                 val entries = zip.entries().toList()
                     .filter { !it.isDirectory && !it.name.contains("__MACOSX") }
-                    .sortedBy { it.name }
+                    .sortedWith { a, b -> a.name.compareToCaseInsensitiveNaturalOrder(b.name) }
 
                 entries.forEachIndexed { i, entry ->
-                    val extractedFile = File(extractDir, entry.name.substringAfterLast('/'))
+                    val safeEntryName = "%04d_%s".format(i, entry.name.substringAfterLast('/'))
+                    val extractedFile = File(extractDir, safeEntryName)
                     zip.getInputStream(entry).use { input ->
                         extractedFile.outputStream().use { output ->
                             input.copyTo(output)
@@ -191,7 +200,7 @@ class TelegramSource(
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
-            cbzFile.delete()
+            telegramCloudManager.releaseDownloadedFile(downloadedPath, cloudChapter.fileId)
             telegramCloudManager.showNotification("Biblioteca Telegram", "Capítulo carregado!", autoDismiss = true)
         }
 

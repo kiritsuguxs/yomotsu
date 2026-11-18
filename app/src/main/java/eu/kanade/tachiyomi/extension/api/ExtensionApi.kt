@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.extension.api
 
 import android.content.Context
+import eu.kanade.tachiyomi.extension.deduplicateAvailableExtensions
 import eu.kanade.tachiyomi.extension.hasExtensionUpdate
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.LoadResult
@@ -17,7 +18,11 @@ internal class ExtensionApi {
     private val updateExtensionStores: UpdateExtensionStores by injectLazy()
 
     suspend fun findExtensions(): List<Extension.Available> {
-        return withIOContext { repository.fetchExtensions() }
+        return withIOContext {
+            deduplicateAvailableExtensions(
+                repository.fetchExtensions().filterNot { it.isTorrent },
+            )
+        }
     }
 
     suspend fun checkForUpdates(context: Context) {

@@ -68,7 +68,6 @@ material = "1.12.0"
 materialKolor = "5.0.0"
 mlkit-text-recognition = "16.0.1"
 mlkit-text-translate = "17.0.3"
-google-generativeai = "0.5.0"
 mockk = "1.14.11"
 moko-resources = "0.26.4"
 okhttp = "5.4.0"
@@ -102,7 +101,6 @@ torrentserver = { module = "com.github.Diegopyl1209:torrentserver-aniyomi", vers
 media-router = { module = "androidx.mediarouter:mediarouter", version.ref = "media-router" }
 cast-play-services = { module = "com.google.android.gms:play-services-cast-framework", version.ref = "cast-play-services" }
 
-google-generativeai = { module = "com.google.genai:google-genai-kotlin", version.ref = "google-generativeai" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text-recognition" }
 mlkit-text-recognition-chinese = { module = "com.google.mlkit:text-recognition-chinese", version.ref = "mlkit-text-recognition" }
 mlkit-text-recognition-japanese = { module = "com.google.mlkit:text-recognition-japanese", version.ref = "mlkit-text-recognition" }

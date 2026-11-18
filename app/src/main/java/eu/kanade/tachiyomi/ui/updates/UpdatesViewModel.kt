@@ -97,6 +97,11 @@ class UpdatesViewModel(
                 ) { downloaded, downloading -> downloaded to downloading },
             ) { _, _, _, _, _ -> Unit }
 
+            val mergeStateFlow = combine(
+                libraryPreferences.seriesMergingEnabled.changes(),
+                mergeGroupRepository.getLibraryMembershipsAsFlow(tachiyomi.domain.merge.model.ContentType.MANGA),
+            ) { enabled, memberships -> enabled to memberships }
+
             combine(
                 // needed for SQL filters (unread, started, bookmarked, etc)
                 getUpdatesItemPreferenceFlow()
@@ -117,8 +122,14 @@ class UpdatesViewModel(
                 getUpdatesItemPreferenceFlow().distinctUntilChanged { old, new ->
                     old.filterDownloaded == new.filterDownloaded
                 },
-            ) { updates, _, itemPreferences ->
-                updates
+                mergeStateFlow,
+            ) { updates, _, itemPreferences, (mergingEnabled, memberships) ->
+                val deduplicatedUpdates = if (mergingEnabled && memberships.isNotEmpty()) {
+                    deduplicateMergedUpdates(updates, memberships)
+                } else {
+                    updates
+                }
+                deduplicatedUpdates
                     .toUpdateItems()
                     .applyFilters(itemPreferences)
             }
@@ -161,6 +172,59 @@ class UpdatesViewModel(
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    private suspend fun deduplicateMergedUpdates(
+        updates: List<UpdatesWithRelations>,
+        memberships: Map<Long, Long>,
+    ): List<UpdatesWithRelations> {
+        val updatesByGroup = updates.mapNotNull { u -> memberships[u.mangaId]?.let { it to u } }
+        if (updatesByGroup.isEmpty()) return updates
+
+        val unitLookup = HashMap<Long, Pair<Long, tachiyomi.domain.merge.ChapterUnit>>()
+        updatesByGroup.groupBy({ it.first }, { it.second }).forEach { (groupId, groupUpdates) ->
+            val source = sourceManager.get(groupUpdates.first().sourceId)
+            val contentType = when {
+                source is eu.kanade.tachiyomi.animesource.AnimeSource -> tachiyomi.domain.merge.model.ContentType.ANIME
+                source is eu.kanade.tachiyomi.novelsource.NovelSource || source is eu.kanade.tachiyomi.source.INovelSource -> tachiyomi.domain.merge.model.ContentType.NOVEL
+                else -> tachiyomi.domain.merge.model.ContentType.MANGA
+            }
+            val stitch = runCatching { reconcileMergedChapters.currentStitch(contentType, groupId) }.getOrDefault(emptyList())
+            for (cu in stitch) {
+                unitLookup[cu.chapterId] = groupId to cu
+            }
+        }
+        if (unitLookup.isEmpty()) return updates
+
+        val bestForUnit = HashMap<Pair<Long, Int>, UpdatesWithRelations>()
+        for (update in updates) {
+            val (groupId, cu) = unitLookup[update.chapterId] ?: continue
+            val key = groupId to cu.unit
+            val currentBest = bestForUnit[key]
+            if (currentBest == null) {
+                bestForUnit[key] = update
+            } else {
+                val currentBestCu = unitLookup[currentBest.chapterId]?.second
+                if (currentBestCu != null && cu.copyOrder < currentBestCu.copyOrder) {
+                    bestForUnit[key] = update
+                }
+            }
+        }
+
+        val emittedUnits = HashSet<Pair<Long, Int>>()
+        return buildList(updates.size) {
+            for (update in updates) {
+                val mapped = unitLookup[update.chapterId]
+                if (mapped == null) {
+                    add(update)
+                } else {
+                    val key = mapped.first to mapped.second.unit
+                    if (emittedUnits.add(key)) {
+                        add(bestForUnit[key] ?: update)
+                    }
+                }
+            }
+        }
     }
 
     private fun List<UpdatesItem>.applyFilters(

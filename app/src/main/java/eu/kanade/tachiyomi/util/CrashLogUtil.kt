@@ -22,7 +22,7 @@ import kotlin.time.Clock
 
 class CrashLogUtil(
     private val context: Context,
-    private val extensionManager: ExtensionManager = Injekt.get(),
+    private val extensionManager: ExtensionManager? = runCatching { Injekt.get<ExtensionManager>() }.getOrNull(),
     private val preferences: BasePreferences = Injekt.get(),
     private val networkPreferences: NetworkPreferences = Injekt.get(),
 ) {
@@ -32,11 +32,21 @@ class CrashLogUtil(
             val file = context.createFileInCacheDir("yomotsu_crash_logs.txt")
 
             file.appendText(getDebugInfo() + "\n\n")
-            getExtensionsInfo()?.let { file.appendText("$it\n\n") }
+            runCatching { getExtensionsInfo() }.getOrNull()?.let { file.appendText("$it\n\n") }
             exception?.let { file.appendText("$it\n\n") }
 
             val logPriority = if (networkPreferences.verboseLogging.get()) "V" else "E"
-            Runtime.getRuntime().exec("logcat *:$logPriority -d -v year -v zone -f ${file.absolutePath}").waitFor()
+            ProcessBuilder(
+                "logcat",
+                "*:$logPriority",
+                "-d",
+                "-v",
+                "year",
+                "-v",
+                "zone",
+                "-f",
+                file.absolutePath,
+            ).start().waitFor()
 
             val uri = file.getUriCompat(context)
             context.startActivity(uri.toShareIntent(context, "text/plain"))
@@ -64,9 +74,10 @@ class CrashLogUtil(
     }
 
     private fun getExtensionsInfo(): String? {
-        val availableExtensions = extensionManager.availableExtensionsFlow.value.associateBy { it.pkgName }
+        val manager = extensionManager ?: return null
+        val availableExtensions = manager.availableExtensionsFlow.value.associateBy { it.pkgName }
 
-        val extensionInfoList = extensionManager.installedExtensionsFlow.value
+        val extensionInfoList = manager.installedExtensionsFlow.value
             .sortedBy { it.name }
             .mapNotNull {
                 val availableExtension = availableExtensions[it.pkgName]

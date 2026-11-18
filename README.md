@@ -105,9 +105,9 @@ Built on top of the celebrated foundations of **Mihon (Tachiyomi)** and **Anikku
 
 <div align="center">
   <img src="./assets/traducoes_llm.jpg" width="32%" alt="AI and LLM Settings"/>
-  <img src="./assets/traducoes_ocr.jpg" width="32%" alt="Translation and OpenRouter Settings"/>
+  <img src="./assets/traducoes_ocr.jpg" width="32%" alt="Translation and Groq Settings"/>
   <img src="./assets/telegram_cloud.jpg" width="32%" alt="Telegram Cloud Settings"/>
-  <p><i>Advanced customization panels: native support for Qwen, OpenRouter, PaddleOCR, and Telegram.</i></p>
+  <p><i>Advanced customization panels: native support for Gemini, Groq, PaddleOCR/DBNet, and Telegram Cloud.</i></p>
   <p><sub><i>* Settings shown in Portuguese as configured on the Brazilian creator's device. The application UI is 100% available in English.</i></sub></p>
 </div>
 
@@ -137,7 +137,7 @@ Yomotsu offers total flexibility for you to choose how to translate your reading
 | **Google Translate** | Cloud | ❌ Not needed | Dozens of languages | **No setup** — Ready to use immediately. |
 | **DeepL** | Cloud (API) | 🔑 Required | EN, JA, ZH | **Extreme Fluency** — High-level grammatical and natural translations. |
 | **Google Gemini** | Generative AI | 🔑 Free | All languages | **Contextual Understanding** — Understands slang, jokes, and narrative context. |
-| **OpenRouter** | Multi-model AI | 🔑 Required | All languages | **Total Freedom** — Connect to models like Claude, GPT-4, Llama, and others. |
+| **Groq** | Ultra-fast AI | 🔑 Free / API | All languages | **Blazing Speed & Open Models** — Instant inference with Llama, Qwen, and DeepSeek models. |
 
 ---
 
@@ -179,7 +179,7 @@ The latest official version ready for installation is always available at:
 
 </div>
 
-* The main file is **`Yomotsu-*-arm64.apk`** (optimized for almost all modern phones).
+* The main file is **`Yomotsu-arm64-v8a-*.apk`** (or **`Yomotsu-*.apk`**, optimized for almost all modern 64-bit phones).
 * Subsequent installations work as direct updates over the existing version, without losing your library or data.
 
 ---
@@ -188,7 +188,7 @@ The latest official version ready for installation is always available at:
 
 * **OS:** Android 8.0 (Oreo) or higher.
 * **Permissions:** Access to notifications (for download and backup statuses) and storage.
-* **Connection:** Internet connection required for cloud AI translators (DeepL, Gemini, OpenRouter) and Telegram Cloud.
+* **Connection:** Internet connection required for cloud AI translators (DeepL, Gemini, Groq) and Telegram Cloud.
 
 ---
 

@@ -31,29 +31,32 @@ class GetApplicationRelease(
         // Removes prefixes like "r" or "v"
         val newVersion = versionTag.replace("[^\\d.]".toRegex(), "")
         return if (isPreview) {
-            // Preview builds: based on releases in "mihonapp/mihon-preview" repo
-            // tagged as something like "r1234"
-            newVersion.toInt() > commitCount
+            // Preview builds: based on releases tagged as "r1234", falling back to SemVer if tagged as "v0.22.2"
+            newVersion.toIntOrNull()?.let { it > commitCount } ?: compareSemVer(versionName, versionTag)
         } else {
             // Release builds: tagged as something like "v0.1.2" or "v0.21.5"
-            val cleanOldVersion = versionName.substringBefore('-').replace("[^\\d.]".toRegex(), "")
-            val cleanNewVersion = versionTag.substringBefore('-').replace("[^\\d.]".toRegex(), "")
-
-            val newSemVer = cleanNewVersion.split(".").filter { it.isNotEmpty() }.mapNotNull { it.toIntOrNull() }
-            val oldSemVer = cleanOldVersion.split(".").filter { it.isNotEmpty() }.mapNotNull { it.toIntOrNull() }
-
-            val minSize = minOf(oldSemVer.size, newSemVer.size)
-            for (index in 0 until minSize) {
-                if (newSemVer[index] > oldSemVer[index]) {
-                    return true
-                }
-                if (newSemVer[index] < oldSemVer[index]) {
-                    return false
-                }
-            }
-
-            newSemVer.size > oldSemVer.size
+            compareSemVer(versionName, versionTag)
         }
+    }
+
+    private fun compareSemVer(versionName: String, versionTag: String): Boolean {
+        val cleanOldVersion = versionName.substringBefore('-').replace("[^\\d.]".toRegex(), "")
+        val cleanNewVersion = versionTag.substringBefore('-').replace("[^\\d.]".toRegex(), "")
+
+        val newSemVer = cleanNewVersion.split(".").filter { it.isNotEmpty() }.mapNotNull { it.toIntOrNull() }
+        val oldSemVer = cleanOldVersion.split(".").filter { it.isNotEmpty() }.mapNotNull { it.toIntOrNull() }
+
+        val minSize = minOf(oldSemVer.size, newSemVer.size)
+        for (index in 0 until minSize) {
+            if (newSemVer[index] > oldSemVer[index]) {
+                return true
+            }
+            if (newSemVer[index] < oldSemVer[index]) {
+                return false
+            }
+        }
+
+        return newSemVer.size > oldSemVer.size
     }
 
     data class Arguments(

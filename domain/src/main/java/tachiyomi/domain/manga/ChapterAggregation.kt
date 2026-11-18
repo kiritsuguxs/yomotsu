@@ -17,17 +17,19 @@ object ChapterAggregation {
         preferredSourceIds: List<Long> = emptyList(),
         gallerySourceMangaIds: Set<Long> = emptySet(),
         memberRanking: List<Long> = emptyList(),
+        numberSelector: (Chapter) -> Double = { it.chapterNumber },
     ): MergedChapters<Chapter> {
         if (chaptersBySource.size <= 1) {
             return unstitchedChapters(chaptersBySource.values.firstOrNull().orEmpty()) { it.id }
         }
 
-        val ranked = walkOrder(chaptersBySource, sourceIdByManga, preferredSourceIds, memberRanking)
+        val ranked = walkOrder(chaptersBySource, sourceIdByManga, preferredSourceIds, memberRanking, numberSelector)
 
         val order = MergedChapterOrder<Chapter> { chapter ->
-            chapter.chapterNumber.toFloat()
+            numberSelector(chapter).toFloat()
                 .takeIf { chapter.isRecognizedNumber && chapter.mangaId !in gallerySourceMangaIds }
         }
+        val placedUnnumberedNames = HashSet<String>()
         ranked.forEachIndexed { index, source ->
             order.startSource()
             val isTrunk = index == 0
@@ -38,7 +40,11 @@ object ChapterAggregation {
                     continue
                 }
                 if (!chapter.isRecognizedNumber) {
-                    if (isTrunk) order.place(chapter)
+                    val normName = chapter.name.trim().lowercase()
+                    if (isTrunk || (normName.isNotEmpty() && normName !in placedUnnumberedNames)) {
+                        if (normName.isNotEmpty()) placedUnnumberedNames.add(normName)
+                        order.place(chapter)
+                    }
                     continue
                 }
                 val existing = order.positionOf(chapter)
@@ -59,21 +65,24 @@ object ChapterAggregation {
         sourceIdByManga: Map<Long, Long> = emptyMap(),
         preferredSourceIds: List<Long> = emptyList(),
         memberRanking: List<Long> = emptyList(),
-    ): List<Long> = rank(chaptersBySource, sourceIdByManga, preferredSourceIds, memberRanking).map { it.mangaId }
+        numberSelector: (Chapter) -> Double = { it.chapterNumber },
+    ): List<Long> = rank(chaptersBySource, sourceIdByManga, preferredSourceIds, memberRanking, numberSelector).map { it.mangaId }
 
     fun trunkId(
         chaptersBySource: Map<Long, List<Chapter>>,
         sourceIdByManga: Map<Long, Long>,
         preferredSourceIds: List<Long>,
         memberRanking: List<Long>,
-    ): Long? = walkOrder(chaptersBySource, sourceIdByManga, preferredSourceIds, memberRanking).firstOrNull()?.mangaId
+        numberSelector: (Chapter) -> Double = { it.chapterNumber },
+    ): Long? = walkOrder(chaptersBySource, sourceIdByManga, preferredSourceIds, memberRanking, numberSelector).firstOrNull()?.mangaId
 
     private fun walkOrder(
         chaptersBySource: Map<Long, List<Chapter>>,
         sourceIdByManga: Map<Long, Long>,
         preferredSourceIds: List<Long>,
         memberRanking: List<Long>,
-    ): List<RankedSource> = stitchOrder(rank(chaptersBySource, sourceIdByManga, preferredSourceIds, memberRanking)) {
+        numberSelector: (Chapter) -> Double,
+    ): List<RankedSource> = stitchOrder(rank(chaptersBySource, sourceIdByManga, preferredSourceIds, memberRanking, numberSelector)) {
         it.chapters.isNotEmpty()
     }
 
@@ -82,15 +91,18 @@ object ChapterAggregation {
         sourceIdByManga: Map<Long, Long>,
         preferredSourceIds: List<Long>,
         memberRanking: List<Long>,
+        numberSelector: (Chapter) -> Double,
     ): List<RankedSource> = chaptersBySource.entries
         .map { (mangaId, chapters) ->
             val prefRank = sourcePriority(mangaId, sourceIdByManga[mangaId], preferredSourceIds, memberRanking)
-            RankedSource(mangaId, chapters, recognizedChapterCount(chapters), prefRank)
+            RankedSource(mangaId, chapters, recognizedChapterCount(chapters, numberSelector), prefRank)
         }
         .sortedWith(trunkOrder({ it.prefRank }, { it.distinctCount.toLong() }, { it.mangaId }))
 
-    fun recognizedChapterCount(chapters: List<Chapter>): Int =
-        distinctChapterNumberCount(chapters.filter { it.isRecognizedNumber }.map { it.chapterNumber })
+    fun recognizedChapterCount(
+        chapters: List<Chapter>,
+        numberSelector: (Chapter) -> Double = { it.chapterNumber },
+    ): Int = distinctChapterNumberCount(chapters.filter { it.isRecognizedNumber }.map(numberSelector))
 
     fun distinctChapterNumberCount(numbers: List<Double>): Int = numbers.distinctBy { it.toFloat() }.size
 

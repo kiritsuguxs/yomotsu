@@ -61,7 +61,10 @@ open class EntryMergeManager(
 
     suspend fun unmerge(targetContentType: ContentType = contentType, ids: List<Long>) {
         if (!preferences.seriesMergingEnabled.get()) return
-        ids.forEach { repository.dissolve(targetContentType, it) }
+        ids.distinct().forEach { targetId ->
+            onBeforeDissolve(computeRelatedIds(targetId).toList())
+            repository.dissolve(targetContentType, targetId)
+        }
     }
 
     suspend fun replaceInGroup(oldId: Long, newId: Long) {

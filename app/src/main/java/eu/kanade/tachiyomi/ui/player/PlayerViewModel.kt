@@ -1298,7 +1298,7 @@ class PlayerViewModel @JvmOverloads constructor(
 
     override fun onCleared() {
         if (currentEpisode.value != null) {
-            saveWatchingProgress(currentEpisode.value!!)
+            saveWatchingProgress(currentEpisode.value!!, useIndependentScope = true)
             episodeToDownload?.let {
                 downloadManager.addDownloadsToStartOfQueue(listOf(it))
             }
@@ -1563,7 +1563,11 @@ class PlayerViewModel @JvmOverloads constructor(
         mediaTitle.update { _ -> episode.name }
         _isEpisodeOnline.update { _ -> isEpisodeOnline() == true }
         runCatching {
-            mpv.setPropertyDouble("user-data/current-anime/episode-number", episode.chapter_number.toDouble())
+            val decoded = eu.kanade.presentation.util.decodeEpisodeNumber(
+                episode.chapter_number.toDouble(),
+                episode.name,
+            )
+            mpv.setPropertyDouble("user-data/current-anime/episode-number", decoded)
         }
     }
 
@@ -2279,14 +2283,16 @@ class PlayerViewModel @JvmOverloads constructor(
         }
     }
 
+    private var lastProgressDbSaveMs: Long = 0L
+    private var lastWatchHistoryTickMs: Long = 0L
+    private var pendingWatchDurationMs: Long = 0L
+    private var lastTrackedWatchEpisodeId: Long = -1L
+
     /**
      * Called every time a second is reached in the player. Used to mark the flag of episode being
      * seen, update tracking services, enqueue downloaded episode deletion and download next episode.
      */
     fun onSecondReached(position: Long, customDuration: Long? = null) {
-        // ANK -->
-        // ANK <--
-
         if (isLoadingEpisode.value) return
         val currentEp = currentEpisode.value ?: return
         if (episodeId == -1L) return
@@ -2304,28 +2310,39 @@ class PlayerViewModel @JvmOverloads constructor(
 
         val seconds = position * 1000L
         val totalSeconds = dur * 1000L
-        
+
         episodePosition = seconds
 
-        // ANK -->
+        val nowElapsed = android.os.SystemClock.elapsedRealtime()
+        val epId = currentEp.id ?: -1L
+        if (epId != lastTrackedWatchEpisodeId) {
+            lastTrackedWatchEpisodeId = epId
+            lastWatchHistoryTickMs = nowElapsed
+        } else if (lastWatchHistoryTickMs > 0L) {
+            val delta = nowElapsed - lastWatchHistoryTickMs
+            if (delta in 1L..5_000L) {
+                pendingWatchDurationMs += delta
+            }
+            lastWatchHistoryTickMs = nowElapsed
+        } else {
+            lastWatchHistoryTickMs = nowElapsed
+        }
+
         if (!incognitoMode) {
-            // Save last second seen and mark as seen if needed
             currentEp.last_page_read = seconds.toInt()
             currentEp.total_seconds = totalSeconds
 
             val progress = playerPreferences.progressPreference().get()
-            if (seconds >= (totalSeconds * progress).toLong()) {
+            var completedNow = false
+            if (!currentEp.read && seconds >= (totalSeconds * progress).toLong()) {
+                completedNow = true
                 updateEpisodeProgressOnComplete(currentEp)
-
-                // SY -->
-                // Check if syncing is enabled for episode seen:
-                // SY <--
             }
-            // ANK <--
 
-            saveWatchingProgress(currentEp)
-
-
+            if (completedNow || nowElapsed - lastProgressDbSaveMs >= 5_000L) {
+                lastProgressDbSaveMs = nowElapsed
+                saveWatchingProgress(currentEp, checkAchievements = completedNow)
+            }
         }
 
         val inDownloadRange = seconds.toDouble() / totalSeconds.toDouble() > 0.35
@@ -2343,19 +2360,24 @@ class PlayerViewModel @JvmOverloads constructor(
             currentEp.total_seconds = totalSeconds
 
             val progress = playerPreferences.progressPreference().get()
-            if (totalSeconds > 0 && seconds >= (totalSeconds * progress).toLong()) {
+            var completedNow = false
+            if (!currentEp.read && totalSeconds > 0 && seconds >= (totalSeconds * progress).toLong()) {
+                completedNow = true
                 updateEpisodeProgressOnComplete(currentEp)
             }
-            saveWatchingProgress(currentEp)
+            saveWatchingProgress(currentEp, checkAchievements = completedNow)
         }
     }
 
     private fun updateEpisodeProgressOnComplete(currentEp: Episode) {
+        val wasAlreadySeen = currentEp.read
         currentEp.read = true
         val updatedEp = currentEp
         _currentEpisode.update { updatedEp }
-        updateTrackEpisodeSeen(updatedEp)
-        deleteEpisodeIfNeeded(updatedEp)
+        if (!wasAlreadySeen) {
+            updateTrackEpisodeSeen(updatedEp)
+            deleteEpisodeIfNeeded(updatedEp)
+        }
 
         val currentEpId = updatedEp.id
         if (currentEpId != null && mergedAnimeById.size > 1 && currentStitch.isNotEmpty()) {
@@ -2372,17 +2394,23 @@ class PlayerViewModel @JvmOverloads constructor(
             .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
         if (!markDuplicateAsSeen) return
 
+        val updatedDecodedNumber = eu.kanade.presentation.util.decodeEpisodeNumber(
+            updatedEp.chapter_number.toDouble(),
+            updatedEp.name,
+        ).toFloat()
         val duplicateUnseenEpisodes = unfilteredEpisodeList
             .mapNotNull { episode ->
+                val candidateDecoded = eu.kanade.presentation.util.decodeEpisodeNumber(
+                    episode.episodeNumber,
+                    episode.name,
+                ).toFloat()
                 if (
                     !episode.read &&
                     episode.isRecognizedNumber &&
-                    episode.episodeNumber.toFloat() == updatedEp.chapter_number
+                    (episode.episodeNumber.toFloat() == updatedEp.chapter_number || candidateDecoded == updatedDecodedNumber)
                 ) {
                     EpisodeUpdate(id = episode.id!!, read = true)
-                        // KMK -->
                         .also { deleteDupChapterIfNeeded(episode.copy(read = true).toDbEpisode()) }
-                    // KMK <--
                 } else {
                     null
                 }
@@ -2498,16 +2526,28 @@ class PlayerViewModel @JvmOverloads constructor(
     // KMK <--
 
     fun saveCurrentEpisodeWatchingProgress() {
+        lastWatchHistoryTickMs = 0L
         currentEpisode.value?.let { saveWatchingProgress(it) }
     }
 
     /**
      * Called when episode is changed in player or when activity is paused.
      */
-    private fun saveWatchingProgress(episode: Episode) {
-        viewModelScope.launchNonCancellable {
+    private fun saveWatchingProgress(
+        episode: Episode,
+        checkAchievements: Boolean = false,
+        useIndependentScope: Boolean = false,
+    ) {
+        val durationDelta = pendingWatchDurationMs.coerceAtLeast(0L)
+        pendingWatchDurationMs = 0L
+        val block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit = {
             saveEpisodeProgress(episode)
-            saveEpisodeHistory(episode)
+            saveEpisodeHistory(episode, durationDelta, checkAchievements)
+        }
+        if (useIndependentScope) {
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch(block = block)
+        } else {
+            viewModelScope.launchNonCancellable(block = block)
         }
     }
 
@@ -2517,9 +2557,10 @@ class PlayerViewModel @JvmOverloads constructor(
      */
     private suspend fun saveEpisodeProgress(episode: Episode) {
         if (!incognitoMode) {
+            val epId = episode.id ?: return
             updateEpisode.await(
                 EpisodeUpdate(
-                    id = episode.id!!,
+                    id = epId,
                     read = episode.read,
                     bookmark = episode.bookmark,
                     lastPageRead = episode.last_page_read.toLong(),
@@ -2532,17 +2573,23 @@ class PlayerViewModel @JvmOverloads constructor(
     /**
      * Saves this [episode] last seen history if incognito mode isn't on.
      */
-    private suspend fun saveEpisodeHistory(episode: Episode) {
+    private suspend fun saveEpisodeHistory(
+        episode: Episode,
+        sessionDurationMs: Long = 0L,
+        checkAchievements: Boolean = false,
+    ) {
         if (!incognitoMode) {
-            val episodeId = episode.id!!
+            val episodeId = episode.id ?: return
             val seenAt = Date()
             upsertHistory.await(
-                HistoryUpdate(episodeId, seenAt, 0),
+                HistoryUpdate(episodeId, seenAt, sessionDurationMs),
             )
-            runCatching {
-                eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(
-                    uy.kohesive.injekt.Injekt.get<android.app.Application>()
-                )
+            if (checkAchievements) {
+                runCatching {
+                    eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(
+                        uy.kohesive.injekt.Injekt.get<android.app.Application>(),
+                    )
+                }
             }
         }
     }
@@ -2709,6 +2756,10 @@ class PlayerViewModel @JvmOverloads constructor(
 
         val anime = anime ?: return
         val context = Injekt.get<Application>()
+        val decodedEpisodeNumber = eu.kanade.presentation.util.decodeEpisodeNumber(
+            episode.chapter_number.toDouble(),
+            episode.name,
+        )
 
         viewModelScope.launchNonCancellable {
             val targetIds = if (mergedAnimeById.size > 1) {
@@ -2717,7 +2768,7 @@ class PlayerViewModel @JvmOverloads constructor(
                 listOf(anime.id)
             }
             targetIds.forEach { trackAnimeId ->
-                trackEpisode.await(context, trackAnimeId, episode.chapter_number.toDouble())
+                trackEpisode.await(context, trackAnimeId, decodedEpisodeNumber)
             }
         }
     }
@@ -2796,7 +2847,11 @@ class PlayerViewModel @JvmOverloads constructor(
         val animeId = anime?.id ?: return null
         val trackerManager = Injekt.get<TrackerManager>()
         var malId: Long?
-        val episodeNumber = currentEpisode.value?.chapter_number?.toInt() ?: return null
+        val currentEp = currentEpisode.value ?: return null
+        val episodeNumber = eu.kanade.presentation.util.decodeEpisodeNumber(
+            currentEp.chapter_number.toDouble(),
+            currentEp.name,
+        ).toInt()
         val tracks = getTracks.await(animeId).ifEmpty {
             if (mergedAnimeById.size > 1) {
                 mergedAnimeById.keys.firstNotNullOfOrNull { id ->

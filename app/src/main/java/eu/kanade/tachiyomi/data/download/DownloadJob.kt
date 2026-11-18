@@ -67,18 +67,23 @@ class DownloadJob(context: Context, workerParams: WorkerParameters) : CoroutineW
         setForegroundSafely()
 
         coroutineScope {
-            combineTransform(
+            val networkJob = combineTransform(
                 applicationContext.networkStateFlow(),
                 downloadPreferences.downloadOnlyOverWifi.changes(),
                 transform = { a, b -> emit(checkNetworkState(a, b)) },
             )
                 .onEach { networkCheck = it }
                 .launchIn(this)
-        }
 
-        // Keep the worker running when needed
-        while (active) {
-            active = !isStopped && downloadManager.isRunning && networkCheck
+            // Keep the worker running when needed
+            try {
+                while (active) {
+                    kotlinx.coroutines.delay(1_000L)
+                    active = !isStopped && downloadManager.isRunning && networkCheck
+                }
+            } finally {
+                networkJob.cancel()
+            }
         }
 
         return Result.success()

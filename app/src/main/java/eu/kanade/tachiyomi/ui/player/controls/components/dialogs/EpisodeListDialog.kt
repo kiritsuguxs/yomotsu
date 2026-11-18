@@ -166,6 +166,12 @@ private fun EpisodeListItem(
     }
 
 
+    val iconMaxHeight = if (textHeight > 0) {
+        with(LocalDensity.current) { (textHeight.toDp() - 2.dp).coerceAtLeast(12.dp) }
+    } else {
+        20.dp
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -178,7 +184,7 @@ private fun EpisodeListItem(
                 contentDescription = null,
                 tint = bookmarkColor,
                 modifier = Modifier
-                    .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp })
+                    .sizeIn(maxHeight = iconMaxHeight)
                     .alpha(bookmarkAlpha),
             )
         }
@@ -188,7 +194,7 @@ private fun EpisodeListItem(
                 contentDescription = null,
                 tint = fillermarkColor,
                 modifier = Modifier
-                    .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp })
+                    .sizeIn(maxHeight = iconMaxHeight)
                     .alpha(fillermarkAlpha),
             )
         }

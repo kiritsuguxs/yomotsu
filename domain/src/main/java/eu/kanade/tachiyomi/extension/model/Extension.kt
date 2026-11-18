@@ -43,6 +43,7 @@ sealed class Extension {
         override val lang: String,
         override val isNsfw: Boolean,
         override val isAnime: Boolean = false,
+        val isTorrent: Boolean = false,
         val sources: List<Source>,
         val apkUrl: String,
         val iconUrl: String,

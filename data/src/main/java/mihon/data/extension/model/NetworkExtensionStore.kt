@@ -38,6 +38,7 @@ data class NetworkExtensionStore(
         @ProtoNumber(6) val versionName: String,
         @ProtoNumber(7) val contentWarning: ContentWarning = ContentWarning.UNSPECIFIED,
         @ProtoNumber(8) val sources: List<Source> = emptyList(),
+        @ProtoNumber(99) val isTorrent: Boolean = false,
     )
 
     @Serializable
@@ -102,6 +103,7 @@ fun ExtensionList.toAvailableExtensions(store: ExtensionStore): List<TachiyomiEx
         TachiyomiExtension.Available(
             name = extension.name.substringAfter("Aniyomi: ").substringAfter("Tachiyomi: "),
             isAnime = isAnime,
+            isTorrent = extension.isTorrent,
             pkgName = extension.packageName,
             apkUrl = extension.resources.apkUrl,
             iconUrl = extension.resources.iconUrl,

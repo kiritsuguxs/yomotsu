@@ -189,11 +189,18 @@ class AnimeDownloadManager(
             provider.findChapterDir(
                 episode.name,
                 episode.scanlator,
-                // SY -->
                 anime.ogTitle,
-                // SY <--
                 source,
-            )
+            ) ?: if (anime.title != anime.ogTitle) {
+                provider.findChapterDir(
+                    episode.name,
+                    episode.scanlator,
+                    anime.title,
+                    source,
+                )
+            } else {
+                null
+            }
         val files = episodeDir?.listFiles().orEmpty()
             .filter { "video" in it.type.orEmpty() }
 

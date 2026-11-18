@@ -136,6 +136,11 @@ class ExperimentalDbnetOcrEngine internal constructor(
             }
         }
         try {
+            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeFile(prepared.file.absolutePath, bounds)
+            if (bounds.outWidth > 0 && bounds.outHeight > bounds.outWidth * 2 && bounds.outHeight > 2048) {
+                throw DbnetEmptyPageException()
+            }
             val detection = timings.measure(DbnetPageStage.DBNET_REQUEST) {
                 prepared.client.detect(prepared.file).also { result ->
                     timings.worker(result.workerTimings)

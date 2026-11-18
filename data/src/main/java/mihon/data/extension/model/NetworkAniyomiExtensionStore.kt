@@ -51,6 +51,7 @@ internal data class NetworkAniyomiExtensionStore(
                 versionName = versionName,
                 contentWarning = contentWarning,
                 sources = sources.map { it.toNetworkSource() },
+                isTorrent = isTorrent,
             )
         }
     }

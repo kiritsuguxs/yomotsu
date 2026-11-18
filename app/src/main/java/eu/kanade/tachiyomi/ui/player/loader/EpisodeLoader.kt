@@ -63,12 +63,19 @@ class EpisodeLoader {
             return downloadManager.isEpisodeDownloaded(
                 episodeName = episode.name,
                 episodeScanlator = episode.scanlator,
-                // SY -->
-                animeTitle = anime.title,
-                // SY <--
+                animeTitle = anime.ogTitle,
                 sourceId = anime.source,
                 skipCache = true,
-            )
+            ) || (
+                anime.title != anime.ogTitle &&
+                    downloadManager.isEpisodeDownloaded(
+                        episodeName = episode.name,
+                        episodeScanlator = episode.scanlator,
+                        animeTitle = anime.title,
+                        sourceId = anime.source,
+                        skipCache = true,
+                    )
+                )
         }
 
         private fun checkHasHosters(source: AnimeHttpSource): Boolean {

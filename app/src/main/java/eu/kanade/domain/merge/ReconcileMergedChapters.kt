@@ -49,10 +49,15 @@ class ReconcileMergedChapters(
 
     private suspend fun rebuildIfStale(stitcher: MergedGroupStitcher, groupId: Long, ranking: String?) =
         rebuildLock.withLock {
-            val contentType = stitcher.contentType
-            if (repository.isStale(contentType, groupId) || repository.getRankings()[groupId] != ranking) {
-                repository.replaceGroup(contentType, groupId, stitcher.stitch(groupId), ranking)
+            try {
+                val contentType = stitcher.contentType
+                if (repository.isStale(contentType, groupId) || repository.getRankings()[groupId] != ranking) {
+                    repository.replaceGroup(contentType, groupId, stitcher.stitch(groupId), ranking)
+                }
+            } finally {
+                withContext(NonCancellable) {
+                    repository.releaseClaim(groupId)
+                }
             }
-            repository.releaseClaim(groupId)
         }
 }

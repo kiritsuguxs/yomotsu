@@ -15,6 +15,7 @@ data class NetworkLegacyExtension(
     val code: Long,
     val version: String,
     val nsfw: Int,
+    val torrent: Int = 0,
     val sources: List<Source>?,
 ) {
     @Serializable
@@ -33,6 +34,7 @@ data class NetworkLegacyExtension(
         return Extension.Available(
             name = name.substringAfter("Aniyomi: ").substringAfter("Tachiyomi: "),
             isAnime = isAnime,
+            isTorrent = torrent == 1,
             pkgName = pkg,
             apkUrl = "$storeBaseUrl/apk/$apk",
             iconUrl = "$storeBaseUrl/icon/$pkg.png",

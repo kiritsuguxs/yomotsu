@@ -86,7 +86,20 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         patchInjekt()
         // TelemetryConfig.init(applicationContext) // Otimização: Telemetria externa desligada
 
-        GlobalExceptionHandler.initialize(applicationContext, CrashActivity::class.java)
+        val currentProcessName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getProcessName()
+        } else {
+            runCatching {
+                val am = getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+                val myPid = android.os.Process.myPid()
+                am?.runningAppProcesses?.firstOrNull { it.pid == myPid }?.processName
+            }.getOrNull()
+        }
+        val isErrorHandlerProcess = currentProcessName?.endsWith(":error_handler") == true
+
+        if (!isErrorHandlerProcess) {
+            GlobalExceptionHandler.initialize(applicationContext, CrashActivity::class.java)
+        }
 
         // TLS 1.3 support for Android < 10
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -95,13 +108,30 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
         // Avoid potential crashes
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val process = getProcessName()
-            if (packageName != process) WebView.setDataDirectorySuffix(process)
+            if (currentProcessName != null && packageName != currentProcessName) {
+                WebView.setDataDirectorySuffix(currentProcessName)
+            }
         }
 
         Injekt.importModule(PreferenceModule(this))
         Injekt.importModule(AppModule(this))
         Injekt.importModule(DomainModule())
+
+        setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode.get())
+
+        if (!LogcatLogger.isInstalled) {
+            val minLogPriority = when {
+                networkPreferences.verboseLogging.get() -> LogPriority.VERBOSE
+                BuildConfig.DEBUG -> LogPriority.DEBUG
+                else -> LogPriority.INFO
+            }
+            LogcatLogger.install()
+            LogcatLogger.loggers += AndroidLogcatLogger(minLogPriority)
+        }
+
+        if (isErrorHandlerProcess) {
+            return
+        }
 
         setupNotificationChannels()
 
@@ -156,20 +186,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             .onEach { ImageUtil.hardwareBitmapThreshold = it }
             .launchIn(scope)
 
-        setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode.get())
-
         // Updates widget update
         WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
-
-        if (!LogcatLogger.isInstalled) {
-            val minLogPriority = when {
-                networkPreferences.verboseLogging.get() -> LogPriority.VERBOSE
-                BuildConfig.DEBUG -> LogPriority.DEBUG
-                else -> LogPriority.INFO
-            }
-            LogcatLogger.install()
-            LogcatLogger.loggers += AndroidLogcatLogger(minLogPriority)
-        }
 
         initializeMigrator()
     }

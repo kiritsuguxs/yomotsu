@@ -20,10 +20,15 @@ fun formatChapterNumber(chapterNumber: Double): String {
     return formatter.format(chapterNumber)
 }
 
-fun formatEpisodeNumber(
+private data class DecodedSeasonEpisode(
+    val season: Int,
+    val episode: Int,
+)
+
+private fun tryDecodeSeasonEpisode(
     episodeNumber: Double,
     episodeName: String? = null,
-): String {
+): DecodedSeasonEpisode? {
     if (episodeNumber >= 0.0 && episodeNumber.isFinite()) {
         val season = floor(episodeNumber).toInt()
         val fractional = episodeNumber - season
@@ -47,7 +52,7 @@ fun formatEpisodeNumber(
                     parsedSeason == season &&
                     abs(scaledThousandths - parsedEpisode) < 0.5
                 ) {
-                    return formatDecodedSeasonEpisode(parsedSeason, parsedEpisode)
+                    return DecodedSeasonEpisode(parsedSeason, parsedEpisode)
                 }
             }
 
@@ -55,9 +60,39 @@ fun formatEpisodeNumber(
             // Only .001-.099 is treated as an encoded episode automatically so real fractional
             // episodes like 12.5 or 1.25 keep formatting as decimals.
             if (roundedEpisode in 1..99 && abs(scaledThousandths - roundedEpisode) < 0.05) {
-                return formatDecodedSeasonEpisode(season, roundedEpisode)
+                return DecodedSeasonEpisode(season, roundedEpisode)
             }
         }
+    }
+    return null
+}
+
+fun decodeEpisodeNumber(
+    episodeNumber: Double,
+    episodeName: String? = null,
+): Double {
+    return tryDecodeSeasonEpisode(episodeNumber, episodeName)?.episode?.toDouble() ?: episodeNumber
+}
+
+fun normalizeMergedEpisodeNumber(
+    episodeNumber: Double,
+    episodeName: String? = null,
+): Double {
+    val decoded = tryDecodeSeasonEpisode(episodeNumber, episodeName) ?: return episodeNumber
+    return when {
+        decoded.season == 0 -> episodeNumber
+        decoded.season == 1 -> decoded.episode.toDouble()
+        else -> decoded.season * 10_000.0 + decoded.episode
+    }
+}
+
+fun formatEpisodeNumber(
+    episodeNumber: Double,
+    episodeName: String? = null,
+): String {
+    val decoded = tryDecodeSeasonEpisode(episodeNumber, episodeName)
+    if (decoded != null) {
+        return formatDecodedSeasonEpisode(decoded.season, decoded.episode)
     }
     return formatChapterNumber(episodeNumber)
 }

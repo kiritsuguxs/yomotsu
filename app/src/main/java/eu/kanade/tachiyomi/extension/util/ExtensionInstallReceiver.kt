@@ -81,7 +81,10 @@ internal class ExtensionInstallReceiver(private val listener: Listener) : Broadc
 
                 val pkgName = getPackageNameFromIntent(intent)
                 if (pkgName != null) {
-                    listener.onPackageUninstalled(pkgName)
+                    listener.onPackageUninstalled(
+                        pkgName = pkgName,
+                        isSystemPackage = intent.action == Intent.ACTION_PACKAGE_REMOVED,
+                    )
                 }
             }
         }
@@ -125,7 +128,7 @@ internal class ExtensionInstallReceiver(private val listener: Listener) : Broadc
         fun onExtensionInstalled(extension: Extension.Installed)
         fun onExtensionUpdated(extension: Extension.Installed)
         fun onExtensionUntrusted(extension: Extension.Untrusted)
-        fun onPackageUninstalled(pkgName: String)
+        fun onPackageUninstalled(pkgName: String, isSystemPackage: Boolean = false)
     }
 
     companion object {

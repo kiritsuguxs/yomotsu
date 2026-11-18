@@ -166,11 +166,13 @@ class ExtensionManager(
             return
         }
 
-        enableAdditionalSubLanguages(extensions)
+        val deduplicatedExtensions = deduplicateAvailableExtensions(extensions)
 
-        availableExtensionMapFlow.value = extensions.associateBy { it.pkgName }
-        updatedInstalledExtensionsStatuses(extensions)
-        setupAvailableExtensionsSourcesDataMap(extensions)
+        enableAdditionalSubLanguages(deduplicatedExtensions)
+
+        availableExtensionMapFlow.value = deduplicatedExtensions.associateBy { it.pkgName }
+        updatedInstalledExtensionsStatuses(deduplicatedExtensions)
+        setupAvailableExtensionsSourcesDataMap(deduplicatedExtensions)
     }
 
     /**
@@ -292,7 +294,8 @@ class ExtensionManager(
      * @param extension The extension to uninstall.
      */
     fun uninstallExtension(extension: Extension) {
-        installer.uninstallApk(extension.pkgName)
+        val isPrivate = (extension as? Extension.Installed)?.isShared == false
+        installer.uninstallApk(extension.pkgName, isPrivate = isPrivate)
     }
 
     /**
@@ -385,8 +388,13 @@ class ExtensionManager(
             updatePendingUpdatesCount()
         }
 
-        override fun onPackageUninstalled(pkgName: String) {
-            ExtensionLoader.uninstallPrivateExtension(context, pkgName)
+        override fun onPackageUninstalled(pkgName: String, isSystemPackage: Boolean) {
+            if (isSystemPackage && installedExtensionMapFlow.value[pkgName]?.isShared == false) {
+                return
+            }
+            if (!isSystemPackage) {
+                ExtensionLoader.uninstallPrivateExtension(context, pkgName)
+            }
             unregisterExtension(pkgName)
             updatePendingUpdatesCount()
         }
@@ -429,21 +437,42 @@ class ExtensionManager(
     }
 }
 
+internal fun deduplicateAvailableExtensions(extensions: List<Extension.Available>): List<Extension.Available> {
+    return extensions
+        .groupBy { it.pkgName }
+        .values
+        .map { candidates ->
+            candidates.maxWith(
+                compareBy<Extension.Available> { it.libVersion }
+                    .thenBy { normalizeAnimeVersionCode(it.versionCode, it.libVersion) }
+                    .thenBy { it.versionCode },
+            )
+        }
+}
+
+internal fun normalizeAnimeVersionCode(code: Long, libVersion: Double): Long {
+    if (libVersion >= 1.0 && libVersion % 1.0 == 0.0) {
+        val prefix = libVersion.toLong() * 100_000L
+        if (code in prefix until (prefix + 100_000L)) {
+            return code - prefix
+        }
+    }
+    return code
+}
+
 internal fun hasExtensionUpdate(
     installed: Extension.Installed,
     available: Extension.Available,
     isAnime: Boolean,
 ): Boolean {
-    val isCompositeSameVersion = available.versionName == installed.versionName &&
-        available.libVersion >= 1.0 &&
-        available.libVersion % 1.0 == 0.0 &&
-        available.versionCode == available.libVersion.toLong() * 100_000L + installed.versionCode
-    if (isCompositeSameVersion) {
-        return false
-    }
-
     return if (isAnime) {
-        available.versionCode > installed.versionCode
+        val installedNormalized = normalizeAnimeVersionCode(installed.versionCode, installed.libVersion)
+        val availableNormalized = normalizeAnimeVersionCode(available.versionCode, available.libVersion)
+        if (available.versionName == installed.versionName && availableNormalized == installedNormalized) {
+            return false
+        }
+        available.libVersion > installed.libVersion ||
+            (available.libVersion == installed.libVersion && availableNormalized > installedNormalized)
     } else {
         available.versionCode > installed.versionCode || available.libVersion > installed.libVersion
     }

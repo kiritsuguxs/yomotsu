@@ -40,7 +40,7 @@ fun Screen.migrateSourceTab(selectedMedia: String): TabContent {
                 title = stringResource(MR.strings.migration_help_guide),
                 icon = Icons.AutoMirrored.Outlined.HelpOutline,
                 onClick = {
-                    uriHandler.openUri("https://yomotsu-app.github.io/help.html#source-migration")
+                    uriHandler.openUri("https://kiritsuguxs.github.io/yomotsu/help.html#source-migration")
                 },
             ),
         ),
