@@ -515,6 +515,7 @@ private fun MangaScreenSmallImpl(
                         onChapterSwipe = onChapterSwipe,
                         onTranslationChapter = onTranslationChapter,
                         isAnime = state.isAnime,
+                        isNovel = state.source is eu.kanade.tachiyomi.source.INovelSource || state.source is eu.kanade.tachiyomi.novelsource.NovelSource,
                         isMerged = state.isMerged,
                         selectedMergeSource = state.selectedMergeSource,
                         sourceMap = sourceMap,
@@ -797,6 +798,7 @@ fun MangaScreenLargeImpl(
                                 onChapterSwipe = onChapterSwipe,
                                 onTranslationChapter = onTranslationChapter,
                                 isAnime = state.isAnime,
+                                isNovel = state.source is eu.kanade.tachiyomi.source.INovelSource || state.source is eu.kanade.tachiyomi.novelsource.NovelSource,
                                 isMerged = state.isMerged,
                                 selectedMergeSource = state.selectedMergeSource,
                                 sourceMap = sourceMap,
@@ -878,6 +880,7 @@ private fun LazyListScope.sharedChapterItems(
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
     isAnime: Boolean = false,
+    isNovel: Boolean = false,
     isMerged: Boolean = false,
     selectedMergeSource: Long? = null,
     sourceMap: Map<Long, String> = emptyMap(),
@@ -922,32 +925,40 @@ private fun LazyListScope.sharedChapterItems(
                         item.chapter.name
                     },
                     date = relativeDateText(item.chapter.dateUpload),
-                    readProgress = if (isAnime) {
-                        item.chapter.lastPageRead
-                            .takeIf { !item.chapter.read && it > 0L }
-                            ?.let {
-                                if (item.chapter.totalSeconds > 0L) {
+                    readProgress = when {
+                        isAnime -> {
+                            item.chapter.lastPageRead
+                                .takeIf { !item.chapter.read && it > 0L }
+                                ?.let {
+                                    if (item.chapter.totalSeconds > 0L) {
+                                        stringResource(
+                                            AYMR.strings.episode_progress,
+                                            formatTime(it),
+                                            formatTime(item.chapter.totalSeconds),
+                                        )
+                                    } else {
+                                        stringResource(
+                                            AYMR.strings.episode_progress_no_total,
+                                            formatTime(it),
+                                        )
+                                    }
+                                }
+                        }
+                        isNovel -> {
+                            item.chapter.lastPageRead
+                                .takeIf { !item.chapter.read && it in 1L..99L }
+                                ?.let { "${it}%" }
+                        }
+                        else -> {
+                            item.chapter.lastPageRead
+                                .takeIf { !item.chapter.read && it > 0L }
+                                ?.let {
                                     stringResource(
-                                        AYMR.strings.episode_progress,
-                                        formatTime(it),
-                                        formatTime(item.chapter.totalSeconds),
-                                    )
-                                } else {
-                                    stringResource(
-                                        AYMR.strings.episode_progress_no_total,
-                                        formatTime(it),
+                                        MR.strings.chapter_progress,
+                                        it + 1,
                                     )
                                 }
-                            }
-                    } else {
-                        item.chapter.lastPageRead
-                            .takeIf { !item.chapter.read && it > 0L }
-                            ?.let {
-                                stringResource(
-                                    MR.strings.chapter_progress,
-                                    it + 1,
-                                )
-                            }
+                        }
                     },
                     scanlator = scanlator,
                     read = item.chapter.read,

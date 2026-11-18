@@ -319,8 +319,9 @@ class MainActivity : BaseActivity() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
-        // App updates
+        // App updates (deferred so cold-start UI & Library load without network/CPU contention)
         LaunchedEffect(Unit) {
+            kotlinx.coroutines.delay(3_000L)
             if (updaterEnabled) {
                 try {
                     val result = AppUpdateChecker().checkForUpdate()
@@ -342,8 +343,9 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        // Extensions updates
+        // Extensions updates (deferred to avoid multi-MB protobuf parsing during Library startup)
         LaunchedEffect(Unit) {
+            kotlinx.coroutines.delay(4_500L)
             try {
                 ExtensionApi().checkForUpdates(context)
             } catch (e: Exception) {
@@ -625,6 +627,6 @@ class MainActivity : BaseActivity() {
 }
 
 // Splash screen
-private const val SPLASH_MIN_DURATION = 500 // ms
-private const val SPLASH_MAX_DURATION = 5000 // ms
-private const val SPLASH_EXIT_ANIM_DURATION = 400L // ms
+private const val SPLASH_MIN_DURATION = 150 // ms
+private const val SPLASH_MAX_DURATION = 4000 // ms
+private const val SPLASH_EXIT_ANIM_DURATION = 220L // ms

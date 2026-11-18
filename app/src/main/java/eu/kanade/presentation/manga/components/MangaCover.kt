@@ -44,8 +44,9 @@ enum class MangaCover(val ratio: Float) {
         onLongClick: (() -> Unit)? = null,
     ) {
         val context = LocalContext.current
+        val isPanorama = this == Panorama
         var srcAspect by remember { mutableStateOf<Float?>(null) }
-        val model = if (this == Panorama && data !is ImageRequest) {
+        val model = if (isPanorama && data !is ImageRequest) {
             remember(data) {
                 ImageRequest.Builder(context)
                     .data(data)
@@ -62,12 +63,16 @@ enum class MangaCover(val ratio: Float) {
             placeholder = ColorPainter(CoverPlaceholderColor),
             error = rememberResourceBitmapPainter(id = R.drawable.cover_error),
             contentDescription = contentDescription,
-            onSuccess = { state ->
-                val w = state.result.image.width
-                val h = state.result.image.height
-                if (w > 0 && h > 0) {
-                    srcAspect = w.toFloat() / h.toFloat()
+            onSuccess = if (isPanorama) {
+                { state ->
+                    val w = state.result.image.width
+                    val h = state.result.image.height
+                    if (w > 0 && h > 0) {
+                        srcAspect = w.toFloat() / h.toFloat()
+                    }
                 }
+            } else {
+                null
             },
             modifier = modifier
                 .aspectRatio(ratio)

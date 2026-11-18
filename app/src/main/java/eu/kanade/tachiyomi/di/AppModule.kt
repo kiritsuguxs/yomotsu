@@ -29,6 +29,7 @@ import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.source.AndroidSourceManager
 import eu.kanade.translation.TranslationManager
 import eu.kanade.translation.data.TranslationProvider
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.protobuf.ProtoBuf
 import nl.adaptivity.xmlutil.XmlDeclMode
@@ -161,14 +162,11 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { AudioManager(app) }
         addSingletonFactory { BrightnessManager(app) }
 
-        // Asynchronously init expensive components for a faster cold start
-        ContextCompat.getMainExecutor(app).execute {
-            get<NetworkHelper>()
-
-            get<SourceManager>()
-
+        // Asynchronously init expensive components off the Main UI thread for a faster cold start
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
             get<Database>()
-
+            get<NetworkHelper>()
+            get<SourceManager>()
             get<DownloadManager>()
             get<AnimeDownloadManager>()
         }

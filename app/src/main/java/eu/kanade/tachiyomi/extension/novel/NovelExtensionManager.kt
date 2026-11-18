@@ -46,8 +46,11 @@ class NovelExtensionManager(
     private var availablePluginsMap: Map<String, NovelPlugin> = emptyMap()
 
     init {
-        loadInstalledExtensions()
-        refreshAvailablePlugins()
+        scope.launch {
+            loadInstalledExtensions()
+            kotlinx.coroutines.delay(5_000L)
+            refreshAvailablePlugins()
+        }
     }
 
     fun loadInstalledExtensions() {

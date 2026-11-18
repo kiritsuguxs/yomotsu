@@ -228,19 +228,23 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                 add(MangaKeyer())
             }
 
+            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+            val isLowRam = activityManager?.isLowRamDevice == true || Runtime.getRuntime().availableProcessors() <= 4
+
             memoryCache(
                 MemoryCache.Builder()
-                    .maxSizePercent(context)
+                    .maxSizePercent(context, if (isLowRam) 0.15 else 0.22)
                     .build(),
             )
 
-            crossfade((300 * this@App.animatorDurationScale).toInt())
+            val crossfadeMs = if (isLowRam) 0 else (150 * this@App.animatorDurationScale).toInt()
+            crossfade(crossfadeMs)
             allowRgb565(true) // Otimização: Força uso de memória reduzida (capinhas leves)
             if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
 
-            // Coil spawns a new thread for every image load by default
-            fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(8))
-            decoderCoroutineContext(Dispatchers.IO.limitedParallelism(4))
+            // Bound concurrency so cover decoding never starves UI composition on weaker CPUs
+            fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(if (isLowRam) 4 else 8))
+            decoderCoroutineContext(Dispatchers.IO.limitedParallelism(if (isLowRam) 2 else 4))
         }
             .build()
     }

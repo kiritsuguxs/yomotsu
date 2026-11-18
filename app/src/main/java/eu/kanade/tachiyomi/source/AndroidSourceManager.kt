@@ -99,10 +99,9 @@ class AndroidSourceManager(
         scope.launch {
             sourceRepository.subscribeAll()
                 .collectLatest { sources ->
-                    val mutableMap = stubSourcesMap.toMutableMap()
-                    sources.forEach {
-                        mutableMap[it.id] = it
-                    }
+                    val incoming = sources.associateBy { it.id }
+                    stubSourcesMap.keys.retainAll(incoming.keys)
+                    stubSourcesMap.putAll(incoming)
                 }
         }
     }

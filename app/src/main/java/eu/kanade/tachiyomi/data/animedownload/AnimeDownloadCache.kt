@@ -114,11 +114,12 @@ class AnimeDownloadCache(
         get() = File(context.cacheDir, "anime_dl_index_cache_v3")
 
     private val rootDownloadsDirMutex = Mutex()
-    private var rootDownloadsDir = RootDirectory(storageManager.getAnimeDownloadsDirectory())
+    private var rootDownloadsDir = RootDirectory(null)
 
     init {
-        // Attempt to read cache file
+        // Attempt to read cache file off the calling thread
         scope.launch {
+            var loadedFromDisk = false
             rootDownloadsDirMutex.withLock {
                 try {
                     if (diskCacheFile.exists()) {
@@ -127,11 +128,18 @@ class AnimeDownloadCache(
                         }
                         rootDownloadsDir = diskCache
                         lastRenew = System.currentTimeMillis()
+                        loadedFromDisk = true
+                    } else {
+                        rootDownloadsDir = RootDirectory(storageManager.getAnimeDownloadsDirectory())
                     }
                 } catch (e: Throwable) {
                     logcat(LogPriority.ERROR, e) { "Failed to initialize from disk cache" }
                     diskCacheFile.delete()
+                    rootDownloadsDir = RootDirectory(storageManager.getAnimeDownloadsDirectory())
                 }
+            }
+            if (loadedFromDisk) {
+                _changes.trySend(Unit)
             }
         }
 

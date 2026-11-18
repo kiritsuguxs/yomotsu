@@ -31,7 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -127,6 +127,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
@@ -134,10 +136,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import org.jsoup.Jsoup
 import java.net.URI
 import java.util.Date
+import kotlin.math.roundToInt
 import android.app.Application
 
 class NovelReaderActivity : ComponentActivity() {
 
+    private val exitSaveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val volumeScrollChannel = Channel<Int>(Channel.BUFFERED)
     private var volumeKeysScrollEnabled: Boolean = false
 
@@ -178,9 +182,52 @@ class NovelReaderActivity : ComponentActivity() {
         var chapter by mutableStateOf(chapter)
         var originalText by mutableStateOf(originalText)
         var translatedText by mutableStateOf(translatedText)
+        var originalBlocks by mutableStateOf<List<String>>(emptyList())
+        var translatedBlocks by mutableStateOf<List<String>>(emptyList())
         var isLoading by mutableStateOf(isLoading)
         var isTranslating by mutableStateOf(isTranslating)
         var error by mutableStateOf(error)
+    }
+
+    sealed interface NovelRenderEntry {
+        val key: String
+        val contentType: String
+        val chapterIndex: Int
+        val chapterState: ChapterItemState
+
+        data class Header(
+            override val key: String,
+            override val chapterIndex: Int,
+            override val chapterState: ChapterItemState,
+            val showTopDivider: Boolean,
+        ) : NovelRenderEntry {
+            override val contentType: String get() = "header"
+        }
+
+        data class Status(
+            override val key: String,
+            override val chapterIndex: Int,
+            override val chapterState: ChapterItemState,
+        ) : NovelRenderEntry {
+            override val contentType: String get() = "status"
+        }
+
+        data class Block(
+            override val key: String,
+            override val chapterIndex: Int,
+            override val chapterState: ChapterItemState,
+            val blockIndex: Int,
+            val totalBlocks: Int,
+            val text: String,
+            val isImage: Boolean,
+        ) : NovelRenderEntry {
+            override val contentType: String get() = if (isImage) "image_block" else "text_block"
+        }
+    }
+
+    private fun splitNovelBlocks(text: String?): List<String> {
+        if (text.isNullOrBlank()) return emptyList()
+        return text.split("\n\n").map { it.trim() }.filter { it.isNotEmpty() }
     }
 
     enum class ReaderTheme(val title: String, val bg: Color, val text: Color) {
@@ -362,6 +409,66 @@ class NovelReaderActivity : ComponentActivity() {
             }
 
             val lazyListState = rememberLazyListState()
+            var pendingScrollRestoreChapterId by remember(initialChapterId) { mutableStateOf<Long?>(initialChapterId) }
+            var pendingRatioRestore by remember { mutableStateOf<Pair<Long, Float>?>(null) }
+
+            val renderEntries by remember {
+                derivedStateOf {
+                    buildList {
+                        loadedChapters.forEachIndexed { chapterIdx, item ->
+                            add(
+                                NovelRenderEntry.Header(
+                                    key = "hdr_${item.chapter.id}",
+                                    chapterIndex = chapterIdx,
+                                    chapterState = item,
+                                    showTopDivider = chapterIdx > 0,
+                                ),
+                            )
+                            if (item.isLoading || item.isTranslating || item.error != null) {
+                                add(
+                                    NovelRenderEntry.Status(
+                                        key = "sts_${item.chapter.id}",
+                                        chapterIndex = chapterIdx,
+                                        chapterState = item,
+                                    ),
+                                )
+                            } else {
+                                val blocks = if (isTranslated && item.translatedBlocks.isNotEmpty()) {
+                                    item.translatedBlocks
+                                } else {
+                                    item.originalBlocks
+                                }
+                                val total = blocks.size
+                                blocks.forEachIndexed { blockIdx, blockText ->
+                                    add(
+                                        NovelRenderEntry.Block(
+                                            key = "blk_${item.chapter.id}_$blockIdx",
+                                            chapterIndex = chapterIdx,
+                                            chapterState = item,
+                                            blockIndex = blockIdx,
+                                            totalBlocks = total,
+                                            text = blockText,
+                                            isImage = blockText.startsWith("[[IMG:") && blockText.endsWith("]]"),
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            val currentVisibleChapter by remember {
+                derivedStateOf {
+                    renderEntries.getOrNull(lazyListState.firstVisibleItemIndex)?.chapterState?.chapter
+                        ?: loadedChapters.firstOrNull()?.chapter
+                }
+            }
+
+            fun activeChapterIndex(): Int {
+                return renderEntries.getOrNull(lazyListState.firstVisibleItemIndex)?.chapterIndex
+                    ?: (loadedChapters.size - 1).coerceAtLeast(0)
+            }
 
             LaunchedEffect(Unit) {
                 volumeScrollChannel.receiveAsFlow().collect { direction ->
@@ -396,22 +503,56 @@ class NovelReaderActivity : ComponentActivity() {
                         }
 
                         val cleanText = formatNovelText(rawText, novelSource?.baseUrl)
-                        state.originalText = cleanText
-                        state.isLoading = false
+                        val origBlocks = splitNovelBlocks(cleanText)
+                        val seriesTitle = m?.title.orEmpty()
 
-                        // Check cached translation or auto-translate
-                        val cached = NovelTranslator.getCached(state.chapter.id)
+                        // Check cached translation BEFORE clearing isLoading so translated chapters never flash original text or reset scroll
+                        val cached = NovelTranslator.getCached(
+                            chapterId = state.chapter.id,
+                            seriesTitle = seriesTitle,
+                            originalText = cleanText,
+                        )
                         if (cached != null) {
-                            state.translatedText = formatNovelText(cached, novelSource?.baseUrl)
+                            val cleanTranslated = formatNovelText(cached, novelSource?.baseUrl)
+                            val transBlocks = splitNovelBlocks(cleanTranslated)
+                            withContext(Dispatchers.Main) {
+                                state.originalText = cleanText
+                                state.originalBlocks = origBlocks
+                                state.translatedText = cleanTranslated
+                                state.translatedBlocks = transBlocks
+                                state.isLoading = false
+                            }
                         } else if (isTranslated) {
-                            state.isTranslating = true
-                            val translated = NovelTranslator.translate(
-                                chapterId = state.chapter.id,
-                                text = cleanText,
-                                seriesTitle = m?.title.orEmpty(),
-                            )
-                            state.translatedText = formatNovelText(translated, novelSource?.baseUrl)
-                            state.isTranslating = false
+                            withContext(Dispatchers.Main) {
+                                state.originalText = cleanText
+                                state.originalBlocks = origBlocks
+                                state.isTranslating = true
+                                state.isLoading = false
+                            }
+                            try {
+                                val translated = NovelTranslator.translate(
+                                    chapterId = state.chapter.id,
+                                    text = cleanText,
+                                    seriesTitle = seriesTitle,
+                                )
+                                val cleanTranslated = formatNovelText(translated, novelSource?.baseUrl)
+                                val transBlocks = splitNovelBlocks(cleanTranslated)
+                                withContext(Dispatchers.Main) {
+                                    state.translatedText = cleanTranslated
+                                    state.translatedBlocks = transBlocks
+                                    state.isTranslating = false
+                                }
+                            } catch (_: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    state.isTranslating = false
+                                }
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                state.originalText = cleanText
+                                state.originalBlocks = origBlocks
+                                state.isLoading = false
+                            }
                         }
 
                         if (autoPlayTtsWhenReady) {
@@ -433,8 +574,11 @@ class NovelReaderActivity : ComponentActivity() {
                             }
                         }
                     } catch (e: Exception) {
-                        state.error = e.message ?: "Erro ao carregar texto"
-                        state.isLoading = false
+                        withContext(Dispatchers.Main) {
+                            state.error = e.message ?: "Erro ao carregar texto"
+                            state.isTranslating = false
+                            state.isLoading = false
+                        }
                     }
                 }
             }
@@ -443,7 +587,14 @@ class NovelReaderActivity : ComponentActivity() {
                 audioPlayer?.stop(resetProgress = true)
                 val existingIndex = loadedChapters.indexOfFirst { it.chapter.id == targetChapter.id }
                 if (existingIndex != -1) {
-                    scope.launch { lazyListState.animateScrollToItem(existingIndex) }
+                    pendingScrollRestoreChapterId = null
+                    pendingRatioRestore = null
+                    val headerEntryIdx = renderEntries.indexOfFirst {
+                        it is NovelRenderEntry.Header && it.chapterState.chapter.id == targetChapter.id
+                    }
+                    if (headerEntryIdx != -1) {
+                        scope.launch { lazyListState.animateScrollToItem(headerEntryIdx) }
+                    }
                     if (autoStartTts) {
                         val existing = loadedChapters[existingIndex]
                         val textToSpeak = if (isTranslated && !existing.translatedText.isNullOrBlank()) {
@@ -462,6 +613,8 @@ class NovelReaderActivity : ComponentActivity() {
                         }
                     }
                 } else {
+                    pendingRatioRestore = null
+                    pendingScrollRestoreChapterId = targetChapter.id
                     loadedChapters.clear()
                     val newItem = ChapterItemState(chapter = targetChapter)
                     loadedChapters.add(newItem)
@@ -475,8 +628,7 @@ class NovelReaderActivity : ComponentActivity() {
                 if (player.isPlaying) {
                     player.stop(resetProgress = false)
                 } else {
-                    val currentIdx = lazyListState.firstVisibleItemIndex.coerceIn(0, (loadedChapters.size - 1).coerceAtLeast(0))
-                    val activeChapter = loadedChapters.getOrNull(currentIdx) ?: loadedChapters.firstOrNull()
+                    val activeChapter = loadedChapters.getOrNull(activeChapterIndex()) ?: loadedChapters.firstOrNull()
                     val textToSpeak = if (isTranslated && !activeChapter?.translatedText.isNullOrBlank()) {
                         activeChapter?.translatedText
                     } else {
@@ -508,8 +660,8 @@ class NovelReaderActivity : ComponentActivity() {
                 }
                 audioPlayer?.onChapterFinished = {
                     if (autoAdvanceTts && allChapters.isNotEmpty()) {
-                        val currentIdx = lazyListState.firstVisibleItemIndex.coerceIn(0, (loadedChapters.size - 1).coerceAtLeast(0))
-                        val activeChapter = loadedChapters.getOrNull(currentIdx)?.chapter ?: loadedChapters.lastOrNull()?.chapter
+                        val activeChapter = loadedChapters.getOrNull(activeChapterIndex())?.chapter
+                            ?: loadedChapters.lastOrNull()?.chapter
                         val allIdx = allChapters.indexOfFirst { it.id == activeChapter?.id }
                         if (allIdx != -1 && allIdx + 1 < allChapters.size) {
                             navigateToChapter(allChapters[allIdx + 1], autoStartTts = true)
@@ -526,7 +678,7 @@ class NovelReaderActivity : ComponentActivity() {
 
             // Initial load of chapters and target chapter
             LaunchedEffect(mangaId, initialChapterId) {
-                withContext(Dispatchers.IO) {
+                val initial = withContext(Dispatchers.IO) {
                     val loadedManga = getManga.await(mangaId)
                     manga = loadedManga
                     val chapters = if (loadedManga != null) {
@@ -559,29 +711,109 @@ class NovelReaderActivity : ComponentActivity() {
                     }
                     allChapters = chapters
 
-                    val initial = chapters.firstOrNull { it.id == initialChapterId }
+                    val target = chapters.firstOrNull { it.id == initialChapterId }
                         ?: getChapter.await(initialChapterId)
 
-                    if (initial != null) {
-                        val firstItem = ChapterItemState(chapter = initial)
-                        loadedChapters.add(firstItem)
-                        loadChapterContent(firstItem)
-                        upsertHistory.await(HistoryUpdate(initial.id, Date(), 0L))
-                        if (initial.lastPageRead > 0L) {
-                            withContext(Dispatchers.Main) {
-                                lazyListState.scrollToItem(0, initial.lastPageRead.toInt().coerceAtLeast(0))
-                            }
-                        }
+                    if (target != null) {
+                        upsertHistory.await(HistoryUpdate(target.id, Date(), 0L))
                     }
+                    target
+                }
+
+                if (initial != null) {
+                    val firstItem = ChapterItemState(chapter = initial)
+                    loadedChapters.add(firstItem)
+                    loadChapterContent(firstItem)
                 }
             }
 
-            // Infinite Scroll: observe scroll position and load next chapter when nearing the end
+            // Deferred scroll restoration: runs ONLY after chapter loading AND translation finish and blocks are materialized
+            LaunchedEffect(renderEntries, pendingScrollRestoreChapterId, pendingRatioRestore) {
+                val ratioTarget = pendingRatioRestore
+                if (ratioTarget != null) {
+                    val (targetChapterId, targetRatio) = ratioTarget
+                    val targetItem = loadedChapters.firstOrNull { it.chapter.id == targetChapterId } ?: return@LaunchedEffect
+                    if (targetItem.isLoading || targetItem.isTranslating) return@LaunchedEffect
+                    if (targetItem.error != null) {
+                        pendingRatioRestore = null
+                        return@LaunchedEffect
+                    }
+                    val firstBlockEntryIdx = renderEntries.indexOfFirst {
+                        it is NovelRenderEntry.Block && it.chapterState.chapter.id == targetChapterId
+                    }
+                    if (firstBlockEntryIdx != -1) {
+                        val firstBlock = renderEntries[firstBlockEntryIdx] as NovelRenderEntry.Block
+                        val blockOffset = (targetRatio * (firstBlock.totalBlocks - 1).coerceAtLeast(0))
+                            .roundToInt()
+                            .coerceIn(0, (firstBlock.totalBlocks - 1).coerceAtLeast(0))
+                        lazyListState.scrollToItem(firstBlockEntryIdx + blockOffset, 0)
+                    }
+                    pendingRatioRestore = null
+                    return@LaunchedEffect
+                }
+
+                val restoreChapterId = pendingScrollRestoreChapterId ?: return@LaunchedEffect
+                val targetItem = loadedChapters.firstOrNull { it.chapter.id == restoreChapterId } ?: return@LaunchedEffect
+                if (targetItem.isLoading || targetItem.isTranslating) return@LaunchedEffect
+                if (targetItem.error != null) {
+                    pendingScrollRestoreChapterId = null
+                    return@LaunchedEffect
+                }
+
+                val firstBlockEntryIdx = renderEntries.indexOfFirst {
+                    it is NovelRenderEntry.Block && it.chapterState.chapter.id == restoreChapterId
+                }
+                if (firstBlockEntryIdx == -1) {
+                    pendingScrollRestoreChapterId = null
+                    return@LaunchedEffect
+                }
+
+                val firstBlock = renderEntries[firstBlockEntryIdx] as NovelRenderEntry.Block
+                val savedRaw = prefs.getString("pos_$restoreChapterId", null)
+                val nowWallMs = System.currentTimeMillis()
+                var restoreRatio: Float? = null
+                var restoreOffsetPx = 0
+
+                if (!savedRaw.isNullOrBlank()) {
+                    val parts = savedRaw.split("|")
+                    val parsedRatio = parts.getOrNull(0)?.toFloatOrNull()?.coerceIn(0f, 1f)
+                    val parsedOffset = parts.getOrNull(1)?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+                    val savedAtMs = parts.getOrNull(2)?.toLongOrNull() ?: 0L
+                    val recentlySaved = savedAtMs > 0L && (nowWallMs - savedAtMs) in 0L..10_000L
+                    if (parsedRatio != null && (!targetItem.chapter.read && targetItem.chapter.lastPageRead > 0L || recentlySaved)) {
+                        restoreRatio = parsedRatio
+                        restoreOffsetPx = parsedOffset
+                    } else if (targetItem.chapter.read || targetItem.chapter.lastPageRead <= 0L) {
+                        prefs.edit().remove("pos_$restoreChapterId").apply()
+                    }
+                } else if (!targetItem.chapter.read && targetItem.chapter.lastPageRead > 0L) {
+                    restoreRatio = if (targetItem.chapter.lastPageRead in 1L..99L) {
+                        targetItem.chapter.lastPageRead / 100f
+                    } else {
+                        (targetItem.chapter.lastPageRead.toFloat() / 8000f).coerceIn(0.02f, 0.95f)
+                    }
+                }
+
+                if (restoreRatio != null && (restoreRatio > 0f || restoreOffsetPx > 0)) {
+                    val blockOffset = (restoreRatio * (firstBlock.totalBlocks - 1).coerceAtLeast(0))
+                        .roundToInt()
+                        .coerceIn(0, (firstBlock.totalBlocks - 1).coerceAtLeast(0))
+                    lazyListState.scrollToItem(firstBlockEntryIdx + blockOffset, restoreOffsetPx)
+                }
+                pendingScrollRestoreChapterId = null
+            }
+
+            // Infinite Scroll: observe scroll position and prefetch next chapter when within last 6 paragraphs
             val shouldLoadNextChapter by remember {
                 derivedStateOf {
-                    val total = lazyListState.layoutInfo.totalItemsCount
-                    val lastVisible = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                    total > 0 && lastVisible >= total - 1
+                    val lastItem = loadedChapters.lastOrNull()
+                    if (lastItem == null || lastItem.isLoading || lastItem.isTranslating || lastItem.error != null) {
+                        false
+                    } else {
+                        val total = lazyListState.layoutInfo.totalItemsCount
+                        val lastVisible = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        total > 2 && lastVisible >= (total - 6).coerceAtLeast(1)
+                    }
                 }
             }
 
@@ -611,124 +843,226 @@ class NovelReaderActivity : ComponentActivity() {
                         lazyListState.firstVisibleItemScrollOffset,
                         lastVisibleIdx,
                         if (!lazyListState.canScrollForward) 1 else 0,
+                        renderEntries.size,
                     )
                 }
                 .distinctUntilChanged()
-                .debounce(350L)
+                .debounce(250L)
                 .collectLatest { snapshot ->
-                    val firstVisibleIndex = snapshot[0]
-                    val scrollOffset = snapshot[1]
-                    val lastVisibleIndex = snapshot[2]
+                    val firstVisibleEntryIdx = snapshot[0]
+                    val scrollOffset = snapshot[1].coerceAtLeast(0)
+                    val lastVisibleEntryIdx = snapshot[2]
                     val reachedEnd = snapshot[3] == 1
                     val nowMs = android.os.SystemClock.elapsedRealtime()
                     val elapsedDeltaMs = (nowMs - lastHistoryTickMs).coerceIn(0L, 60_000L)
                     lastHistoryTickMs = nowMs
 
-                    if (firstVisibleIndex in loadedChapters.indices) {
-                        val currentItem = loadedChapters[firstVisibleIndex]
+                    val firstEntry = renderEntries.getOrNull(firstVisibleEntryIdx) ?: return@collectLatest
+                    val lastEntry = renderEntries.getOrNull(lastVisibleEntryIdx) ?: firstEntry
+                    val currentChapterIdx = firstEntry.chapterIndex
+                    val lastChapterIdx = lastEntry.chapterIndex
+                    val currentItem = firstEntry.chapterState
 
-                        // Chapters strictly above firstVisibleIndex were scrolled past completely.
-                        // The last visible chapter is finished only when loaded without error and cannot scroll forward.
-                        val newlyFinishedItems = buildList {
-                            for (idx in 0 until firstVisibleIndex) {
-                                val past = loadedChapters.getOrNull(idx) ?: continue
-                                if (!past.chapter.read && !past.isLoading && past.error == null && !past.originalText.isNullOrBlank()) {
-                                    add(past)
-                                }
-                            }
-                            if (reachedEnd && lastVisibleIndex in loadedChapters.indices) {
-                                val lastItem = loadedChapters[lastVisibleIndex]
-                                if (!lastItem.chapter.read && !lastItem.isLoading && lastItem.error == null && !lastItem.originalText.isNullOrBlank()) {
-                                    add(lastItem)
-                                }
-                            }
-                        }.distinctBy { it.chapter.id }
+                    // Never overwrite saved scroll while loading, translating, or waiting for initial restoration
+                    if (pendingScrollRestoreChapterId != null ||
+                        pendingRatioRestore != null ||
+                        currentItem.isLoading ||
+                        currentItem.isTranslating ||
+                        currentItem.error != null
+                    ) {
+                        return@collectLatest
+                    }
 
-                        // Optimistically flip in-memory read flag before IO suspension so rapid scroll ticks never double-fire trackers
+                    val newlyFinishedItems = buildList {
+                        for (idx in 0 until currentChapterIdx) {
+                            val past = loadedChapters.getOrNull(idx) ?: continue
+                            if (!past.chapter.read && !past.isLoading && !past.isTranslating && past.error == null && past.originalBlocks.isNotEmpty()) {
+                                add(past)
+                            }
+                        }
+                        if (reachedEnd && lastChapterIdx in loadedChapters.indices) {
+                            val lastItem = loadedChapters[lastChapterIdx]
+                            val isAtLastParagraph = lastEntry is NovelRenderEntry.Block &&
+                                lastEntry.blockIndex >= (lastEntry.totalBlocks - 1).coerceAtLeast(0)
+                            if (isAtLastParagraph &&
+                                !lastItem.chapter.read &&
+                                !lastItem.isLoading &&
+                                !lastItem.isTranslating &&
+                                lastItem.error == null &&
+                                lastItem.originalBlocks.isNotEmpty()
+                            ) {
+                                add(lastItem)
+                            }
+                        }
+                    }.distinctBy { it.chapter.id }
+
+                    // Optimistically flip in-memory read flag before IO suspension so rapid scroll ticks never double-fire trackers
+                    newlyFinishedItems.forEach { finished ->
+                        finished.chapter = finished.chapter.copy(read = true, lastPageRead = 0L)
+                        prefs.edit().remove("pos_${finished.chapter.id}").apply()
+                    }
+
+                    val isCurrentAtBottom = reachedEnd &&
+                        currentChapterIdx == lastChapterIdx &&
+                        lastEntry is NovelRenderEntry.Block &&
+                        lastEntry.blockIndex >= (lastEntry.totalBlocks - 1).coerceAtLeast(0)
+
+                    val (currentRatio, progressPercent) = when {
+                        isCurrentAtBottom || currentItem.chapter.read -> 0f to 0L
+                        firstEntry is NovelRenderEntry.Block -> {
+                            val denom = (firstEntry.totalBlocks - 1).coerceAtLeast(1)
+                            val r = (firstEntry.blockIndex.toFloat() / denom.toFloat()).coerceIn(0f, 1f)
+                            val pct = if (firstEntry.blockIndex == 0 && scrollOffset < 40) {
+                                0L
+                            } else {
+                                (r * 100f).roundToInt().coerceIn(1, 99).toLong()
+                            }
+                            r to pct
+                        }
+                        else -> 0f to 0L
+                    }
+
+                    if (!currentItem.chapter.read && newlyFinishedItems.none { it.chapter.id == currentItem.chapter.id }) {
+                        currentItem.chapter = currentItem.chapter.copy(lastPageRead = progressPercent)
+                        if (progressPercent == 0L) {
+                            prefs.edit().remove("pos_${currentItem.chapter.id}").apply()
+                        } else {
+                            prefs.edit()
+                                .putString("pos_${currentItem.chapter.id}", "$currentRatio|$scrollOffset|${System.currentTimeMillis()}")
+                                .apply()
+                        }
+                    }
+
+                    withContext(Dispatchers.IO) {
                         newlyFinishedItems.forEach { finished ->
-                            finished.chapter = finished.chapter.copy(read = true, lastPageRead = 0L)
+                            val finishedChapter = finished.chapter
+                            updateChapter.await(
+                                ChapterUpdate(
+                                    id = finishedChapter.id,
+                                    read = true,
+                                    lastPageRead = 0L,
+                                ),
+                            )
+                            if (currentStitch.isNotEmpty()) {
+                                val siblingIds = eu.kanade.domain.merge.expandToUnits(setOf(finishedChapter.id), currentStitch) - finishedChapter.id
+                                if (siblingIds.isNotEmpty()) {
+                                    updateChapter.awaitAll(siblingIds.map { ChapterUpdate(id = it, read = true, lastPageRead = 0L) })
+                                }
+                            }
+                            val targetTrackIds = if (mangaById.size > 1) {
+                                mangaById.keys.filter { id -> getTracks.await(id).isNotEmpty() }
+                                    .ifEmpty { listOf(mangaId) }
+                            } else {
+                                listOf(mangaId)
+                            }
+                            targetTrackIds.forEach { targetId ->
+                                trackChapter.await(appContext, targetId, finishedChapter.chapterNumber.toDouble())
+                            }
+
+                            val removeSlots = downloadPreferences.removeAfterReadSlots.get()
+                            if (removeSlots == 0) {
+                                NovelDownloadManager.deleteChapter(finishedChapter.mangaId, finishedChapter.id)
+                            } else if (removeSlots > 0 && allChapters.isNotEmpty()) {
+                                val finishedIdx = allChapters.indexOfFirst { it.id == finishedChapter.id }
+                                val targetDeleteIdx = finishedIdx - removeSlots
+                                if (finishedIdx != -1 && targetDeleteIdx >= 0) {
+                                    val chapterToDelete = allChapters[targetDeleteIdx]
+                                    NovelDownloadManager.deleteChapter(chapterToDelete.mangaId, chapterToDelete.id)
+                                }
+                            }
                         }
 
-                        val isCurrentAtBottom = reachedEnd && firstVisibleIndex == lastVisibleIndex && currentItem.chapter.read
-                        withContext(Dispatchers.IO) {
-                            newlyFinishedItems.forEach { finished ->
-                                val finishedChapter = finished.chapter
-                                updateChapter.await(
-                                    ChapterUpdate(
-                                        id = finishedChapter.id,
-                                        read = true,
-                                        lastPageRead = 0L,
-                                    ),
-                                )
-                                if (currentStitch.isNotEmpty()) {
-                                    val siblingIds = eu.kanade.domain.merge.expandToUnits(setOf(finishedChapter.id), currentStitch) - finishedChapter.id
-                                    if (siblingIds.isNotEmpty()) {
-                                        updateChapter.awaitAll(siblingIds.map { ChapterUpdate(id = it, read = true, lastPageRead = 0L) })
+                        if (newlyFinishedItems.isNotEmpty()) {
+                            eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(appContext)
+                        }
+
+                        if (newlyFinishedItems.none { it.chapter.id == currentItem.chapter.id }) {
+                            updateChapter.await(
+                                ChapterUpdate(
+                                    id = currentItem.chapter.id,
+                                    read = currentItem.chapter.read,
+                                    lastPageRead = progressPercent,
+                                ),
+                            )
+                        }
+
+                        upsertHistory.await(HistoryUpdate(currentItem.chapter.id, Date(), elapsedDeltaMs))
+
+                        val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading.get()
+                        if (downloadAheadAmount > 0 && allChapters.isNotEmpty()) {
+                            val currAllIdx = allChapters.indexOfFirst { it.id == currentItem.chapter.id }
+                            if (currAllIdx != -1) {
+                                val seenUnits = HashSet<Int>()
+                                currentStitch.firstOrNull { it.chapterId == currentItem.chapter.id }?.unit?.let(seenUnits::add)
+                                val toDownload = allChapters.drop(currAllIdx + 1)
+                                    .filter { ch ->
+                                        val unit = currentStitch.firstOrNull { it.chapterId == ch.id }?.unit
+                                        val unitOk = unit == null || seenUnits.add(unit)
+                                        unitOk &&
+                                            !ch.read &&
+                                            !NovelDownloadManager.isChapterDownloaded(ch.mangaId, ch.id) &&
+                                            !NovelDownloadManager.isChapterDownloading(ch.id)
                                     }
-                                }
-                                val targetTrackIds = if (mangaById.size > 1) {
-                                    mangaById.keys.filter { id -> getTracks.await(id).isNotEmpty() }
-                                        .ifEmpty { listOf(mangaId) }
-                                } else {
-                                    listOf(mangaId)
-                                }
-                                targetTrackIds.forEach { targetId ->
-                                    trackChapter.await(appContext, targetId, finishedChapter.chapterNumber.toDouble())
-                                }
-
-                                val removeSlots = downloadPreferences.removeAfterReadSlots.get()
-                                if (removeSlots == 0) {
-                                    NovelDownloadManager.deleteChapter(finishedChapter.mangaId, finishedChapter.id)
-                                } else if (removeSlots > 0 && allChapters.isNotEmpty()) {
-                                    val finishedIdx = allChapters.indexOfFirst { it.id == finishedChapter.id }
-                                    val targetDeleteIdx = finishedIdx - removeSlots
-                                    if (finishedIdx != -1 && targetDeleteIdx >= 0) {
-                                        val chapterToDelete = allChapters[targetDeleteIdx]
-                                        NovelDownloadManager.deleteChapter(chapterToDelete.mangaId, chapterToDelete.id)
-                                    }
-                                }
-                            }
-
-                            if (newlyFinishedItems.isNotEmpty()) {
-                                eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(appContext)
-                            }
-
-                            if (newlyFinishedItems.none { it.chapter.id == currentItem.chapter.id }) {
-                                updateChapter.await(
-                                    ChapterUpdate(
-                                        id = currentItem.chapter.id,
-                                        read = currentItem.chapter.read,
-                                        lastPageRead = if (isCurrentAtBottom) 0L else scrollOffset.toLong(),
-                                    ),
-                                )
-                            }
-
-                            upsertHistory.await(HistoryUpdate(currentItem.chapter.id, Date(), elapsedDeltaMs))
-
-                            val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading.get()
-                            if (downloadAheadAmount > 0 && allChapters.isNotEmpty()) {
-                                val currAllIdx = allChapters.indexOfFirst { it.id == currentItem.chapter.id }
-                                if (currAllIdx != -1) {
-                                    val seenUnits = HashSet<Int>()
-                                    currentStitch.firstOrNull { it.chapterId == currentItem.chapter.id }?.unit?.let(seenUnits::add)
-                                    val toDownload = allChapters.drop(currAllIdx + 1)
-                                        .filter { ch ->
-                                            val unit = currentStitch.firstOrNull { it.chapterId == ch.id }?.unit
-                                            val unitOk = unit == null || seenUnits.add(unit)
-                                            unitOk &&
-                                                !ch.read &&
-                                                !NovelDownloadManager.isChapterDownloaded(ch.mangaId, ch.id) &&
-                                                !NovelDownloadManager.isChapterDownloading(ch.id)
-                                        }
-                                        .take(downloadAheadAmount)
-                                    toDownload.groupBy { it.mangaId }.forEach { (targetMangaId, targetChapters) ->
-                                        val targetManga = mangaById[targetMangaId] ?: manga
-                                        if (targetManga != null) {
-                                            NovelDownloadManager.downloadChapters(targetManga, targetChapters)
-                                        }
+                                    .take(downloadAheadAmount)
+                                toDownload.groupBy { it.mangaId }.forEach { (targetMangaId, targetChapters) ->
+                                    val targetManga = mangaById[targetMangaId] ?: manga
+                                    if (targetManga != null) {
+                                        NovelDownloadManager.downloadChapters(targetManga, targetChapters)
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+
+            // Persist exact scroll position immediately on exit even if user presses Back before debounce fires
+            DisposableEffect(Unit) {
+                onDispose {
+                    val firstIdx = lazyListState.firstVisibleItemIndex
+                    val scrollOffset = lazyListState.firstVisibleItemScrollOffset.coerceAtLeast(0)
+                    val firstEntry = renderEntries.getOrNull(firstIdx) ?: return@onDispose
+                    val item = firstEntry.chapterState
+                    if (pendingScrollRestoreChapterId != null ||
+                        pendingRatioRestore != null ||
+                        item.isLoading ||
+                        item.isTranslating ||
+                        item.error != null ||
+                        item.chapter.read
+                    ) {
+                        return@onDispose
+                    }
+                    val (ratio, percent) = when (firstEntry) {
+                        is NovelRenderEntry.Block -> {
+                            val denom = (firstEntry.totalBlocks - 1).coerceAtLeast(1)
+                            val r = (firstEntry.blockIndex.toFloat() / denom.toFloat()).coerceIn(0f, 1f)
+                            val pct = if (firstEntry.blockIndex == 0 && scrollOffset < 40) {
+                                0L
+                            } else {
+                                (r * 100f).roundToInt().coerceIn(1, 99).toLong()
+                            }
+                            r to pct
+                        }
+                        else -> 0f to 0L
+                    }
+                    if (percent == 0L) {
+                        prefs.edit().remove("pos_${item.chapter.id}").apply()
+                    } else {
+                        prefs.edit()
+                            .putString("pos_${item.chapter.id}", "$ratio|$scrollOffset|${System.currentTimeMillis()}")
+                            .apply()
+                    }
+                    val chapterId = item.chapter.id
+                    val isRead = item.chapter.read
+                    exitSaveScope.launch {
+                        runCatching {
+                            updateChapter.await(
+                                ChapterUpdate(
+                                    id = chapterId,
+                                    read = isRead,
+                                    lastPageRead = percent,
+                                ),
+                            )
                         }
                     }
                 }
@@ -805,11 +1139,24 @@ class NovelReaderActivity : ComponentActivity() {
                     .background(resolvedBg),
             ) {
                 // Reading content (Edge to Edge)
-                if (loadedChapters.isEmpty()) {
+                if (renderEntries.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
                 } else {
+                    val baseBodyLarge = MaterialTheme.typography.bodyLarge
+                    val paragraphTextStyle = remember(baseBodyLarge, fontSize, lineHeightMultiplier, fontFamilyChoice, justifyText) {
+                        baseBodyLarge.copy(
+                            fontSize = fontSize.sp,
+                            lineHeight = (fontSize * lineHeightMultiplier).sp,
+                            fontFamily = fontFamilyChoice.family,
+                            textAlign = if (justifyText) TextAlign.Justify else TextAlign.Start,
+                        )
+                    }
+                    val activeSnippetPrefix = remember(isTtsPlaying, activeTtsSnippet) {
+                        if (isTtsPlaying && activeTtsSnippet.length >= 12) activeTtsSnippet.take(28) else ""
+                    }
+
                     LazyColumn(
                         state = lazyListState,
                         modifier = Modifier
@@ -825,132 +1172,128 @@ class NovelReaderActivity : ComponentActivity() {
                             bottom = 96.dp,
                         ),
                     ) {
-                        itemsIndexed(
-                            items = loadedChapters,
-                            key = { _, item -> item.chapter.id },
-                        ) { index, item ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
+                        items(
+                            items = renderEntries,
+                            key = { it.key },
+                            contentType = { it.contentType },
+                        ) { entry ->
+                            when (entry) {
+                                is NovelRenderEntry.Header -> {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = horizontalMarginDp.dp)
+                                            .padding(top = 16.dp, bottom = 20.dp),
                                     ) {
-                                        menuVisible = !menuVisible
+                                        if (entry.showTopDivider) {
+                                            HorizontalDivider(
+                                                modifier = Modifier.padding(vertical = 32.dp),
+                                                color = resolvedTextColor.copy(alpha = 0.2f),
+                                            )
+                                        }
+                                        Text(
+                                            text = entry.chapterState.chapter.name,
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = fontFamilyChoice.family,
+                                            ),
+                                            color = if (readerTheme == ReaderTheme.DEFAULT) MaterialTheme.colorScheme.primary else resolvedTextColor,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            textAlign = TextAlign.Center,
+                                        )
                                     }
-                                    .padding(horizontal = horizontalMarginDp.dp, vertical = 16.dp),
-                            ) {
-                                // Chapter Header Divider
-                                if (index > 0) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(vertical = 32.dp),
-                                        color = resolvedTextColor.copy(alpha = 0.2f),
-                                    )
                                 }
 
-                                Text(
-                                    text = item.chapter.name,
-                                    style = MaterialTheme.typography.titleLarge.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = fontFamilyChoice.family,
-                                    ),
-                                    color = if (readerTheme == ReaderTheme.DEFAULT) MaterialTheme.colorScheme.primary else resolvedTextColor,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 20.dp),
-                                    textAlign = TextAlign.Center,
-                                )
-
-                                when {
-                                    item.isLoading || item.isTranslating -> {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 40.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                        ) {
-                                            CircularProgressIndicator()
-                                            Spacer(modifier = Modifier.height(12.dp))
-                                            Text(
-                                                text = if (item.isTranslating) stringResource(ATMR.strings.novel_translating_chapter) else stringResource(ATMR.strings.novel_loading_chapter),
-                                                color = resolvedTextColor,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                        }
-                                    }
-                                    item.error != null -> {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 24.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                        ) {
-                                            Text(
-                                                text = "Erro: ${item.error}",
-                                                color = MaterialTheme.colorScheme.error,
-                                            )
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            Button(onClick = {
-                                                item.isLoading = true
-                                                item.error = null
-                                                loadChapterContent(item)
-                                            }) {
-                                                Text(stringResource(MR.strings.action_retry))
-                                            }
-                                        }
-                                    }
-                                    else -> {
-                                        val displayText = if (isTranslated && item.translatedText != null) {
-                                            item.translatedText!!
-                                        } else {
-                                            item.originalText ?: ""
-                                        }
-
-                                        val blocks = remember(displayText) {
-                                            displayText.split("\n\n").map { it.trim() }.filter { it.isNotEmpty() }
-                                        }
-
-                                        blocks.forEach { blockText ->
-                                            if (blockText.startsWith("[[IMG:") && blockText.endsWith("]]")) {
-                                                val imgUrl = blockText.removePrefix("[[IMG:").removeSuffix("]]").trim()
-                                                AsyncImage(
-                                                    model = imgUrl,
-                                                    contentDescription = null,
-                                                    contentScale = ContentScale.FillWidth,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(vertical = (paragraphSpacingDp / 2f).dp)
-                                                        .clip(RoundedCornerShape(8.dp)),
-                                                )
-                                            } else {
-                                                val isTtsHighlighted = isTtsPlaying &&
-                                                    activeTtsSnippet.length >= 12 &&
-                                                    blockText.contains(activeTtsSnippet.take(28), ignoreCase = true)
+                                is NovelRenderEntry.Status -> {
+                                    val item = entry.chapterState
+                                    when {
+                                        item.isLoading || item.isTranslating -> {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = horizontalMarginDp.dp, vertical = 40.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                            ) {
+                                                CircularProgressIndicator()
+                                                Spacer(modifier = Modifier.height(12.dp))
                                                 Text(
-                                                    text = blockText,
-                                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                                        fontSize = fontSize.sp,
-                                                        lineHeight = (fontSize * lineHeightMultiplier).sp,
-                                                        fontFamily = fontFamilyChoice.family,
-                                                        textAlign = if (justifyText) TextAlign.Justify else TextAlign.Start,
-                                                    ),
+                                                    text = if (item.isTranslating) {
+                                                        stringResource(ATMR.strings.novel_translating_chapter)
+                                                    } else {
+                                                        stringResource(ATMR.strings.novel_loading_chapter)
+                                                    },
                                                     color = resolvedTextColor,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .then(
-                                                            if (isTtsHighlighted) {
-                                                                Modifier
-                                                                    .clip(RoundedCornerShape(6.dp))
-                                                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
-                                                                    .padding(horizontal = 6.dp, vertical = 4.dp)
-                                                            } else {
-                                                                Modifier
-                                                            },
-                                                        )
-                                                        .padding(bottom = paragraphSpacingDp.dp),
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                 )
                                             }
                                         }
+                                        item.error != null -> {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = horizontalMarginDp.dp, vertical = 24.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                            ) {
+                                                Text(
+                                                    text = "Erro: ${item.error}",
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Button(onClick = {
+                                                    item.isLoading = true
+                                                    item.error = null
+                                                    loadChapterContent(item)
+                                                }) {
+                                                    Text(stringResource(MR.strings.action_retry))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                is NovelRenderEntry.Block -> {
+                                    val blockText = entry.text
+                                    if (entry.isImage) {
+                                        val imgUrl = blockText.removePrefix("[[IMG:").removeSuffix("]]").trim()
+                                        AsyncImage(
+                                            model = imgUrl,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.FillWidth,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(
+                                                    horizontal = horizontalMarginDp.dp,
+                                                    vertical = (paragraphSpacingDp / 2f).dp,
+                                                )
+                                                .clip(RoundedCornerShape(8.dp)),
+                                        )
+                                    } else {
+                                        val isTtsHighlighted = activeSnippetPrefix.isNotEmpty() &&
+                                            blockText.contains(activeSnippetPrefix, ignoreCase = true)
+                                        val bottomPad = if (entry.blockIndex == entry.totalBlocks - 1) {
+                                            (paragraphSpacingDp + 16f).dp
+                                        } else {
+                                            paragraphSpacingDp.dp
+                                        }
+                                        Text(
+                                            text = blockText,
+                                            style = paragraphTextStyle,
+                                            color = resolvedTextColor,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = horizontalMarginDp.dp)
+                                                .then(
+                                                    if (isTtsHighlighted) {
+                                                        Modifier
+                                                            .clip(RoundedCornerShape(6.dp))
+                                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                                                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                                                    } else {
+                                                        Modifier
+                                                    },
+                                                )
+                                                .padding(bottom = bottomPad),
+                                        )
                                     }
                                 }
                             }
@@ -969,7 +1312,6 @@ class NovelReaderActivity : ComponentActivity() {
                         modifier = Modifier.statusBarsPadding(),
                         title = {
                             Column {
-                                val currentVisibleChapter = loadedChapters.getOrNull(lazyListState.firstVisibleItemIndex)?.chapter
                                 Text(
                                     text = currentVisibleChapter?.name ?: manga?.title ?: "Novel",
                                     maxLines = 1,
@@ -1022,23 +1364,57 @@ class NovelReaderActivity : ComponentActivity() {
                                 modifier = Modifier.padding(end = 8.dp),
                             ) {
                                 IconButton(onClick = {
+                                    val firstEntry = renderEntries.getOrNull(lazyListState.firstVisibleItemIndex)
+                                    if (firstEntry is NovelRenderEntry.Block) {
+                                        val denom = (firstEntry.totalBlocks - 1).coerceAtLeast(1)
+                                        val ratio = (firstEntry.blockIndex.toFloat() / denom.toFloat()).coerceIn(0f, 1f)
+                                        pendingRatioRestore = firstEntry.chapterState.chapter.id to ratio
+                                    }
                                     isTranslated = !isTranslated
                                     if (isTranslated) {
                                         loadedChapters.forEach { item ->
-                                            if (item.translatedText == null && item.originalText != null) {
+                                            if (item.translatedBlocks.isEmpty() && item.originalText != null && !item.isTranslating) {
                                                 val itemManga = mangaById[item.chapter.mangaId] ?: manga
+                                                val seriesTitle = itemManga?.title.orEmpty()
                                                 val novelSource = itemManga?.let { sourceManager.get(it.source) as? NovelSourceWrapper }
+                                                val orig = item.originalText!!
                                                 scope.launch(Dispatchers.IO) {
-                                                    item.isTranslating = true
-                                                    item.translatedText = formatNovelText(
-                                                        NovelTranslator.translate(
-                                                            chapterId = item.chapter.id,
-                                                            text = item.originalText!!,
-                                                            seriesTitle = itemManga?.title.orEmpty(),
-                                                        ),
-                                                        novelSource?.baseUrl,
+                                                    val cached = NovelTranslator.getCached(
+                                                        chapterId = item.chapter.id,
+                                                        seriesTitle = seriesTitle,
+                                                        originalText = orig,
                                                     )
-                                                    item.isTranslating = false
+                                                    if (cached != null) {
+                                                        val cleanTranslated = formatNovelText(cached, novelSource?.baseUrl)
+                                                        val transBlocks = splitNovelBlocks(cleanTranslated)
+                                                        withContext(Dispatchers.Main) {
+                                                            item.translatedText = cleanTranslated
+                                                            item.translatedBlocks = transBlocks
+                                                        }
+                                                    } else {
+                                                        withContext(Dispatchers.Main) {
+                                                            item.isTranslating = true
+                                                        }
+                                                        try {
+                                                            val translated = NovelTranslator.translate(
+                                                                chapterId = item.chapter.id,
+                                                                text = orig,
+                                                                seriesTitle = seriesTitle,
+                                                            )
+                                                            val cleanTranslated = formatNovelText(translated, novelSource?.baseUrl)
+                                                            val transBlocks = splitNovelBlocks(cleanTranslated)
+                                                            withContext(Dispatchers.Main) {
+                                                                item.translatedText = cleanTranslated
+                                                                item.translatedBlocks = transBlocks
+                                                                item.isTranslating = false
+                                                            }
+                                                        } catch (e: Exception) {
+                                                            withContext(Dispatchers.Main) {
+                                                                item.isTranslating = false
+                                                                toast(e.message ?: "Erro ao traduzir capítulo")
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -1087,7 +1463,7 @@ class NovelReaderActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                         ) {
-                            val currentChapter = loadedChapters.getOrNull(lazyListState.firstVisibleItemIndex)?.chapter
+                            val currentChapter = currentVisibleChapter
                             val currentIdx = allChapters.indexOfFirst { it.id == currentChapter?.id }
 
                             // Previous / Next chapter buttons row

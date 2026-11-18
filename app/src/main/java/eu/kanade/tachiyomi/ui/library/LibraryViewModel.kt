@@ -42,9 +42,9 @@ import mihon.domain.library.model.search.QueryNode
 import mihon.feature.library.matches
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
-import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
+import tachiyomi.core.common.util.lang.toCollationKey
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
@@ -70,39 +70,42 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.GetTracksPerManga
 import tachiyomi.domain.track.model.Track
 import tachiyomi.source.local.isLocal
+import kotlinx.coroutines.flow.first
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import uy.kohesive.injekt.injectLazy
+import java.text.CollationKey
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
-class LibraryViewModel(
-    private val getLibraryManga: GetLibraryManga = Injekt.get(),
-    private val getCategories: GetCategories = Injekt.get(),
-    private val getTracksPerManga: GetTracksPerManga = Injekt.get(),
-    private val getNextChapters: GetNextChapters = Injekt.get(),
-    private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
-    private val getBookmarkedChaptersByMangaId: GetBookmarkedChaptersByMangaId = Injekt.get(),
-    private val setReadStatus: SetReadStatus = Injekt.get(),
-    private val updateManga: UpdateManga = Injekt.get(),
-    private val setMangaCategories: SetMangaCategories = Injekt.get(),
-    private val preferences: BasePreferences = Injekt.get(),
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    private val coverCache: CoverCache = Injekt.get(),
-    private val sourceManager: SourceManager = Injekt.get(),
-    private val downloadManager: DownloadManager = Injekt.get(),
-    private val animeDownloadManager: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager = Injekt.get(),
-    private val downloadCache: DownloadCache = Injekt.get(),
-    private val animeDownloadCache: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadCache = Injekt.get(),
-    private val trackerManager: TrackerManager = Injekt.get(),
-    private val mangaMergeManager: eu.kanade.domain.manga.MangaMergeManager = Injekt.get(),
-    private val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider = Injekt.get(),
-    private val mangaGroupCategories: eu.kanade.domain.manga.MangaGroupCategories = Injekt.get(),
-    private val mergedChapterUnitRepository: MergedChapterUnitRepository = Injekt.get(),
-    private val getManga: GetManga = Injekt.get(),
-) : StateViewModel<LibraryViewModel.State>(State()) {
+class LibraryViewModel : StateViewModel<LibraryViewModel.State>(State()) {
+
+    private val getLibraryManga: GetLibraryManga by injectLazy()
+    private val getCategories: GetCategories by injectLazy()
+    private val getTracksPerManga: GetTracksPerManga by injectLazy()
+    private val getNextChapters: GetNextChapters by injectLazy()
+    private val getChaptersByMangaId: GetChaptersByMangaId by injectLazy()
+    private val getBookmarkedChaptersByMangaId: GetBookmarkedChaptersByMangaId by injectLazy()
+    private val setReadStatus: SetReadStatus by injectLazy()
+    private val updateManga: UpdateManga by injectLazy()
+    private val setMangaCategories: SetMangaCategories by injectLazy()
+    private val preferences: BasePreferences by injectLazy()
+    private val libraryPreferences: LibraryPreferences by injectLazy()
+    private val coverCache: CoverCache by injectLazy()
+    private val sourceManager: SourceManager by injectLazy()
+    private val downloadManager: DownloadManager by injectLazy()
+    private val animeDownloadManager: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager by injectLazy()
+    private val downloadCache: DownloadCache by injectLazy()
+    private val animeDownloadCache: eu.kanade.tachiyomi.data.animedownload.AnimeDownloadCache by injectLazy()
+    private val trackerManager: TrackerManager by injectLazy()
+    private val mangaMergeManager: eu.kanade.domain.manga.MangaMergeManager by injectLazy()
+    private val mergedChapterProvider: eu.kanade.domain.manga.MergedChapterProvider by injectLazy()
+    private val mangaGroupCategories: eu.kanade.domain.manga.MangaGroupCategories by injectLazy()
+    private val mergedChapterUnitRepository: MergedChapterUnitRepository by injectLazy()
+    private val getManga: GetManga by injectLazy()
+    private val uiPreferences: eu.kanade.domain.ui.UiPreferences by injectLazy()
 
     init {
-        val uiPreferences = Injekt.get<eu.kanade.domain.ui.UiPreferences>()
         viewModelScope.launchIO {
             uiPreferences.lastUsedLibraryMedia.changes().collectLatest { media ->
                 val lastUsedIndex = when (media) {
@@ -114,13 +117,16 @@ class LibraryViewModel(
             }
         }
         viewModelScope.launchIO {
+            // Wait on IO for SourceManager extension discovery so media-type filtering never misclassifies entries on cold start
+            sourceManager.isInitialized.first { it }
+
             combine(
                 state.map { it.searchQuery }.distinctUntilChanged().debounce(0.25.seconds),
                 combine(getCategories.subscribe(), uiPreferences.lastUsedLibraryMedia.changes()) { categories, media ->
                     categories.filter { category ->
                         if (category.isSystemCategory) return@filter true
                         val type = category.mediaType
-                        
+
                         when (media) {
                             "Anime" -> type == tachiyomi.domain.category.model.Category.MediaType.ANIME
                             "Novel" -> type == tachiyomi.domain.category.model.Category.MediaType.NOVEL
@@ -128,16 +134,7 @@ class LibraryViewModel(
                         }
                     }
                 },
-                combine(getFavoritesFlow(), uiPreferences.lastUsedLibraryMedia.changes()) { favs, media ->
-                    favs.filter { item ->
-                        val source = sourceManager.get(item.libraryManga.manga.source)
-                        when (media) {
-                            "Anime" -> source is eu.kanade.tachiyomi.animesource.AnimeSource
-                            "Novel" -> source is eu.kanade.tachiyomi.novelsource.NovelSource || source is eu.kanade.tachiyomi.source.INovelSource
-                            else -> source !is eu.kanade.tachiyomi.animesource.AnimeSource && source !is eu.kanade.tachiyomi.novelsource.NovelSource && source !is eu.kanade.tachiyomi.source.INovelSource
-                        }
-                    }
-                },
+                getFavoritesFlow(uiPreferences.lastUsedLibraryMedia.changes()),
                 combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
                 combine(
                     getLibraryItemPreferencesFlow(),
@@ -387,10 +384,12 @@ class LibraryViewModel(
         trackMap: Map<Long, List<Track>>,
         loggedInTrackerIds: Set<Long>,
     ): Map<Category, List</* LibraryItem */ Long>> {
+        val collationKeys = HashMap<Long, CollationKey>(favoritesById.size)
+        fun collationKeyFor(item: LibraryItem): CollationKey =
+            collationKeys.getOrPut(item.id) { item.libraryManga.manga.title.lowercase().toCollationKey() }
+
         val sortAlphabetically: (LibraryItem, LibraryItem) -> Int = { manga1, manga2 ->
-            val title1 = manga1.libraryManga.manga.title.lowercase()
-            val title2 = manga2.libraryManga.manga.title.lowercase()
-            title1.compareToWithCollator(title2)
+            collationKeyFor(manga1).compareTo(collationKeyFor(manga2))
         }
 
         val defaultTrackerScoreSortValue = -1.0
@@ -496,8 +495,17 @@ class LibraryViewModel(
         }
     }
 
-    private fun getMediaDownloadCount(manga: Manga): Int {
-        val source = sourceManager.getOrStub(manga.source)
+    private class CachedSourceMeta(
+        val source: eu.kanade.tachiyomi.source.Source,
+        val lowerName: String,
+        val lang: String,
+        val mediaBucket: String,
+    )
+
+    private fun getMediaDownloadCount(
+        manga: Manga,
+        source: eu.kanade.tachiyomi.source.Source = sourceManager.getOrStub(manga.source),
+    ): Int {
         return when {
             source is eu.kanade.tachiyomi.source.INovelSource ->
                 eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.getDownloadCount(manga.id)
@@ -508,47 +516,61 @@ class LibraryViewModel(
         }
     }
 
-    private fun getFavoritesFlow(): Flow<List<LibraryItem>> {
-        return combine(
-            getLibraryManga.subscribe(),
-            getLibraryItemPreferencesFlow(),
+    private fun getFavoritesFlow(mediaFlow: Flow<String>): Flow<List<LibraryItem>> {
+        val downloadChanges = combine(
             downloadCache.changes,
             animeDownloadCache.changes,
             eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.downloadedChapters,
-        ) { libraryManga, preferences, _, _, _ ->
+        ) { _, _, _ -> Unit }
+
+        return combine(
+            getLibraryManga.subscribe(),
+            mediaFlow,
+            sourceManager.sources,
+            getLibraryItemPreferencesFlow(),
+            downloadChanges,
+        ) { libraryManga, media, _, preferences, _ ->
+            val targetBucket = when (media) {
+                "Anime" -> "Anime"
+                "Novel" -> "Novel"
+                else -> "Manga"
+            }
             val needsDownloadCount = preferences.downloadBadge ||
                 preferences.filterDownloaded != TriState.DISABLED ||
                 preferences.globalFilterDownloaded
-            libraryManga.map { manga ->
-                val dlCount = if (needsDownloadCount) getMediaDownloadCount(manga.manga) else 0
+            val sourceMetaCache = HashMap<Long, CachedSourceMeta>(32)
+
+            libraryManga.mapNotNull { manga ->
+                val meta = sourceMetaCache.getOrPut(manga.manga.source) {
+                    val src = sourceManager.getOrStub(manga.manga.source)
+                    val bucket = when {
+                        src is eu.kanade.tachiyomi.animesource.AnimeSource -> "Anime"
+                        src is eu.kanade.tachiyomi.novelsource.NovelSource || src is eu.kanade.tachiyomi.source.INovelSource -> "Novel"
+                        else -> "Manga"
+                    }
+                    CachedSourceMeta(
+                        source = src,
+                        lowerName = src.name.lowercase(),
+                        lang = src.lang,
+                        mediaBucket = bucket,
+                    )
+                }
+                if (meta.mediaBucket != targetBucket) return@mapNotNull null
+
+                val dlCount = if (needsDownloadCount) getMediaDownloadCount(manga.manga, meta.source) else 0
+                val isLocalManga = manga.manga.isLocal()
                 LibraryItem(
                     libraryManga = manga,
                     downloadCount = dlCount,
                     unreadCount = manga.unreadCount,
-                    isLocal = manga.manga.isLocal(),
-                    sourceName = sourceManager.getOrStub(manga.manga.source).name.lowercase(),
-                    sourceLanguage = sourceManager.getOrStub(manga.manga.source).lang,
+                    isLocal = isLocalManga,
+                    sourceName = meta.lowerName,
+                    sourceLanguage = meta.lang,
                     badges = LibraryItem.Badges(
-                        downloadCount = if (preferences.downloadBadge) {
-                            dlCount
-                        } else {
-                            0
-                        },
-                        unreadCount = if (preferences.unreadBadge) {
-                            manga.unreadCount
-                        } else {
-                            0
-                        },
-                        isLocal = if (preferences.localBadge) {
-                            manga.manga.isLocal()
-                        } else {
-                            false
-                        },
-                        sourceLanguage = if (preferences.languageBadge) {
-                            sourceManager.getOrStub(manga.manga.source).lang
-                        } else {
-                            ""
-                        },
+                        downloadCount = if (preferences.downloadBadge) dlCount else 0,
+                        unreadCount = if (preferences.unreadBadge) manga.unreadCount else 0,
+                        isLocal = if (preferences.localBadge) isLocalManga else false,
+                        sourceLanguage = if (preferences.languageBadge) meta.lang else "",
                     ),
                 )
             }
@@ -990,7 +1012,6 @@ class LibraryViewModel(
         }
             .coercedActiveCategoryIndex
 
-        val uiPreferences = Injekt.get<eu.kanade.domain.ui.UiPreferences>()
         when (uiPreferences.lastUsedLibraryMedia.get()) {
             "Anime" -> libraryPreferences.lastUsedCategoryAnime.set(newIndex)
             "Novel" -> libraryPreferences.lastUsedCategoryNovel.set(newIndex)

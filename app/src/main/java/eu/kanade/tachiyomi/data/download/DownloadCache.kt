@@ -97,11 +97,12 @@ class DownloadCache(
         get() = File(context.cacheDir, "dl_index_cache_v3")
 
     private val rootDownloadsDirMutex = Mutex()
-    private var rootDownloadsDir = RootDirectory(storageManager.getDownloadsDirectory())
+    private var rootDownloadsDir = RootDirectory(null)
 
     init {
-        // Attempt to read cache file
+        // Attempt to read cache file off the calling thread
         scope.launch {
+            var loadedFromDisk = false
             rootDownloadsDirMutex.withLock {
                 try {
                     if (diskCacheFile.exists()) {
@@ -110,11 +111,18 @@ class DownloadCache(
                         }
                         rootDownloadsDir = diskCache
                         lastRenew = System.currentTimeMillis()
+                        loadedFromDisk = true
+                    } else {
+                        rootDownloadsDir = RootDirectory(storageManager.getDownloadsDirectory())
                     }
                 } catch (e: Throwable) {
                     logcat(LogPriority.ERROR, e) { "Failed to initialize from disk cache" }
                     diskCacheFile.delete()
+                    rootDownloadsDir = RootDirectory(storageManager.getDownloadsDirectory())
                 }
+            }
+            if (loadedFromDisk) {
+                _changes.trySend(Unit)
             }
         }
 
