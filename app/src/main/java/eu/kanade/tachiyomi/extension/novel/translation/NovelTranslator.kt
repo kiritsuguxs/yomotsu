@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.novel.translation
 
 import android.app.Application
 import eu.kanade.translation.memory.TranslationGlossary
+import eu.kanade.translation.memory.TranslationMemory
 import eu.kanade.translation.translator.ComicTranslationContext
 import eu.kanade.translation.translator.TextTranslatorLanguage
 import eu.kanade.translation.translator.TextTranslators
@@ -67,7 +68,7 @@ object NovelTranslator {
                 0
             } else {
                 val ctx = ComicTranslationContext(mangaTitle = seriesTitle, chapterName = "")
-                TranslationGlossary.promptRules(ctx).hashCode()
+                TranslationMemory.entries(ctx).hashCode()
             }
         }.getOrDefault(0)
         val safeLang = resolvedTargetLang.replace(Regex("[^a-zA-Z0-9_-]"), "_")
