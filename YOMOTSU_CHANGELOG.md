@@ -3,6 +3,60 @@
 Este arquivo contém somente as mudanças importantes para quem usa o aplicativo.
 O workflow de lançamento lê automaticamente a seção correspondente à versão publicada.
 
+## 0.22.3
+
+🇧🇷 **Português (Brasil)**
+
+### 🚀 Desempenho e Melhorias
+- **Abertura instantânea e foco em celulares mais fracos:** A inicialização do aplicativo, o carregamento das extensões e a indexação de downloads agora rodam em segundo plano sem travar a tela inicial. Capas da biblioteca ganharam decodificação redimensionada (`RGB_565` em aparelhos com pouca RAM) e ordenação otimizada para bibliotecas grandes.
+- **Leitor de Light Novels virtualizado e fluido:** Capítulos longos agora são renderizados parágrafo por parágrafo com rolagem infinita contínua, pré-tradução antecipada do próximo capítulo em segundo plano, suporte a imagens ilustradas inline, personalização tipográfica (fontes, margens, espaçamento, texto justificado e rolagem por botões de volume) e preservação de caixas `<...>` em obras LitRPG.
+
+### 🛠️ Correções
+- **Light Novels, Tradutor e Narrador (TTS):**
+  - **Retomada exata da leitura:** Sair no meio de um capítulo (mesmo com tradução automática ativada) agora restaura exatamente o parágrafo e a posição onde você parou, sem voltar para o início.
+  - **Progresso e histórico reais:** Corrigida a marcação automática de capítulos lidos na rolagem infinita, a sincronização com trackers (AniList/MAL), o tempo de leitura nas estatísticas e a limpeza automática de downloads conforme os slots configurados.
+  - **Cache de tradução protegido:** Evitado o salvamento de textos não traduzidos em falhas de rede, separado o cache por idioma/motor/glossário e corrigido o corte de frases longas no Groq.
+  - **Áudio e extensões JS:** Eliminada a sobreposição de vozes no narrador TTS, aprimorado o suporte a plugins modernos (`async`/`await` nativo no QuickJS) e aplicados os filtros de idioma na Pesquisa Global de Novels.
+- **Tradução de Mangás e Webtoons:**
+  - **Toque e zoom suaves no leitor:** Toque simples nos balões não abre mais o editor por acidente (mantido no toque longo) e o gesto de pinça ganhou fluidez sem recalcular textos a cada quadro.
+  - **Falas curtas e glossário CJK:** Impedido o apagamento indevido de nomes próprios/interjeições curtas, corrigido o casamento de termos do glossário em japonês/coreano/chinês e bloqueado o vazamento de raciocínio interno (`thought`) no Gemini.
+  - **Estabilidade em lotes e tiras longas:** Isolado o contexto entre capítulos traduzidos em paralelo, habilitada a tradução em fontes locais (`LocalSource`) e corrigido o consumo de memória/detecção em Webtoons longos e páginas AVIF (`PaddleOCR`, `ML Kit` e `DBNet`).
+- **Player de Anime, Downloads e Chromecast:**
+  - **Episódios e estabilidade:** Decodificação correta do formato `temporada.milésimos` (ex.: `1.007` → `Ep. 7`) no AniSkip, trackers e player; corrigido o fechamento inesperado no seletor de episódios e reduzida a escrita excessiva no banco durante a reprodução.
+  - **Downloads FFmpeg e Cast:** Cancelamento individual por episódio sem interromper outros downloads ativos, seleção da variante correta em streams HLS multi-resolução e suporte aprimorado a playlists HLS (`fMP4`/redirecionamentos) no Chromecast.
+- **Nuvem Telegram, Perfil, Mesclagem e Segurança:**
+  - **Nuvem Telegram:** Sincronização resiliente do índice em novas instalações (com backup automático no `.tachibk`), distinção entre Mangás e Novels na nuvem e verificação completa de integridade antes de remover arquivos locais.
+  - **Perfil e Conquistas:** Corrigida a contabilização de biblioteca, leitura e downloads nas **30 conquistas de Light Novel**, além do armazenamento otimizado de avatares e banners animados.
+  - **Mesclagem de Obras e Extensões:** Unificação precisa de episódios e especiais entre fontes mescladas, sem duplicatas na aba de Atualizações, e avisos claros para extensões Torrent.
+  - **Segurança e Privacidade:** Servidor local do Chromecast protegido por sessão na rede local, chaves de API e tokens marcados como dados sensíveis nos backups (com isolamento entre provedores Gemini e Groq) e compatibilidade reforçada de serviços em segundo plano no Android 14–16.
+
+---
+
+🇺🇸 **English**
+
+### 🚀 Performance & Improvements
+- **Faster Cold Start & Low-End Device Optimization:** App startup, extension loading, and download cache indexing now run asynchronously off the main thread. Library covers use downsampled decoding (`RGB_565` on low-RAM devices) with cached sorting keys for large libraries.
+- **Virtualized Light Novel Reader:** Long chapters now render paragraph-by-paragraph with seamless infinite scroll, background lookahead translation for upcoming chapters, inline illustration rendering, typography controls (fonts, margins, spacing, justified alignment, and volume-key scrolling), and preserved `<...>` system boxes in LitRPG titles.
+
+### 🛠️ Fixes
+- **Light Novels, Translator & Narrator (TTS):**
+  - **Exact Mid-Chapter Scroll Restore:** Leaving a chapter mid-read (including with auto-translation enabled) now restores the exact paragraph and scroll offset instead of resetting to the top.
+  - **Accurate Progress & History:** Fixed read-status tracking across infinite scroll, tracker syncing (AniList/MAL), reading duration stats, and `removeAfterReadSlots` cleanup.
+  - **Protected Translation Cache:** Prevented caching untranslated fallbacks on network errors, scoped caches by target language/engine/glossary, and fixed Groq chunk truncation.
+  - **TTS & JS Plugins:** Fixed overlapping narrator voices, improved native `async`/`await` support in QuickJS novel plugins, and respected language filters in Global Novel Search.
+- **Manga & Webtoon Translation:**
+  - **Smooth Reader Touch & Zoom:** Single taps on speech bubbles now pass through for page navigation (long-press to edit), and pinch-to-zoom scales smoothly without per-frame text re-layout.
+  - **Short Dialogues & CJK Glossary:** Prevented short proper nouns/interjections from being blanked out, fixed CJK particle matching in glossary terms, and blocked Gemini internal `thought` leakage.
+  - **Batch & Long-Strip Stability:** Isolated context across parallel chapter jobs, enabled `LocalSource` translation, and fixed memory spikes and tall-strip detection on AVIF/Webtoon pages (`PaddleOCR`, `ML Kit`, and `DBNet`).
+- **Anime Player, Downloads & Chromecast:**
+  - **Episode Formatting & Stability:** Applied `season.thousandths` decoding (`1.007` → `Ep. 7`) to AniSkip, trackers, and player UI; fixed the episode list dialog crash; and throttled playback database writes.
+  - **FFmpeg Downloads & Cast:** Scoped download cancellation per session, prevented downloading all HLS quality variants at once, and improved HLS (`fMP4`/redirect) handling on Chromecast.
+- **Telegram Cloud, Profile, Merging & Security:**
+  - **Telegram Cloud:** Added resilient cloud index recovery on fresh installs (plus `.tachibk` backup support), separated Manga vs. Novel cloud entries, and verified remote uploads before deleting local files.
+  - **Profile & Achievements:** Fixed library, read, and download counters across all **30 Light Novel achievements**, and moved large profile banners/avatars out of `SharedPreferences`.
+  - **Series Merging & Extensions:** Improved episode matching across merged sources without duplicate Update entries, and added clear indicators for Torrent extensions.
+  - **Security & Privacy:** Secured the local Chromecast proxy with session tokens, excluded sensitive API keys/tokens from public backups (preventing Gemini/Groq key cross-contamination), and hardened Android 14–16 foreground service timeouts.
+
 ## 0.22.2
 
 🇧🇷 **Português (Brasil)**
