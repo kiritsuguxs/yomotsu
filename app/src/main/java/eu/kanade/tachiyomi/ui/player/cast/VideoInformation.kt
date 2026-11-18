@@ -86,34 +86,42 @@ class VideoInformation(
 ) {
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun getVideoInformation(videoUrl: String, headers: Headers): CodecInformation {
+        val informationFile = context.createFileInCacheDir("ffprobe_cast_info_${System.nanoTime()}.json")
         return try {
-            val informationFile = context.createFileInCacheDir("ffprobe_cast_info.json")
             val informationFilePath = informationFile.toUri().toFFmpegString(context)
 
-            val headerOptions = if (headers.size == 0) {
-                ""
+            val headerValue = if (headers.size == 0) {
+                null
             } else {
-                headers.joinToString("", "-headers '", "'") {
-                    "${it.first}: ${it.second}\r\n"
+                buildString {
+                    for (i in 0 until headers.size) {
+                        append(headers.name(i)).append(": ").append(headers.value(i)).append("\r\n")
+                    }
                 }
             }
 
-            val targetUrl = if (videoUrl.startsWith("content")) {
-                videoUrl.toUri().toFFmpegString(context)
-            } else if (videoUrl.startsWith("file://")) {
+            val targetUrl = if (videoUrl.startsWith("content") || videoUrl.startsWith("file://")) {
                 videoUrl.toUri().toFFmpegString(context)
             } else {
                 videoUrl
             }
 
-            val ffprobeCommand = FFmpegKitConfig.parseArguments(
-                listOf(
-                    headerOptions,
-                    "-v quiet -print_format json -show_format -show_streams -show_chapters",
-                    "-o \"$informationFilePath\"",
-                    "\"$targetUrl\"",
-                ).filter { it.isNotBlank() }.joinToString(" "),
-            )
+            val ffprobeCommand = buildList {
+                if (!headerValue.isNullOrEmpty()) {
+                    add("-headers")
+                    add(headerValue)
+                }
+                add("-v")
+                add("quiet")
+                add("-print_format")
+                add("json")
+                add("-show_format")
+                add("-show_streams")
+                add("-show_chapters")
+                add("-o")
+                add(informationFilePath)
+                add(targetUrl)
+            }.toTypedArray()
 
             suspendCancellableCoroutine { continuation ->
                 val session = FFprobeKit.executeWithArgumentsAsync(ffprobeCommand) {
@@ -172,6 +180,8 @@ class VideoInformation(
         } catch (e: Exception) {
             logcat(LogPriority.WARN, e) { "Failed to probe video info, using fallback" }
             fallbackCodecInformation(videoUrl)
+        } finally {
+            runCatching { informationFile.delete() }
         }
     }
 

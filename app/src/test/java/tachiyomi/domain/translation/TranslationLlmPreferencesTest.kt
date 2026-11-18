@@ -68,4 +68,45 @@ class TranslationLlmPreferencesTest {
         assertEquals("saved-key", preferences.llmApiKey(TranslationLlmProvider.GROQ).get())
         assertEquals("saved-model", preferences.llmModel(TranslationLlmProvider.GROQ).get())
     }
+
+    @Test
+    fun `legacy Gemini AIza key and gemini model never leak into Groq`() {
+        val store = InMemoryPreferenceStore(
+            sequenceOf(
+                InMemoryPreference("translation_engine_api_key", "AIzaSyTestGoogleKey123", ""),
+                InMemoryPreference("translation_engine_model", "gemini-2.5-flash", "gemini-3.8-flash"),
+                InMemoryPreference("translation_groq_api_key", "AIzaSyAccidentallyCopied", ""),
+                InMemoryPreference("translation_groq_model", "gemini-2.5-flash", "qwen/qwen3.8-27b"),
+            ),
+        )
+        val preferences = TranslationPreferences(store)
+
+        preferences.migrateLegacyLlmSettings(TranslationLlmProvider.GROQ)
+
+        assertFalse(preferences.llmApiKey(TranslationLlmProvider.GROQ).isSet())
+        assertEquals("qwen/qwen3.8-27b", preferences.llmModel(TranslationLlmProvider.GROQ).get())
+    }
+
+    @Test
+    fun `API keys are treated as private preferences`() {
+        val preferences = TranslationPreferences(InMemoryPreferenceStore())
+        org.junit.jupiter.api.Assertions.assertTrue(
+            tachiyomi.core.common.preference.Preference.isPrivate(
+                preferences.llmApiKey(TranslationLlmProvider.GEMINI).key(),
+            ),
+        )
+        org.junit.jupiter.api.Assertions.assertTrue(
+            tachiyomi.core.common.preference.Preference.isPrivate(
+                preferences.llmApiKey(TranslationLlmProvider.GROQ).key(),
+            ),
+        )
+        org.junit.jupiter.api.Assertions.assertTrue(
+            tachiyomi.core.common.preference.Preference.isPrivate(
+                preferences.deepLApiKey().key(),
+            ),
+        )
+        org.junit.jupiter.api.Assertions.assertTrue(
+            tachiyomi.core.common.preference.Preference.isPrivate("pref_telegram_bot_token"),
+        )
+    }
 }

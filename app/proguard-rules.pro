@@ -85,10 +85,12 @@
 }
 
 -keep,includedescriptorclasses class eu.kanade.**$$serializer { *; }
--keepclassmembers class eu.kanade.** {
+-keep,includedescriptorclasses class mihon.**$$serializer { *; }
+-keep,includedescriptorclasses class tachiyomi.**$$serializer { *; }
+-keepclassmembers class eu.kanade.**, mihon.**, tachiyomi.** {
     *** Companion;
 }
--keepclasseswithmembers class eu.kanade.** {
+-keepclasseswithmembers class eu.kanade.**, mihon.**, tachiyomi.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 

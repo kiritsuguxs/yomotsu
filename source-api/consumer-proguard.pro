@@ -4,5 +4,8 @@
 -keep class eu.kanade.tachiyomi.animesource.** { *; }
 -keep interface eu.kanade.tachiyomi.animesource.** { *; }
 -keep class * implements eu.kanade.tachiyomi.animesource.AnimeSource { *; }
+-keep class eu.kanade.tachiyomi.novelsource.** { *; }
+-keep interface eu.kanade.tachiyomi.novelsource.** { *; }
+-keep class * implements eu.kanade.tachiyomi.novelsource.NovelSource { *; }
 
 -keep,allowoptimization class eu.kanade.tachiyomi.util.JsoupExtensionsKt { public protected *; }

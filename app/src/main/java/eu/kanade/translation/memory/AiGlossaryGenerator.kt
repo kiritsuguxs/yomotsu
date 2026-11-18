@@ -55,8 +55,8 @@ object AiGlossaryGenerator {
             return@withContext AiGlossaryResult.Failure("Título da obra inválido.")
         }
 
-        TranslationLlmProvider.entries.forEach(preferences::migrateLegacyLlmSettings)
         val preferredProvider = TextTranslators.fromPref(preferences.translationEngine()).llmProvider
+        preferredProvider?.let(preferences::migrateLegacyLlmSettings)
         val candidateProviders = buildList {
             if (preferredProvider != null) add(preferredProvider)
             TranslationLlmProvider.entries.forEach { if (it !in this) add(it) }

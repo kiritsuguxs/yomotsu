@@ -304,6 +304,15 @@ class BackupRestorer(
             }
     }
 
+    private fun resolveSafeRestoreFile(baseDir: File, rawFileName: String): File {
+        val baseName = File(rawFileName).name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        require(baseName.isNotEmpty() && baseName != "." && baseName != "..") { "Invalid restore filename: $rawFileName" }
+        val target = File(baseDir, baseName)
+        val baseCanonical = baseDir.canonicalPath + File.separator
+        require(target.canonicalPath.startsWith(baseCanonical)) { "Blocked path traversal in backup restore: $rawFileName" }
+        return target
+    }
+
     private fun CoroutineScope.restorePrivateExtensions(
         backupPrivateExtensions: List<BackupPrivateExtension>,
     ) = launch {
@@ -312,7 +321,12 @@ class BackupRestorer(
         backupPrivateExtensions.forEach { ext ->
             ensureActive()
             try {
-                val target = File(extsDir, ext.name)
+                val safeName = if (ext.name.endsWith(".ext", ignoreCase = true)) ext.name else "${ext.name}.ext"
+                val target = resolveSafeRestoreFile(extsDir, safeName)
+                if (target.exists()) {
+                    target.setWritable(true)
+                    target.delete()
+                }
                 target.writeBytes(ext.data)
                 target.setReadOnly()
                 ExtensionInstallReceiver.notifyAdded(context, target.nameWithoutExtension)
@@ -332,8 +346,8 @@ class BackupRestorer(
         backupNovelPlugins.forEach { plugin ->
             ensureActive()
             try {
-                val jsFile = File(pluginsDir, "${plugin.id}.js")
-                val jsonFile = File(pluginsDir, "${plugin.id}.json")
+                val jsFile = resolveSafeRestoreFile(pluginsDir, "${plugin.id}.js")
+                val jsonFile = resolveSafeRestoreFile(pluginsDir, "${plugin.id}.json")
                 jsFile.writeText(plugin.jsContent)
                 jsonFile.writeText(plugin.jsonMeta)
             } catch (e: Exception) {

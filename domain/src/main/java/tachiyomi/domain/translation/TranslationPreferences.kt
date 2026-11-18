@@ -59,15 +59,44 @@ class TranslationPreferences(
 
     fun migrateLegacyLlmSettings(provider: TranslationLlmProvider) {
         val providerApiKey = llmApiKeys.getValue(provider)
-        val legacyApiKey = translationEngineApiKey()
-        if (!providerApiKey.isSet() && legacyApiKey.isSet()) {
-            providerApiKey.set(legacyApiKey.get())
+        val providerModel = llmModels.getValue(provider)
+
+        // Heal previously misrouted Gemini credentials/models copied into Groq preferences.
+        if (provider == TranslationLlmProvider.GROQ) {
+            if (providerApiKey.isSet() && providerApiKey.get().trim().startsWith("AIza")) {
+                providerApiKey.delete()
+            }
+            if (providerModel.isSet() && providerModel.get().trim().startsWith("gemini-", ignoreCase = true)) {
+                providerModel.delete()
+            }
+        } else if (provider == TranslationLlmProvider.GEMINI) {
+            if (providerApiKey.isSet() && providerApiKey.get().trim().startsWith("gsk_")) {
+                providerApiKey.delete()
+            }
         }
 
-        val providerModel = llmModels.getValue(provider)
+        val legacyApiKey = translationEngineApiKey()
+        if (!providerApiKey.isSet() && legacyApiKey.isSet()) {
+            val rawKey = legacyApiKey.get().trim()
+            val compatibleKey = when (provider) {
+                TranslationLlmProvider.GEMINI -> !rawKey.startsWith("gsk_")
+                TranslationLlmProvider.GROQ -> !rawKey.startsWith("AIza")
+            }
+            if (compatibleKey) {
+                providerApiKey.set(legacyApiKey.get())
+            }
+        }
+
         val legacyModel = translationEngineModel()
         if (!providerModel.isSet() && legacyModel.isSet()) {
-            providerModel.set(legacyModel.get())
+            val rawModel = legacyModel.get().trim()
+            val compatibleModel = when (provider) {
+                TranslationLlmProvider.GEMINI -> !rawModel.contains("/")
+                TranslationLlmProvider.GROQ -> !rawModel.startsWith("gemini-", ignoreCase = true)
+            }
+            if (compatibleModel) {
+                providerModel.set(legacyModel.get())
+            }
         }
     }
 }

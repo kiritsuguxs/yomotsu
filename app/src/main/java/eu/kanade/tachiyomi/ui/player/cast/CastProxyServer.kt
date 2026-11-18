@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.player.cast
 
-import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.res.AssetFileDescriptor
 import android.net.Uri
@@ -20,11 +19,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.net.URI
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
+import java.util.concurrent.ConcurrentHashMap
 
 class CastProxyServer(
     baseClient: OkHttpClient,
@@ -32,29 +27,13 @@ class CastProxyServer(
     private val ipAddress: String,
     private val port: Int,
     private val json: Json,
-) : NanoHTTPD(port) {
-
-    private fun OkHttpClient.Builder.ignoreAllSSLErrors(): OkHttpClient.Builder {
-        val naiveTrustManager =
-            @SuppressLint("CustomX509TrustManager")
-            object : X509TrustManager {
-                override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-                override fun checkClientTrusted(certs: Array<X509Certificate>, authType: String) = Unit
-                override fun checkServerTrusted(certs: Array<X509Certificate>, authType: String) = Unit
-            }
-
-        val insecureSocketFactory = SSLContext.getInstance("TLSv1.2").apply {
-            val trustAllCerts = arrayOf<TrustManager>(naiveTrustManager)
-            init(null, trustAllCerts, SecureRandom())
-        }.socketFactory
-
-        sslSocketFactory(insecureSocketFactory, naiveTrustManager)
-        hostnameVerifier { _, _ -> true }
-        return this
-    }
+    private val sessionToken: String,
+    private val allowedLocalMedia: ConcurrentHashMap<String, String>,
+) : NanoHTTPD(ipAddress.takeIf { it.isNotBlank() && it != "0.0.0.0" }, port) {
 
     private val client = baseClient.newBuilder()
-        .ignoreAllSSLErrors()
+        .followRedirects(true)
+        .followSslRedirects(true)
         .build()
 
     override fun serve(session: IHTTPSession?): Response? {
@@ -64,10 +43,16 @@ class CastProxyServer(
             addCorsHeaders(response)
             return response
         }
+
+        val requestToken = session.parameters["token"]?.firstOrNull()
+        if (sessionToken.isBlank() || requestToken != sessionToken) {
+            return forbidden("Invalid cast session token")
+        }
+
         return when {
             uri.startsWith("/local") || uri.startsWith("/file") -> localServe(session)
             uri.startsWith("/proxy") -> proxyServe(session)
-            else -> super.serve(session)
+            else -> notFound("Unknown route")
         }
     }
 
@@ -92,13 +77,47 @@ class CastProxyServer(
         }
     }
 
+    private fun parseByteRange(rangeHeader: String, fileLength: Long): Pair<Long, Long>? {
+        val spec = rangeHeader.removePrefix("bytes=").trim()
+        val parts = spec.split("-", limit = 2)
+        if (parts.size != 2 || fileLength <= 0L) return null
+        val startStr = parts[0].trim()
+        val endStr = parts[1].trim()
+        val (start, end) = if (startStr.isEmpty()) {
+            val suffixLen = endStr.toLongOrNull()?.takeIf { it > 0L } ?: return null
+            (fileLength - suffixLen).coerceAtLeast(0L) to (fileLength - 1L)
+        } else {
+            val s = startStr.toLongOrNull()?.takeIf { it >= 0L && it < fileLength } ?: return null
+            val e = endStr.takeIf { it.isNotEmpty() }?.toLongOrNull()?.coerceAtMost(fileLength - 1L) ?: (fileLength - 1L)
+            if (e < s) return null
+            s to e
+        }
+        return start to end
+    }
+
+    private fun isForbiddenInternalPath(file: File): Boolean {
+        val canonical = runCatching { file.canonicalPath }.getOrDefault(file.absolutePath)
+        return canonical.contains("/databases/") ||
+            canonical.contains("/shared_prefs/") ||
+            canonical.contains("/files/exts/") ||
+            canonical.contains("/files/tdlib")
+    }
+
     private fun localServe(session: IHTTPSession): Response {
-        val rawUrl = session.parameters["url"]?.firstOrNull()
-            ?: session.parameters["uri"]?.firstOrNull()
-            ?: return badRequest("No url param")
+        val mediaId = session.parameters["id"]?.firstOrNull()
+        val rawUrl = if (mediaId != null) {
+            allowedLocalMedia[mediaId] ?: return forbidden("Media not registered")
+        } else {
+            val candidate = session.parameters["url"]?.firstOrNull()
+                ?: session.parameters["uri"]?.firstOrNull()
+                ?: return badRequest("No media id")
+            if (!allowedLocalMedia.containsValue(candidate)) {
+                return forbidden("Unregistered local path")
+            }
+            candidate
+        }
         val cleanUrl = if (rawUrl.startsWith("file://")) rawUrl.removePrefix("file://") else rawUrl
 
-        // Try direct file first if raw filesystem path or primary: SAF storage path
         val directFile = when {
             File(cleanUrl).exists() && File(cleanUrl).canRead() -> File(cleanUrl)
             rawUrl.contains("primary%3A") || rawUrl.contains("primary:") -> {
@@ -110,10 +129,12 @@ class CastProxyServer(
         }
 
         if (directFile != null && directFile.exists() && directFile.canRead()) {
+            if (isForbiddenInternalPath(directFile)) {
+                return forbidden("Access denied")
+            }
             return serveDirectFile(directFile, session)
         }
 
-        // Otherwise try contentResolver
         val uri = try {
             rawUrl.toUri()
         } catch (e: Exception) {
@@ -157,8 +178,12 @@ class CastProxyServer(
         }
 
         val inputStream: InputStream = try {
-            afd?.createInputStream() ?: contentResolver.openInputStream(uri) ?: return notFound("File not found")
+            afd?.createInputStream() ?: contentResolver.openInputStream(uri) ?: run {
+                try { afd?.close() } catch (_: Exception) {}
+                return notFound("File not found")
+            }
         } catch (e: Exception) {
+            try { afd?.close() } catch (_: Exception) {}
             logcat(LogPriority.ERROR, e) { "Failed to open input stream: $rawUrl" }
             return notFound("File not found: ${e.message}")
         }
@@ -166,31 +191,32 @@ class CastProxyServer(
         val afdStream = ClosableAfdStream(afd, inputStream)
 
         if (rangeHeader != null && fileLength > 0) {
-            try {
-                val range = rangeHeader.replace("bytes=", "").split("-")
-                val start = range.getOrNull(0)?.toLongOrNull() ?: 0L
-                val end = range.getOrNull(1)?.takeIf { it.isNotBlank() }?.toLongOrNull() ?: (fileLength - 1)
-                val length = (end - start + 1).coerceAtLeast(0L)
+            val parsedRange = parseByteRange(rangeHeader, fileLength)
+            if (parsedRange != null) {
+                try {
+                    val (start, end) = parsedRange
+                    val length = (end - start + 1).coerceAtLeast(0L)
 
-                if (inputStream is FileInputStream) {
-                    inputStream.channel.position(start)
-                } else {
-                    var skipped = 0L
-                    while (skipped < start) {
-                        val s = afdStream.skip(start - skipped)
-                        if (s <= 0) break
-                        skipped += s
+                    if (inputStream is FileInputStream) {
+                        inputStream.channel.position(start)
+                    } else {
+                        var skipped = 0L
+                        while (skipped < start) {
+                            val s = afdStream.skip(start - skipped)
+                            if (s <= 0) break
+                            skipped += s
+                        }
                     }
-                }
 
-                val response = newFixedLengthResponse(Response.Status.PARTIAL_CONTENT, mime, afdStream, length)
-                response.addHeader("Content-Range", "bytes $start-$end/$fileLength")
-                response.addHeader("Content-Length", length.toString())
-                response.addHeader("Accept-Ranges", "bytes")
-                addCorsHeaders(response)
-                return response
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR, e) { "Error processing Range header" }
+                    val response = newFixedLengthResponse(Response.Status.PARTIAL_CONTENT, mime, afdStream, length)
+                    response.addHeader("Content-Range", "bytes $start-$end/$fileLength")
+                    response.addHeader("Content-Length", length.toString())
+                    response.addHeader("Accept-Ranges", "bytes")
+                    addCorsHeaders(response)
+                    return response
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e) { "Error processing Range header" }
+                }
             }
         }
 
@@ -219,23 +245,26 @@ class CastProxyServer(
         }
 
         if (rangeHeader != null && fileLength > 0) {
-            try {
-                val range = rangeHeader.replace("bytes=", "").split("-")
-                val start = range.getOrNull(0)?.toLongOrNull() ?: 0L
-                val end = range.getOrNull(1)?.takeIf { it.isNotBlank() }?.toLongOrNull() ?: (fileLength - 1)
-                val length = (end - start + 1).coerceAtLeast(0L)
+            val parsedRange = parseByteRange(rangeHeader, fileLength)
+            if (parsedRange != null) {
+                var inputStream: FileInputStream? = null
+                try {
+                    val (start, end) = parsedRange
+                    val length = (end - start + 1).coerceAtLeast(0L)
 
-                val inputStream = FileInputStream(file)
-                inputStream.channel.position(start)
+                    inputStream = FileInputStream(file)
+                    inputStream.channel.position(start)
 
-                val response = newFixedLengthResponse(Response.Status.PARTIAL_CONTENT, mime, inputStream, length)
-                response.addHeader("Content-Range", "bytes $start-$end/$fileLength")
-                response.addHeader("Content-Length", length.toString())
-                response.addHeader("Accept-Ranges", "bytes")
-                addCorsHeaders(response)
-                return response
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR, e) { "Error processing direct file Range header" }
+                    val response = newFixedLengthResponse(Response.Status.PARTIAL_CONTENT, mime, inputStream, length)
+                    response.addHeader("Content-Range", "bytes $start-$end/$fileLength")
+                    response.addHeader("Content-Length", length.toString())
+                    response.addHeader("Accept-Ranges", "bytes")
+                    addCorsHeaders(response)
+                    return response
+                } catch (e: Exception) {
+                    try { inputStream?.close() } catch (_: Exception) {}
+                    logcat(LogPriority.ERROR, e) { "Error processing direct file Range header" }
+                }
             }
         }
 
@@ -268,6 +297,9 @@ class CastProxyServer(
 
     private fun proxyServe(session: IHTTPSession): Response {
         val url = session.parameters["url"]?.firstOrNull() ?: return badRequest("No url param")
+        if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) {
+            return badRequest("Only http/https URLs are supported")
+        }
         val headers = session.parameters["header"]?.firstOrNull()
             ?.let {
                 try {
@@ -277,12 +309,21 @@ class CastProxyServer(
                 }
             } ?: emptyMap()
 
-        val requestBuilder = Request.Builder().url(url)
-        headers.forEach { (name, value) -> requestBuilder.addHeader(name, value) }
-        session.headers["range"]?.let { requestBuilder.addHeader("Range", it) }
+        val request = try {
+            val requestBuilder = Request.Builder().url(url)
+            if (session.method == Method.HEAD) {
+                requestBuilder.head()
+            }
+            headers.forEach { (name, value) -> requestBuilder.addHeader(name, value) }
+            session.headers["range"]?.let { requestBuilder.addHeader("Range", it) }
+            requestBuilder.build()
+        } catch (e: IllegalArgumentException) {
+            logcat(LogPriority.WARN, e) { "Invalid proxy URL or header: $url" }
+            return badRequest("Invalid proxy URL or header")
+        }
 
         val resp = try {
-            client.newCall(requestBuilder.build()).execute()
+            client.newCall(request).execute()
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Failed to fetch proxied URL: $url" }
             return notFound("Failed to fetch stream: ${e.message}")
@@ -290,14 +331,25 @@ class CastProxyServer(
 
         val contentType = resp.header("Content-Type") ?: ""
         val status = Response.Status.lookup(resp.code) ?: Response.Status.OK
+        val effectiveUrl = resp.request.url.toString()
+
+        if (session.method == Method.HEAD) {
+            val headLength = resp.header("Content-Length")?.toLongOrNull() ?: resp.body.contentLength()
+            resp.close()
+            return newFixedLengthResponse(status, contentType.ifEmpty { "application/octet-stream" }, null, 0).apply {
+                if (headLength >= 0) addHeader("Content-Length", headLength.toString())
+                resp.header("Accept-Ranges")?.let { addHeader("Accept-Ranges", it) }
+                addCorsHeaders(this)
+            }
+        }
 
         val response = if (resp.isM3U8()) {
-            val body = resp.body.string()
-            val proxied = proxyM3U8(body, url, headers)
+            val body = resp.use { it.body.string() }
+            val proxied = proxyM3U8(body, effectiveUrl, headers)
             newFixedLengthResponse(status, "application/vnd.apple.mpegurl", proxied)
         } else if (resp.isDash()) {
-            val body = resp.body.string()
-            val proxied = proxyDash(body, url, headers)
+            val body = resp.use { it.body.string() }
+            val proxied = proxyDash(body, effectiveUrl, headers)
             newFixedLengthResponse(status, "application/dash+xml", proxied)
         } else {
             val body = resp.body
@@ -318,12 +370,12 @@ class CastProxyServer(
     }
 
     private fun okhttp3.Response.isM3U8(): Boolean {
-        val contentType = header("Content-Type") ?: ""
-        if (contentType.endsWith("vnd.apple.mpegurl") || contentType.endsWith("x-mpegURL")) {
+        val contentType = header("Content-Type")?.substringBefore(';')?.trim()?.lowercase() ?: ""
+        if (contentType.endsWith("vnd.apple.mpegurl") || contentType.endsWith("x-mpegurl")) {
             return true
         }
 
-        val path = request.url.pathSegments.lastOrNull()
+        val path = request.url.pathSegments.lastOrNull()?.lowercase()
         return path?.endsWith(".m3u8") == true || path?.endsWith(".m3u") == true
     }
 
@@ -366,12 +418,12 @@ class CastProxyServer(
     }
 
     private fun okhttp3.Response.isDash(): Boolean {
-        val contentType = header("Content-Type") ?: ""
+        val contentType = header("Content-Type")?.substringBefore(';')?.trim()?.lowercase() ?: ""
         if (contentType.endsWith("dash+xml")) {
             return true
         }
 
-        val path = request.url.pathSegments.lastOrNull()
+        val path = request.url.pathSegments.lastOrNull()?.lowercase()
         return path?.endsWith(".mpd") == true
     }
 
@@ -419,9 +471,14 @@ class CastProxyServer(
     private fun getProxyUrl(targetUrl: String, headers: Map<String, String>): String {
         return "http://$ipAddress:$port".toHttpUrl().newBuilder().apply {
             addPathSegment("proxy")
+            addQueryParameter("token", sessionToken)
             addQueryParameter("url", targetUrl)
             addQueryParameter("header", json.encodeToString(headers))
         }.build().toString()
+    }
+
+    private fun forbidden(message: String): Response {
+        return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", message)
     }
 
     private fun notFound(message: String): Response {
@@ -434,7 +491,7 @@ class CastProxyServer(
 
     companion object {
         private val ATTRIBUTE_REGEX = Regex("""URI="([^"]+)"""")
-        private val HLS_TAGS = listOf("#EXT-X-KEY", "#EXT-X-MEDIA", "#EXT-X-I-FRAME-STREAM-INF")
+        private val HLS_TAGS = listOf("#EXT-X-KEY", "#EXT-X-MAP", "#EXT-X-MEDIA", "#EXT-X-I-FRAME-STREAM-INF")
         private val DASH_ATTRS = listOf("initialization", "media", "index")
         private val DASH_TOKEN_REGEX = Regex("""\$[A-Za-z0-9]*(?:%0\d+d)?\$""")
     }

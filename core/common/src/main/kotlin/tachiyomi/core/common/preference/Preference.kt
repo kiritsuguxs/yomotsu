@@ -27,7 +27,7 @@ interface Preference<T> {
          * A preference that should not be exposed in places like backups without user consent.
          */
         fun isPrivate(key: String): Boolean {
-            return key.startsWith(PRIVATE_PREFIX)
+            return key.startsWith(PRIVATE_PREFIX) || key in SENSITIVE_KEYS
         }
         fun privateKey(key: String): String {
             return "$PRIVATE_PREFIX$key"
@@ -46,6 +46,14 @@ interface Preference<T> {
 
         private const val APP_STATE_PREFIX = "__APP_STATE_"
         private const val PRIVATE_PREFIX = "__PRIVATE_"
+        private val SENSITIVE_KEYS = setOf(
+            "translation_gemini_api_key",
+            "translation_groq_api_key",
+            "translation_engine_api_key",
+            "deepl_api_key",
+            "pref_telegram_bot_token",
+            "pref_telegram_chat_id",
+        )
     }
 }
 

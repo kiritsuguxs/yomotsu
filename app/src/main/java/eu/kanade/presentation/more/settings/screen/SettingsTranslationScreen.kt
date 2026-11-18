@@ -111,7 +111,9 @@ object SettingsTranslationScreen : SearchableSettings {
         val selectedNovelEngine = engines.getOrNull(selectedNovelEngineValue) ?: TextTranslators.GOOGLE
         val engineSettings = translationEngineSettings(selectedNovelEngine)
         val llmProvider = selectedNovelEngine.llmProvider
-        llmProvider?.let(translationPreferences::migrateLegacyLlmSettings)
+        androidx.compose.runtime.LaunchedEffect(llmProvider) {
+            llmProvider?.let(translationPreferences::migrateLegacyLlmSettings)
+        }
 
         val items = buildList<Preference.PreferenceItem<out Any, out Any>> {
             add(
@@ -234,7 +236,9 @@ object SettingsTranslationScreen : SearchableSettings {
         val selectedEngine = engines.getOrNull(selectedEngineValue) ?: TextTranslators.MLKIT
         val engineSettings = translationEngineSettings(selectedEngine)
         val llmProvider = selectedEngine.llmProvider
-        llmProvider?.let(translationPreferences::migrateLegacyLlmSettings)
+        androidx.compose.runtime.LaunchedEffect(llmProvider) {
+            llmProvider?.let(translationPreferences::migrateLegacyLlmSettings)
+        }
         val items = buildList<Preference.PreferenceItem<out Any, out Any>> {
             add(
                 Preference.PreferenceItem.ListPreference(

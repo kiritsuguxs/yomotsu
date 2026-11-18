@@ -67,6 +67,11 @@ internal object ExtensionLoader {
 
     private fun getPrivateExtensionDir(context: Context) = File(context.filesDir, "exts")
 
+    @Suppress("DEPRECATION")
+    private val METADATA_AND_SIGNATURE_FLAGS = PackageManager.GET_META_DATA or
+        PackageManager.GET_SIGNATURES or
+        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else 0)
+
     private fun getPackageArchiveInfoCompat(pkgManager: PackageManager, path: String): PackageInfo? {
         val pkg = try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -80,22 +85,22 @@ internal object ExtensionLoader {
             } ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 pkgManager.getPackageArchiveInfo(
                     path,
-                    PackageManager.PackageInfoFlags.of(PackageManager.GET_META_DATA.toLong()),
+                    PackageManager.PackageInfoFlags.of(METADATA_AND_SIGNATURE_FLAGS.toLong()),
                 )
             } else {
                 @Suppress("DEPRECATION")
-                pkgManager.getPackageArchiveInfo(path, PackageManager.GET_META_DATA)
+                pkgManager.getPackageArchiveInfo(path, METADATA_AND_SIGNATURE_FLAGS)
             }
         } catch (e: Throwable) {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     pkgManager.getPackageArchiveInfo(
                         path,
-                        PackageManager.PackageInfoFlags.of(PackageManager.GET_META_DATA.toLong()),
+                        PackageManager.PackageInfoFlags.of(METADATA_AND_SIGNATURE_FLAGS.toLong()),
                     )
                 } else {
                     @Suppress("DEPRECATION")
-                    pkgManager.getPackageArchiveInfo(path, PackageManager.GET_META_DATA)
+                    pkgManager.getPackageArchiveInfo(path, METADATA_AND_SIGNATURE_FLAGS)
                 }
             } catch (e2: Throwable) {
                 logcat(LogPriority.ERROR, e2) { "Failed to get package archive info for $path" }
@@ -367,8 +372,9 @@ internal object ExtensionLoader {
             }
 
             val signatures = getSignatures(pkgInfo)
+            val isInternalPrivateExt = appInfo.sourceDir?.contains("/files/exts/") == true
             if (signatures.isNullOrEmpty()) {
-                if (!isAnime) {
+                if (!isInternalPrivateExt) {
                     logcat(LogPriority.WARN) { "Package $pkgName isn't signed" }
                     return LoadResult.Error
                 }
@@ -397,10 +403,10 @@ internal object ExtensionLoader {
             }
 
             val classLoader = try {
-                ChildFirstPathClassLoader(appInfo.sourceDir, null, context.classLoader)
+                ChildFirstPathClassLoader(appInfo.sourceDir, appInfo.nativeLibraryDir, context.classLoader)
             } catch (e: Throwable) {
                 try {
-                    dalvik.system.PathClassLoader(appInfo.sourceDir, null, context.classLoader)
+                    dalvik.system.PathClassLoader(appInfo.sourceDir, appInfo.nativeLibraryDir, context.classLoader)
                 } catch (e2: Throwable) {
                     logcat(LogPriority.ERROR, e2) { "Extension load error: $extName ($pkgName)" }
                     return LoadResult.Error

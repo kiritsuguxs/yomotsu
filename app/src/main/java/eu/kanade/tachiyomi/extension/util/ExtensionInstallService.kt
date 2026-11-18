@@ -24,6 +24,7 @@ class ExtensionInstallService : Service() {
     private var installer: Installer? = null
 
     override fun onCreate() {
+        super.onCreate()
         val notification = notificationBuilder(Notifications.CHANNEL_EXTENSIONS_UPDATE) {
             setSmallIcon(R.drawable.ic_yomotsu)
             setAutoCancel(false)
@@ -59,9 +60,20 @@ class ExtensionInstallService : Service() {
         return START_NOT_STICKY
     }
 
+    override fun onTimeout(startId: Int) {
+        logcat(LogPriority.WARN) { "ExtensionInstallService shortService timed out" }
+        stopSelf(startId)
+    }
+
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        logcat(LogPriority.WARN) { "ExtensionInstallService shortService timed out (type=$fgsType)" }
+        stopSelf(startId)
+    }
+
     override fun onDestroy() {
         installer?.onDestroy()
         installer = null
+        super.onDestroy()
     }
 
     override fun onBind(i: Intent?): IBinder? = null

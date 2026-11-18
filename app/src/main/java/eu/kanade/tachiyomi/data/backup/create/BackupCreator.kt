@@ -176,10 +176,21 @@ class BackupCreator(
         if (!options.extensionStores) return emptyList()
         val extsDir = File(context.filesDir, "exts")
         if (!extsDir.exists()) return emptyList()
+        val maxSingleExtBytes = 15L * 1024L * 1024L // 15 MB
+        val maxTotalExtBytes = 48L * 1024L * 1024L // 48 MB total heap safety cap
+        var accumulatedBytes = 0L
         return extsDir.listFiles { file -> file.isFile && file.extension == "ext" }
+            ?.sortedBy { it.length() }
             ?.mapNotNull { file ->
                 try {
-                    BackupPrivateExtension(file.name, file.readBytes())
+                    val fileSize = file.length()
+                    if (fileSize <= 0L || fileSize > maxSingleExtBytes || accumulatedBytes + fileSize > maxTotalExtBytes) {
+                        logcat(LogPriority.WARN) { "Skipping oversized private extension ${file.name} (${fileSize}B) in backup to avoid OOM" }
+                        null
+                    } else {
+                        accumulatedBytes += fileSize
+                        BackupPrivateExtension(file.name, file.readBytes())
+                    }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Failed to backup private extension ${file.name}" }
                     null

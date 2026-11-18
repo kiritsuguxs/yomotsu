@@ -57,12 +57,17 @@ class CastProxyServerService : Service() {
         } catch (_: Exception) {}
 
         val port = playerPreferences.castProxyPort().get()
+        val token = sessionToken.ifBlank {
+            java.util.UUID.randomUUID().toString().also { sessionToken = it }
+        }
         server = CastProxyServer(
             baseClient = networkHelper.client,
             contentResolver = contentResolver,
             ipAddress = address,
             port = port,
             json = json,
+            sessionToken = token,
+            allowedLocalMedia = allowedLocalMedia,
         )
 
         try {
@@ -106,8 +111,8 @@ class CastProxyServerService : Service() {
                 this,
                 Notifications.ID_CAST_SERVER,
                 builder.build(),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                 } else {
                     0
                 },
@@ -119,8 +124,20 @@ class CastProxyServerService : Service() {
         return START_STICKY
     }
 
+    override fun onTimeout(startId: Int) {
+        logcat(LogPriority.WARN) { "CastProxyServerService FGS timed out" }
+        stopSelf(startId)
+    }
+
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        logcat(LogPriority.WARN) { "CastProxyServerService FGS timed out (type=$fgsType)" }
+        stopSelf(startId)
+    }
+
     override fun onDestroy() {
         _isRunning.update { _ -> false }
+        allowedLocalMedia.clear()
+        sessionToken = ""
         try {
             server?.stop()
         } catch (e: Exception) {
@@ -134,7 +151,29 @@ class CastProxyServerService : Service() {
         private val ACTION_STOP = "${BuildConfig.APPLICATION_ID}.$NAME.ACTION_STOP"
         const val EXTRA_ADDRESS = "$NAME.EXTRA.ADDRESS"
 
+        @Volatile
+        var sessionToken: String = ""
+            private set
+
+        private val allowedLocalMedia = java.util.concurrent.ConcurrentHashMap<String, String>()
+
         private val _isRunning = MutableStateFlow(false)
         val isRunning = _isRunning.asStateFlow()
+
+        fun ensureSessionToken(): String {
+            val existing = sessionToken
+            if (existing.isNotBlank()) return existing
+            return synchronized(this) {
+                sessionToken.ifBlank {
+                    java.util.UUID.randomUUID().toString().also { sessionToken = it }
+                }
+            }
+        }
+
+        fun registerLocalMedia(videoUrl: String): String {
+            val id = java.util.UUID.randomUUID().toString()
+            allowedLocalMedia[id] = videoUrl
+            return id
+        }
     }
 }

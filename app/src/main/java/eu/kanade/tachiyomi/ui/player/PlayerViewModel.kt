@@ -2195,9 +2195,11 @@ class PlayerViewModel @JvmOverloads constructor(
 
             val isLocal = video.videoUrl.startsWith("content://") || video.videoUrl.startsWith("file://") || isEpisodeOnline() != true
             val needServer = useProxy || isLocal
+            val token = if (needServer) CastProxyServerService.ensureSessionToken() else ""
             if (needServer) {
                 try {
-                    context.startService(
+                    androidx.core.content.ContextCompat.startForegroundService(
+                        context,
                         Intent(context, CastProxyServerService::class.java)
                             .putExtra(CastProxyServerService.EXTRA_ADDRESS, ipAddress),
                     )
@@ -2214,10 +2216,13 @@ class PlayerViewModel @JvmOverloads constructor(
 
             val targetVideoUrl = when {
                 isLocal -> {
-                    "http://$ipAddress:$port/local?url=" + java.net.URLEncoder.encode(video.videoUrl, "UTF-8")
+                    val mediaId = CastProxyServerService.registerLocalMedia(video.videoUrl)
+                    "http://$ipAddress:$port/local?token=" + java.net.URLEncoder.encode(token, "UTF-8") +
+                        "&id=" + java.net.URLEncoder.encode(mediaId, "UTF-8")
                 }
                 useProxy -> {
-                    "http://$ipAddress:$port/proxy?url=" + java.net.URLEncoder.encode(video.videoUrl, "UTF-8") +
+                    "http://$ipAddress:$port/proxy?token=" + java.net.URLEncoder.encode(token, "UTF-8") +
+                        "&url=" + java.net.URLEncoder.encode(video.videoUrl, "UTF-8") +
                         "&header=" + java.net.URLEncoder.encode(json.encodeToString(headersMap), "UTF-8")
                 }
                 else -> video.videoUrl

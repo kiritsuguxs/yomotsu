@@ -145,16 +145,25 @@ class NovelExtensionManager(
         }
     }
 
+    private fun resolveSafePluginFile(pluginId: String, ext: String): File {
+        val safeId = pluginId.trim().replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        require(safeId.isNotEmpty() && safeId != "." && safeId != "..") { "Invalid plugin id: $pluginId" }
+        val file = File(pluginsDir, "$safeId.$ext")
+        val baseCanonical = pluginsDir.canonicalPath + File.separator
+        require(file.canonicalPath.startsWith(baseCanonical)) { "Path traversal blocked for plugin id: $pluginId" }
+        return file
+    }
+
     fun installPlugin(plugin: NovelPlugin, onComplete: (Boolean) -> Unit) {
         val pluginToInstall = availablePluginsMap[plugin.id] ?: plugin
         scope.launch {
             try {
+                val targetFile = resolveSafePluginFile(pluginToInstall.id, "js")
+                val metaFile = resolveSafePluginFile(pluginToInstall.id, "json")
                 val response = network.client.newCall(GET(pluginToInstall.url)).awaitSuccess()
-                val targetFile = File(pluginsDir, "${pluginToInstall.id}.js")
                 targetFile.sink().buffer().use { sink ->
                     sink.writeAll(response.body.source())
                 }
-                val metaFile = File(pluginsDir, "${pluginToInstall.id}.json")
                 metaFile.writeText(json.encodeToString(pluginToInstall))
                 loadInstalledExtensions()
                 refreshAvailablePlugins()
@@ -167,11 +176,11 @@ class NovelExtensionManager(
     }
 
     fun uninstallPlugin(pluginId: String) {
-        val targetFile = File(pluginsDir, "$pluginId.js")
+        val targetFile = runCatching { resolveSafePluginFile(pluginId, "js") }.getOrNull() ?: return
         if (targetFile.exists()) {
             targetFile.delete()
         }
-        val metaFile = File(pluginsDir, "$pluginId.json")
+        val metaFile = runCatching { resolveSafePluginFile(pluginId, "json") }.getOrNull() ?: return
         if (metaFile.exists()) {
             metaFile.delete()
         }
