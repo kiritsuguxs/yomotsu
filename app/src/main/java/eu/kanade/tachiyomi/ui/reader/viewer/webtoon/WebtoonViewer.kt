@@ -144,16 +144,21 @@ class WebtoonViewer(val activity: ReaderActivity, val isContinuous: Boolean = tr
             }
         }
         recycler.longTapListener = f@{ event ->
-            if (activity.viewModel.state.value.menuVisible || config.longTapEnabled) {
-                val child = recycler.findChildViewUnder(event.x, event.y)
-                if (child != null) {
-                    val position = recycler.getChildAdapterPosition(child)
-                    val item = adapter.items.getOrNull(position)
-                    if (item is ReaderPage) {
-                        val holder = recycler.getChildViewHolder(child) as? WebtoonPageHolder
+            val child = recycler.findChildViewUnder(event.x, event.y)
+            if (child != null) {
+                val position = recycler.getChildAdapterPosition(child)
+                val item = adapter.items.getOrNull(position)
+                if (item is ReaderPage) {
+                    val holder = recycler.getChildViewHolder(child) as? WebtoonPageHolder
+                    val relX = event.x - child.left
+                    val relY = event.y - child.top
+                    if (holder?.openTranslationBlockEditorAt(relX, relY) == true) {
+                        return@f true
+                    }
+                    if (activity.viewModel.state.value.menuVisible || config.longTapEnabled) {
                         val translationPosition = holder?.manualTranslationPosition(
-                            viewX = event.x - child.left,
-                            viewY = event.y - child.top,
+                            viewX = relX,
+                            viewY = relY,
                         )
                         activity.onPageLongTap(item, translationPosition)
                         return@f true

@@ -130,17 +130,17 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
             }
         }
         pager.longTapListener = f@{ event ->
-            if (activity.viewModel.state.value.menuVisible || config.longTapEnabled) {
-                val item = adapter.items.getOrNull(pager.currentItem)
-                if (item is ReaderPage) {
-                    val holder = (0 until pager.childCount)
-                        .asSequence()
-                        .map(pager::getChildAt)
-                        .filterIsInstance<PagerPageHolder>()
-                        .firstOrNull { it.page === item }
-                    if (holder?.isTouchOnTranslationBlock(event.x - holder.left, event.y - holder.top) == true) {
-                        return@f false
-                    }
+            val item = adapter.items.getOrNull(pager.currentItem)
+            if (item is ReaderPage) {
+                val holder = (0 until pager.childCount)
+                    .asSequence()
+                    .map(pager::getChildAt)
+                    .filterIsInstance<PagerPageHolder>()
+                    .firstOrNull { it.page === item }
+                if (holder?.openTranslationBlockEditorAt(event.x - holder.left, event.y - holder.top) == true) {
+                    return@f true
+                }
+                if (activity.viewModel.state.value.menuVisible || config.longTapEnabled) {
                     val position = holder?.let {
                         it.manualTranslationPosition(
                             viewX = event.x - it.left,

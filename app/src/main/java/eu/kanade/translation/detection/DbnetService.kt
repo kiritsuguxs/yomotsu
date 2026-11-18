@@ -74,12 +74,14 @@ class DbnetService : Service() {
     private fun detect(fd: ParcelFileDescriptor, timings: DbnetWorkerTimingRecorder): DetectionResult {
         val prepared = timings.measure(DbnetWorkerStage.PREPARATION) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            runCatching { android.system.Os.lseek(fd.fileDescriptor, 0L, android.system.OsConstants.SEEK_SET) }
             BitmapFactory.decodeFileDescriptor(fd.fileDescriptor, null, bounds)
             val plan = DbnetResizePlan.create(bounds.outWidth, bounds.outHeight)
             val options = BitmapFactory.Options().apply {
                 inPreferredConfig = Bitmap.Config.ARGB_8888
                 inSampleSize = DbnetPixels.sampleSize(plan.originalWidth, plan.originalHeight, 2048)
             }
+            runCatching { android.system.Os.lseek(fd.fileDescriptor, 0L, android.system.OsConstants.SEEK_SET) }
             val bitmap = checkNotNull(BitmapFactory.decodeFileDescriptor(fd.fileDescriptor, null, options)) {
                 "Imagem DBNet inválida"
             }

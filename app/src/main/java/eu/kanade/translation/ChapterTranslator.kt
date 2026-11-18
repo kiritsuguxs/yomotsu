@@ -7,8 +7,10 @@ import android.graphics.BitmapRegionDecoder
 import android.graphics.Rect
 import android.os.Build
 import com.hippo.unifile.UniFile
+import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.data.download.DownloadProvider
-import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.source.INovelSource
+import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.util.lang.compareToCaseInsensitiveNaturalOrder
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.translation.data.TranslationProvider
@@ -57,6 +59,8 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
@@ -71,11 +75,14 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.translation.TranslationPreferences
 import tachiyomi.i18n.at.ATMR
+import tachiyomi.source.local.LocalSource
+import tachiyomi.source.local.io.Format
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.Closeable
 import java.io.File
 import java.io.InputStream
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.coroutineContext
 
 internal data class TextTranslatorConfiguration(
@@ -119,6 +126,7 @@ class ChapterTranslator(
     private val downloadProvider: DownloadProvider = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val translationPreferences: TranslationPreferences = Injekt.get(),
+    private val fileMutex: Mutex = Mutex(),
 ) {
 
     private val _queueState = MutableStateFlow<List<Translation>>(emptyList())
@@ -146,13 +154,15 @@ class ChapterTranslator(
         )
     }
     private val aotInpaintClient = AotInpaintClient(context)
+    private val activeInpaintJobs = AtomicInteger(0)
+    private val translatorMutex = Mutex()
     private var textTranslator: TextTranslator? = null
     private var textTranslatorConfiguration: TextTranslatorConfiguration? = null
 
     private suspend fun ensureTextTranslator(
         fromLang: TextRecognizerLanguage,
         toLang: TextTranslatorLanguage,
-    ): TextTranslator {
+    ): TextTranslator = translatorMutex.withLock {
         val configuration = TextTranslatorConfiguration.from(
             preferences = translationPreferences,
             fromLang = fromLang,
@@ -164,7 +174,7 @@ class ChapterTranslator(
                 .build(translationPreferences, fromLang, toLang)
             textTranslatorConfiguration = configuration
         }
-        return requireNotNull(textTranslator)
+        requireNotNull(textTranslator)
     }
 
     fun start(): Boolean {
@@ -202,7 +212,7 @@ class ChapterTranslator(
             val activeTranslationFlow = queueState.transformLatest { queue ->
                 while (true) {
                     val activeTranslations = queue.asSequence().filter { it.status.value <= Translation.State.TRANSLATING.value }
-                        .groupBy { it.source }.toList().take(5).map { (_, translations) -> translations.first() }
+                        .groupBy { it.source.id }.toList().take(5).map { (_, translations) -> translations.first() }
                     emit(activeTranslations)
                     if (activeTranslations.isEmpty()) break
                     combine(activeTranslations.map(Translation::statusFlow)) { states -> states.contains(Translation.State.ERROR) }
@@ -240,9 +250,18 @@ class ChapterTranslator(
     private fun cancelTranslatorJob() { translationJob?.cancel(); translationJob = null }
 
     fun queueChapter(manga: Manga, chapter: Chapter) {
-        val source = sourceManager.get(manga.source) as? HttpSource ?: return
+        val source = sourceManager.get(manga.source)
+            ?.takeIf { it !is AnimeSource && it !is INovelSource }
+            ?: return
         if (provider.findTranslationFile(chapter.name, chapter.scanlator, manga.title, source) != null) return
-        if (queueState.value.any { it.chapter.id == chapter.id }) return
+        val existing = queueState.value.find { it.chapter.id == chapter.id }
+        if (existing != null) {
+            if (existing.status == Translation.State.ERROR) {
+                removeFromQueue(existing)
+            } else {
+                return
+            }
+        }
         val fromLang = TextRecognizerLanguage.fromPref(translationPreferences.translateFromLanguage())
         val toLang = TextTranslatorLanguage.fromPref(translationPreferences.translateToLanguage())
         val ocrType = OcrEngineType.fromPref(translationPreferences.ocrEngine())
@@ -254,11 +273,35 @@ class ChapterTranslator(
         addToQueue(Translation(source, manga, chapter, fromLang, toLang))
     }
 
+    private fun resolveChapterPath(translation: Translation): UniFile? {
+        downloadProvider.findChapterDir(
+            translation.chapter.name,
+            translation.chapter.scanlator,
+            translation.chapter.url,
+            translation.manga.title,
+            translation.source,
+        )?.let { return it }
+
+        val localSource = translation.source as? LocalSource ?: return null
+        val sChapter = SChapter.create().apply {
+            url = translation.chapter.url
+            name = translation.chapter.name
+        }
+        return runCatching {
+            when (val format = localSource.getFormat(sChapter)) {
+                is Format.Directory -> format.file
+                is Format.Archive -> format.file
+                is Format.Epub -> null
+            }
+        }.getOrNull()
+    }
+
     private suspend fun translateChapter(translation: Translation) {
         val pipelineStart = System.nanoTime()
         val selectedOcrType = OcrEngineType.fromPref(translationPreferences.ocrEngine())
         var processedPages = 0
         var accumulatedOcrTimeMs = 0L
+        translation.status = Translation.State.TRANSLATING
         try {
             val chapterNumber = synchronized(sessionLock) { completedChaptersInSession + 1 }
             notifier.onPreparing(translation.manga, translation.chapter.name, chapterNumber, currentSessionTotal())
@@ -266,10 +309,8 @@ class ChapterTranslator(
             val strictOcrGrouping = selectedOcrType == OcrEngineType.PADDLE_OCR
             val translationMangaDir = provider.getMangaDir(translation.manga.title, translation.source)
             val saveFile = provider.getTranslationFileName(translation.chapter.name, translation.chapter.scanlator)
-            val chapterPath = downloadProvider.findChapterDir(
-                translation.chapter.name, translation.chapter.scanlator, translation.chapter.url,
-                translation.manga.title, translation.source,
-            ) ?: error("O capítulo original não foi encontrado para tradução.")
+            val chapterPath = resolveChapterPath(translation)
+                ?: error("O capítulo original não foi encontrado para tradução.")
 
             val pages = mutableMapOf<String, PageTranslation>()
             val chapterPages = getChapterPages(chapterPath)
@@ -278,8 +319,9 @@ class ChapterTranslator(
             var accumulatedInpaintTimeMs = 0L
 
             chapterPages.use {
-                translationMangaDir.findFile("tmp")?.delete()
-                val tmpFile = translationMangaDir.createFile("tmp")!!
+                val tmpName = "tmp-${translation.chapter.id}"
+                translationMangaDir.findFile(tmpName)?.delete()
+                val tmpFile = translationMangaDir.createFile(tmpName)!!
                 try {
                     withContext(Dispatchers.IO) {
                         chapterPages.pages.forEachIndexed { index, (fileName, streamFn) ->
@@ -377,6 +419,7 @@ class ChapterTranslator(
 
                     if (translationPreferences.inpainterAot().get() && AotInpaintClient.isDeviceSupported()) {
                         val inpaintStart = System.nanoTime()
+                        activeInpaintJobs.incrementAndGet()
                         inpaintedBlocksTotal = try {
                             applyAotInpaintingToPages(
                                 translation = translation,
@@ -392,13 +435,18 @@ class ChapterTranslator(
                             }
                             0
                         } finally {
-                            runCatching { aotInpaintClient.close() }
+                            if (activeInpaintJobs.decrementAndGet() <= 0) {
+                                activeInpaintJobs.set(0)
+                                runCatching { aotInpaintClient.close() }
+                            }
                         }
                         accumulatedInpaintTimeMs = elapsedMs(inpaintStart)
                     }
                 }
             }
-            saveTranslatedPages(translationMangaDir, saveFile, pages)
+            fileMutex.withLock {
+                saveTranslatedPages(translationMangaDir, saveFile, pages)
+            }
             translation.status = Translation.State.TRANSLATED
             logcat(LogPriority.INFO) {
                 "OCR chapter engine=$selectedOcrType pages=$processedPages ocrMs=$accumulatedOcrTimeMs " +
@@ -790,7 +838,9 @@ class ChapterTranslator(
     private fun releaseOcrEngineAsync() {
         scope.launch {
             try { ocrEngineManager.release() } catch (error: Throwable) { logcat(LogPriority.ERROR, error) }
-            try { aotInpaintClient.close() } catch (error: Throwable) { logcat(LogPriority.ERROR, error) }
+            if (activeInpaintJobs.get() == 0) {
+                try { aotInpaintClient.close() } catch (error: Throwable) { logcat(LogPriority.ERROR, error) }
+            }
         }
     }
 

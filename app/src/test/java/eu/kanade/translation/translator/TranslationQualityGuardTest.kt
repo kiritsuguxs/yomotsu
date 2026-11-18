@@ -54,6 +54,25 @@ class TranslationQualityGuardTest {
         )
     }
 
+    @Test
+    fun `unchanged romanized names interjections and glossary tokens are not retried`() {
+        assertFalse(guard("Sung Jin-Woo!", "Sung Jin-Woo!"))
+        assertFalse(guard("OK!", "OK!"))
+        assertFalse(guard("YOMOTSUTERM0000ZXQ", "YOMOTSUTERM0000ZXQ"))
+    }
+
+    @Test
+    fun `unchanged cjk dialogue is still retried`() {
+        assertTrue(
+            TranslationQualityGuard.shouldRetry(
+                sourceText = "ありがとう",
+                translatedText = "ありがとう",
+                fromLang = TextRecognizerLanguage.JAPANESE,
+                toLang = TextTranslatorLanguage.PORTUGUESE,
+            ),
+        )
+    }
+
     private fun guard(source: String, target: String): Boolean =
         TranslationQualityGuard.shouldRetry(
             sourceText = source,

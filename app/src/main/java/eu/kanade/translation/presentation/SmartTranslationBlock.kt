@@ -1,6 +1,5 @@
 package eu.kanade.translation.presentation
 
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredSize
@@ -58,19 +57,6 @@ fun SmartTranslationBlock(
     val textMeasurer = rememberTextMeasurer()
     val baseTextStyle = LocalTextStyle.current
     if (cleanText.isEmpty()) {
-        if (onLongClick != null) {
-            val targetWidth = (region.width * scaleFactor).pxToDp()
-            val targetHeight = (region.height * scaleFactor).pxToDp()
-            Box(
-                modifier = modifier
-                    .offset(xPx.pxToDp(), yPx.pxToDp())
-                    .requiredSize(targetWidth, targetHeight)
-                    .combinedClickable(
-                        onClick = onLongClick,
-                        onLongClick = onLongClick,
-                    ),
-            )
-        }
         return
     }
 
@@ -81,19 +67,9 @@ fun SmartTranslationBlock(
             .graphicsLayer {
                 scaleX = scaleFactor
                 scaleY = scaleFactor
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                transformOrigin = TransformOrigin(0f, 0f)
             }
-            .clipToBounds()
-            .then(
-                if (onLongClick != null) {
-                    Modifier.combinedClickable(
-                        onClick = onLongClick,
-                        onLongClick = onLongClick,
-                    )
-                } else {
-                    Modifier
-                },
-            ),
+            .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
         val density = LocalDensity.current

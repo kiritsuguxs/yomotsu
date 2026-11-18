@@ -89,6 +89,12 @@ class WebtoonPageHolder(
     fun manualTranslationPosition(viewX: Float, viewY: Float): ManualTranslationPosition? =
         frame.manualTranslationPosition(viewX, viewY)
 
+    fun openTranslationBlockEditorAt(viewX: Float, viewY: Float): Boolean {
+        if (!showTranslations || page?.translationEditor == null) return false
+        val pos = manualTranslationPosition(viewX, viewY) ?: return false
+        return translationsView?.openBlockEditorAt(pos.x, pos.y) == true
+    }
+
     fun refreshTranslationOverlay() {
         val currentPage = page ?: return
         if (translationsView == null) {

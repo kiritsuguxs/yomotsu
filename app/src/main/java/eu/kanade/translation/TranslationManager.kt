@@ -57,9 +57,9 @@ class TranslationManager(
     private val sourceManager: SourceManager = Injekt.get(),
     private val translationPreferences: TranslationPreferences = Injekt.get(),
 ) {
-    private val translator = ChapterTranslator(context, provider)
-    private val editorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val translationFileMutex = Mutex()
+    private val translator = ChapterTranslator(context, provider, fileMutex = translationFileMutex)
+    private val editorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val isRunning: Boolean
         get() = translator.isRunning

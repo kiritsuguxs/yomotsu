@@ -107,7 +107,7 @@ class MlKitOcrEngine(
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
 
-        val decodedAny = image.openInputStream().use { stream ->
+        var decodedAny = image.openInputStream().use { stream ->
             val decoder = runCatching {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     BitmapRegionDecoder.newInstance(stream)
@@ -154,6 +154,68 @@ class MlKitOcrEngine(
                 true
             } finally {
                 decoder.recycle()
+            }
+        }
+        if (!decodedAny) {
+            var sampleSize = 1
+            while ((pageWidth / sampleSize).toLong() * (pageHeight / sampleSize).toLong() > 16_000_000L &&
+                pageWidth / (sampleSize * 2) >= MLKIT_MIN_TILE_WIDTH
+            ) {
+                sampleSize *= 2
+            }
+            val fallbackOpts = BitmapFactory.Options().apply {
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+                inSampleSize = sampleSize
+            }
+            val fullBitmap = runCatching {
+                image.openInputStream().use { BitmapFactory.decodeStream(it, null, fallbackOpts) }
+            }.getOrNull()
+            if (fullBitmap != null) {
+                try {
+                    val scaleX = pageWidth.toFloat() / fullBitmap.width.coerceAtLeast(1)
+                    val scaleY = pageHeight.toFloat() / fullBitmap.height.coerceAtLeast(1)
+                    for ((index, tile) in tiles.withIndex()) {
+                        val sampledTop = (tile.top / scaleY).toInt().coerceIn(0, fullBitmap.height - 1)
+                        val sampledBottom = (tile.bottom / scaleY).toInt().coerceIn(sampledTop + 1, fullBitmap.height)
+                        val sliceHeight = sampledBottom - sampledTop
+                        if (sliceHeight <= 0) continue
+                        val tileBitmap = Bitmap.createBitmap(fullBitmap, 0, sampledTop, fullBitmap.width, sliceHeight)
+                        val prevTile = tiles.getOrNull(index - 1)
+                        val nextTile = tiles.getOrNull(index + 1)
+                        val tileResult = try {
+                            val sliceStart = System.nanoTime()
+                            val inputImage = InputImage.fromBitmap(tileBitmap, 0)
+                            val result = recognizer.process(inputImage).await()
+                            ocrTimeMs += elapsedMs(sliceStart)
+                            result
+                        } finally {
+                            if (tileBitmap !== fullBitmap) tileBitmap.recycle()
+                        }
+                        extractBlocks(tileResult, offsetY = 0f).forEach { sampledBlock ->
+                            val localBlock = sampledBlock.copy(
+                                x = sampledBlock.x * scaleX,
+                                y = sampledBlock.y * scaleY,
+                                width = sampledBlock.width * scaleX,
+                                height = sampledBlock.height * scaleY,
+                                symbolWidth = sampledBlock.symbolWidth * scaleX,
+                                symbolHeight = sampledBlock.symbolHeight * scaleY,
+                            )
+                            val actualTop = sampledTop * scaleY
+                            val corners = listOf(
+                                OcrPoint(localBlock.x, localBlock.y),
+                                OcrPoint(localBlock.x + localBlock.width, localBlock.y),
+                                OcrPoint(localBlock.x + localBlock.width, localBlock.y + localBlock.height),
+                                OcrPoint(localBlock.x, localBlock.y + localBlock.height),
+                            )
+                            if (!PaddleWebtoonTiler.isClippedAtTileSeam(corners, tile, prevTile, nextTile)) {
+                                rawBlocks += localBlock.copy(y = localBlock.y + actualTop)
+                            }
+                        }
+                    }
+                    decodedAny = true
+                } finally {
+                    fullBitmap.recycle()
+                }
             }
         }
         if (!decodedAny) return null

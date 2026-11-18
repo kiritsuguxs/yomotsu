@@ -62,10 +62,10 @@ object AiGlossaryGenerator {
             TranslationLlmProvider.entries.forEach { if (it !in this) add(it) }
         }
         val activeProvider = candidateProviders.firstOrNull {
-            preferences.llmApiKey(it).get().trim().isNotEmpty()
+            preferences.llmApiKey(it).get().trim().filter { ch -> ch in '\u0020'..'\u007E' }.isNotEmpty()
         } ?: return@withContext AiGlossaryResult.MissingApiKey
 
-        val apiKey = preferences.llmApiKey(activeProvider).get().trim()
+        val apiKey = preferences.llmApiKey(activeProvider).get().trim().filter { it in '\u0020'..'\u007E' }
         val modelName = preferences.llmModel(activeProvider).get().trim()
             .ifBlank { activeProvider.defaultModel }
         val maxTokens = (preferences.translationEngineMaxOutputTokens().get().toIntOrNull() ?: 4096)

@@ -31,10 +31,17 @@ class DbnetModelStore(
         for (asset in assets) {
             checkCancelled()
             val target = File(directory, asset.name)
-            if (target.isFile && target.length() == asset.size &&
-                target.inputStream().use { digest(it, asset.size, checkCancelled) } == asset.sha256
-            ) {
-                continue
+            val canonicalPath = runCatching { target.canonicalPath }.getOrElse { target.absolutePath }
+            if (target.isFile && target.length() == asset.size) {
+                val currentStamp = VerifiedModelStamp(target.length(), target.lastModified(), asset.sha256)
+                if (verifiedStamps[canonicalPath] == currentStamp) {
+                    continue
+                }
+                if (target.inputStream().use { digest(it, asset.size, checkCancelled) } == asset.sha256) {
+                    verifiedStamps[canonicalPath] = VerifiedModelStamp(target.length(), target.lastModified(), asset.sha256)
+                    continue
+                }
+                verifiedStamps.remove(canonicalPath)
             }
             val partial = File.createTempFile(asset.name, ".part", directory)
             try {
@@ -70,6 +77,7 @@ class DbnetModelStore(
                     StandardCopyOption.ATOMIC_MOVE,
                     StandardCopyOption.REPLACE_EXISTING,
                 )
+                verifiedStamps[canonicalPath] = VerifiedModelStamp(target.length(), target.lastModified(), asset.sha256)
             } finally {
                 partial.delete()
             }
@@ -95,9 +103,16 @@ class DbnetModelStore(
 
     private fun ByteArray.hex() = joinToString("") { "%02x".format(it) }
 
+    private data class VerifiedModelStamp(
+        val length: Long,
+        val lastModified: Long,
+        val sha256: String,
+    )
+
     companion object {
         private const val BUFFER_SIZE = 64 * 1024
         private val downloadLock = Any()
+        private val verifiedStamps = java.util.concurrent.ConcurrentHashMap<String, VerifiedModelStamp>()
         val ASSETS = listOf(
             DbnetModelAsset(
                 "dbnet_detect.ncnn.param",

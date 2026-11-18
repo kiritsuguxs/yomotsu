@@ -84,8 +84,18 @@ class ReliableTextTranslator(
             }
         }
 
-        clearFailedBlocks(failed, context)
-        primaryFailure?.let { throw it }
+        if (primaryFailure != null) {
+            clearFailedBlocks(failed, context)
+            throw primaryFailure
+        }
+        failed.forEach { (_, block) ->
+            if (context.mangaTitle.isNotBlank()) {
+                TranslationCache.remove(context, fromLang, toLang, block.text)
+            }
+            if (block.translation.isBlank()) {
+                block.translation = ""
+            }
+        }
     }
 
     private suspend fun translateWithFactory(

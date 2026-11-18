@@ -107,6 +107,7 @@ internal fun buildComicTranslationPrompt(
         - Preserve every input key, array order, and array length exactly.
         - NEVER merge two adjacent array items into one string or skip an item; each input index i MUST map 1-to-1 to output index i.
         - Every output item must be a string containing only its final translation.
+        - Preserve any placeholder token matching YOMOTSUTERM0000ZXQ verbatim in its translated position without altering, splitting, or removing it.
         - Never translate watermarks, credits, chapter notes, scanlation group names, or site links; keep that element's slot as "" inside the JSON array (e.g., {"001.jpg": [""]}). NEVER output bare "" or {} instead of a JSON object containing every input key.
     """.trimIndent()
 }

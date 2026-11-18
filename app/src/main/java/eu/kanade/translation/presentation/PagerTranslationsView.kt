@@ -4,7 +4,8 @@ import android.content.Context
 import android.graphics.PointF
 import android.util.AttributeSet
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -12,7 +13,10 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -24,6 +28,7 @@ import eu.kanade.translation.detection.DbnetCleanupMask
 import eu.kanade.translation.model.PageTranslation
 import eu.kanade.translation.model.TranslationLayoutCollisionResolver
 import eu.kanade.translation.model.TranslationPageEditor
+import eu.kanade.translation.model.TranslationRegion
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class PagerTranslationsView : AbstractComposeView {
@@ -61,31 +66,65 @@ class PagerTranslationsView : AbstractComposeView {
     val scaleState = MutableStateFlow(1f)
     val viewTLState = MutableStateFlow(PointF())
     private var refreshRevision by mutableStateOf(0)
+    private var editingBlockIndexState by mutableStateOf<Int?>(null)
 
     fun refreshContent() {
         refreshRevision++
     }
 
+    fun openBlockEditorAt(imageX: Float, imageY: Float): Boolean {
+        if (!isVisible || editor == null || translation.blocks.isEmpty()) return false
+        val layouts = TranslationLayoutCollisionResolver.computeNonOverlappingLayouts(
+            translation.blocks,
+            translation.imgWidth,
+            translation.imgHeight,
+        )
+        val hitIndex = translation.blocks.indices.reversed().firstOrNull { index ->
+            val block = translation.blocks[index]
+            val region = layouts.getOrNull(index)
+                ?: block.layoutRegion
+                ?: TranslationRegion(block.x, block.y, block.width, block.height)
+            imageX in region.x..(region.x + region.width) &&
+                imageY in region.y..(region.y + region.height)
+        } ?: return false
+        editingBlockIndexState = hitIndex
+        return true
+    }
+
     @Composable
     override fun Content() {
-        val viewTL by viewTLState.collectAsState()
-        val scale by scaleState.collectAsState()
-        var editingBlockIndex by remember { mutableStateOf<Int?>(null) }
+        val viewTLCompose = viewTLState.collectAsState()
+        val scaleCompose = scaleState.collectAsState()
         var contentRevision by remember { mutableStateOf(0) }
-        Box(modifier = Modifier.absoluteOffset(viewTL.x.pxToDp(), viewTL.y.pxToDp())) {
+        val pageW = translation.imgWidth.takeIf { it > 0f } ?: 1f
+        val pageH = translation.imgHeight.takeIf { it > 0f } ?: 1f
+        Box(
+            modifier = Modifier
+                .wrapContentSize(Alignment.TopStart, unbounded = true)
+                .requiredSize(pageW.pxToDp(), pageH.pxToDp())
+                .graphicsLayer {
+                    val tl = viewTLCompose.value
+                    val s = scaleCompose.value
+                    translationX = tl.x
+                    translationY = tl.y
+                    scaleX = s
+                    scaleY = s
+                    transformOrigin = TransformOrigin(0f, 0f)
+                },
+        ) {
             val visibleRevision = contentRevision + refreshRevision
             key(visibleRevision) {
-                TextBlockBackground(scale)
+                TextBlockBackground(1f)
                 TextBlockContent(
-                    zoomScale = scale,
+                    zoomScale = 1f,
                     contentRevision = visibleRevision,
                     onEdit = editor?.let {
-                        { index -> editingBlockIndex = index }
+                        { index -> editingBlockIndexState = index }
                     },
                 )
             }
         }
-        val blockIndex = editingBlockIndex
+        val blockIndex = editingBlockIndexState
         if (blockIndex != null) {
             val block = translation.blocks.getOrNull(blockIndex)
             val activeEditor = editor
@@ -103,9 +142,9 @@ class PagerTranslationsView : AbstractComposeView {
                             translation.blocks.removeAt(blockIndex)
                         }
                         contentRevision++
-                        editingBlockIndex = null
+                        editingBlockIndexState = null
                     },
-                    onDismissRequest = { editingBlockIndex = null },
+                    onDismissRequest = { editingBlockIndexState = null },
                 )
             }
         }

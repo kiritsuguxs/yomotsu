@@ -110,25 +110,50 @@ fun TranslationCleanupBlock(
             if (maskColor.alpha == 0f) return
             val width = cleanup.mask.pageWidth
             val height = cleanup.mask.pageHeight
-            val paint = Paint().apply {
-                color = maskColor
-                isAntiAlias = false
-            }
             val padding = (width * 0.003f).coerceAtLeast(2f)
+            val bounds = remember(cleanup.mask, width, height, padding) {
+                var minX = Float.POSITIVE_INFINITY
+                var minY = Float.POSITIVE_INFINITY
+                var maxX = Float.NEGATIVE_INFINITY
+                var maxY = Float.NEGATIVE_INFINITY
+                val valid = cleanup.mask.forEachRun(width, height) { y, x, length ->
+                    if (x - padding < minX) minX = x - padding
+                    if (y - padding < minY) minY = y - padding
+                    if (x + length + padding > maxX) maxX = x + length + padding
+                    if (y + 1 + padding > maxY) maxY = y + 1 + padding
+                }
+                if (!valid || !minX.isFinite() || !minY.isFinite()) {
+                    null
+                } else {
+                    val left = minX.coerceAtLeast(0f)
+                    val top = minY.coerceAtLeast(0f)
+                    val right = maxX.coerceAtMost(pageWidth).coerceAtLeast(left + 1f)
+                    val bottom = maxY.coerceAtMost(pageHeight).coerceAtLeast(top + 1f)
+                    floatArrayOf(left, top, right - left, bottom - top)
+                }
+            } ?: return
+            val paint = remember(maskColor) {
+                Paint().apply {
+                    color = maskColor
+                    isAntiAlias = false
+                }
+            }
+            val originX = bounds[0]
+            val originY = bounds[1]
             Canvas(
                 modifier = Modifier
-                    .wrapContentSize(Alignment.TopStart, unbounded = true)
+                    .offset((originX * scaleFactor).pxToDp(), (originY * scaleFactor).pxToDp())
                     .requiredSize(
-                        (pageWidth * scaleFactor).pxToDp(),
-                        (pageHeight * scaleFactor).pxToDp(),
+                        (bounds[2] * scaleFactor).pxToDp(),
+                        (bounds[3] * scaleFactor).pxToDp(),
                     ),
             ) {
                 cleanup.mask.forEachRun(width, height) { y, x, length ->
                     drawContext.canvas.drawRect(
-                        (x - padding) * scaleFactor,
-                        (y - padding) * scaleFactor,
-                        (x + length + padding) * scaleFactor,
-                        (y + 1 + padding) * scaleFactor,
+                        (x - padding - originX) * scaleFactor,
+                        (y - padding - originY) * scaleFactor,
+                        (x + length + padding - originX) * scaleFactor,
+                        (y + 1 + padding - originY) * scaleFactor,
                         paint,
                     )
                 }
@@ -136,10 +161,7 @@ fun TranslationCleanupBlock(
         }
         is AotPatchCleanup -> {
             val patchBitmap = remember(cleanup.patchBase64) {
-                runCatching {
-                    val bytes = Base64.decode(cleanup.patchBase64, Base64.DEFAULT)
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-                }.getOrNull()
+                decodeCachedAotPatch(cleanup.patchBase64)
             }
             val region = cleanup.region
             if (patchBitmap != null) {
@@ -172,4 +194,25 @@ fun TranslationCleanupBlock(
         }
         NoCleanup -> Unit
     }
+}
+
+private val aotPatchBitmapCache: MutableMap<String, androidx.compose.ui.graphics.ImageBitmap> =
+    java.util.Collections.synchronizedMap(
+        object : LinkedHashMap<String, androidx.compose.ui.graphics.ImageBitmap>(32, 0.75f, true) {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<String, androidx.compose.ui.graphics.ImageBitmap>?,
+            ): Boolean = size > 48
+        },
+    )
+
+private fun decodeCachedAotPatch(patchBase64: String): androidx.compose.ui.graphics.ImageBitmap? {
+    aotPatchBitmapCache[patchBase64]?.let { return it }
+    val decoded = runCatching {
+        val bytes = Base64.decode(patchBase64, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+    }.getOrNull() ?: return null
+    if (patchBase64.length <= 262_144) {
+        aotPatchBitmapCache[patchBase64] = decoded
+    }
+    return decoded
 }

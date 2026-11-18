@@ -83,5 +83,26 @@ class GeminiTranslatorTest {
         assertEquals(pages.keys.toList(), chunks.flatMap { it.keys })
         assertTrue(chunks.all { it.size <= 16 && it.values.sumOf { p -> p.blocks.size } <= 75 })
     }
-}
 
+    @Test
+    fun `parseGeminiStreamLines never leaks thought parts when output truncates at MAX_TOKENS`() {
+        val sse = sequenceOf(
+            """data: {"candidates":[{"content":{"parts":[{"thought":true,"text":"Internal chain of thought about json"}]},"finishReason":"MAX_TOKENS"}]}""",
+            "",
+        )
+        val parsed = parseGeminiStreamLines(sse)
+        assertEquals("", parsed.text)
+        assertEquals("MAX_TOKENS", parsed.finishReason)
+    }
+
+    @Test
+    fun `parseGeminiStreamLines captures mid-stream SSE error status`() {
+        val sse = sequenceOf(
+            """data: {"error":{"code":503,"status":"UNAVAILABLE","message":"Overloaded"}}""",
+            "",
+        )
+        val parsed = parseGeminiStreamLines(sse)
+        assertEquals("", parsed.text)
+        assertEquals("SSE_ERROR:UNAVAILABLE", parsed.finishReason)
+    }
+}

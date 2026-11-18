@@ -172,18 +172,19 @@ object DBPostProcessor {
         val ymax = points.maxOf { kotlin.math.ceil(it.y).toInt() }.coerceIn(0, h - 1)
 
         val mask = Mat(ymax - ymin + 1, xmax - xmin + 1, CvType.CV_8UC1, Scalar(0.0))
-        val pts = MatOfPoint().apply {
-            fromList(
-                points.map { Point((it.x - xmin).toInt().toDouble(), (it.y - ymin).toInt().toDouble()) }
+        val pts = MatOfPoint()
+        var roi: Mat? = null
+        return try {
+            pts.fromList(
+                points.map { Point((it.x - xmin).toInt().toDouble(), (it.y - ymin).toInt().toDouble()) },
             )
+            Imgproc.fillPoly(mask, mutableListOf(pts), Scalar(1.0))
+            roi = probMap.submat(ymin, ymax + 1, xmin, xmax + 1)
+            Core.mean(roi, mask).`val`[0].toFloat()
+        } finally {
+            roi?.release()
+            mask.release()
+            pts.release()
         }
-        Imgproc.fillPoly(mask, mutableListOf(pts), Scalar(1.0))
-
-        val roi = probMap.submat(ymin, ymax + 1, xmin, xmax + 1)
-        val mean = Core.mean(roi, mask)
-        roi.release()
-        mask.release()
-        pts.release()
-        return mean.`val`[0].toFloat()
     }
 }

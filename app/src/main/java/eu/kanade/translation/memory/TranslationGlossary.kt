@@ -181,17 +181,33 @@ object TranslationGlossary {
     private fun boundedRegex(term: String): Regex {
         val cleanTerm = term.trim()
         val escaped = Regex.escape(cleanTerm)
-        val leftBoundary = if (cleanTerm.firstOrNull()?.isLetterOrDigit() == true) {
+        val firstChar = cleanTerm.firstOrNull()
+        val lastChar = cleanTerm.lastOrNull()
+        val leftBoundary = if (firstChar != null && firstChar.isLetterOrDigit() && !isCjkOrKanaOrHangul(firstChar)) {
             "(?<![\\p{L}\\p{N}])"
         } else {
             ""
         }
-        val rightBoundary = if (cleanTerm.lastOrNull()?.isLetterOrDigit() == true) {
+        val rightBoundary = if (lastChar != null && lastChar.isLetterOrDigit() && !isCjkOrKanaOrHangul(lastChar)) {
             "(?![\\p{L}\\p{N}])"
         } else {
             ""
         }
         return Regex("$leftBoundary$escaped$rightBoundary", RegexOption.IGNORE_CASE)
+    }
+
+    private fun isCjkOrKanaOrHangul(ch: Char): Boolean {
+        val block = Character.UnicodeBlock.of(ch) ?: return false
+        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS ||
+            block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A ||
+            block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B ||
+            block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS ||
+            block == Character.UnicodeBlock.HIRAGANA ||
+            block == Character.UnicodeBlock.KATAKANA ||
+            block == Character.UnicodeBlock.KATAKANA_PHONETIC_EXTENSIONS ||
+            block == Character.UnicodeBlock.HANGUL_SYLLABLES ||
+            block == Character.UnicodeBlock.HANGUL_JAMO ||
+            block == Character.UnicodeBlock.HANGUL_COMPATIBILITY_JAMO
     }
 
     private fun protectedToken(index: Int): String =

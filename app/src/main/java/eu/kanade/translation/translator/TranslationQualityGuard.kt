@@ -25,7 +25,9 @@ object TranslationQualityGuard {
         if (TranslationRecoveryPolicy.isWatermarkOrCredit(sourceText)) return false
         if (target.isEmpty()) return true
         if (fromLang.code.equals(toLang.code, ignoreCase = true)) return false
-        if (source.equals(target, ignoreCase = true)) return true
+        if (source.equals(target, ignoreCase = true)) {
+            return !isLikelyInvariantTokenOrName(sourceText, source)
+        }
 
         if (fromLang != TextRecognizerLanguage.ENGLISH || toLang != TextTranslatorLanguage.PORTUGUESE) {
             return false
@@ -45,6 +47,29 @@ object TranslationQualityGuard {
         return overlapRatio >= MIN_SOURCE_OVERLAP &&
             englishMarkers >= MIN_ENGLISH_MARKERS &&
             portugueseMarkers == 0
+    }
+
+    private fun isLikelyInvariantTokenOrName(rawSource: String, normalizedSource: String): Boolean {
+        if (normalizedSource.contains("yomotsuterm")) return true
+        if (rawSource.any(::isCjkOrKanaOrHangul)) return false
+        val rawTokens = normalizedSource.split(' ').filter(String::isNotEmpty)
+        if (rawTokens.isEmpty() || rawTokens.any(ENGLISH_MARKERS::contains)) return false
+        if (rawTokens.size <= 2) return true
+        return rawTokens.size == 3 && rawSource.contains('-')
+    }
+
+    private fun isCjkOrKanaOrHangul(ch: Char): Boolean {
+        val block = Character.UnicodeBlock.of(ch) ?: return false
+        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS ||
+            block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A ||
+            block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B ||
+            block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS ||
+            block == Character.UnicodeBlock.HIRAGANA ||
+            block == Character.UnicodeBlock.KATAKANA ||
+            block == Character.UnicodeBlock.KATAKANA_PHONETIC_EXTENSIONS ||
+            block == Character.UnicodeBlock.HANGUL_SYLLABLES ||
+            block == Character.UnicodeBlock.HANGUL_JAMO ||
+            block == Character.UnicodeBlock.HANGUL_COMPATIBILITY_JAMO
     }
 
     private fun normalize(text: String): String = text

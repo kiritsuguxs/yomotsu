@@ -161,10 +161,17 @@ class GeminiTranslator(
         }
 
         if (result.statusCode !in 200..299) {
+            val category = when (result.statusCode) {
+                401, 403 -> TranslationFailureCategory.INVALID_KEY
+                404 -> TranslationFailureCategory.MODEL_NOT_FOUND
+                429 -> TranslationFailureCategory.RATE_LIMIT
+                in 500..599 -> TranslationFailureCategory.SERVER
+                else -> TranslationFailureCategory.UNKNOWN
+            }
             throw TranslationProviderException(
                 TranslationProviderId.GEMINI,
-                TranslationFailureCategory.UNKNOWN,
-                result.statusCode == 429 || result.statusCode >= 500,
+                category,
+                result.statusCode == 408 || result.statusCode == 429 || result.statusCode >= 500,
                 buildGeminiHttpDiagnostic(result.statusCode, result.errorBody, cleanApiKey),
             )
         }
@@ -173,11 +180,17 @@ class GeminiTranslator(
 
         if (responseText.isBlank()) {
             val finishReason = result.content.finishReason.ifBlank { "UNKNOWN" }
+            val retryable = finishReason.equals("MAX_TOKENS", ignoreCase = true) ||
+                finishReason.startsWith("SSE_ERROR", ignoreCase = true)
             throw TranslationProviderException(
                 TranslationProviderId.GEMINI,
-                TranslationFailureCategory.UNKNOWN,
-                false,
-                "Gemini blocked the translation. Reason: $finishReason",
+                if (finishReason.startsWith("SSE_ERROR", ignoreCase = true)) {
+                    TranslationFailureCategory.SERVER
+                } else {
+                    TranslationFailureCategory.MALFORMED_RESPONSE
+                },
+                retryable,
+                "Gemini blocked or truncated the translation. Reason: $finishReason",
             )
         }
 
@@ -187,8 +200,8 @@ class GeminiTranslator(
             val snippet = responseText.take(50).replace("\n", " ")
             throw TranslationProviderException(
                 TranslationProviderId.GEMINI,
-                TranslationFailureCategory.UNKNOWN,
-                false,
+                TranslationFailureCategory.MALFORMED_RESPONSE,
+                true,
                 "Gemini JSON error: $snippet",
             )
         }
@@ -267,13 +280,18 @@ internal fun parseGeminiStreamLines(lines: Sequence<String>): GeminiResponseCont
     val eventData = StringBuilder()
     val rawLines = StringBuilder()
     val nonThoughtText = StringBuilder()
-    val fallbackText = StringBuilder()
     var lastFinishReason = ""
 
     fun consumeEventJson(jsonText: String) {
         val trimmed = jsonText.trim()
         if (trimmed.isEmpty() || trimmed == "[DONE]") return
         val chunkJson = runCatching { JSONObject(trimmed) }.getOrNull() ?: return
+        val streamError = chunkJson.optJSONObject("error")
+        if (streamError != null) {
+            val status = streamError.optString("status").ifBlank { streamError.optInt("code", 500).toString() }
+            lastFinishReason = "SSE_ERROR:$status"
+            return
+        }
         val candidate = chunkJson.optJSONArray("candidates")?.optJSONObject(0) ?: return
         val finishReason = candidate.optString("finishReason").trim()
         if (finishReason.isNotEmpty() && !finishReason.equals("null", ignoreCase = true)) {
@@ -284,7 +302,6 @@ internal fun parseGeminiStreamLines(lines: Sequence<String>): GeminiResponseCont
             val part = parts.optJSONObject(index) ?: continue
             val text = part.optString("text")
             if (text.isEmpty()) continue
-            fallbackText.append(text)
             if (!part.optBoolean("thought", false)) {
                 nonThoughtText.append(text)
             }
@@ -319,9 +336,8 @@ internal fun parseGeminiStreamLines(lines: Sequence<String>): GeminiResponseCont
     }
 
     if (sawSseDataLine) {
-        val resolvedText = if (nonThoughtText.isNotEmpty()) nonThoughtText.toString() else fallbackText.toString()
         return GeminiResponseContent(
-            text = resolvedText,
+            text = nonThoughtText.toString(),
             finishReason = lastFinishReason.ifBlank { "UNKNOWN" },
         )
     }
@@ -329,6 +345,11 @@ internal fun parseGeminiStreamLines(lines: Sequence<String>): GeminiResponseCont
     val rawJson = rawLines.toString().trim()
     val responseJson = runCatching { JSONObject(rawJson) }.getOrNull()
         ?: return GeminiResponseContent("", "UNKNOWN")
+    val directError = responseJson.optJSONObject("error")
+    if (directError != null) {
+        val status = directError.optString("status").ifBlank { directError.optInt("code", 500).toString() }
+        return GeminiResponseContent("", "SSE_ERROR:$status")
+    }
     val finishReason = responseJson.optJSONArray("candidates")
         ?.optJSONObject(0)
         ?.optString("finishReason")
@@ -500,19 +521,12 @@ internal fun extractGeminiResponseText(responseJson: JSONObject): String {
         ?.optJSONArray("parts")
         ?: return ""
 
-    val nonThoughtText = buildString {
+    return buildString {
         for (index in 0 until parts.length()) {
             val part = parts.optJSONObject(index) ?: continue
             if (!part.optBoolean("thought", false)) {
                 append(part.optString("text"))
             }
-        }
-    }
-    if (nonThoughtText.isNotBlank()) return nonThoughtText
-
-    return buildString {
-        for (index in 0 until parts.length()) {
-            append(parts.optJSONObject(index)?.optString("text").orEmpty())
         }
     }
 }

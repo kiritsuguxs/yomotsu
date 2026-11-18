@@ -187,13 +187,27 @@ class PaddleOcrEngine(
         }
 
         if (!usedRegionDecoder) {
-            val fullBitmap = image.openInputStream().use { BitmapFactory.decodeStream(it, null, decodeOpts) }
+            var sampleSize = 1
+            while ((pageWidth / sampleSize).toLong() * (pageHeight / sampleSize).toLong() > 16_000_000L &&
+                pageWidth / (sampleSize * 2) >= 480
+            ) {
+                sampleSize *= 2
+            }
+            val fallbackOpts = BitmapFactory.Options().apply {
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+                inSampleSize = sampleSize
+            }
+            val fullBitmap = image.openInputStream().use { BitmapFactory.decodeStream(it, null, fallbackOpts) }
                 ?: throw IllegalStateException("Unable to decode image for OCR")
             try {
+                val scaleX = pageWidth.toFloat() / fullBitmap.width.coerceAtLeast(1)
+                val scaleY = pageHeight.toFloat() / fullBitmap.height.coerceAtLeast(1)
                 for ((index, tile) in tiles.withIndex()) {
-                    val sliceHeight = tile.height.coerceAtMost(fullBitmap.height - tile.top)
+                    val sampledTop = (tile.top / scaleY).toInt().coerceIn(0, fullBitmap.height - 1)
+                    val sampledBottom = (tile.bottom / scaleY).toInt().coerceIn(sampledTop + 1, fullBitmap.height)
+                    val sliceHeight = sampledBottom - sampledTop
                     if (sliceHeight <= 0) continue
-                    val tileBitmap = Bitmap.createBitmap(fullBitmap, 0, tile.top, fullBitmap.width, sliceHeight)
+                    val tileBitmap = Bitmap.createBitmap(fullBitmap, 0, sampledTop, fullBitmap.width, sliceHeight)
                     val tileRes: OCRRunResult = try {
                         engine.recognize(tileBitmap)
                     } finally {
@@ -205,9 +219,31 @@ class PaddleOcrEngine(
                     if (lastShape.isEmpty() && tileRes.detInputShape.isNotEmpty()) {
                         lastShape = tileRes.detInputShape.joinToString("x")
                     }
+                    val scaledTileRes = if (sampleSize == 1) {
+                        tileRes
+                    } else {
+                        tileRes.copy(
+                            results = tileRes.results.map { item ->
+                                item.copy(
+                                    box = item.box.copy(
+                                        points = item.box.points.map { pt ->
+                                            android.graphics.PointF(pt.x * scaleX, pt.y * scaleY)
+                                        },
+                                    ),
+                                )
+                            },
+                        )
+                    }
+                    val adjustedTile = if (sampleSize == 1) {
+                        tile
+                    } else {
+                        val actualTop = (sampledTop * scaleY).toInt()
+                        val actualBottom = (sampledBottom * scaleY).toInt().coerceAtLeast(actualTop + 1)
+                        PaddleWebtoonTiler.TileWindow(top = actualTop, bottom = actualBottom)
+                    }
                     collectTileBlocks(
-                        tileRes = tileRes,
-                        tile = tile,
+                        tileRes = scaledTileRes,
+                        tile = adjustedTile,
                         prevTile = tiles.getOrNull(index - 1),
                         nextTile = tiles.getOrNull(index + 1),
                         pageWidth = pageWidth,

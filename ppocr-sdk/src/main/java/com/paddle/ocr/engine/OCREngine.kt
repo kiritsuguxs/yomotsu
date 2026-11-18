@@ -118,17 +118,17 @@ class OCREngine(
         }.forEach { batch ->
             val batchCrops = mutableListOf<org.opencv.core.Mat>()
             val batchBoxIndices = mutableListOf<Int>()
-            batch.forEach { indexedBox ->
-                val crop = QuadTextCrop.crop(srcMat, indexedBox.value)
-                if (crop.rows() > 0 && crop.cols() > 0) {
-                    batchCrops.add(crop)
-                    batchBoxIndices.add(indexedBox.index)
-                } else {
-                    crop.release()
-                }
-            }
-
             try {
+                batch.forEach { indexedBox ->
+                    val crop = QuadTextCrop.crop(srcMat, indexedBox.value)
+                    if (crop.rows() > 0 && crop.cols() > 0) {
+                        batchCrops.add(crop)
+                        batchBoxIndices.add(indexedBox.index)
+                    } else {
+                        crop.release()
+                    }
+                }
+
                 if (batchCrops.isNotEmpty()) {
                     val batchResult = recognitionEngine.recognize(batchCrops)
                     totalRecPreMs += batchResult.preprocessMs

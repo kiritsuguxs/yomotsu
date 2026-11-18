@@ -23,7 +23,7 @@ internal fun GroqModelsDialog(
         emptyText = stringResource(ATMR.strings.groq_models_empty),
         initialModels = GroqModelsCatalog.curatedDefaults.map { it.toDialogItem() },
         fetchModels = { key -> GroqModelsCatalog.fetchModels(key).map { it.toDialogItem() } },
-        showFreeBadge = true,
+        showFreeBadge = false,
         onDismissRequest = onDismissRequest,
     )
 }

@@ -118,4 +118,43 @@ class TranslationGlossaryTest {
         assertFalse(instructions.contains("Shadow Monarch"))
         assertFalse(instructions.contains("Mount Hua Sect"))
     }
+
+    @Test
+    fun `hangul and japanese protected names match even when attached to particles`() {
+        val entries = listOf(
+            TranslationMemoryEntry(
+                source = "성진우",
+                target = "Sung Jin-Woo",
+                type = TranslationMemoryEntryType.NAME,
+                isProtected = true,
+            ),
+            TranslationMemoryEntry(
+                source = "ナルト",
+                target = "Naruto",
+                type = TranslationMemoryEntryType.NAME,
+                isProtected = true,
+            ),
+        )
+        val koreanPrepared = TranslationGlossary.prepare("성진우는 강하다.", entries)
+        assertEquals(1, koreanPrepared.protectedTerms.size)
+        assertEquals(
+            "Sung Jin-Woo é forte.",
+            TranslationGlossary.resolve(
+                koreanPrepared,
+                "${koreanPrepared.protectedTerms.single().token} é forte.",
+                entries,
+            ),
+        )
+
+        val japanesePrepared = TranslationGlossary.prepare("ナルトが来た！", entries)
+        assertEquals(1, japanesePrepared.protectedTerms.size)
+        assertEquals(
+            "Naruto chegou!",
+            TranslationGlossary.resolve(
+                japanesePrepared,
+                "${japanesePrepared.protectedTerms.single().token} chegou!",
+                entries,
+            ),
+        )
+    }
 }

@@ -36,10 +36,10 @@ internal object TranslationNetworkHelper {
                 continue
             }
 
-            if (!response.isSuccessful && (response.code == 408 || response.code == 429 || response.code >= 500) && httpTryCount < 3) {
+            if (!response.isSuccessful && (response.code == 408 || response.code in 502..504) && httpTryCount < 1) {
                 httpTryCount++
                 response.close()
-                sleepWithCancel(chain, 2_000L * httpTryCount)
+                sleepWithCancel(chain, 1_500L)
                 continue
             }
             return@Interceptor response

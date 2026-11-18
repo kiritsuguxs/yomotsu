@@ -24,6 +24,7 @@ import eu.kanade.translation.detection.DbnetCleanupMask
 import eu.kanade.translation.model.PageTranslation
 import eu.kanade.translation.model.TranslationLayoutCollisionResolver
 import eu.kanade.translation.model.TranslationPageEditor
+import eu.kanade.translation.model.TranslationRegion
 
 class WebtoonTranslationsView : AbstractComposeView {
 
@@ -32,9 +33,29 @@ class WebtoonTranslationsView : AbstractComposeView {
     private val fontFamily: FontFamily
     private val editor: TranslationPageEditor?
     private var refreshRevision by mutableStateOf(0)
+    private var editingBlockIndexState by mutableStateOf<Int?>(null)
 
     fun refreshContent() {
         refreshRevision++
+    }
+
+    fun openBlockEditorAt(imageX: Float, imageY: Float): Boolean {
+        if (!isVisible || editor == null || translation.blocks.isEmpty()) return false
+        val layouts = TranslationLayoutCollisionResolver.computeNonOverlappingLayouts(
+            translation.blocks,
+            translation.imgWidth,
+            translation.imgHeight,
+        )
+        val hitIndex = translation.blocks.indices.reversed().firstOrNull { index ->
+            val block = translation.blocks[index]
+            val region = layouts.getOrNull(index)
+                ?: block.layoutRegion
+                ?: TranslationRegion(block.x, block.y, block.width, block.height)
+            imageX in region.x..(region.x + region.width) &&
+                imageY in region.y..(region.y + region.height)
+        } ?: return false
+        editingBlockIndexState = hitIndex
+        return true
     }
 
     constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : super(
@@ -65,7 +86,6 @@ class WebtoonTranslationsView : AbstractComposeView {
     @Composable
     override fun Content() {
         var size by remember { mutableStateOf(IntSize.Zero) }
-        var editingBlockIndex by remember { mutableStateOf<Int?>(null) }
         var contentRevision by remember { mutableStateOf(0) }
         Box(
             modifier = Modifier
@@ -84,12 +104,12 @@ class WebtoonTranslationsView : AbstractComposeView {
                     scaleFactor = scaleFactor,
                     contentRevision = visibleRevision,
                     onEdit = editor?.let {
-                        { index -> editingBlockIndex = index }
+                        { index -> editingBlockIndexState = index }
                     },
                 )
             }
         }
-        val blockIndex = editingBlockIndex
+        val blockIndex = editingBlockIndexState
         if (blockIndex != null) {
             val block = translation.blocks.getOrNull(blockIndex)
             val activeEditor = editor
@@ -107,9 +127,9 @@ class WebtoonTranslationsView : AbstractComposeView {
                             translation.blocks.removeAt(blockIndex)
                         }
                         contentRevision++
-                        editingBlockIndex = null
+                        editingBlockIndexState = null
                     },
-                    onDismissRequest = { editingBlockIndex = null },
+                    onDismissRequest = { editingBlockIndexState = null },
                 )
             }
         }

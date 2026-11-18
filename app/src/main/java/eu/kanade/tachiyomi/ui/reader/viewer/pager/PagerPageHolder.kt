@@ -318,12 +318,16 @@ class PagerPageHolder(
         (pageView as? SubsamplingScaleImageView)?.let(::updateTranslationCoords)
     }
 
+    fun openTranslationBlockEditorAt(viewX: Float, viewY: Float): Boolean {
+        if (!showTranslations || page.translationEditor == null) return false
+        val pos = manualTranslationPosition(viewX, viewY) ?: return false
+        return translationsView?.openBlockEditorAt(pos.x, pos.y) == true
+    }
+
     fun isTouchOnTranslationBlock(viewX: Float, viewY: Float): Boolean {
         if (!showTranslations || page.translationEditor == null) return false
         val translation = page.translation ?: return false
         val pos = manualTranslationPosition(viewX, viewY) ?: return false
-        val pageWidth = translation.imgWidth.takeIf { it > 0f } ?: pos.pageWidth
-        val pageHeight = translation.imgHeight.takeIf { it > 0f } ?: pos.pageHeight
         return translation.blocks.any { block ->
             val r = block.layoutRegion ?: eu.kanade.translation.model.TranslationRegion(block.x, block.y, block.width, block.height)
             pos.x in r.x..(r.x + r.width) && pos.y in r.y..(r.y + r.height)

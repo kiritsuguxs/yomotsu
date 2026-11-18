@@ -20,11 +20,13 @@ class DeepLTranslator(
 
     private val okHttpClient by lazy { TranslationNetworkHelper.sharedClient }
 
+    private val cleanApiKey: String = apiKey.trim().filter { it in '\u0020'..'\u007E' }
+
     override suspend fun translate(
         pages: MutableMap<String, PageTranslation>,
         context: ComicTranslationContext,
     ) {
-        if (apiKey.isBlank()) throw TranslationProviderFailureMapper.missingKey(TranslationProviderId.DEEPL)
+        if (cleanApiKey.isBlank()) throw TranslationProviderFailureMapper.missingKey(TranslationProviderId.DEEPL)
         try {
             translateInternal(pages, context)
         } catch (error: CancellationException) {
@@ -127,8 +129,8 @@ class DeepLTranslator(
             }
 
             val request = Request.Builder()
-                .url(endpointFor(apiKey))
-                .header("Authorization", "DeepL-Auth-Key $apiKey")
+                .url(endpointFor(cleanApiKey))
+                .header("Authorization", "DeepL-Auth-Key $cleanApiKey")
                 .post(formBuilder.build())
                 .build()
 
