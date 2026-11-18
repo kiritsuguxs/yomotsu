@@ -90,7 +90,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.text.HtmlCompat
+import org.jsoup.parser.Parser
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import tachiyomi.i18n.MR
@@ -162,6 +162,13 @@ class NovelReaderActivity : ComponentActivity() {
     }
 
     companion object {
+        private val NOVEL_HTML_TAG_REGEX = Regex(
+            "(?i)<\\s*/?\\s*(p|div|br|span|img|a|b|strong|i|em|u|s|hr|h[1-6]|ul|ol|li|blockquote|" +
+                "table|thead|tbody|tr|td|th|section|article|main|figure|figcaption|script|style|" +
+                "noscript|iframe|nav|header|footer|aside|ruby|rt|rp|sup|sub|font|center|pre|code|" +
+                "small|big|dl|dt|dd)\\b[^>]*>",
+        )
+
         fun newIntent(context: Context, mangaId: Long, chapterId: Long): Intent {
             return Intent(context, NovelReaderActivity::class.java).apply {
                 putExtra("manga_id", mangaId)
@@ -245,51 +252,52 @@ class NovelReaderActivity : ComponentActivity() {
 
     private fun formatNovelText(raw: String, baseUrl: String? = null): String {
         if (raw.isBlank()) return ""
-        val withImageTokens = runCatching {
-            val doc = if (baseUrl != null) Jsoup.parse(raw, baseUrl) else Jsoup.parse(raw)
-            doc.select(
-                "script, style, noscript, iframe, nav, header, footer, svg, canvas, " +
-                    "form, button, input, select, textarea, aside, .ads, .ad, .advertisement, " +
-                    "[style*='display:none'], [style*='display: none'], [hidden]",
-            ).remove()
-            doc.select("img").forEach { img ->
-                val rawSrc = img.attr("abs:src").ifBlank {
-                    img.attr("src").ifBlank {
-                        img.attr("data-src").ifBlank { img.attr("data-original") }
+        val withoutBreaks = if (NOVEL_HTML_TAG_REGEX.containsMatchIn(raw)) {
+            val withImageTokens = runCatching {
+                val doc = if (baseUrl != null) Jsoup.parse(raw, baseUrl) else Jsoup.parse(raw)
+                doc.outputSettings().prettyPrint(false)
+                doc.select(
+                    "script, style, noscript, iframe, nav, header, footer, svg, canvas, " +
+                        "form, button, input, select, textarea, aside, .ads, .ad, .advertisement, " +
+                        "[style*='display:none'], [style*='display: none'], [hidden]",
+                ).remove()
+                doc.select("img").forEach { img ->
+                    val rawSrc = img.attr("abs:src").ifBlank {
+                        img.attr("src").ifBlank {
+                            img.attr("data-src").ifBlank { img.attr("data-original") }
+                        }
+                    }.trim()
+                    if (rawSrc.isNotBlank()) {
+                        val resolved = if (baseUrl != null && !rawSrc.startsWith("http", ignoreCase = true) && !rawSrc.startsWith("data:image/", ignoreCase = true)) {
+                            runCatching { URI(baseUrl).resolve(rawSrc).toString() }.getOrDefault(rawSrc)
+                        } else {
+                            rawSrc
+                        }
+                        val isAllowedScheme = resolved.startsWith("http://", ignoreCase = true) ||
+                            resolved.startsWith("https://", ignoreCase = true) ||
+                            resolved.startsWith("data:image/", ignoreCase = true)
+                        if (isAllowedScheme) {
+                            img.before("\n\n[[IMG:$resolved]]\n\n")
+                        }
                     }
-                }.trim()
-                if (rawSrc.isNotBlank()) {
-                    val resolved = if (baseUrl != null && !rawSrc.startsWith("http", ignoreCase = true) && !rawSrc.startsWith("data:image/", ignoreCase = true)) {
-                        runCatching { URI(baseUrl).resolve(rawSrc).toString() }.getOrDefault(rawSrc)
-                    } else {
-                        rawSrc
-                    }
-                    val isAllowedScheme = resolved.startsWith("http://", ignoreCase = true) ||
-                        resolved.startsWith("https://", ignoreCase = true) ||
-                        resolved.startsWith("data:image/", ignoreCase = true)
-                    if (isAllowedScheme) {
-                        img.before("\n\n[[IMG:$resolved]]\n\n")
-                    }
+                    img.remove()
                 }
-                img.remove()
-            }
-            doc.body().html()
-        }.getOrDefault(raw)
+                doc.body().html()
+            }.getOrDefault(raw)
 
-        val withoutBreaks = withImageTokens
-            .replace(Regex("(?i)<br\\s*/?>"), "\n")
-            .replace(Regex("(?i)</p>"), "\n\n")
-            .replace(Regex("(?i)</div>"), "\n\n")
-            .replace(Regex("(?i)<p[^>]*>"), "")
-            .replace(Regex("(?i)<div[^>]*>"), "")
-            .replace(Regex("<[^>]+>"), "")
+            withImageTokens
+                .replace(Regex("(?i)<br\\s*/?>"), "\n")
+                .replace(Regex("(?i)</(p|div|h[1-6]|li|blockquote|tr|section|article|pre|figure|figcaption)>"), "\n\n")
+                .replace(Regex("(?i)<hr\\s*/?>"), "\n\n* * *\n\n")
+                .replace(Regex("(?i)<(p|div)[^>]*>"), "")
+                .replace(Regex("<[^>]+>"), "")
+        } else {
+            raw
+        }
 
-        val unescaped = try {
-            HtmlCompat.fromHtml(
-                withoutBreaks,
-                HtmlCompat.FROM_HTML_MODE_LEGACY,
-            ).toString()
-        } catch (_: Exception) {
+        val unescaped = runCatching {
+            Parser.unescapeEntities(withoutBreaks, false)
+        }.getOrElse {
             withoutBreaks
                 .replace("&quot;", "\"")
                 .replace("&#39;", "'")
@@ -301,11 +309,13 @@ class NovelReaderActivity : ComponentActivity() {
         }
 
         return unescaped
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .replace('\u00A0', ' ')
             .lines()
             .map { it.trim() }
-            .filterIndexed { index, line -> line.isNotEmpty() || index > 0 }
+            .filter { it.isNotEmpty() }
             .joinToString("\n\n")
-            .replace(Regex("\\n{3,}"), "\n\n")
             .trim()
     }
 
@@ -685,8 +695,13 @@ class NovelReaderActivity : ComponentActivity() {
                         val group = mergedChapterProvider.load(loadedManga)
                         mangaById = group.mangaById
                         currentStitch = group.stitch
+                        val orderedGroupChapters = if (group.isMerged) {
+                            group.chapters
+                        } else {
+                            group.chapters.sortedBy { it.sourceOrder }
+                        }
                         when {
-                            group.chapters.any { it.id == initialChapterId } -> group.chapters
+                            orderedGroupChapters.any { it.id == initialChapterId } -> orderedGroupChapters
                             else -> {
                                 val requested = group.pooledChapters.firstOrNull { it.id == initialChapterId }
                                 if (requested != null) {
@@ -695,14 +710,14 @@ class NovelReaderActivity : ComponentActivity() {
                                         val sameUnitIds = group.stitch
                                             .filter { it.unit == unitOfRequested }
                                             .mapTo(HashSet()) { it.chapterId }
-                                        group.chapters.map {
+                                        orderedGroupChapters.map {
                                             if (it.id in sameUnitIds) requested.copy(sourceOrder = it.sourceOrder) else it
                                         }.let { list -> if (list.any { it.id == initialChapterId }) list else list + requested }
                                     } else {
-                                        group.chapters + requested
+                                        orderedGroupChapters + requested
                                     }
                                 } else {
-                                    group.chapters
+                                    orderedGroupChapters
                                 }
                             }
                         }
@@ -803,33 +818,68 @@ class NovelReaderActivity : ComponentActivity() {
                 pendingScrollRestoreChapterId = null
             }
 
-            // Infinite Scroll: observe scroll position and prefetch next chapter when within last 6 paragraphs
-            val shouldLoadNextChapter by remember {
-                derivedStateOf {
+            // Infinite Scroll: seamlessly prefetch and append next chapter before user reaches bottom
+            LaunchedEffect(lazyListState) {
+                snapshotFlow {
+                    val layoutInfo = lazyListState.layoutInfo
+                    val total = layoutInfo.totalItemsCount
+                    val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
+                    val canScrollMore = lazyListState.canScrollForward
+                    val firstIdx = lazyListState.firstVisibleItemIndex
+                    val firstOffset = lazyListState.firstVisibleItemScrollOffset
+                    val entries = renderEntries
+                    val chaptersCount = allChapters.size
+                    val loadedCount = loadedChapters.size
                     val lastItem = loadedChapters.lastOrNull()
-                    if (lastItem == null || lastItem.isLoading || lastItem.isTranslating || lastItem.error != null) {
-                        false
-                    } else {
-                        val total = lazyListState.layoutInfo.totalItemsCount
-                        val lastVisible = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                        total > 2 && lastVisible >= (total - 6).coerceAtLeast(1)
-                    }
-                }
-            }
+                    val translatingMode = isTranslated
+                    val restorePending = pendingScrollRestoreChapterId != null || pendingRatioRestore != null
 
-            LaunchedEffect(shouldLoadNextChapter) {
-                if (shouldLoadNextChapter && loadedChapters.isNotEmpty() && allChapters.isNotEmpty()) {
-                    val lastLoaded = loadedChapters.last().chapter
-                    val currentIndex = allChapters.indexOfFirst { it.id == lastLoaded.id }
-                    if (currentIndex != -1 && currentIndex + 1 < allChapters.size) {
-                        val nextChapter = allChapters[currentIndex + 1]
-                        if (loadedChapters.none { it.chapter.id == nextChapter.id }) {
-                            val newItem = ChapterItemState(chapter = nextChapter)
-                            loadedChapters.add(newItem)
-                            loadChapterContent(newItem)
+                    if (restorePending || chaptersCount <= 1 || lastItem == null) {
+                        null
+                    } else if (lastItem.isLoading || lastItem.isTranslating || lastItem.error != null) {
+                        null
+                    } else {
+                        val lastChapterBlocks = if (translatingMode && lastItem.translatedBlocks.isNotEmpty()) {
+                            lastItem.translatedBlocks.size
+                        } else {
+                            lastItem.originalBlocks.size
+                        }
+                        val hasRenderedBlocks = lastChapterBlocks > 0 &&
+                            entries.any { it is NovelRenderEntry.Block && it.chapterState.chapter.id == lastItem.chapter.id }
+
+                        if (!hasRenderedBlocks || total <= 0 || lastVisibleItem == null) {
+                            null
+                        } else {
+                            val viewportHeight = (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset).coerceAtLeast(600)
+                            val nearLastItemBottom = lastVisibleItem.index >= total - 1 &&
+                                ((lastVisibleItem.offset + lastVisibleItem.size) - layoutInfo.viewportEndOffset) <= viewportHeight
+                            val prefetchAheadParagraphs = if (translatingMode && lastChapterBlocks >= 16) 10 else 6
+                            val nearLastParagraphs = lastChapterBlocks >= 8 &&
+                                lastVisibleItem.index >= total - prefetchAheadParagraphs
+                            val nearBottom = !canScrollMore || nearLastItemBottom || nearLastParagraphs
+                            val untouchedAtTop = firstIdx == 0 && firstOffset == 0
+                            val idleCapOk = !untouchedAtTop || loadedCount < 2
+
+                            if (nearBottom && idleCapOk) lastItem.chapter.id else null
                         }
                     }
                 }
+                    .distinctUntilChanged()
+                    .collect { triggerLastChapterId ->
+                        if (triggerLastChapterId != null && loadedChapters.isNotEmpty() && allChapters.isNotEmpty()) {
+                            val lastLoaded = loadedChapters.last().chapter
+                            if (lastLoaded.id != triggerLastChapterId) return@collect
+                            val currentIndex = allChapters.indexOfFirst { it.id == lastLoaded.id }
+                            if (currentIndex != -1 && currentIndex + 1 < allChapters.size) {
+                                val nextChapter = allChapters[currentIndex + 1]
+                                if (loadedChapters.none { it.chapter.id == nextChapter.id }) {
+                                    val newItem = ChapterItemState(chapter = nextChapter)
+                                    loadedChapters.add(newItem)
+                                    loadChapterContent(newItem)
+                                }
+                            }
+                        }
+                    }
             }
 
             // Save scroll offset & mark read when user scrolls through a chapter
@@ -873,8 +923,15 @@ class NovelReaderActivity : ComponentActivity() {
                         return@collectLatest
                     }
 
+                    val userHasScrolled = firstVisibleEntryIdx > 0 || scrollOffset >= 40
+                    val finishedBeforeIdx = if (reachedEnd && userHasScrolled && lastChapterIdx > currentChapterIdx) {
+                        lastChapterIdx
+                    } else {
+                        currentChapterIdx
+                    }
+
                     val newlyFinishedItems = buildList {
-                        for (idx in 0 until currentChapterIdx) {
+                        for (idx in 0 until finishedBeforeIdx) {
                             val past = loadedChapters.getOrNull(idx) ?: continue
                             if (!past.chapter.read && !past.isLoading && !past.isTranslating && past.error == null && past.originalBlocks.isNotEmpty()) {
                                 add(past)

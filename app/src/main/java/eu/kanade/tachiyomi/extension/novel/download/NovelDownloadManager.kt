@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.extension.novel.download
 
 import android.app.Application
-import androidx.core.text.HtmlCompat
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.extension.novel.NovelSourceWrapper
@@ -23,6 +22,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import org.jsoup.Jsoup
+import org.jsoup.parser.Parser
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
@@ -37,6 +37,12 @@ import java.util.concurrent.ConcurrentHashMap
 object NovelDownloadManager {
 
     private const val MAX_CONCURRENT_DOWNLOADS = 3
+    private val HTML_TAG_REGEX = Regex(
+        "(?i)<\\s*/?\\s*(p|div|br|span|img|a|b|strong|i|em|u|s|hr|h[1-6]|ul|ol|li|blockquote|" +
+            "table|thead|tbody|tr|td|th|section|article|main|figure|figcaption|script|style|" +
+            "noscript|iframe|nav|header|footer|aside|ruby|rt|rp|sup|sub|font|center|pre|code|" +
+            "small|big|dl|dt|dd)\\b[^>]*>",
+    )
     private val app: Application by lazy { Injekt.get() }
     private val sourceManager: SourceManager by lazy { Injekt.get() }
     private val storageManager: StorageManager by lazy { Injekt.get() }
@@ -101,25 +107,31 @@ object NovelDownloadManager {
      */
     fun cleanHtmlToPlainText(raw: String): String {
         if (raw.isBlank()) return ""
-        val stripped = runCatching {
-            val doc = Jsoup.parse(raw)
-            doc.select(
-                "script, style, noscript, iframe, nav, header, footer, svg, canvas, " +
-                    "form, button, input, select, textarea, aside, .ads, .ad, .advertisement, " +
-                    "[style*='display:none'], [style*='display: none'], [hidden]",
-            ).remove()
-            doc.select("img").remove()
-            doc.body().html()
-        }.getOrDefault(raw)
+        val withBreaks = if (HTML_TAG_REGEX.containsMatchIn(raw)) {
+            val stripped = runCatching {
+                val doc = Jsoup.parse(raw)
+                doc.outputSettings().prettyPrint(false)
+                doc.select(
+                    "script, style, noscript, iframe, nav, header, footer, svg, canvas, " +
+                        "form, button, input, select, textarea, aside, .ads, .ad, .advertisement, " +
+                        "[style*='display:none'], [style*='display: none'], [hidden]",
+                ).remove()
+                doc.select("img").remove()
+                doc.body().html()
+            }.getOrDefault(raw)
 
-        val withBreaks = stripped
-            .replace(Regex("(?i)<br\\s*/?>"), "\n")
-            .replace(Regex("(?i)</(p|div|h[1-6]|li|blockquote|tr|section|article)>"), "\n\n")
-            .replace(Regex("(?i)<hr\\s*/?>"), "\n\n* * *\n\n")
-            .replace(Regex("<[^>]+>"), "")
+            stripped
+                .replace(Regex("(?i)<br\\s*/?>"), "\n")
+                .replace(Regex("(?i)</(p|div|h[1-6]|li|blockquote|tr|section|article|pre|figure|figcaption)>"), "\n\n")
+                .replace(Regex("(?i)<hr\\s*/?>"), "\n\n* * *\n\n")
+                .replace(Regex("(?i)<(p|div)[^>]*>"), "")
+                .replace(Regex("<[^>]+>"), "")
+        } else {
+            raw
+        }
 
         val unescaped = runCatching {
-            HtmlCompat.fromHtml(withBreaks, HtmlCompat.FROM_HTML_MODE_LEGACY).toString()
+            Parser.unescapeEntities(withBreaks, false)
         }.getOrElse {
             withBreaks
                 .replace("&quot;", "\"")
@@ -132,11 +144,13 @@ object NovelDownloadManager {
         }
 
         return unescaped
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .replace('\u00A0', ' ')
             .lines()
             .map { it.trim() }
             .filter { it.isNotEmpty() && !it.startsWith("[[IMG:") }
             .joinToString("\n\n")
-            .replace(Regex("\\n{3,}"), "\n\n")
             .trim()
     }
 

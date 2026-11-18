@@ -83,7 +83,9 @@ object NovelTranslator {
     ): String? {
         val scopedKey = buildCacheKey(chapterId, targetLang = targetLang, seriesTitle = seriesTitle)
         translationCache[scopedKey]?.let { cached ->
-            if (originalText == null || cached.trim() != originalText.trim()) {
+            if (isInvalidCachedContent(cached, originalText)) {
+                translationCache.remove(scopedKey)
+            } else {
                 return cached
             }
         }
@@ -116,8 +118,15 @@ object NovelTranslator {
         if (cached.contains("<script", ignoreCase = true) || cached.contains("<style", ignoreCase = true)) {
             return true
         }
-        if (!originalText.isNullOrBlank() && originalText.length > 40 && cached.trim() == originalText.trim()) {
-            return true
+        if (!originalText.isNullOrBlank()) {
+            if (originalText.length > 40 && cached.trim() == originalText.trim()) {
+                return true
+            }
+            val origLines = originalText.lineSequence().count { it.isNotBlank() }
+            val cachedLines = cached.lineSequence().count { it.isNotBlank() }
+            if (origLines >= 10 && cachedLines <= 4 && cached.length > 1500) {
+                return true
+            }
         }
         return false
     }
