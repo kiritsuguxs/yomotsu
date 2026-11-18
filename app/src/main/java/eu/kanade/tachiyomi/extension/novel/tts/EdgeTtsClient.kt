@@ -4,6 +4,7 @@ import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 import logcat.LogPriority
+import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -22,7 +23,11 @@ import java.util.UUID
 
 object EdgeTtsClient {
 
-    private val client: OkHttpClient by lazy { Injekt.get<NetworkHelper>().client }
+    private val client: OkHttpClient by lazy {
+        Injekt.get<NetworkHelper>().client.newBuilder()
+            .cookieJar(CookieJar.NO_COOKIES)
+            .build()
+    }
 
     private const val TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
     private const val CHROMIUM_VERSION = "143.0.3650.75"
@@ -50,13 +55,24 @@ object EdgeTtsClient {
         return format.format(System.currentTimeMillis())
     }
 
-    private fun escapeXml(text: String): String {
-        return text
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&apos;")
+    internal fun escapeXml(text: String): String {
+        val sb = StringBuilder(text.length + 16)
+        for (ch in text) {
+            val code = ch.code
+            val isValidXmlChar = code == 0x09 || code == 0x0A || code == 0x0D ||
+                (code in 0x20..0xD7FF) ||
+                (code in 0xE000..0xFFFD)
+            if (!isValidXmlChar && !ch.isSurrogate()) continue
+            when (ch) {
+                '&' -> sb.append("&amp;")
+                '<' -> sb.append("&lt;")
+                '>' -> sb.append("&gt;")
+                '"' -> sb.append("&quot;")
+                '\'' -> sb.append("&apos;")
+                else -> sb.append(ch)
+            }
+        }
+        return sb.toString()
     }
 
     suspend fun synthesize(

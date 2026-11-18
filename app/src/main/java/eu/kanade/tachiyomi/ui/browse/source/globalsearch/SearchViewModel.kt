@@ -54,8 +54,8 @@ abstract class SearchViewModel(
     private var activeSearchSemaphore = Semaphore(MAX_CONCURRENT_SEARCHES)
     private var searchJob: Job? = null
 
-    private val enabledLanguages = sourcePreferences.enabledLanguages.get()
-    private val disabledSources = sourcePreferences.disabledSources.get()
+    protected val enabledLanguages = sourcePreferences.enabledLanguages.get()
+    protected val disabledSources = sourcePreferences.disabledSources.get()
     protected val pinnedSources = sourcePreferences.pinnedSources.get()
 
     private var lastQuery: String? = null

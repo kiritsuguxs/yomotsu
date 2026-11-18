@@ -200,6 +200,11 @@ class NovelReaderActivity : ComponentActivity() {
         if (raw.isBlank()) return ""
         val withImageTokens = runCatching {
             val doc = if (baseUrl != null) Jsoup.parse(raw, baseUrl) else Jsoup.parse(raw)
+            doc.select(
+                "script, style, noscript, iframe, nav, header, footer, svg, canvas, " +
+                    "form, button, input, select, textarea, aside, .ads, .ad, .advertisement, " +
+                    "[style*='display:none'], [style*='display: none'], [hidden]",
+            ).remove()
             doc.select("img").forEach { img ->
                 val rawSrc = img.attr("abs:src").ifBlank {
                     img.attr("src").ifBlank {
@@ -207,12 +212,17 @@ class NovelReaderActivity : ComponentActivity() {
                     }
                 }.trim()
                 if (rawSrc.isNotBlank()) {
-                    val resolved = if (baseUrl != null && !rawSrc.startsWith("http")) {
+                    val resolved = if (baseUrl != null && !rawSrc.startsWith("http", ignoreCase = true) && !rawSrc.startsWith("data:image/", ignoreCase = true)) {
                         runCatching { URI(baseUrl).resolve(rawSrc).toString() }.getOrDefault(rawSrc)
                     } else {
                         rawSrc
                     }
-                    img.before("\n\n[[IMG:$resolved]]\n\n")
+                    val isAllowedScheme = resolved.startsWith("http://", ignoreCase = true) ||
+                        resolved.startsWith("https://", ignoreCase = true) ||
+                        resolved.startsWith("data:image/", ignoreCase = true)
+                    if (isAllowedScheme) {
+                        img.before("\n\n[[IMG:$resolved]]\n\n")
+                    }
                 }
                 img.remove()
             }
@@ -592,35 +602,70 @@ class NovelReaderActivity : ComponentActivity() {
 
             // Save scroll offset & mark read when user scrolls through a chapter
             LaunchedEffect(lazyListState) {
+                var lastHistoryTickMs = android.os.SystemClock.elapsedRealtime()
                 snapshotFlow {
-                    Triple(
+                    val visible = lazyListState.layoutInfo.visibleItemsInfo
+                    val lastVisibleIdx = visible.lastOrNull()?.index ?: lazyListState.firstVisibleItemIndex
+                    listOf(
                         lazyListState.firstVisibleItemIndex,
                         lazyListState.firstVisibleItemScrollOffset,
-                        !lazyListState.canScrollForward,
+                        lastVisibleIdx,
+                        if (!lazyListState.canScrollForward) 1 else 0,
                     )
                 }
                 .distinctUntilChanged()
                 .debounce(350L)
-                .collectLatest { (firstVisibleIndex, scrollOffset, reachedEnd) ->
+                .collectLatest { snapshot ->
+                    val firstVisibleIndex = snapshot[0]
+                    val scrollOffset = snapshot[1]
+                    val lastVisibleIndex = snapshot[2]
+                    val reachedEnd = snapshot[3] == 1
+                    val nowMs = android.os.SystemClock.elapsedRealtime()
+                    val elapsedDeltaMs = (nowMs - lastHistoryTickMs).coerceIn(0L, 60_000L)
+                    lastHistoryTickMs = nowMs
+
                     if (firstVisibleIndex in loadedChapters.indices) {
-                        val item = loadedChapters[firstVisibleIndex]
-                        val markAsRead = item.chapter.read || reachedEnd || firstVisibleIndex > 0
-                        withContext(Dispatchers.IO) {
-                            updateChapter.await(
-                                ChapterUpdate(
-                                    id = item.chapter.id,
-                                    read = markAsRead,
-                                    lastPageRead = if (reachedEnd) 0L else scrollOffset.toLong(),
-                                ),
-                            )
-                            if (markAsRead && currentStitch.isNotEmpty()) {
-                                val siblingIds = eu.kanade.domain.merge.expandToUnits(setOf(item.chapter.id), currentStitch) - item.chapter.id
-                                if (siblingIds.isNotEmpty()) {
-                                    updateChapter.awaitAll(siblingIds.map { ChapterUpdate(id = it, read = true) })
+                        val currentItem = loadedChapters[firstVisibleIndex]
+
+                        // Chapters strictly above firstVisibleIndex were scrolled past completely.
+                        // The last visible chapter is finished only when loaded without error and cannot scroll forward.
+                        val newlyFinishedItems = buildList {
+                            for (idx in 0 until firstVisibleIndex) {
+                                val past = loadedChapters.getOrNull(idx) ?: continue
+                                if (!past.chapter.read && !past.isLoading && past.error == null && !past.originalText.isNullOrBlank()) {
+                                    add(past)
                                 }
                             }
-                            upsertHistory.await(HistoryUpdate(item.chapter.id, Date(), 0L))
-                            if (markAsRead && !item.chapter.read) {
+                            if (reachedEnd && lastVisibleIndex in loadedChapters.indices) {
+                                val lastItem = loadedChapters[lastVisibleIndex]
+                                if (!lastItem.chapter.read && !lastItem.isLoading && lastItem.error == null && !lastItem.originalText.isNullOrBlank()) {
+                                    add(lastItem)
+                                }
+                            }
+                        }.distinctBy { it.chapter.id }
+
+                        // Optimistically flip in-memory read flag before IO suspension so rapid scroll ticks never double-fire trackers
+                        newlyFinishedItems.forEach { finished ->
+                            finished.chapter = finished.chapter.copy(read = true, lastPageRead = 0L)
+                        }
+
+                        val isCurrentAtBottom = reachedEnd && firstVisibleIndex == lastVisibleIndex && currentItem.chapter.read
+                        withContext(Dispatchers.IO) {
+                            newlyFinishedItems.forEach { finished ->
+                                val finishedChapter = finished.chapter
+                                updateChapter.await(
+                                    ChapterUpdate(
+                                        id = finishedChapter.id,
+                                        read = true,
+                                        lastPageRead = 0L,
+                                    ),
+                                )
+                                if (currentStitch.isNotEmpty()) {
+                                    val siblingIds = eu.kanade.domain.merge.expandToUnits(setOf(finishedChapter.id), currentStitch) - finishedChapter.id
+                                    if (siblingIds.isNotEmpty()) {
+                                        updateChapter.awaitAll(siblingIds.map { ChapterUpdate(id = it, read = true, lastPageRead = 0L) })
+                                    }
+                                }
                                 val targetTrackIds = if (mangaById.size > 1) {
                                     mangaById.keys.filter { id -> getTracks.await(id).isNotEmpty() }
                                         .ifEmpty { listOf(mangaId) }
@@ -628,20 +673,44 @@ class NovelReaderActivity : ComponentActivity() {
                                     listOf(mangaId)
                                 }
                                 targetTrackIds.forEach { targetId ->
-                                    trackChapter.await(appContext, targetId, item.chapter.chapterNumber.toDouble())
+                                    trackChapter.await(appContext, targetId, finishedChapter.chapterNumber.toDouble())
                                 }
-                                eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(appContext)
-                                if (downloadPreferences.removeAfterReadSlots.get() != -1) {
-                                    NovelDownloadManager.deleteChapter(item.chapter.mangaId, item.chapter.id)
+
+                                val removeSlots = downloadPreferences.removeAfterReadSlots.get()
+                                if (removeSlots == 0) {
+                                    NovelDownloadManager.deleteChapter(finishedChapter.mangaId, finishedChapter.id)
+                                } else if (removeSlots > 0 && allChapters.isNotEmpty()) {
+                                    val finishedIdx = allChapters.indexOfFirst { it.id == finishedChapter.id }
+                                    val targetDeleteIdx = finishedIdx - removeSlots
+                                    if (finishedIdx != -1 && targetDeleteIdx >= 0) {
+                                        val chapterToDelete = allChapters[targetDeleteIdx]
+                                        NovelDownloadManager.deleteChapter(chapterToDelete.mangaId, chapterToDelete.id)
+                                    }
                                 }
                             }
 
+                            if (newlyFinishedItems.isNotEmpty()) {
+                                eu.kanade.tachiyomi.data.profile.ProfileChecker.checkAchievements(appContext)
+                            }
+
+                            if (newlyFinishedItems.none { it.chapter.id == currentItem.chapter.id }) {
+                                updateChapter.await(
+                                    ChapterUpdate(
+                                        id = currentItem.chapter.id,
+                                        read = currentItem.chapter.read,
+                                        lastPageRead = if (isCurrentAtBottom) 0L else scrollOffset.toLong(),
+                                    ),
+                                )
+                            }
+
+                            upsertHistory.await(HistoryUpdate(currentItem.chapter.id, Date(), elapsedDeltaMs))
+
                             val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading.get()
                             if (downloadAheadAmount > 0 && allChapters.isNotEmpty()) {
-                                val currAllIdx = allChapters.indexOfFirst { it.id == item.chapter.id }
+                                val currAllIdx = allChapters.indexOfFirst { it.id == currentItem.chapter.id }
                                 if (currAllIdx != -1) {
                                     val seenUnits = HashSet<Int>()
-                                    currentStitch.firstOrNull { it.chapterId == item.chapter.id }?.unit?.let(seenUnits::add)
+                                    currentStitch.firstOrNull { it.chapterId == currentItem.chapter.id }?.unit?.let(seenUnits::add)
                                     val toDownload = allChapters.drop(currAllIdx + 1)
                                         .filter { ch ->
                                             val unit = currentStitch.firstOrNull { it.chapterId == ch.id }?.unit
@@ -660,9 +729,6 @@ class NovelReaderActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                        }
-                        if (markAsRead && !item.chapter.read) {
-                            item.chapter = item.chapter.copy(read = true)
                         }
                     }
                 }

@@ -69,15 +69,25 @@ class NovelJsRuntime(
         Thread(runnable, "NovelJsRuntime-$pluginId").apply { isDaemon = true }
     }
 
-    private val quickJs: QuickJs = runOnRuntimeThread {
-        QuickJs.create().apply {
-            Log.i(LOG_TAG, "Using QuickJS runtime for plugin id=$pluginId")
-            compatibilityLogger.logOperation("init", "runtime", "QuickJS")
-            bindNativeApi(this, nativeApi, compatibilityLogger)
-            evaluate(bootstrapScript, "novel-js-runtime-bootstrap.js")
-            moduleRegistry.registerModules(this)
-            compatibilityLogger.logOperation("init", "modules", "registered=${moduleRegistry.modules().size}")
+    private val quickJs: QuickJs = try {
+        runOnRuntimeThread(timeoutMs = 15_000L) {
+            val created = QuickJs.create()
+            try {
+                Log.i(LOG_TAG, "Using QuickJS runtime for plugin id=$pluginId")
+                compatibilityLogger.logOperation("init", "runtime", "QuickJS")
+                bindNativeApi(created, nativeApi, compatibilityLogger)
+                created.evaluate(bootstrapScript, "novel-js-runtime-bootstrap.js")
+                moduleRegistry.registerModules(created)
+                compatibilityLogger.logOperation("init", "modules", "registered=${moduleRegistry.modules().size}")
+                created
+            } catch (t: Throwable) {
+                runCatching { created.close() }
+                throw t
+            }
         }
+    } catch (t: Throwable) {
+        runtimeExecutor.shutdownNow()
+        throw t
     }
 
     fun evaluate(
@@ -95,18 +105,42 @@ class NovelJsRuntime(
                 // failure back to null and let genuine script errors propagate.
                 if (isUnsupportedResultTypeError(e)) null else throw e
             }
+            drainNativePendingJobs()
             normalizeValue(value)
         }
     }
 
-    override fun close() {
-        released = true
-        runOnRuntimeThread {
-            nativeApi.domReleaseAll()
-            quickJs.close()
-            Unit
+    private fun drainNativePendingJobs(): Int {
+        val method = executePendingJobMethod ?: return 0
+        var count = 0
+        while (count < 10_000) {
+            val res = runCatching { method.invoke(quickJs) }.getOrNull() ?: break
+            val ran = when (res) {
+                is Boolean -> res
+                is Number -> res.toInt() > 0
+                else -> false
+            }
+            if (!ran) break
+            count++
         }
-        runtimeExecutor.shutdown()
+        return count
+    }
+
+    @Synchronized
+    override fun close() {
+        if (released) return
+        released = true
+        try {
+            runOnRuntimeThread(timeoutMs = 2_000L) {
+                runCatching { nativeApi.domReleaseAll() }
+                quickJs.close()
+                Unit
+            }
+        } catch (e: Exception) {
+            Log.w(LOG_TAG, "Timed out or failed closing QuickJS runtime for plugin id=$pluginId", e)
+        } finally {
+            runtimeExecutor.shutdownNow()
+        }
     }
 
     @Keep
@@ -224,6 +258,12 @@ class NovelJsRuntime(
 
     companion object {
         private const val LOG_TAG = "NovelJsRuntime"
+
+        private val executePendingJobMethod = runCatching {
+            QuickJs::class.java.methods.firstOrNull {
+                (it.name == "executePendingJob" || it.name == "executePendingJobs") && it.parameterCount == 0
+            }
+        }.getOrNull()
 
         private val bootstrapScript = listOf(
             NovelJsPromiseShim.script,
@@ -1336,14 +1376,25 @@ class NovelJsModuleRegistry(
         // Fallback stub when no asset loader is available (e.g. unit tests)
         return """
             __defineModule("dayjs", function(module, exports) {
+              function unitToMs(unit) {
+                var u = String(unit || "millisecond").toLowerCase().replace(/s$/, "");
+                if (u === "second" || u === "sec" || u === "") return 1000;
+                if (u === "minute" || u === "min" || u === "m" && String(unit) === "m") return 60000;
+                if (u === "hour" || u === "hr" || u === "h") return 3600000;
+                if (u === "day" || u === "d") return 86400000;
+                if (u === "week" || u === "w") return 604800000;
+                if (u === "month" || String(unit) === "M") return 2592000000;
+                if (u === "year" || u === "yr" || u === "y") return 31536000000;
+                return 1;
+              }
               function dayjs(input) {
-                var d = input ? new Date(input) : new Date();
+                var d = input != null ? new Date(input) : new Date();
                 var obj = {
                   format: function(fmt) {
                     try { return d.toISOString(); } catch(e) { return String(input || ""); }
                   },
-                  subtract: function(amount, unit) { return dayjs(d.getTime() - ((Number(amount) || 0) * 1000)); },
-                  add: function(amount, unit) { return dayjs(d.getTime() + ((Number(amount) || 0) * 1000)); },
+                  subtract: function(amount, unit) { return dayjs(d.getTime() - ((Number(amount) || 0) * unitToMs(unit))); },
+                  add: function(amount, unit) { return dayjs(d.getTime() + ((Number(amount) || 0) * unitToMs(unit))); },
                   isValid: function() { return !isNaN(d.getTime()); },
                   toDate: function() { return d; },
                   valueOf: function() { return d.getTime(); }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.util.fastDistinctBy
 import eu.kanade.tachiyomi.data.animedownload.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.download.DownloadManager
+import eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.api.get
@@ -28,18 +29,32 @@ object ProfileChecker {
             val s = sourceManager.get(item.manga.source)
             s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true
         }
+        val novelList = distinctLibraryManga.filter { item ->
+            val s = sourceManager.get(item.manga.source)
+            s is eu.kanade.tachiyomi.novelsource.NovelSource ||
+                s is eu.kanade.tachiyomi.source.INovelSource ||
+                s?.javaClass?.name?.contains("novel", ignoreCase = true) == true
+        }
         val mangaList = distinctLibraryManga.filter { item ->
             val s = sourceManager.get(item.manga.source)
-            !(s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true)
+            !(s is eu.kanade.tachiyomi.animesource.AnimeSource || s?.javaClass?.name?.contains("anime", ignoreCase = true) == true) &&
+                !(s is eu.kanade.tachiyomi.novelsource.NovelSource || s is eu.kanade.tachiyomi.source.INovelSource || s?.javaClass?.name?.contains("novel", ignoreCase = true) == true)
         }
 
+        val mangaChaptersRead = mangaList.sumOf { it.readCount }.toInt()
+        val novelChaptersRead = novelList.sumOf { it.readCount }.toInt()
+        val novelDownloads = novelList.sumOf { NovelDownloadManager.getDownloadCount(it.manga.id) }
+
         val stats = AchievementStats(
-            chaptersRead = mangaList.sumOf { it.readCount }.toInt(),
+            chaptersRead = mangaChaptersRead + novelChaptersRead,
             mangasInLibrary = mangaList.size,
             downloads = downloadManager.getDownloadCount(),
             episodesWatched = animeList.sumOf { it.readCount }.toInt(),
             animesInLibrary = animeList.size,
             animeDownloads = animeDownloadManager.getDownloadCount(),
+            novelsInLibrary = novelList.size,
+            novelChaptersRead = novelChaptersRead,
+            novelDownloads = novelDownloads,
         )
 
         val unlockedNow = YomotsuAchievementManager.ALL_ACHIEVEMENTS.filter {

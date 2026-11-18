@@ -25,6 +25,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 class NovelAudioPlayer(
     private val context: Context,
@@ -37,10 +38,14 @@ class NovelAudioPlayer(
     private var wakeLock: PowerManager.WakeLock? = null
     private var playbackJob: Job? = null
     private var sleepTimerJob: Job? = null
+    private val playbackGeneration = AtomicLong(0L)
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
     private var pausedByTransientLoss: Boolean = false
+    private var lastVoice: NovelTtsVoice? = null
+    private var lastSpeed: Float = 1.0f
+    private var lastIsPortuguese: Boolean = true
 
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
@@ -55,12 +60,26 @@ class NovelAudioPlayer(
                 if (isPlaying) {
                     pausedByTransientLoss = true
                     scope.launch(Dispatchers.Main) {
-                        stop(resetProgress = false)
+                        stopInternal(resetProgress = false, abandonFocus = false)
                     }
                 }
             }
             AudioManager.AUDIOFOCUS_GAIN -> {
-                pausedByTransientLoss = false
+                if (pausedByTransientLoss) {
+                    pausedByTransientLoss = false
+                    val voiceToResume = lastVoice
+                    if (voiceToResume != null && lastRawText.isNotBlank()) {
+                        scope.launch(Dispatchers.Main) {
+                            play(
+                                text = lastRawText,
+                                voice = voiceToResume,
+                                speed = lastSpeed,
+                                isPortuguese = lastIsPortuguese,
+                                startChunkIndex = currentChunkIndex,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -105,6 +124,7 @@ class NovelAudioPlayer(
         } catch (_: Throwable) {}
     }
 
+    @Volatile
     var isPlaying: Boolean = false
         private set
 
@@ -180,30 +200,33 @@ class NovelAudioPlayer(
                 isTtsInitialized = true
                 textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
-                        val idx = utteranceId
-                            ?.removePrefix("novel_p_")
-                            ?.removeSuffix("_last")
-                            ?.toIntOrNull()
-                        if (idx != null) {
-                            scope.launch(Dispatchers.Main) {
-                                currentChunkIndex = idx
-                                val chunkStr = currentChunks.getOrNull(idx).orEmpty()
-                                currentChunkText = chunkStr
-                                onChunkChanged?.invoke(idx, chunkStr)
-                            }
+                        val parsed = parseUtteranceId(utteranceId) ?: return
+                        if (parsed.first != playbackGeneration.get() || !isPlaying) return
+                        val idx = parsed.second
+                        scope.launch(Dispatchers.Main) {
+                            if (parsed.first != playbackGeneration.get() || !isPlaying) return@launch
+                            currentChunkIndex = idx
+                            val chunkStr = currentChunks.getOrNull(idx).orEmpty()
+                            currentChunkText = chunkStr
+                            onChunkChanged?.invoke(idx, chunkStr)
                         }
                     }
                     override fun onDone(utteranceId: String?) {
-                        if (utteranceId?.endsWith("_last") == true) {
+                        val parsed = parseUtteranceId(utteranceId) ?: return
+                        if (parsed.first != playbackGeneration.get() || !isPlaying) return
+                        if (parsed.third) {
                             scope.launch(Dispatchers.Main) {
+                                if (parsed.first != playbackGeneration.get() || !isPlaying) return@launch
                                 stop(resetProgress = true)
                                 onChapterFinished?.invoke()
                             }
                         }
                     }
                     override fun onError(utteranceId: String?) {
+                        val parsed = parseUtteranceId(utteranceId)
+                        if (parsed != null && parsed.first != playbackGeneration.get()) return
                         scope.launch(Dispatchers.Main) {
-                            stop()
+                            if (isPlaying) stop()
                         }
                     }
                 })
@@ -213,6 +236,17 @@ class NovelAudioPlayer(
                 isTtsInitialized = false
             }
         }
+    }
+
+    private fun parseUtteranceId(utteranceId: String?): Triple<Long, Int, Boolean>? {
+        if (utteranceId == null || !utteranceId.startsWith("novel_g")) return null
+        val isLast = utteranceId.endsWith("_last")
+        val clean = utteranceId.removePrefix("novel_g").removeSuffix("_last")
+        val parts = clean.split("_p_")
+        if (parts.size != 2) return null
+        val gen = parts[0].toLongOrNull() ?: return null
+        val idx = parts[1].toIntOrNull() ?: return null
+        return Triple(gen, idx, isLast)
     }
 
     private fun configureNativeVoice(tts: TextToSpeech, targetLocale: Locale, speed: Float = 1.02f) {
@@ -274,10 +308,16 @@ class NovelAudioPlayer(
         startChunkIndex: Int? = null,
     ) {
         val resumeIndex = startChunkIndex ?: if (text == lastRawText && currentChunkIndex > 0) currentChunkIndex else 0
-        stop(resetProgress = false)
+        pausedByTransientLoss = false
+        stopInternal(resetProgress = false, abandonFocus = false)
         lastRawText = text
+        lastVoice = voice
+        lastSpeed = speed
+        lastIsPortuguese = isPortuguese
+
         val sanitized = NovelSpeechSanitizer.sanitize(text)
         if (sanitized.isBlank()) {
+            abandonAudioFocus()
             onError?.invoke("Texto vazio para narração.")
             return
         }
@@ -285,6 +325,7 @@ class NovelAudioPlayer(
         val chunks = splitIntoChunks(sanitized)
         currentChunks = chunks
         if (chunks.isEmpty()) {
+            abandonAudioFocus()
             onError?.invoke("Texto vazio para narração.")
             return
         }
@@ -296,14 +337,15 @@ class NovelAudioPlayer(
             return
         }
 
+        val generation = playbackGeneration.incrementAndGet()
         isPlaying = true
         onStateChanged?.invoke(true)
         acquireWakeLock()
 
         if (voice.isOnline) {
-            playWithEdgeTts(chunks, safeStartIndex, voice, speed, isPortuguese)
+            playWithEdgeTts(generation, chunks, safeStartIndex, voice, speed, isPortuguese)
         } else {
-            playWithNativeTts(chunks, safeStartIndex, speed, isPortuguese)
+            playWithNativeTts(generation, chunks, safeStartIndex, speed, isPortuguese)
         }
     }
 
@@ -312,6 +354,9 @@ class NovelAudioPlayer(
         speed: Float,
         isPortuguese: Boolean,
     ) {
+        lastVoice = voice
+        lastSpeed = speed
+        lastIsPortuguese = isPortuguese
         if (isPlaying && lastRawText.isNotBlank()) {
             play(
                 text = lastRawText,
@@ -323,8 +368,15 @@ class NovelAudioPlayer(
         }
     }
 
-    private fun playWithNativeTts(chunks: List<String>, startIndex: Int, speed: Float, isPortuguese: Boolean) {
+    private fun playWithNativeTts(
+        generation: Long,
+        chunks: List<String>,
+        startIndex: Int,
+        speed: Float,
+        isPortuguese: Boolean,
+    ) {
         initNativeTts {
+            if (!isPlaying || playbackGeneration.get() != generation) return@initNativeTts
             val tts = textToSpeech ?: return@initNativeTts
             val targetLocale = if (isPortuguese) Locale("pt", "BR") else Locale.getDefault()
             var effectiveLocale = targetLocale
@@ -341,16 +393,18 @@ class NovelAudioPlayer(
             tts.stop()
 
             for (index in startIndex until chunks.size) {
+                if (!isPlaying || playbackGeneration.get() != generation) break
                 val chunk = chunks[index]
                 val queueMode = if (index == startIndex) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
                 val isLast = index == chunks.lastIndex
-                val utteranceId = if (isLast) "novel_p_${index}_last" else "novel_p_$index"
+                val utteranceId = if (isLast) "novel_g${generation}_p_${index}_last" else "novel_g${generation}_p_$index"
                 tts.speak(chunk, queueMode, null, utteranceId)
             }
         }
     }
 
     private fun playWithEdgeTts(
+        generation: Long,
         chunks: List<String>,
         startIndex: Int,
         voice: NovelTtsVoice,
@@ -359,77 +413,93 @@ class NovelAudioPlayer(
     ) {
         playbackJob?.cancel()
         playbackJob = scope.launch(Dispatchers.IO) {
+            val sessionScope = this
             if (chunks.isEmpty()) {
-                withContext(Dispatchers.Main) { stop(resetProgress = true) }
+                withContext(Dispatchers.Main) {
+                    if (playbackGeneration.get() == generation) stop(resetProgress = true)
+                }
                 return@launch
             }
 
             val prefetchMap = ConcurrentHashMap<Int, Deferred<ByteArray?>>()
 
+            fun isCurrentSession(): Boolean = isPlaying && playbackGeneration.get() == generation && sessionScope.isActive
+
             fun getChunkDeferred(idx: Int): Deferred<ByteArray?> {
                 return prefetchMap.computeIfAbsent(idx) {
-                    async(Dispatchers.IO) {
-                        if (idx in chunks.indices) {
+                    sessionScope.async(Dispatchers.IO) {
+                        if (idx in chunks.indices && isCurrentSession()) {
                             EdgeTtsClient.synthesize(chunks[idx], voice.id, speed)
-                        } else null
+                        } else {
+                            null
+                        }
                     }
                 }
             }
 
-            // Immediately launch synthesis for startIndex and prefetch startIndex + 1 in parallel
             getChunkDeferred(startIndex)
             if (startIndex + 1 < chunks.size) {
                 getChunkDeferred(startIndex + 1)
             }
 
             suspend fun playChunk(chunkIdx: Int) {
-                if (!isPlaying) return
+                if (!isCurrentSession()) return
                 if (chunkIdx >= chunks.size) {
                     withContext(Dispatchers.Main) {
-                        stop(resetProgress = true)
-                        onChapterFinished?.invoke()
+                        if (playbackGeneration.get() == generation) {
+                            stop(resetProgress = true)
+                            onChapterFinished?.invoke()
+                        }
                     }
                     return
                 }
 
                 withContext(Dispatchers.Main) {
+                    if (!isCurrentSession()) return@withContext
                     currentChunkIndex = chunkIdx
                     val chunkStr = chunks[chunkIdx]
                     currentChunkText = chunkStr
                     onChunkChanged?.invoke(chunkIdx, chunkStr)
                 }
 
-                // Prefetch the next chunks in background while current chunk is playing
                 if (chunkIdx + 1 < chunks.size) getChunkDeferred(chunkIdx + 1)
                 if (chunkIdx + 2 < chunks.size) getChunkDeferred(chunkIdx + 2)
 
                 val deferred = getChunkDeferred(chunkIdx)
                 val audioBytes = deferred.await()
 
-                // Free memory for previous completed chunks
                 prefetchMap.remove(chunkIdx - 1)
+                if (!isCurrentSession()) return
 
                 if (audioBytes == null || audioBytes.isEmpty()) {
                     logcat(LogPriority.INFO) { "Edge TTS unavailable, falling back to Native TTS for remaining chunks from $chunkIdx" }
                     withContext(Dispatchers.Main) {
-                        playWithNativeTts(chunks, chunkIdx, speed, isPortuguese)
+                        if (isCurrentSession()) {
+                            playWithNativeTts(generation, chunks, chunkIdx, speed, isPortuguese)
+                        }
                     }
                     return
                 }
 
-                val tempFile = File(context.cacheDir, "edge_tts_chunk_${chunkIdx % 2}.mp3")
+                val tempFile = File(context.cacheDir, "edge_tts_chunk_${generation}_${chunkIdx % 2}.mp3")
                 try {
                     FileOutputStream(tempFile).use { it.write(audioBytes) }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Failed to write TTS audio cache" }
                     withContext(Dispatchers.Main) {
-                        playWithNativeTts(chunks, chunkIdx, speed, isPortuguese)
+                        if (isCurrentSession()) {
+                            playWithNativeTts(generation, chunks, chunkIdx, speed, isPortuguese)
+                        }
                     }
                     return
                 }
 
+                val chunkCompleted = kotlinx.coroutines.CompletableDeferred<Boolean>()
                 withContext(Dispatchers.Main) {
-                    if (!isPlaying) return@withContext
+                    if (!isCurrentSession()) {
+                        chunkCompleted.complete(false)
+                        return@withContext
+                    }
                     try {
                         mediaPlayer?.stop()
                         mediaPlayer?.release()
@@ -438,30 +508,48 @@ class NovelAudioPlayer(
                     mediaPlayer = MediaPlayer().apply {
                         setDataSource(tempFile.absolutePath)
                         setOnCompletionListener {
-                            scope.launch(Dispatchers.IO) {
-                                playChunk(chunkIdx + 1)
-                            }
+                            chunkCompleted.complete(true)
                         }
                         setOnErrorListener { _, _, _ ->
-                            scope.launch(Dispatchers.IO) {
-                                playChunk(chunkIdx + 1)
-                            }
+                            chunkCompleted.complete(true)
                             true
                         }
                         prepare()
                         start()
                     }
                 }
+
+                try {
+                    val shouldAdvance = chunkCompleted.await()
+                    if (shouldAdvance && isCurrentSession()) {
+                        playChunk(chunkIdx + 1)
+                    }
+                } finally {
+                    runCatching { tempFile.delete() }
+                }
             }
 
-            playChunk(startIndex)
+            try {
+                playChunk(startIndex)
+            } finally {
+                prefetchMap.values.forEach { it.cancel() }
+                prefetchMap.clear()
+            }
         }
     }
 
     fun stop(resetProgress: Boolean = false) {
+        pausedByTransientLoss = false
+        stopInternal(resetProgress = resetProgress, abandonFocus = true)
+    }
+
+    private fun stopInternal(resetProgress: Boolean, abandonFocus: Boolean) {
+        playbackGeneration.incrementAndGet()
         playbackJob?.cancel()
         playbackJob = null
         try {
+            mediaPlayer?.setOnCompletionListener(null)
+            mediaPlayer?.setOnErrorListener(null)
             mediaPlayer?.stop()
             mediaPlayer?.release()
         } catch (_: Throwable) {}
@@ -472,7 +560,9 @@ class NovelAudioPlayer(
         } catch (_: Throwable) {}
 
         releaseWakeLock()
-        abandonAudioFocus()
+        if (abandonFocus) {
+            abandonAudioFocus()
+        }
 
         if (resetProgress) {
             currentChunkIndex = 0

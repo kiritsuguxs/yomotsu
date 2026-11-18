@@ -1022,20 +1022,31 @@ fun UserProfileScreen(
 
             // BARRA DE XP
             item {
+                val isMaxLevel = currentLevel >= YomotsuLevelManager.MAX_LEVEL
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(stringResource(MR.strings.profile_level, currentLevel), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text(stringResource(MR.strings.profile_level, currentLevel + 1), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = if (isMaxLevel) "MAX" else stringResource(MR.strings.profile_level, currentLevel + 1),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
-                        progress = { progress },
+                        progress = { if (isMaxLevel) 1f else progress.coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(50)),
                         color = equippedTitle.colorEnd,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("$totalXp / $nextLevelXp XP", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                    Text(
+                        text = if (isMaxLevel) "$totalXp XP (MAX)" else "$totalXp / $nextLevelXp XP",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -1102,7 +1113,7 @@ fun UserProfileScreen(
                             icon = Icons.Outlined.CloudDownload,
                             value = totalDownloads.toString(),
                             label = stringResource(MR.strings.label_downloaded),
-                            subtitle = "M/N: $mangaDownloads | Ani: $animeDownloads",
+                            subtitle = "M: $mangaDownloads | N: $novelDownloads | A: $animeDownloads",
                             modifier = Modifier.weight(1f)
                         )
                         val totalCompleted = completedMangas + completedNovels + completedAnimes
@@ -1397,6 +1408,14 @@ private fun getLocalizedAchievementName(achievement: YomotsuAchievement): String
             AchievementCategory.READING -> stringResource(MR.strings.achievement_reader_name, level)
             AchievementCategory.COLLECTION -> stringResource(MR.strings.achievement_collector_name, level)
             AchievementCategory.DOWNLOADS -> stringResource(MR.strings.achievement_archivist_name, level)
+            AchievementCategory.NOVEL -> {
+                when {
+                    achievement.id.startsWith("novel_read") -> stringResource(MR.strings.achievement_novel_reader_name, level)
+                    achievement.id.startsWith("novel_lib") -> stringResource(MR.strings.achievement_novel_collector_name, level)
+                    achievement.id.startsWith("novel_dl") -> stringResource(MR.strings.achievement_novel_archivist_name, level)
+                    else -> achievement.name
+                }
+            }
             AchievementCategory.ANIME -> {
                 when {
                     achievement.id.startsWith("anime_watch") -> stringResource(MR.strings.achievement_anime_watcher_name, level)
@@ -1420,6 +1439,14 @@ private fun getLocalizedAchievementDesc(achievement: YomotsuAchievement): String
             AchievementCategory.READING -> stringResource(MR.strings.achievement_reader_desc, target)
             AchievementCategory.COLLECTION -> stringResource(MR.strings.achievement_collector_desc, target)
             AchievementCategory.DOWNLOADS -> stringResource(MR.strings.achievement_archivist_desc, target)
+            AchievementCategory.NOVEL -> {
+                when {
+                    achievement.id.startsWith("novel_read") -> stringResource(MR.strings.achievement_novel_reader_desc, target)
+                    achievement.id.startsWith("novel_lib") -> stringResource(MR.strings.achievement_novel_collector_desc, target)
+                    achievement.id.startsWith("novel_dl") -> stringResource(MR.strings.achievement_novel_archivist_desc, target)
+                    else -> achievement.description
+                }
+            }
             AchievementCategory.ANIME -> {
                 when {
                     achievement.id.startsWith("anime_watch") -> stringResource(MR.strings.achievement_anime_watcher_desc, target)

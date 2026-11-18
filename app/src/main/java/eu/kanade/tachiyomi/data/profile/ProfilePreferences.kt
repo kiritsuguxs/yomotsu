@@ -38,6 +38,8 @@ class ProfilePreferences(
 
     private fun migrateLegacyPreferences() {
         try {
+            val legacyXml = File(context.applicationInfo.dataDir, "shared_prefs/yomotsu_profile_prefs.xml")
+            if (!legacyXml.exists()) return
             val legacy = context.getSharedPreferences("yomotsu_profile_prefs", Context.MODE_PRIVATE)
             if (legacy.all.isEmpty()) return
 
@@ -90,6 +92,12 @@ class ProfilePreferences(
         if (avatarTypePref.get() == "preset") return null
         val localPath = avatarCustomPathPref.get()
         if (localPath.isNotBlank() && File(localPath).exists()) {
+            // Trim legacy multi-MB Base64 payloads already stored in SharedPreferences
+            val existingB64 = avatarCustomBase64Pref.get()
+            if (existingB64.length > MAX_BASE64_PREF_CHARS) {
+                val compact = compressFileToBase64(File(localPath), maxDimension = 320, quality = 75)
+                avatarCustomBase64Pref.set(compact.orEmpty())
+            }
             return localPath
         }
         val base64 = avatarCustomBase64Pref.get()
@@ -98,6 +106,10 @@ class ProfilePreferences(
             val restored = restoreBase64ToFile(base64.removePrefix("GIF:"), "avatar_restored_${System.currentTimeMillis()}.$ext")
             if (restored != null) {
                 avatarCustomPathPref.set(restored.absolutePath)
+                if (base64.length > MAX_BASE64_PREF_CHARS) {
+                    val compact = compressFileToBase64(restored, maxDimension = 320, quality = 75)
+                    avatarCustomBase64Pref.set(compact.orEmpty())
+                }
                 return restored.absolutePath
             }
         }
@@ -107,7 +119,8 @@ class ProfilePreferences(
     fun setAvatarCustom(filePath: String, base64: String? = null) {
         avatarTypePref.set("custom")
         avatarCustomPathPref.set(filePath)
-        val encoded = base64 ?: compressFileToBase64(File(filePath), maxDimension = 400, quality = 80)
+        val encoded = base64?.takeIf { it.length <= MAX_BASE64_PREF_CHARS }
+            ?: compressFileToBase64(File(filePath), maxDimension = 320, quality = 75)
         if (encoded != null) {
             avatarCustomBase64Pref.set(encoded)
         }
@@ -137,6 +150,11 @@ class ProfilePreferences(
         if (bannerTypePref.get() == "preset") return null
         val localPath = bannerCustomPathPref.get()
         if (localPath.isNotBlank() && File(localPath).exists()) {
+            val existingB64 = bannerCustomBase64Pref.get()
+            if (existingB64.length > MAX_BASE64_PREF_CHARS) {
+                val compact = compressFileToBase64(File(localPath), maxDimension = 640, quality = 72)
+                bannerCustomBase64Pref.set(compact.orEmpty())
+            }
             return localPath
         }
         val base64 = bannerCustomBase64Pref.get()
@@ -145,6 +163,10 @@ class ProfilePreferences(
             val restored = restoreBase64ToFile(base64.removePrefix("GIF:"), "banner_restored_${System.currentTimeMillis()}.$ext")
             if (restored != null) {
                 bannerCustomPathPref.set(restored.absolutePath)
+                if (base64.length > MAX_BASE64_PREF_CHARS) {
+                    val compact = compressFileToBase64(restored, maxDimension = 640, quality = 72)
+                    bannerCustomBase64Pref.set(compact.orEmpty())
+                }
                 return restored.absolutePath
             }
         }
@@ -154,7 +176,8 @@ class ProfilePreferences(
     fun setBannerCustom(filePath: String, base64: String? = null) {
         bannerTypePref.set("custom")
         bannerCustomPathPref.set(filePath)
-        val encoded = base64 ?: compressFileToBase64(File(filePath), maxDimension = 800, quality = 75)
+        val encoded = base64?.takeIf { it.length <= MAX_BASE64_PREF_CHARS }
+            ?: compressFileToBase64(File(filePath), maxDimension = 640, quality = 72)
         if (encoded != null) {
             bannerCustomBase64Pref.set(encoded)
         }
@@ -175,7 +198,7 @@ class ProfilePreferences(
     fun compressFileToBase64(file: File, maxDimension: Int, quality: Int): String? {
         return try {
             if (!file.exists()) return null
-            if (file.extension.equals("gif", ignoreCase = true) && file.length() <= 5 * 1024 * 1024) {
+            if (file.extension.equals("gif", ignoreCase = true) && file.length() <= MAX_GIF_BACKUP_BYTES) {
                 return "GIF:" + Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
             }
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -188,24 +211,30 @@ class ProfilePreferences(
 
             val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
             val bitmap = BitmapFactory.decodeFile(file.absolutePath, decodeOpts) ?: return null
+            var scaled: Bitmap? = null
+            try {
+                val maxSide = maxOf(bitmap.width, bitmap.height)
+                val scale = if (maxSide > maxDimension) maxDimension.toFloat() / maxSide else 1f
+                scaled = if (scale < 1f) {
+                    Bitmap.createScaledBitmap(
+                        bitmap,
+                        (bitmap.width * scale).toInt().coerceAtLeast(1),
+                        (bitmap.height * scale).toInt().coerceAtLeast(1),
+                        true,
+                    )
+                } else {
+                    bitmap
+                }
 
-            val maxSide = maxOf(bitmap.width, bitmap.height)
-            val scale = if (maxSide > maxDimension) maxDimension.toFloat() / maxSide else 1f
-            val scaled = if (scale < 1f) {
-                Bitmap.createScaledBitmap(
-                    bitmap,
-                    (bitmap.width * scale).toInt().coerceAtLeast(1),
-                    (bitmap.height * scale).toInt().coerceAtLeast(1),
-                    true
-                )
-            } else {
-                bitmap
+                val bos = ByteArrayOutputStream()
+                scaled.compress(Bitmap.CompressFormat.JPEG, quality, bos)
+                Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP)
+            } finally {
+                if (scaled != null && scaled !== bitmap) {
+                    scaled.recycle()
+                }
+                bitmap.recycle()
             }
-
-            val bos = ByteArrayOutputStream()
-            scaled.compress(Bitmap.CompressFormat.JPEG, quality, bos)
-            val bytes = bos.toByteArray()
-            Base64.encodeToString(bytes, Base64.NO_WRAP)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -224,5 +253,10 @@ class ProfilePreferences(
             e.printStackTrace()
             null
         }
+    }
+
+    companion object {
+        private const val MAX_GIF_BACKUP_BYTES = 384 * 1024L
+        private const val MAX_BASE64_PREF_CHARS = 524_288
     }
 }

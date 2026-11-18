@@ -24,6 +24,7 @@ object NovelJsPromiseShim {
 
           global.__queueJob = __queueJob;
           global.__drainJobs = __drainJobs;
+          global.__hasJobs = function() { return __jobQueue.length > 0; };
 
           // Basic setTimeout shim used by plugins for sleep(). Delay is ignored but scheduling is async.
           global.setTimeout = function(fn, delay) {

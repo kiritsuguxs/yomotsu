@@ -108,9 +108,10 @@ class UserProfileViewModel(
 
             val readChapterCount = mangaList.sumOf { it.readCount }.toInt() + novelList.sumOf { it.readCount }.toInt()
             val totalChapterCount = mangaList.sumOf { it.totalChapters }.toInt() + novelList.sumOf { it.totalChapters }.toInt()
-            val totalDownloadCount = downloadManager.getDownloadCount()
-            val novelDownloadCount = novelList.sumOf { downloadManager.getDownloadCount(it.manga) }
-            val downloadCount = totalDownloadCount - novelDownloadCount
+            val downloadCount = downloadManager.getDownloadCount()
+            val novelDownloadCount = novelList.sumOf {
+                eu.kanade.tachiyomi.extension.novel.download.NovelDownloadManager.getDownloadCount(it.manga.id)
+            }
             val totalAnimes = animeList.size
             val watchedEpisodesCount = animeList.sumOf { it.readCount }.toInt()
             val totalEpisodeCount = animeList.sumOf { it.totalChapters }.toInt()
@@ -156,15 +157,14 @@ class UserProfileViewModel(
 
             val loggedInTrackers = trackerManager.loggedInTrackers()
             val loggedInTrackerIds = loggedInTrackers.map { it.id }.toHashSet()
+            val libraryMangaIds = distinctLibraryManga.map { it.id }.toHashSet()
 
-            val mangaTrackMap = distinctLibraryManga.associate { manga ->
-                val tracks = getTracks.await(manga.id)
-                    .filter { it.trackerId in loggedInTrackerIds }
-                manga.id to tracks
-            }
+            val allLibraryTracks = getTracks.awaitAll()
+                .filter { it.mangaId in libraryMangaIds && it.trackerId in loggedInTrackerIds }
+            val mangaTrackMap = allLibraryTracks.groupBy { it.mangaId }
             val trackedTitleCount = mangaTrackMap.count { it.value.isNotEmpty() }
 
-            val scoredTracks = mangaTrackMap.values.flatten().filter { it.score > 0.0 }
+            val scoredTracks = allLibraryTracks.filter { it.score > 0.0 }
             val meanScore = if (scoredTracks.isNotEmpty()) {
                 scoredTracks.mapNotNull { track ->
                     val service = trackerManager.get(track.trackerId)

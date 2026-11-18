@@ -16,7 +16,10 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import org.jsoup.Jsoup
@@ -33,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 object NovelDownloadManager {
 
+    private const val MAX_CONCURRENT_DOWNLOADS = 3
     private val app: Application by lazy { Injekt.get() }
     private val sourceManager: SourceManager by lazy { Injekt.get() }
     private val storageManager: StorageManager by lazy { Injekt.get() }
@@ -40,6 +44,7 @@ object NovelDownloadManager {
     private val downloadProvider: DownloadProvider by lazy { Injekt.get() }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val downloadSemaphore = Semaphore(MAX_CONCURRENT_DOWNLOADS)
     private val baseDir by lazy { File(app.filesDir, "novel_downloads").apply { mkdirs() } }
     private val activeJobs = ConcurrentHashMap<Long, Job>()
 
@@ -177,7 +182,7 @@ object NovelDownloadManager {
 
     suspend fun downloadChapter(manga: Manga, chapter: Chapter): Boolean = withContext(Dispatchers.IO) {
         currentCoroutineContext()[Job]?.let { activeJobs[chapter.id] = it }
-        _downloadingChapters.value = _downloadingChapters.value + chapter.id
+        _downloadingChapters.update { it + chapter.id }
         try {
             val source = sourceManager.get(manga.source) as? NovelSourceWrapper
                 ?: throw Exception("Fonte não é um plugin de novel")
@@ -190,21 +195,23 @@ object NovelDownloadManager {
 
             currentCoroutineContext().ensureActive()
 
-            if (!restored) {
-                // Se não tá no Telegram, baixa da internet
+            val rawContent = if (!restored) {
                 val raw = source.getChapterText(manga.url, chapter.url)
                 currentCoroutineContext().ensureActive()
                 if (raw.isBlank()) return@withContext false
                 file.writeText(raw)
-
-                // Salva na nuvem logo em seguida
-                telegramCloudManager.uploadNovelChapter(manga, chapter, file)
+                raw
+            } else {
+                file.readText()
             }
 
-            val rawContent = file.readText()
             val cleanText = cleanHtmlToPlainText(rawContent)
 
-            var translatedText: String? = NovelTranslator.getCached(chapter.id)
+            var translatedText: String? = NovelTranslator.getCached(
+                chapterId = chapter.id,
+                seriesTitle = manga.title,
+                originalText = cleanText,
+            )
             if (translationPreferences.autoTranslateNovels().get() && translatedText.isNullOrBlank() && cleanText.isNotBlank()) {
                 translatedText = runCatching {
                     NovelTranslator.translate(
@@ -224,9 +231,13 @@ object NovelDownloadManager {
                 translatedText = translatedText,
             )
 
-            val current = _downloadedChapters.value.toMutableSet()
-            current.add(chapter.id)
-            _downloadedChapters.value = current
+            // Upload to Telegram Cloud only after local clean/translation processing is done
+            // so deleteLocalAfterUpload cannot delete `file` mid-read.
+            if (!restored) {
+                telegramCloudManager.uploadNovelChapter(manga, chapter, file)
+            }
+
+            _downloadedChapters.update { it + chapter.id }
 
             true
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -236,14 +247,24 @@ object NovelDownloadManager {
             false
         } finally {
             activeJobs.remove(chapter.id)
-            _downloadingChapters.value = _downloadingChapters.value - chapter.id
+            _downloadingChapters.update { it - chapter.id }
         }
     }
 
     fun downloadChapters(manga: Manga, chapters: List<Chapter>) {
         chapters.forEach { chapter ->
+            if (activeJobs.containsKey(chapter.id)) return@forEach
+            _downloadingChapters.update { it + chapter.id }
             val job = scope.launch {
-                downloadChapter(manga, chapter)
+                try {
+                    downloadSemaphore.withPermit {
+                        currentCoroutineContext().ensureActive()
+                        downloadChapter(manga, chapter)
+                    }
+                } finally {
+                    activeJobs.remove(chapter.id)
+                    _downloadingChapters.update { it - chapter.id }
+                }
             }
             activeJobs[chapter.id] = job
         }
@@ -251,7 +272,7 @@ object NovelDownloadManager {
 
     fun cancelDownload(chapterId: Long) {
         activeJobs.remove(chapterId)?.cancel()
-        _downloadingChapters.value = _downloadingChapters.value - chapterId
+        _downloadingChapters.update { it - chapterId }
     }
 
     fun deleteChapter(mangaId: Long, chapterId: Long) {
@@ -260,9 +281,8 @@ object NovelDownloadManager {
         if (file.exists()) {
             file.delete()
         }
-        val current = _downloadedChapters.value.toMutableSet()
-        current.remove(chapterId)
-        _downloadedChapters.value = current
+        NovelTranslator.clearCached(chapterId)
+        _downloadedChapters.update { it - chapterId }
     }
 
     fun deleteManga(mangaId: Long) {
@@ -272,11 +292,14 @@ object NovelDownloadManager {
                 ?.mapNotNull { it.nameWithoutExtension.toLongOrNull() }
                 ?.toSet()
                 .orEmpty()
-            deletedIds.forEach { activeJobs.remove(it)?.cancel() }
+            deletedIds.forEach {
+                activeJobs.remove(it)?.cancel()
+                NovelTranslator.clearCached(it)
+            }
             dir.deleteRecursively()
             if (deletedIds.isNotEmpty()) {
-                _downloadingChapters.value = _downloadingChapters.value - deletedIds
-                _downloadedChapters.value = _downloadedChapters.value - deletedIds
+                _downloadingChapters.update { it - deletedIds }
+                _downloadedChapters.update { it - deletedIds }
             }
         }
     }

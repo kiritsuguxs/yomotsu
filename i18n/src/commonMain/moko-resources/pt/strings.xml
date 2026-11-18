@@ -987,6 +987,12 @@
     <string name="achievement_anime_collector_desc">Tenha %1$d animes na biblioteca.</string>
     <string name="achievement_anime_archivist_name">Fansubber Nível %1$d</string>
     <string name="achievement_anime_archivist_desc">Baixe %1$d episódios de anime.</string>
+    <string name="achievement_novel_reader_name">Leitor de Novel Nível %1$d</string>
+    <string name="achievement_novel_reader_desc">Leia %1$d capítulos de novel.</string>
+    <string name="achievement_novel_collector_name">Bibliotecário Nível %1$d</string>
+    <string name="achievement_novel_collector_desc">Tenha %1$d novels na biblioteca.</string>
+    <string name="achievement_novel_archivist_name">Acumulador de Novel Nível %1$d</string>
+    <string name="achievement_novel_archivist_desc">Baixe %1$d capítulos de novel.</string>
     <string name="profile_stat_episodes_watched">Assistidos</string>
     <string name="profile_stat_animes_in_library">Animes</string>
     <string name="profile_stat_mangas_in_library">Mangás</string>

@@ -8,10 +8,12 @@ import eu.kanade.translation.translator.TextTranslators
 import eu.kanade.translation.translator.TranslationNetworkHelper
 import eu.kanade.translation.translator.executeGeminiStreamWithFallback
 import eu.kanade.translation.translator.toGeminiHttpResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -28,36 +30,111 @@ import tachiyomi.domain.translation.TranslationPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
+import java.util.concurrent.atomic.AtomicBoolean
 
 object NovelTranslator {
 
     private const val GEMINI_NOVEL_CONCURRENT_CHUNKS = 3
+    private const val MAX_MEMORY_CACHE_ENTRIES = 64
     private val client: OkHttpClient by lazy { TranslationNetworkHelper.sharedClient }
-    private val translationCache = ConcurrentHashMap<Long, String>()
+    private val translationCache: MutableMap<String, String> = Collections.synchronizedMap(
+        object : LinkedHashMap<String, String>(MAX_MEMORY_CACHE_ENTRIES, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean {
+                return size > MAX_MEMORY_CACHE_ENTRIES
+            }
+        },
+    )
     private val translationPreferences: TranslationPreferences by lazy { Injekt.get() }
     private val context: Application by lazy { Injekt.get() }
     private val cacheDir by lazy { File(context.cacheDir, "novel_translations").apply { mkdirs() } }
 
-    fun getCached(chapterId: Long): String? {
-        translationCache[chapterId]?.let { return it }
-        val file = File(cacheDir, "$chapterId.txt")
-        if (file.exists()) {
-            val text = file.readText()
-            if (text.contains("<script", ignoreCase = true) || text.contains("<style", ignoreCase = true)) {
-                file.delete()
+    private fun currentEngine(): TextTranslators {
+        val engineIndex = runCatching { translationPreferences.novelTranslationEngine().get() }
+            .getOrDefault(TextTranslators.GOOGLE.ordinal)
+        return TextTranslators.entries.getOrNull(engineIndex) ?: TextTranslators.GOOGLE
+    }
+
+    private fun buildCacheKey(
+        chapterId: Long,
+        targetLang: String = "",
+        engine: TextTranslators = currentEngine(),
+        seriesTitle: String = "",
+    ): String {
+        val resolvedTargetLang = targetLang.ifBlank { resolveTargetLanguageCode("pt") }
+        val glossaryHash = runCatching {
+            if (seriesTitle.isBlank()) {
+                0
+            } else {
+                val ctx = ComicTranslationContext(mangaTitle = seriesTitle, chapterName = "")
+                TranslationGlossary.promptRules(ctx).hashCode()
+            }
+        }.getOrDefault(0)
+        val safeLang = resolvedTargetLang.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+        return "${chapterId}_${safeLang}_${engine.name}_g$glossaryHash"
+    }
+
+    fun getCached(
+        chapterId: Long,
+        targetLang: String = "",
+        seriesTitle: String = "",
+        originalText: String? = null,
+    ): String? {
+        val scopedKey = buildCacheKey(chapterId, targetLang = targetLang, seriesTitle = seriesTitle)
+        translationCache[scopedKey]?.let { cached ->
+            if (originalText == null || cached.trim() != originalText.trim()) {
+                return cached
+            }
+        }
+        val scopedFile = File(cacheDir, "$scopedKey.txt")
+        if (scopedFile.exists()) {
+            val text = scopedFile.readText()
+            if (isInvalidCachedContent(text, originalText)) {
+                scopedFile.delete()
                 return null
             }
-            translationCache[chapterId] = text
+            translationCache[scopedKey] = text
+            return text
+        }
+        // Backward-compatible read of pre-v0.22.3 unscoped cache file if not poisoned
+        val legacyFile = File(cacheDir, "$chapterId.txt")
+        if (legacyFile.exists()) {
+            val text = legacyFile.readText()
+            if (isInvalidCachedContent(text, originalText)) {
+                legacyFile.delete()
+                return null
+            }
+            translationCache[scopedKey] = text
             return text
         }
         return null
     }
 
+    private fun isInvalidCachedContent(cached: String, originalText: String?): Boolean {
+        if (cached.isBlank()) return true
+        if (cached.contains("<script", ignoreCase = true) || cached.contains("<style", ignoreCase = true)) {
+            return true
+        }
+        if (!originalText.isNullOrBlank() && originalText.length > 40 && cached.trim() == originalText.trim()) {
+            return true
+        }
+        return false
+    }
+
     fun clearCached(chapterId: Long) {
-        translationCache.remove(chapterId)
-        val file = File(cacheDir, "$chapterId.txt")
-        if (file.exists()) file.delete()
+        val prefix = "${chapterId}_"
+        synchronized(translationCache) {
+            val keysToRemove = translationCache.keys.filter { it == chapterId.toString() || it.startsWith(prefix) }
+            keysToRemove.forEach(translationCache::remove)
+        }
+        runCatching {
+            File(cacheDir, "$chapterId.txt").takeIf { it.exists() }?.delete()
+            cacheDir.listFiles()?.forEach { f ->
+                if (f.name.startsWith(prefix) && f.extension == "txt") {
+                    f.delete()
+                }
+            }
+        }
     }
 
     private fun resolveTargetLanguageCode(defaultLang: String): String {
@@ -76,20 +153,28 @@ object NovelTranslator {
     ): String = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext text
 
-        getCached(chapterId)?.let { return@withContext it }
-
         val resolvedTargetLang = targetLang.ifBlank { resolveTargetLanguageCode("pt") }
-        val engineIndex = runCatching { translationPreferences.novelTranslationEngine().get() }.getOrDefault(TextTranslators.GOOGLE.ordinal)
-        val selectedEngine = TextTranslators.entries.getOrNull(engineIndex) ?: TextTranslators.GOOGLE
+        val selectedEngine = currentEngine()
+        val cacheKey = buildCacheKey(chapterId, resolvedTargetLang, selectedEngine, seriesTitle)
+
+        getCached(
+            chapterId = chapterId,
+            targetLang = resolvedTargetLang,
+            seriesTitle = seriesTitle,
+            originalText = text,
+        )?.let { return@withContext it }
+
         val glossaryContext = seriesTitle.takeIf { it.isNotBlank() }?.let {
             ComicTranslationContext(mangaTitle = it, chapterName = "")
         }
 
         val maxChunkLen = when (selectedEngine) {
-            TextTranslators.GEMINI, TextTranslators.GROQ -> 8000
-            else -> 3000
+            TextTranslators.GEMINI -> 7500
+            TextTranslators.GROQ -> 3200
+            else -> 2800
         }
         val chunks = chunkText(text, maxChunkLen)
+        val hadFailure = AtomicBoolean(false)
         val translatedChunks = if (selectedEngine == TextTranslators.GEMINI && chunks.size > 1) {
             val semaphore = Semaphore(GEMINI_NOVEL_CONCURRENT_CHUNKS)
             coroutineScope {
@@ -99,7 +184,7 @@ object NovelTranslator {
                             ""
                         } else {
                             semaphore.withPermit {
-                                translateChunkWithGlossary(
+                                val translated = translateChunkWithGlossary(
                                     chunk = chunk,
                                     sourceLang = sourceLang,
                                     targetLang = resolvedTargetLang,
@@ -107,6 +192,12 @@ object NovelTranslator {
                                     glossaryContext = glossaryContext,
                                     previousContext = null,
                                 )
+                                if (translated == null) {
+                                    hadFailure.set(true)
+                                    chunk
+                                } else {
+                                    translated
+                                }
                             }
                         }
                     }
@@ -118,7 +209,7 @@ object NovelTranslator {
                 val translated = if (chunk.isBlank()) {
                     ""
                 } else {
-                    translateChunkWithGlossary(
+                    val chunkRes = translateChunkWithGlossary(
                         chunk = chunk,
                         sourceLang = sourceLang,
                         targetLang = resolvedTargetLang,
@@ -126,6 +217,12 @@ object NovelTranslator {
                         glossaryContext = glossaryContext,
                         previousContext = previousChunkContext,
                     )
+                    if (chunkRes == null) {
+                        hadFailure.set(true)
+                        chunk
+                    } else {
+                        chunkRes
+                    }
                 }
                 if (chunk.isNotBlank()) {
                     previousChunkContext = chunk.trim().takeLast(1000)
@@ -135,23 +232,26 @@ object NovelTranslator {
         }
         val result = translatedChunks.joinToString("\n\n")
 
-        translationCache[chapterId] = result
-        try {
-            File(cacheDir, "$chapterId.txt").writeText(result)
-        } catch (e: Exception) {
-            logcat(throwable = e) { "Failed to write translation cache" }
+        // Only persist to memory/disk cache when every non-blank chunk actually succeeded
+        if (!hadFailure.get() && result.isNotBlank()) {
+            translationCache[cacheKey] = result
+            try {
+                File(cacheDir, "$cacheKey.txt").writeText(result)
+            } catch (e: Exception) {
+                logcat(throwable = e) { "Failed to write translation cache" }
+            }
         }
         result
     }
 
-    private fun translateChunkWithGlossary(
+    private suspend fun translateChunkWithGlossary(
         chunk: String,
         sourceLang: String,
         targetLang: String,
         engine: TextTranslators,
         glossaryContext: ComicTranslationContext?,
         previousContext: String?,
-    ): String {
+    ): String? {
         return if (glossaryContext != null) {
             val prepared = TranslationGlossary.prepare(chunk, glossaryContext)
             val rawTranslated = translateChunk(
@@ -160,7 +260,7 @@ object NovelTranslator {
                 tl = targetLang,
                 engine = engine,
                 previousContext = previousContext,
-            )
+            ) ?: return null
             TranslationGlossary.resolve(prepared, rawTranslated, glossaryContext)
         } else {
             translateChunk(
@@ -173,17 +273,57 @@ object NovelTranslator {
         }
     }
 
-    private fun chunkText(text: String, maxLength: Int): List<String> {
-        val paragraphs = text.split("\n\n")
+    internal fun chunkText(text: String, maxLength: Int): List<String> {
+        val rawParagraphs = text.split("\n\n")
+        val normalizedSegments = mutableListOf<String>()
+        val sentenceSplitChars = charArrayOf('.', '!', '?', '。', '！', '？', ';', '；', ' ')
+
+        for (p in rawParagraphs) {
+            if (p.length <= maxLength) {
+                normalizedSegments.add(p)
+            } else {
+                val lines = p.split("\n")
+                var lineGroup = StringBuilder()
+                for (line in lines) {
+                    if (line.length > maxLength) {
+                        if (lineGroup.isNotEmpty()) {
+                            normalizedSegments.add(lineGroup.toString().trim())
+                            lineGroup = StringBuilder()
+                        }
+                        var remaining = line
+                        while (remaining.length > maxLength) {
+                            val cut = remaining.take(maxLength).lastIndexOfAny(sentenceSplitChars)
+                                .takeIf { it >= maxLength / 3 }
+                                ?: maxLength
+                            normalizedSegments.add(remaining.substring(0, cut).trim())
+                            remaining = remaining.substring(cut).trimStart()
+                        }
+                        if (remaining.isNotEmpty()) {
+                            lineGroup.append(remaining).append("\n")
+                        }
+                    } else {
+                        if (lineGroup.length + line.length + 1 > maxLength && lineGroup.isNotEmpty()) {
+                            normalizedSegments.add(lineGroup.toString().trim())
+                            lineGroup = StringBuilder()
+                        }
+                        lineGroup.append(line).append("\n")
+                    }
+                }
+                if (lineGroup.isNotEmpty()) {
+                    normalizedSegments.add(lineGroup.toString().trim())
+                }
+            }
+        }
+
         val chunks = mutableListOf<String>()
         var currentChunk = StringBuilder()
 
-        for (p in paragraphs) {
-            if (currentChunk.length + p.length > maxLength && currentChunk.isNotEmpty()) {
+        for (segment in normalizedSegments) {
+            if (currentChunk.length + segment.length + 2 > maxLength && currentChunk.isNotEmpty()) {
                 chunks.add(currentChunk.toString().trim())
                 currentChunk = StringBuilder()
             }
-            currentChunk.append(p).append("\n\n")
+            currentChunk.append(segment).append("\n\n")
         }
         if (currentChunk.isNotEmpty()) {
             chunks.add(currentChunk.toString().trim())
@@ -191,13 +331,13 @@ object NovelTranslator {
         return chunks
     }
 
-    private fun translateChunk(
+    private suspend fun translateChunk(
         text: String,
         sl: String,
         tl: String,
         engine: TextTranslators = TextTranslators.GOOGLE,
         previousContext: String? = null,
-    ): String {
+    ): String? {
         return when (engine) {
             TextTranslators.GEMINI -> translateWithGemini(text, tl) ?: translateWithGoogle(text, sl, tl)
             TextTranslators.GROQ -> translateWithGroq(text, tl) ?: translateWithGoogle(text, sl, tl)
@@ -206,7 +346,7 @@ object NovelTranslator {
         }
     }
 
-    private fun translateWithGoogle(text: String, sl: String, tl: String): String {
+    private fun translateWithGoogle(text: String, sl: String, tl: String): String? {
         return try {
             val url = "https://translate.google.com/translate_a/single?client=gtx&sl=$sl&tl=$tl&dt=t"
             val formBody = FormBody.Builder()
@@ -220,9 +360,10 @@ object NovelTranslator {
                 .build()
 
             client.newCall(request).execute().use { response ->
-                val responseBody = response.body?.string() ?: return text
+                if (!response.isSuccessful) return null
+                val responseBody = response.body?.string() ?: return null
                 val jsonArray = JSONArray(responseBody)
-                val sentences = jsonArray.getJSONArray(0)
+                val sentences = jsonArray.optJSONArray(0) ?: return null
 
                 buildString {
                     for (i in 0 until sentences.length()) {
@@ -231,11 +372,13 @@ object NovelTranslator {
                             append(sentence.optString(0, ""))
                         }
                     }
-                }
+                }.takeIf { it.isNotBlank() }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            logcat(throwable = e) { "Failed to translate chunk with Google: $text" }
-            text
+            logcat(throwable = e) { "Failed to translate chunk with Google" }
+            null
         }
     }
 
@@ -264,7 +407,7 @@ object NovelTranslator {
                 .ifBlank { eu.kanade.translation.translator.DEFAULT_GEMINI_MODEL_ID }
 
             val targetLanguageName = targetLanguagePromptName(tl)
-            val systemInstruction = "You are a professional literary translator for light novels and web novels. Translate the following text into natural $targetLanguageName. Preserve all paragraph breaks, HTML/image tags if any, and protected tokens (such as [[YOMOTSU_TERM_0]]). Output ONLY the translated text without commentary."
+            val systemInstruction = "You are a professional literary translator for light novels and web novels. Translate the following text into natural $targetLanguageName. Preserve all paragraph breaks, HTML/image tags if any, and protected tokens (such as YOMOTSUTERM0000ZXQ) verbatim without altering casing or spacing. Output ONLY the translated text without commentary."
             val maxTokens = (translationPreferences.translationEngineMaxOutputTokens().get().toIntOrNull() ?: 8192)
                 .coerceIn(2048, 8192)
             val temperature = translationPreferences.translationEngineTemperature().get().toFloatOrNull()
@@ -291,13 +434,15 @@ object NovelTranslator {
             }
             if (result.statusCode !in 200..299) return null
             result.content.text.trim().ifBlank { null }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logcat(throwable = e) { "Failed to translate chunk with Gemini" }
             null
         }
     }
 
-    private fun translateWithGroq(text: String, tl: String): String? {
+    private suspend fun translateWithGroq(text: String, tl: String): String? {
         try {
             translationPreferences.migrateLegacyLlmSettings(TranslationLlmProvider.GROQ)
             val apiKey = eu.kanade.translation.translator.sanitizeGroqApiKey(
@@ -308,7 +453,7 @@ object NovelTranslator {
             if (apiKey.isBlank() || modelName.isBlank()) return null
 
             val targetLanguageName = targetLanguagePromptName(tl)
-            val systemInstruction = "You are a professional literary translator for light novels and web novels. Translate the user's text into natural $targetLanguageName. Preserve all paragraph breaks, HTML/image tags if any, and protected tokens (such as [[YOMOTSU_TERM_0]]). Output ONLY the translated text without commentary."
+            val systemInstruction = "You are a professional literary translator for light novels and web novels. Translate the user's text into natural $targetLanguageName. Preserve all paragraph breaks, HTML/image tags if any, and protected tokens (such as YOMOTSUTERM0000ZXQ) verbatim without altering casing or spacing. Output ONLY the translated text without commentary."
 
             val jsonBody = JSONObject().apply {
                 put("model", modelName)
@@ -358,7 +503,7 @@ object NovelTranslator {
                     val delayMs = waitMs ?: ((attempt + 1) * 3_000L)
                     if (delayMs in 0..35_000L) {
                         attempt++
-                        Thread.sleep(delayMs + 250L)
+                        delay(delayMs + 250L)
                         continue
                     }
                 }
@@ -372,6 +517,8 @@ object NovelTranslator {
                 val cleaned = eu.kanade.translation.translator.stripGroqThinkingTags(rawContent)
                 return cleaned.ifBlank { null }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logcat(throwable = e) { "Failed to translate chunk with Groq" }
             return null
@@ -385,7 +532,12 @@ object NovelTranslator {
         previousContext: String? = null,
     ): String? {
         return try {
-            val apiKey = translationPreferences.deepLApiKey().get().trim()
+            val apiKey = translationPreferences.deepLApiKey().get()
+                .trim()
+                .removePrefix("DeepL-Auth-Key ")
+                .removePrefix("Bearer ")
+                .trim()
+                .replace(Regex("[\\r\\n]"), "")
             if (apiKey.isBlank()) return null
             val endpoint = if (apiKey.endsWith(":fx")) {
                 "https://api-free.deepl.com/v2/translate"
@@ -426,6 +578,8 @@ object NovelTranslator {
                 }.trim()
                 if (result.isNotBlank()) result else null
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logcat(throwable = e) { "Failed to translate chunk with DeepL" }
             null

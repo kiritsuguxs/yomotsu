@@ -34,6 +34,7 @@ class GlobalAnimeSearchViewModel(
     override fun getEnabledSources(): List<Source> {
         return sourceManager.getAll()
             .filter { it is eu.kanade.tachiyomi.animesource.AnimeSource || it.javaClass.name.contains("anime", ignoreCase = true) }
+            .filter { (it.lang in enabledLanguages || it.lang == "all") && "${it.id}" !in disabledSources }
             .sortedWith(
                 compareBy(
                     { "${it.id}" !in pinnedSources },

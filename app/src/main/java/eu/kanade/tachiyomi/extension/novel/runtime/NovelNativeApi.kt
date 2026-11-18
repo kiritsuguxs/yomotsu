@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.extension.novel.runtime
 
+import android.app.Application
+import android.content.Context
 import android.util.Base64
 import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.serialization.json.Json
@@ -29,6 +31,7 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 class NovelNativeApi(
+    private val pluginId: String = "default",
     private val client: OkHttpClient = Injekt.get<NetworkHelper>().client,
 ) : NovelJsRuntime.NativeApi {
 
@@ -165,23 +168,68 @@ class NovelNativeApi(
 
     override fun fetchProto(url: String, configJson: String, optionsJson: String?): String = fetch(url, optionsJson)
 
-    override fun storageGet(key: String): String? = pluginStorage[key]
-    override fun storageSet(key: String, value: String) { pluginStorage[key] = value }
-    override fun storageRemove(key: String) { pluginStorage.remove(key) }
-    override fun storageClear() { pluginStorage.clear() }
-    override fun storageKeys(): String = buildJsonArray { pluginStorage.keys.forEach { add(JsonPrimitive(it)) } }.toString()
+    private val safePluginKey: String = pluginId.replace(Regex("[^a-zA-Z0-9._-]"), "_").ifBlank { "default" }
 
-    override fun localStorageGet(key: String): String? = localStore[key]
-    override fun localStorageSet(key: String, value: String) { localStore[key] = value }
-    override fun localStorageRemove(key: String) { localStore.remove(key) }
-    override fun localStorageClear() { localStore.clear() }
-    override fun localStorageKeys(): String = buildJsonArray { localStore.keys.forEach { add(JsonPrimitive(it)) } }.toString()
+    private fun pluginMap(): ConcurrentHashMap<String, String> =
+        pluginStores.computeIfAbsent(safePluginKey) { loadPersistedStore("novel_plugin_storage_$safePluginKey") }
 
-    override fun sessionStorageGet(key: String): String? = sessionStore[key]
-    override fun sessionStorageSet(key: String, value: String) { sessionStore[key] = value }
-    override fun sessionStorageRemove(key: String) { sessionStore.remove(key) }
-    override fun sessionStorageClear() { sessionStore.clear() }
-    override fun sessionStorageKeys(): String = buildJsonArray { sessionStore.keys.forEach { add(JsonPrimitive(it)) } }.toString()
+    private fun localMap(): ConcurrentHashMap<String, String> =
+        localStores.computeIfAbsent(safePluginKey) { loadPersistedStore("novel_local_storage_$safePluginKey") }
+
+    private fun sessionMap(): ConcurrentHashMap<String, String> =
+        sessionStores.computeIfAbsent(safePluginKey) { ConcurrentHashMap() }
+
+    private fun persistEntry(prefsName: String, key: String, value: String?) {
+        val app = runCatching { Injekt.get<Application>() }.getOrNull() ?: return
+        runCatching {
+            val editor = app.getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit()
+            if (value == null) editor.remove(key) else editor.putString(key, value)
+            editor.apply()
+        }
+    }
+
+    private fun clearPersistedStore(prefsName: String) {
+        val app = runCatching { Injekt.get<Application>() }.getOrNull() ?: return
+        runCatching {
+            app.getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit().clear().apply()
+        }
+    }
+
+    override fun storageGet(key: String): String? = pluginMap()[key]
+    override fun storageSet(key: String, value: String) {
+        pluginMap()[key] = value
+        persistEntry("novel_plugin_storage_$safePluginKey", key, value)
+    }
+    override fun storageRemove(key: String) {
+        pluginMap().remove(key)
+        persistEntry("novel_plugin_storage_$safePluginKey", key, null)
+    }
+    override fun storageClear() {
+        pluginMap().clear()
+        clearPersistedStore("novel_plugin_storage_$safePluginKey")
+    }
+    override fun storageKeys(): String = buildJsonArray { pluginMap().keys.forEach { add(JsonPrimitive(it)) } }.toString()
+
+    override fun localStorageGet(key: String): String? = localMap()[key]
+    override fun localStorageSet(key: String, value: String) {
+        localMap()[key] = value
+        persistEntry("novel_local_storage_$safePluginKey", key, value)
+    }
+    override fun localStorageRemove(key: String) {
+        localMap().remove(key)
+        persistEntry("novel_local_storage_$safePluginKey", key, null)
+    }
+    override fun localStorageClear() {
+        localMap().clear()
+        clearPersistedStore("novel_local_storage_$safePluginKey")
+    }
+    override fun localStorageKeys(): String = buildJsonArray { localMap().keys.forEach { add(JsonPrimitive(it)) } }.toString()
+
+    override fun sessionStorageGet(key: String): String? = sessionMap()[key]
+    override fun sessionStorageSet(key: String, value: String) { sessionMap()[key] = value }
+    override fun sessionStorageRemove(key: String) { sessionMap().remove(key) }
+    override fun sessionStorageClear() { sessionMap().clear() }
+    override fun sessionStorageKeys(): String = buildJsonArray { sessionMap().keys.forEach { add(JsonPrimitive(it)) } }.toString()
 
     override fun resolveUrl(url: String, base: String?): String =
         runCatching { if (base != null) URI(base).resolve(url).toString() else url }.getOrDefault(url)
@@ -278,8 +326,20 @@ class NovelNativeApi(
     override fun consoleWarn(message: String) { System.err.println(message) }
 
     companion object {
-        private val pluginStorage = ConcurrentHashMap<String, String>()
-        private val localStore = ConcurrentHashMap<String, String>()
-        private val sessionStore = ConcurrentHashMap<String, String>()
+        private val pluginStores = ConcurrentHashMap<String, ConcurrentHashMap<String, String>>()
+        private val localStores = ConcurrentHashMap<String, ConcurrentHashMap<String, String>>()
+        private val sessionStores = ConcurrentHashMap<String, ConcurrentHashMap<String, String>>()
+
+        private fun loadPersistedStore(prefsName: String): ConcurrentHashMap<String, String> {
+            val map = ConcurrentHashMap<String, String>()
+            val app = runCatching { Injekt.get<Application>() }.getOrNull() ?: return map
+            runCatching {
+                val prefs = app.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                prefs.all.forEach { (k, v) ->
+                    if (v is String) map[k] = v
+                }
+            }
+            return map
+        }
     }
 }

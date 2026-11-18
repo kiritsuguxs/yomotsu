@@ -21,6 +21,7 @@ class NovelJsDomStore {
 
     private var nextHandle = 1
     private val nodes = LinkedHashMap<Int, Node>(256, 0.75f, true)
+    private val nodeToHandle = java.util.IdentityHashMap<Node, Int>(256)
 
     // ------------------------------------------------------------------
     // Document lifecycle
@@ -357,11 +358,15 @@ class NovelJsDomStore {
     // ------------------------------------------------------------------
 
     fun release(handle: Int) {
-        nodes.remove(handle)
+        val removed = nodes.remove(handle)
+        if (removed != null) {
+            nodeToHandle.remove(removed)
+        }
     }
 
     fun releaseAll() {
         nodes.clear()
+        nodeToHandle.clear()
         nextHandle = 1
     }
 
@@ -370,12 +375,14 @@ class NovelJsDomStore {
     // ------------------------------------------------------------------
 
     private fun assignHandle(node: Node): Int {
-        // Check if this exact node instance already has a handle.
-        for ((h, n) in nodes) {
-            if (n === node) return h
+        nodeToHandle[node]?.let { existing ->
+            // Touch LinkedHashMap entry to maintain access-order LRU
+            if (nodes[existing] === node) return existing
+            nodeToHandle.remove(node)
         }
         val h = nextHandle++
         nodes[h] = node
+        nodeToHandle[node] = h
         evictIfNeeded()
         return h
     }
@@ -391,7 +398,8 @@ class NovelJsDomStore {
         val toRemove = nodes.size - MAX_HANDLES
         var removed = 0
         while (iterator.hasNext() && removed < toRemove) {
-            iterator.next()
+            val entry = iterator.next()
+            nodeToHandle.remove(entry.value)
             iterator.remove()
             removed++
         }
